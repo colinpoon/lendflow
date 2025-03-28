@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 
 interface FileUploadProps {
@@ -37,11 +35,16 @@ const FileUpload: React.FC<FileUploadProps> = ({
     }
   };
 
-  const handleUpload = async () => {
+  const handleUpload = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
     if (!file) {
       alert('Please select a file before uploading.');
       return;
     }
+
     setUploading(true);
     setUploadProgress(0);
 
@@ -82,9 +85,16 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
   return (
     <div className="p-8 border rounded-lg shadow-md w-full max-w-md mx-auto flex flex-col items-center gap-2 max-h-fit">
-      <div className="">
-        <Input
+      <form
+        action="/api/extractData"
+        method="POST"
+        encType="multipart/form-data"
+        onSubmit={handleUpload}
+        className="w-full flex flex-col items-center gap-2"
+      >
+        <input
           type="file"
+          name="file"
           accept=".pdf,.xls,.xlsx,.doc,.docx"
           onChange={handleFileChange}
           className="hidden"
@@ -96,14 +106,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
         >
           {file ? file.name : 'Choose a file'}
         </label>
-      </div>
-      <Button
-        onClick={handleUpload}
-        variant="default"
-        className="bg-blue-500 text-white px-4 py-2 rounded-md"
-      >
-        {uploading ? 'Uploading...' : 'Process File'}
-      </Button>
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-4 py-2 rounded-md"
+        >
+          {uploading ? 'Uploading...' : 'Process File'}
+        </button>
+      </form>
       {uploading && (
         <Progress value={uploadProgress} className="w-full mt-4" />
       )}
