@@ -1,7 +1,18 @@
-require('dotenv').config();
+import type { Configuration } from 'webpack';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  webpack: (
+    config: Configuration,
+    { isServer }: { isServer: boolean }
+  ) => {
+    if (!isServer) {
+      config.resolve!.alias!['canvas'] = false as unknown as
+        | false
+        | string;
+    }
+    return config;
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

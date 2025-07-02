@@ -56,7 +56,7 @@ const Home = () => {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
       <h1 className="text-3xl font-extrabold text-center text-primary mb-8">
-        Bank Loan Risk Analysis
+        Lendflow
       </h1>
 
       <Tabs

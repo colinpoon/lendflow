@@ -100,26 +100,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ Log the uploaded file path for debugging
-    console.log('📂 Uploaded file path:', file.filepath);
+    // ✅ Resolve and verify the file path before sending to AI
+    const resolvedPath = path.resolve(file.filepath as string);
+    console.log('📂 Resolved file path:', resolvedPath);
 
-    console.log('📂 File received:', {
-      name: file.originalFilename,
-      size: file.size,
-      path: file.filepath,
-    });
+    // ✅ Check if the file exists before sending to AI
+    if (!fs.existsSync(resolvedPath)) {
+      console.error(
+        '❗ File not found at resolved path:',
+        resolvedPath
+      );
+      return NextResponse.json(
+        { error: 'File not found. Please try again.' },
+        { status: 404 }
+      );
+    }
 
-    // Log file path before sending to AI
+    // ✅ Log file path before sending to AI
     console.log(
       '🤖 Sending file to AI for extraction. File path:',
-      file.filepath
+      resolvedPath
     );
 
-    // Send file to AI for extraction
+    // ✅ Send file to AI for extraction with correct file path
     console.log('⚡ Starting AI data extraction...');
-    const extractedData = await extractFinancialData(
-      file.filepath as string
-    );
+    const extractedData = await extractFinancialData(resolvedPath);
     console.log('✅ AI data extraction completed successfully.');
 
     console.log('📊 Extracted data:', extractedData);
