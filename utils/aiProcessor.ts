@@ -1,3 +1,14 @@
+// ───────────────────────── helper: strip ``` fences ─────────────────────────
+function cleanJsonFence(input: string): string {
+  return (
+    input
+      .trim()
+      // remove ```json or ``` blocks at start/end
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim()
+  );
+}
 import OpenAI from 'openai';
 // use inner parser to avoid built‑in test harness that loads 05‑versions‑space.pdf
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
@@ -154,7 +165,8 @@ This schema must work for any financial statement worldwide.
       );
 
       try {
-        allExtractions.push(JSON.parse(extractedText));
+        const cleaned = cleanJsonFence(extractedText);
+        allExtractions.push(JSON.parse(cleaned));
         // capture a riskAssessment if present
         const maybeObj = allExtractions.at(-1);
         if (
@@ -215,7 +227,7 @@ JSON only.`,
         });
 
         const rawRisk = riskResp.choices[0]?.message?.content ?? '{}';
-        riskSnapshot = JSON.parse(rawRisk);
+        riskSnapshot = JSON.parse(cleanJsonFence(rawRisk));
       } catch (e) {
         console.warn('⚠️  Risk snapshot generation failed:', e);
       }

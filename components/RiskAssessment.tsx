@@ -50,15 +50,22 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
         <tbody>
           {Object.entries(data.pillars).map(([key, raw]) => {
             const p = raw as any;
+            // eslint-disable-next-line no-console
+            console.log('📊 pillar debug:', key, p);
             const obs =
               p.observations ??
               p.observation ??
-              JSON.stringify(p, null, 0);
-            const impact = p.impact ?? '—';
+              p.summary ??
+              Object.values(p).find((v) => typeof v === 'string') ??
+              '—';
+
+            const impact = p.impact ?? p.effect ?? p.influence ?? '—';
+
             const score =
-              p.score !== undefined && p.score !== null
-                ? p.score
-                : '—';
+              p.score ??
+              p.rating ??
+              (typeof p === 'number' ? p : undefined) ??
+              '—';
 
             return (
               <tr key={key}>
