@@ -56,18 +56,20 @@ const Home = () => {
       setFinancialData({ metrics_by_year: data.metrics_by_year });
     }
 
-    if (data.riskAssessment) {
-      setRiskData(data.riskAssessment);
+    // Risk assessment may appear at root, inside financialMetrics, or alongside metrics_by_year
+    const nestedRisk =
+      data.riskAssessment ??
+      data.financialMetrics?.riskAssessment ??
+      data.metrics_by_year?.riskAssessment ??
+      null;
+    if (nestedRisk) {
+      setRiskData(nestedRisk);
     }
 
     // decide default tab
-    if (
-      data.riskAssessment &&
-      !data.financialMetrics &&
-      !data.metrics_by_year
-    ) {
+    if (nestedRisk && !financialData) {
       setActiveTab('credit');
-    } else if (data.financialMetrics || data.metrics_by_year) {
+    } else if (financialData) {
       setActiveTab('analysis');
     } else if (data.extracted) {
       setActiveTab('extracted');
