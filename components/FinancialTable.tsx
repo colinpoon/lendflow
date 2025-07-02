@@ -1,47 +1,84 @@
 'use client';
 
-interface FinancialData {
-  netIncome: number;
-  expenses: number;
-  profitMargin: number;
-  interest: number;
-  taxes: number;
-  depreciation: number;
-  amortization: number;
+import React from 'react';
+
+interface YearMetrics {
+  net_income: number | null;
+  expenses: number | null;
+  profit_margins: number | null;
+  interest: number | null;
+  taxes: number | null;
+  depreciation_amortization: number | null;
+  ebitda: number | null;
 }
 
 interface FinancialTableProps {
-  data: FinancialData | null;
+  /** Result returned by the backend: { metrics_by_year: { "2024": {...}, "2023": {...} } } */
+  data: { metrics_by_year: Record<string, YearMetrics> } | null;
 }
 
+const rows = [
+  { key: 'net_income', label: 'Net Income' },
+  { key: 'expenses', label: 'Expenses' },
+  { key: 'profit_margins', label: 'Profit Margins' },
+  { key: 'interest', label: 'Interest' },
+  { key: 'taxes', label: 'Taxes' },
+  {
+    key: 'depreciation_amortization',
+    label: 'Depreciation & Amort.',
+  },
+  { key: 'ebitda', label: 'EBITDA' },
+];
+
+const fmtCurrency = (v: number | null | undefined) =>
+  v == null
+    ? '—'
+    : v.toLocaleString(undefined, {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+      });
+
 const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
-  if (!data) {
+  if (
+    !data ||
+    !data.metrics_by_year ||
+    Object.keys(data.metrics_by_year).length === 0
+  ) {
     return (
       <p className="text-gray-500">No financial data available.</p>
     );
   }
 
+  const years = Object.keys(data.metrics_by_year).sort().reverse(); // newest first
+
   return (
-    <div className="p-4 border rounded-lg shadow-md w-full max-w-lg mx-auto mt-4">
+    <div className="p-4 border rounded-lg shadow-md w-full overflow-x-auto">
       <h2 className="text-lg font-semibold mb-2">
         Financial Metrics
       </h2>
-      <table className="w-full border-collapse border border-gray-300">
+      <table className="min-w-full text-sm border-collapse border border-gray-300">
         <thead>
           <tr className="bg-gray-200">
-            <th className="border p-2">Metric</th>
-            <th className="border p-2">Value</th>
+            <th className="border p-2 text-left">Metric</th>
+            {years.map((y) => (
+              <th key={y} className="border p-2 text-right">
+                {y}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {Object.entries(data).map(([key, value]) => (
-            <tr key={key}>
-              <td className="border p-2 capitalize">
-                {key.replace(/([A-Z])/g, ' $1')}
-              </td>
-              <td className="border p-2">
-                ${value.toLocaleString()}
-              </td>
+          {rows.map((row) => (
+            <tr key={row.key}>
+              <td className="border p-2">{row.label}</td>
+              {years.map((y) => (
+                <td key={y} className="border p-2 text-right">
+                  {fmtCurrency(
+                    (data.metrics_by_year[y] as any)?.[row.key]
+                  )}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>

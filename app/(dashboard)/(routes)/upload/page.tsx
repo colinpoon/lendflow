@@ -32,7 +32,11 @@ import {
 
 const Home = () => {
   const [extractedData, setExtractedData] = useState<any>(null);
-  const [financialData, setFinancialData] = useState<any>(null);
+
+  // year‑agnostic map returned from aiProcessor:
+  const [financialData, setFinancialData] = useState<{
+    metrics_by_year: Record<string, any>;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
 
   const handleDataUpdate = (data: any) => {
@@ -48,7 +52,15 @@ const Home = () => {
       <h1 className="text-3xl font-extrabold text-center text-primary mb-8">
         Bank Loan Risk Analysis
       </h1>
-
+      {!extractedData && (
+        <Alert variant="default" className="mt-6">
+          <AlertTitle>Get Started</AlertTitle>
+          <AlertDescription>
+            Upload a financial document to begin your bank loan risk
+            analysis.
+          </AlertDescription>
+        </Alert>
+      )}
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
@@ -115,16 +127,6 @@ const Home = () => {
           )}
         </TabsContent>
       </Tabs>
-
-      {!extractedData && (
-        <Alert variant="default" className="mt-6">
-          <AlertTitle>Get Started</AlertTitle>
-          <AlertDescription>
-            Upload a financial document to begin your bank loan risk
-            analysis.
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 };

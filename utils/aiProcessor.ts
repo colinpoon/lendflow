@@ -101,8 +101,40 @@ export const extractFinancialData = async (filePath: string) => {
         messages: [
           {
             role: 'system',
-            content:
-              'Extract financial metrics from the provided text chunk, including Net Income, Expenses, Profit Margins, Interest, Taxes, Depreciation, and Amortization. Also, infer and compute EBITDA if possible.',
+            content: `
+You are a deterministic **financial‑statement extraction engine**.  
+The user text may come from any kind of financial filing (annual report, 10‑K, MD&A, notes, etc.).
+
+OUTPUT REQUIREMENTS  
+Return **valid JSON only** in the exact schema below – no markdown or comments:
+
+{
+  "metrics_by_year": {
+    "<year>": {
+      "revenue": number|null,
+      "net_income": number|null,
+      "expenses": number|null,
+      "profit_margins": number|null,
+      "interest": number|null,
+      "taxes": number|null,
+      "depreciation_amortization": number|null,
+      "ebitda": number|null,
+      "shareholders_equity": number|null
+    }
+  }
+}
+
+RULES  
+• Detect every fiscal year present (e.g. 2025, 2024, 2023) and use it as the JSON key.  
+• Emit numeric values as plain JSON numbers – **no quotes, commas, or currency symbols**.  
+• If a value is unavailable for a metric, output null (do NOT omit the key).  
+• If net_income, interest, taxes, and depreciation_amortization are all non‑null for a year, compute:  
+  "ebitda" = net_income + interest + taxes + depreciation_amortization  
+  (otherwise leave ebitda as null).  
+• Do not add any keys, explanations, or narrative – JSON object only.
+
+This schema must work for any financial statement worldwide.
+`,
           },
           {
             role: 'user',
@@ -130,10 +162,35 @@ export const extractFinancialData = async (filePath: string) => {
       }
     }
 
+    /* ────────────── consolidate all partial JSONs ────────────── */
+    const merged: Record<string, any> = {};
+    for (const obj of allExtractions) {
+      if (obj && typeof obj === 'object' && obj.metrics_by_year) {
+        for (const [yr, metrics] of Object.entries<any>(
+          obj.metrics_by_year
+        )) {
+          if (!merged[yr]) merged[yr] = { ...metrics };
+          else {
+            // fill nulls with any non‑null values found in later chunks
+            for (const key of Object.keys(metrics)) {
+              if (merged[yr][key] == null && metrics[key] != null) {
+                merged[yr][key] = metrics[key];
+              }
+            }
+          }
+        }
+      }
+    }
+    /* if nothing parsed, fall back to raw array */
+    const finalResult =
+      Object.keys(merged).length > 0
+        ? { metrics_by_year: merged }
+        : { raw_chunks: allExtractions };
+
     console.log(
       '✅ All chunks processed. Returning combined extractions.'
     );
-    return allExtractions;
+    return finalResult;
   } catch (error: any) {
     console.error(
       '❗ AI processing failed:',
