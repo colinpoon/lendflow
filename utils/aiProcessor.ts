@@ -90,6 +90,7 @@ export const extractFinancialData = async (filePath: string) => {
     );
 
     const allExtractions: any[] = [];
+    let riskSnapshot: any | null = null; // capture first riskAssessment
 
     for (let i = 0; i < textChunks.length; i++) {
       console.log(
@@ -154,11 +155,69 @@ This schema must work for any financial statement worldwide.
 
       try {
         allExtractions.push(JSON.parse(extractedText));
+        // capture a riskAssessment if present
+        const maybeObj = allExtractions.at(-1);
+        if (
+          !riskSnapshot &&
+          maybeObj &&
+          typeof maybeObj === 'object' &&
+          maybeObj.riskAssessment
+        ) {
+          riskSnapshot = maybeObj.riskAssessment;
+        }
       } catch (err) {
         console.warn(
           `⚠️  Failed to parse chunk ${i + 1} as JSON:`,
           err
         );
+      }
+    }
+
+    /* ────────── 2nd‑pass: request credit‑risk snapshot if not captured ────────── */
+    if (!riskSnapshot) {
+      console.log(
+        '🔍 No riskAssessment captured; requesting summary…'
+      );
+      try {
+        const riskResp = await openai.chat.completions.create({
+          model: 'gpt-4-turbo-2024-04-09',
+          temperature: 0.1,
+          max_tokens: 1200,
+          messages: [
+            {
+              role: 'system',
+              content: `
+You are a credit‑risk analyst for SME lending.
+
+Return **valid JSON** in the schema:
+{
+  "header": string,
+  "pillars": {
+    "profitability_cashflow": { "observations": string, "impact": string, "weight": 20, "score": number|null },
+    "leverage":               { "observations": string, "impact": string, "weight": 20, "score": number|null },
+    "liquidity":              { "observations": string, "impact": string, "weight": 20, "score": number|null },
+    "debt_service":           { "observations": string, "impact": string, "weight": 15, "score": number|null },
+    "interest_rate_sensitivity": { "observations": string, "impact": string, "weight": 10, "score": number|null },
+    "concentration_sector":   { "observations": string, "impact": string, "weight": 15, "score": number|null },
+    "governance":             { "observations": string, "impact": string, "weight": 10, "score": number|null }
+  },
+  "weighted_score": number|null,
+  "band": string,
+  "lending_recommendation": string
+}
+
+Compute weighted_score = Σ(weight × score)/100 and select band:
+0–2 “Very Low”, 2–4 “Moderate‑Low”, 4–6 “Moderate”, 6–8 “Elevated”, 8–10 “High”.
+JSON only.`,
+            },
+            { role: 'user', content: fileContent.slice(0, 100_000) },
+          ],
+        });
+
+        const rawRisk = riskResp.choices[0]?.message?.content ?? '{}';
+        riskSnapshot = JSON.parse(rawRisk);
+      } catch (e) {
+        console.warn('⚠️  Risk snapshot generation failed:', e);
       }
     }
 
@@ -183,8 +242,13 @@ This schema must work for any financial statement worldwide.
     }
     /* if nothing parsed, fall back to raw array */
     const finalResult =
-      Object.keys(merged).length > 0
-        ? { metrics_by_year: merged }
+      Object.keys(merged).length > 0 || riskSnapshot
+        ? {
+            ...(Object.keys(merged).length > 0 && {
+              metrics_by_year: merged,
+            }),
+            ...(riskSnapshot && { riskAssessment: riskSnapshot }),
+          }
         : { raw_chunks: allExtractions };
 
     console.log(
