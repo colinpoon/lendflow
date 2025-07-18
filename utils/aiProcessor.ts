@@ -110,6 +110,8 @@ export const extractFinancialData = async (filePath: string) => {
 
       const response = await openai.chat.completions.create({
         model: 'gpt-4-turbo-2024-04-09',
+        temperature: 0,
+        max_tokens: 2_000,
         messages: [
           {
             role: 'system',
@@ -153,8 +155,6 @@ This schema must work for any financial statement worldwide.
             content: textChunks[i],
           },
         ],
-        max_tokens: 2_000,
-        temperature: 0.2,
       });
 
       const extractedText =
