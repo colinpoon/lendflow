@@ -19,8 +19,10 @@ function buildMetricRatios(
     const icr =
       m.interest && m.interest !== 0 ? m.ebitda / m.interest : null;
     const d2e =
-      m.shareholders_equity && m.shareholders_equity !== 0
-        ? (m.expenses ?? 0) / m.shareholders_equity
+      m.total_debt &&
+      m.shareholders_equity &&
+      m.shareholders_equity !== 0
+        ? m.total_debt / m.shareholders_equity
         : null;
     out[yr] = {
       ...m,
@@ -38,15 +40,107 @@ import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
-import fs from 'fs';
 
 const CACHE_DIR = path.join(os.tmpdir(), 'lendflow-cache');
 if (!existsSync(CACHE_DIR)) {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
+  // Use fs from destructured import
+  import('fs').then((fs) =>
+    fs.mkdirSync(CACHE_DIR, { recursive: true })
+  );
 }
 
 function hashBuffer(buffer: Buffer): string {
   return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+// ─────────── helper: split large text into manageable chunks ───────────
+function chunkText(text: string, maxChars: number): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += maxChars) {
+    chunks.push(text.slice(i, i + maxChars));
+  }
+  return chunks;
+}
+
+// ─────────── helper: hash a text chunk ───────────
+function hashChunk(text: string): string {
+  return crypto.createHash('sha256').update(text).digest('hex');
+}
+
+// ────────────── Validation: Sanity checks on financial metrics ──────────────
+function validateMetrics(metrics: Record<string, any>) {
+  const issues: Record<string, string[]> = {};
+  for (const [year, data] of Object.entries<any>(metrics)) {
+    const problems: string[] = [];
+
+    if (
+      data.expenses != null &&
+      data.revenue != null &&
+      data.expenses > data.revenue
+    ) {
+      problems.push('Expenses exceed revenue');
+    }
+    if (
+      data.debt_to_equity_ratio != null &&
+      !isFinite(data.debt_to_equity_ratio)
+    ) {
+      problems.push('Debt-to-equity ratio is not a finite number');
+    }
+    if (
+      data.interest_coverage_ratio != null &&
+      !isFinite(data.interest_coverage_ratio)
+    ) {
+      problems.push('Interest coverage ratio is not a finite number');
+    }
+    if (
+      data.net_income != null &&
+      typeof data.net_income !== 'number'
+    ) {
+      problems.push('Net income is not a number');
+    }
+    if (
+      data.shareholders_equity != null &&
+      typeof data.shareholders_equity !== 'number'
+    ) {
+      problems.push('Shareholders equity is not a number');
+    }
+
+    if (problems.length > 0) {
+      issues[year] = problems;
+    }
+  }
+  return issues;
+}
+
+// ────────────── Validation: Detect scale inconsistencies ──────────────
+function validateScaleInconsistencies(
+  metrics: Record<string, any>
+): string[] {
+  const sampleValues: number[] = [];
+
+  for (const year of Object.keys(metrics)) {
+    const yearMetrics = metrics[year];
+    const values = Object.values(yearMetrics).filter(
+      (v) => typeof v === 'number' && isFinite(v)
+    ) as number[];
+
+    sampleValues.push(...values);
+  }
+
+  if (sampleValues.length === 0) return [];
+
+  const max = Math.max(...sampleValues);
+  const min = Math.min(...sampleValues);
+
+  const ratio = max / Math.max(min, 1); // avoid div-by-zero
+
+  if (ratio > 1000) {
+    return [
+      'Detected unusually large spread in financial values. Possible inconsistent scaling (e.g. mixed thousands and full values).',
+    ];
+  }
+
+  return [];
 }
 
 function getCachedAnalysisPath(hash: string): string {
@@ -68,65 +162,34 @@ export const extractFinancialData = async (filePath: string) => {
       '📂 Path received by extractFinancialData():',
       filePath
     );
-
     if (!filePath) {
       throw new Error(
         '❗ No file path provided to extractFinancialData().'
       );
     }
-
     const resolvedPath = path.resolve(filePath);
     const dataBuffer = readFileSync(resolvedPath);
-    // const fileHash = hashBuffer(dataBuffer);
-    // const cachePath = getCachedAnalysisPath(fileHash);
-    // if (existsSync(cachePath)) {
-    //   console.log('✅ Returning cached analysis.');
-    //   const cached = readFileSync(cachePath, 'utf-8');
-    //   return JSON.parse(cached);
-    // }
-
-    console.log(
-      '📂 Attempting to read file at resolved path:',
-      resolvedPath
-    );
-
     if (!existsSync(resolvedPath)) {
       throw new Error(
         `❗ File not found at resolved path: ${resolvedPath}`
       );
     }
-
     if (!process.env.OPENAI_API_KEY) {
       throw new Error(
         'OpenAI API key is missing. Please configure it in the environment variables.'
       );
     }
-
-    console.log('📚 Checking file type before reading…');
     let fileContent: string;
-
-    // ───────────────────────────── PDF branch ─────────────────────────────
     if (resolvedPath.endsWith('.pdf')) {
-      console.log(
-        '📄 Detected PDF file. Extracting text with pdf‑parse…'
-      );
-      // already read earlier for hashing
-      // Updated logic: try pdf-parse, fall back to pdf2json if needed
-      // Import PDFParser from pdf2json
-      // (placed inside the block to avoid import issues in non-PDF usage)
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // PDF: Try pdf-parse, then pdf2json as fallback
       const PDFParser = (await import('pdf2json')).default;
-
       let { text } = await pdfParse(dataBuffer);
       text = text.trim();
-
       if (!text) {
         console.warn(
           '⚠️ pdf-parse found no text — falling back to pdf2json'
         );
-
         const pdfParser = new PDFParser();
-
         const pdf2Text: string = await new Promise(
           (resolve, reject) => {
             pdfParser.on('pdfParser_dataError', (errData: any) =>
@@ -144,78 +207,50 @@ export const extractFinancialData = async (filePath: string) => {
             pdfParser.parseBuffer(dataBuffer);
           }
         );
-
         if (!pdf2Text) {
           throw new Error(
             '❗ No extractable text found using pdf2json either.'
           );
         }
-
         fileContent = pdf2Text;
         console.log('✅ PDF content extracted via pdf2json.');
       } else {
         fileContent = text;
         console.log('✅ PDF content extracted via pdf-parse.');
       }
-    }
-    // ───────────────────────────── non‑PDF branch ─────────────────────────
-    else {
-      console.log('📚 Reading non‑PDF file as text…');
+    } else {
       fileContent = readFileSync(resolvedPath, 'utf-8').trim();
     }
-
-    // (Global scaleFactor removed; scaling will be handled per-chunk)
-
-    console.log(
-      '📚 File content read successfully. Preparing to chunk…'
-    );
-
-    // ─────────── helper: split large text into manageable chunks ───────────
-    function chunkText(text: string, maxChars: number): string[] {
-      const chunks: string[] = [];
-      for (let i = 0; i < text.length; i += maxChars) {
-        chunks.push(text.slice(i, i + maxChars));
-      }
-      return chunks;
-    }
-
-    const CHUNK_SIZE = 8_000; // ≈2,000 tokens
+    const CHUNK_SIZE = 8_000;
     const textChunks = chunkText(fileContent, CHUNK_SIZE);
     console.log(
-      `✅ Split text into ${textChunks.length} chunks for analysis.`
+      `✅ Prepared ${textChunks.length} text chunk(s) for analysis.`
     );
-
     const allExtractions: any[] = [];
-    let riskSnapshot: any | null = null; // capture first riskAssessment
-
+    let riskSnapshot: any | null = null;
     const seenChunks = new Set<string>();
-
     for (let i = 0; i < textChunks.length; i++) {
       const trimmedChunk = textChunks[i].trim();
-      const hash = crypto
-        .createHash('sha256')
-        .update(trimmedChunk)
-        .digest('hex');
+      const hash = hashChunk(trimmedChunk);
       if (seenChunks.has(hash)) {
-        console.log(`⏩ Skipping duplicate chunk ${i + 1}`);
+        console.log(`⏩ Duplicate chunk ${i + 1} skipped`);
         continue;
       }
       seenChunks.add(hash);
-
       console.log(
-        `🤖 Sending chunk ${i + 1}/${textChunks.length} to OpenAI…`
+        `🤖 Processing chunk ${i + 1}/${textChunks.length}…`
       );
-
       // Detect if this chunk references values "in thousands" or "in 000s"
       const chunkScaleFactor = /in (thousands|000s)/i.test(
         trimmedChunk
       )
         ? 1000
         : 1;
-
       const response = await openai.chat.completions.create({
         model: 'gpt-4-turbo-2024-04-09',
         temperature: 0,
+        // temperature: 0.1,
+        // temperature: 0.2,
         max_tokens: 2_000,
         messages: [
           {
@@ -238,12 +273,13 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "taxes": number|null,
       "depreciation_amortization": number|null,
       "ebitda": number|null,
-      "shareholders_equity": number|null
+      "shareholders_equity": number|null,
+      "total_debt": number|null
     }
   }
 }
 
-• Be flexible in identifying synonyms and alternate phrasing for metrics (e.g. "turnover" = revenue, "retained earnings" may contribute to shareholders_equity).
+• Be flexible in identifying synonyms and alternate phrasing for metrics (e.g. "turnover" = revenue, "retained earnings" may contribute to shareholders_equity, "total liabilities" may indicate total_debt).
 
 RULES  
 • Detect every fiscal year present (e.g. 2025, 2024, 2023) and use it as the JSON key.  
@@ -283,15 +319,16 @@ This schema must work for any financial statement worldwide.
             maybeObj.metrics_by_year
           )) {
             for (const [key, value] of Object.entries(metrics)) {
-              if (typeof value === 'number') {
-                metrics[key] =
-                  Math.round(value * chunkScaleFactor * 100) / 100;
+              if (
+                typeof value === 'number' &&
+                Number.isFinite(value)
+              ) {
+                metrics[key] = value;
               }
             }
           }
         }
         allExtractions.push(maybeObj);
-        // capture a riskAssessment if present
         if (
           !riskSnapshot &&
           maybeObj &&
@@ -308,8 +345,7 @@ This schema must work for any financial statement worldwide.
       }
     }
 
-    /* ────────── 2nd‑pass: request credit‑risk snapshot if not captured ────────── */
-    /* ────────────── consolidate all partial JSONs ────────────── */
+    // Consolidate all partial JSONs
     const merged: Record<string, any> = {};
     for (const obj of allExtractions) {
       if (obj && typeof obj === 'object' && obj.metrics_by_year) {
@@ -318,7 +354,6 @@ This schema must work for any financial statement worldwide.
         )) {
           if (!merged[yr]) merged[yr] = { ...metrics };
           else {
-            // fill nulls with any non‑null values found in later chunks
             for (const key of Object.keys(metrics)) {
               if (merged[yr][key] == null && metrics[key] != null) {
                 merged[yr][key] = metrics[key];
@@ -328,68 +363,53 @@ This schema must work for any financial statement worldwide.
         }
       }
     }
-    // (Scaling already applied per chunk; global scaling block removed)
-    // for (const [year, metrics] of Object.entries(merged)) {
-    //   for (const [key, value] of Object.entries(metrics)) {
-    //     if (typeof value === 'number') {
-    //       metrics[key] = Math.round(value * scaleFactor * 100) / 100;
-    //     }
+    //************************* */
+    // 📊 DEBUG: Log shareholders_equity and total_debt for each year
+    // for (const [year, data] of Object.entries(merged)) {
+    //   console.log(`📊 Year: ${year}`);
+    //   console.log(
+    //     `  • Shareholders' Equity: ${data.shareholders_equity}`
+    //   );
+    //   console.log(`  • Total Debt: ${data.total_debt ?? 'N/A'}`);
+    //   if (
+    //     data.total_debt &&
+    //     data.shareholders_equity &&
+    //     data.shareholders_equity !== 0
+    //   ) {
+    //     data.debt_to_equity_ratio =
+    //       data.total_debt / data.shareholders_equity;
     //   }
     // }
-    // build deterministic ratios for risk analysis
-    const ratiosByYear = buildMetricRatios(merged);
 
-    // ────────────── Validation: Sanity checks on financial metrics ──────────────
-    function validateMetrics(metrics: Record<string, any>) {
-      const issues: Record<string, string[]> = {};
-      for (const [year, data] of Object.entries<any>(metrics)) {
-        const problems: string[] = [];
+    // Freeze the financial metrics as canonical input for risk assessment caching
+    const canonicalMetricsJson = JSON.stringify(
+      merged,
+      Object.keys(merged).sort()
+    );
+    console.log('🔎 Canonical Metrics JSON:', canonicalMetricsJson);
+    const canonicalMetricsHash = crypto
+      .createHash('sha256')
+      .update(canonicalMetricsJson)
+      .digest('hex');
+    console.log('🔑 Metrics Hash for Cache:', canonicalMetricsHash);
+    const cachedRiskPath = getCachedAnalysisPath(
+      `${canonicalMetricsHash}-risk`
+    );
 
-        if (
-          data.expenses != null &&
-          data.revenue != null &&
-          data.expenses > data.revenue
-        ) {
-          problems.push('Expenses exceed revenue');
-        }
-        if (
-          data.debt_to_equity_ratio != null &&
-          !isFinite(data.debt_to_equity_ratio)
-        ) {
-          problems.push(
-            'Debt-to-equity ratio is not a finite number'
-          );
-        }
-        if (
-          data.interest_coverage_ratio != null &&
-          !isFinite(data.interest_coverage_ratio)
-        ) {
-          problems.push(
-            'Interest coverage ratio is not a finite number'
-          );
-        }
-        if (
-          data.net_income != null &&
-          typeof data.net_income !== 'number'
-        ) {
-          problems.push('Net income is not a number');
-        }
-        if (
-          data.shareholders_equity != null &&
-          typeof data.shareholders_equity !== 'number'
-        ) {
-          problems.push('Shareholders equity is not a number');
-        }
-
-        if (problems.length > 0) {
-          issues[year] = problems;
-        }
+    // let riskSnapshot: any | null = null;
+    if (existsSync(cachedRiskPath)) {
+      try {
+        const riskData = readFileSync(cachedRiskPath, 'utf-8');
+        riskSnapshot = JSON.parse(riskData);
+        console.log('♻️ Reusing cached risk assessment');
+      } catch (e) {
+        console.warn('⚠️ Failed to load cached risk snapshot:', e);
       }
-      return issues;
     }
 
+    const ratiosByYear = buildMetricRatios(merged);
     const validationIssues = validateMetrics(ratiosByYear);
-
+    const scaleIssues = validateScaleInconsistencies(ratiosByYear);
     if (!riskSnapshot) {
       console.log(
         '🔍 No riskAssessment captured; requesting summary…'
@@ -397,7 +417,7 @@ This schema must work for any financial statement worldwide.
       try {
         const riskResp = await openai.chat.completions.create({
           model: 'gpt-4-turbo-2024-04-09',
-          temperature: 0, // deterministic
+          temperature: 0,
           max_tokens: 2000,
           messages: [
             {
@@ -445,35 +465,45 @@ Use any information available from the financial statement — including governa
       } catch (e) {
         console.warn('⚠️  Risk snapshot generation failed:', e);
       }
+      // After riskSnapshot is generated, cache the result
+      if (riskSnapshot) {
+        try {
+          import('fs').then((fs) =>
+            fs.writeFileSync(
+              cachedRiskPath,
+              JSON.stringify(riskSnapshot, null, 2),
+              'utf-8'
+            )
+          );
+        } catch (e) {
+          console.warn('⚠️ Failed to write risk cache file:', e);
+        }
+      }
     }
 
-    /* if nothing parsed, fall back to raw array */
-    const finalResult =
-      Object.keys(merged).length > 0 || riskSnapshot
-        ? {
-            ...(Object.keys(merged).length > 0 && {
-              metrics_by_year: merged,
-            }),
-            ...(riskSnapshot && { riskAssessment: riskSnapshot }),
-            ...(Object.keys(validationIssues).length > 0 && {
-              validation_issues: validationIssues,
-            }),
-          }
-        : { raw_chunks: allExtractions };
-
-    // Save to cache
-    try {
-      // fs.writeFileSync(
-      //   cachePath,
-      //   JSON.stringify(finalResult, null, 2),
-      //   'utf-8'
-      // );
-    } catch (err) {
-      console.warn('⚠️ Failed to write cache:', err);
+    let finalResult: any;
+    if (Object.keys(merged).length > 0 || riskSnapshot) {
+      finalResult = {
+        ...(Object.keys(merged).length > 0 && {
+          metrics_by_year: merged,
+        }),
+        ...(riskSnapshot && { riskAssessment: riskSnapshot }),
+        ...(Object.keys(validationIssues).length > 0 && {
+          validation_issues: validationIssues,
+        }),
+        ...(scaleIssues.length > 0 && {
+          validation_issues: {
+            ...validationIssues,
+            scale: scaleIssues,
+          },
+        }),
+      };
+    } else {
+      finalResult = { raw_chunks: allExtractions };
     }
-
+    // (Cache writing logic omitted)
     console.log(
-      '✅ All chunks processed. Returning combined extractions.'
+      '✅ Chunk processing complete. Returning combined extraction.'
     );
     return finalResult;
   } catch (error: any) {

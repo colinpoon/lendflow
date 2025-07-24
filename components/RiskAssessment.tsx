@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { fmtCurrency } from '@/utils/format';
+import { fmtCurrency, sanitizeObservationText } from '@/utils/format';
 
 const PILLAR_KEYS = [
   'profitability_cashflow',
@@ -64,9 +64,11 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
           {PILLAR_KEYS.map((key) => {
             const p = data.pillars[key] as PillarScore | undefined;
             const obs =
-              typeof p?.observations === 'number'
+              typeof p?.observations === 'string'
+                ? sanitizeObservationText(p.observations)
+                : typeof p?.observations === 'number'
                 ? fmtCurrency(p.observations)
-                : p?.observations ?? '—';
+                : '—';
             const impact =
               typeof p?.impact === 'string' ? p.impact : '—';
             const score =
