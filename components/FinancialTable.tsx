@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-
+import { fmtCurrency } from '@/utils/format';
 interface YearMetrics {
+  revenue: number | null;
   net_income: number | null;
   expenses: number | null;
   profit_margins: number | null;
@@ -10,6 +11,7 @@ interface YearMetrics {
   taxes: number | null;
   depreciation_amortization: number | null;
   ebitda: number | null;
+  shareholders_equity: number | null;
 }
 
 interface FinancialTableProps {
@@ -18,6 +20,7 @@ interface FinancialTableProps {
 }
 
 const rows = [
+  { key: 'revenue', label: 'Revenue' },
   { key: 'net_income', label: 'Net Income' },
   { key: 'expenses', label: 'Expenses' },
   { key: 'profit_margins', label: 'Profit Margins' },
@@ -28,16 +31,8 @@ const rows = [
     label: 'Depreciation & Amort.',
   },
   { key: 'ebitda', label: 'EBITDA' },
+  { key: 'shareholders_equity', label: "Shareholders' Equity" },
 ];
-
-const fmtCurrency = (v: number | null | undefined) =>
-  v == null
-    ? '—'
-    : v.toLocaleString(undefined, {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0,
-      });
 
 const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   if (
@@ -75,7 +70,13 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               {years.map((y) => (
                 <td key={y} className="border p-2 text-right">
                   {fmtCurrency(
-                    (data.metrics_by_year[y] as any)?.[row.key]
+                    typeof (data.metrics_by_year[y] as any)?.[
+                      row.key
+                    ] === 'string'
+                      ? parseFloat(
+                          (data.metrics_by_year[y] as any)?.[row.key]
+                        )
+                      : (data.metrics_by_year[y] as any)?.[row.key]
                   )}
                 </td>
               ))}
