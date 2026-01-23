@@ -26,7 +26,7 @@ interface FinancialTableProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
 }
 
-const rows = [
+const rows: { key: keyof YearMetrics; label: string }[] = [
   { key: 'revenue', label: 'Revenue' },
   { key: 'net_income', label: 'Net Income' },
   { key: 'expenses', label: 'Expenses' },
@@ -39,6 +39,13 @@ const rows = [
   { key: 'senior_debt', label: 'Senior Debt' },
   { key: 'shareholders_equity', label: "Shareholders' Equity" },
 ];
+
+const getMetricValue = (metrics: YearMetrics, key: keyof YearMetrics): number | null => {
+  const value = metrics[key];
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return parseFloat(value) || null;
+  return typeof value === 'number' ? value : null;
+};
 
 const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   if (
@@ -75,15 +82,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               <td className="border p-2">{row.label}</td>
               {years.map((y) => (
                 <td key={y} className="border p-2 text-right">
-                  {fmtCurrency(
-                    typeof (data.metrics_by_year[y] as Record<string, number | string | null>)?.[
-                      row.key
-                    ] === 'string'
-                      ? parseFloat(
-                          (data.metrics_by_year[y] as Record<string, string>)?.[row.key]
-                        )
-                      : (data.metrics_by_year[y] as Record<string, number | null>)?.[row.key]
-                  )}
+                  {fmtCurrency(getMetricValue(data.metrics_by_year[y], row.key))}
                 </td>
               ))}
             </tr>

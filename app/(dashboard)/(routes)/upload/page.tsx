@@ -141,97 +141,51 @@ const Home = () => {
 
         <TabsContent value="analysis" key="analysis">
           {financialData && (
-            <div className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle>Debt Health Indicators</CardTitle>
+                  <CardTitle>Financial Table</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <DebtHealthMeters data={financialData} />
+                  <FinancialTable data={financialData} />
                 </CardContent>
               </Card>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Financial Table</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FinancialTable data={financialData} />
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>EBITDA Analysis</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <EBITDA data={financialData} />
-                  </CardContent>
-                </Card>
-              </div>
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle>EBITDA Analysis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <EBITDA data={financialData} />
+                </CardContent>
+              </Card>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="credit" key="credit">
           {riskData ? (
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Credit‑Risk Snapshot</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RiskAssessment data={riskData} />
-                {financialData?.metrics_by_year && (
-                  <div className="mt-6">
-                    <h2 className="text-xl font-semibold mb-4">
-                      Key Ratios by Year
-                    </h2>
-                    <div className="grid grid-cols-2 gap-4">
-                      {Object.entries(
-                        financialData.metrics_by_year
-                      ).map(([year, metrics]: [string, any]) => {
-                        const interestCoverage =
-                          metrics.ebitda && metrics.interest
-                            ? (
-                                metrics.ebitda / metrics.interest
-                              ).toFixed(2)
-                            : 'N/A';
-                        const debtToEquity =
-                          metrics.total_debt &&
-                          metrics.shareholders_equity
-                            ? (
-                                metrics.total_debt /
-                                metrics.shareholders_equity
-                              ).toFixed(2)
-                            : 'N/A';
+            <div className="space-y-6">
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle>Credit‑Risk Snapshot</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RiskAssessment data={riskData} />
+                </CardContent>
+              </Card>
 
-                        return (
-                          <div
-                            key={year}
-                            className="border p-4 rounded shadow-sm"
-                          >
-                            <h3 className="text-lg font-bold mb-2">
-                              {year}
-                            </h3>
-                            <p>
-                              <strong>
-                                Interest Coverage Ratio:
-                              </strong>{' '}
-                              {interestCoverage}
-                            </p>
-                            <p>
-                              <strong>Debt-to-Equity Ratio:</strong>{' '}
-                              {debtToEquity}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              {financialData && (
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Debt Health Indicators</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <DebtHealthMeters data={financialData} />
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           ) : (
             <p className="text-gray-500">
               No risk assessment available.
