@@ -20,7 +20,12 @@ interface DebtHealthMetersProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
 }
 
-type HealthLevel = 'excellent' | 'good' | 'adequate' | 'weak' | 'poor';
+type HealthLevel =
+  | 'excellent'
+  | 'good'
+  | 'adequate'
+  | 'weak'
+  | 'poor';
 
 const formatCurrency = (value: number | null): string => {
   if (value == null) return 'N/A';
@@ -33,15 +38,23 @@ const formatCurrency = (value: number | null): string => {
 
 const getRatingLabel = (level: HealthLevel): string => {
   switch (level) {
-    case 'excellent': return 'Excellent';
-    case 'good': return 'Great';
-    case 'adequate': return 'Good';
-    case 'weak': return 'Fair';
-    case 'poor': return 'Poor';
+    case 'excellent':
+      return 'Excellent';
+    case 'good':
+      return 'Great';
+    case 'adequate':
+      return 'Good';
+    case 'weak':
+      return 'Fair';
+    case 'poor':
+      return 'Poor';
   }
 };
 
-const getDSCRReasoning = (value: number, level: HealthLevel): string => {
+const getDSCRReasoning = (
+  value: number,
+  level: HealthLevel
+): string => {
   switch (level) {
     case 'excellent':
       return `Very strong cash flow with ${value.toFixed(2)}x coverage. The company generates more than twice the income needed to cover debt obligations.`;
@@ -56,7 +69,10 @@ const getDSCRReasoning = (value: number, level: HealthLevel): string => {
   }
 };
 
-const getDebtEBITDAReasoning = (value: number, level: HealthLevel): string => {
+const getDebtEBITDAReasoning = (
+  value: number,
+  level: HealthLevel
+): string => {
   switch (level) {
     case 'excellent':
       return `Very low leverage at ${value.toFixed(2)}x. High financial flexibility with a conservative capital structure.`;
@@ -71,7 +87,10 @@ const getDebtEBITDAReasoning = (value: number, level: HealthLevel): string => {
   }
 };
 
-const getDebtCapitalReasoning = (value: number, level: HealthLevel): string => {
+const getDebtCapitalReasoning = (
+  value: number,
+  level: HealthLevel
+): string => {
   const pct = (value * 100).toFixed(0);
   switch (level) {
     case 'excellent':
@@ -100,10 +119,14 @@ interface HealthConfig {
 // Fair (1.0–1.24): Break-even or slim cushion, stricter terms may apply
 // Poor (Below 1.0): Insufficient income to cover debt, high risk of default
 const getDSCRHealth = (value: number): HealthConfig => {
-  if (value >= 2.0) return { level: 'excellent', color: '#22c55e', percentage: 100 };
-  if (value >= 1.5) return { level: 'good', color: '#84cc16', percentage: 80 };
-  if (value >= 1.25) return { level: 'adequate', color: '#eab308', percentage: 60 };
-  if (value >= 1.0) return { level: 'weak', color: '#f97316', percentage: 40 };
+  if (value >= 2.0)
+    return { level: 'excellent', color: '#22c55e', percentage: 100 };
+  if (value >= 1.5)
+    return { level: 'good', color: '#84cc16', percentage: 80 };
+  if (value >= 1.25)
+    return { level: 'adequate', color: '#eab308', percentage: 60 };
+  if (value >= 1.0)
+    return { level: 'weak', color: '#f97316', percentage: 40 };
   return { level: 'poor', color: '#ef4444', percentage: 20 };
 };
 
@@ -114,10 +137,14 @@ const getDSCRHealth = (value: number): HealthConfig => {
 // Poor/Elevated (3.0x to 4.0x): High leverage, risk if cash flows decline, lenders scrutinize carefully
 // Bad/Distressed (>4.0x): High risk of financial distress, potential covenant breaches
 const getSeniorDebtEBITDAHealth = (value: number): HealthConfig => {
-  if (value <= 1.5) return { level: 'excellent', color: '#22c55e', percentage: 100 };
-  if (value <= 2.5) return { level: 'good', color: '#84cc16', percentage: 80 };
-  if (value <= 3.0) return { level: 'adequate', color: '#eab308', percentage: 60 };
-  if (value <= 4.0) return { level: 'weak', color: '#f97316', percentage: 40 };
+  if (value <= 1.5)
+    return { level: 'excellent', color: '#22c55e', percentage: 100 };
+  if (value <= 2.5)
+    return { level: 'good', color: '#84cc16', percentage: 80 };
+  if (value <= 3.0)
+    return { level: 'adequate', color: '#eab308', percentage: 60 };
+  if (value <= 4.0)
+    return { level: 'weak', color: '#f97316', percentage: 40 };
   return { level: 'poor', color: '#ef4444', percentage: 20 };
 };
 
@@ -128,10 +155,14 @@ const getSeniorDebtEBITDAHealth = (value: number): HealthConfig => {
 // Poor/High Risk (0.6–0.7+): High leverage, borrowing may become difficult, vulnerable to downturns
 // Bad/Insolvent (>1.0): Total debt exceeds equity, potential technical insolvency
 const getTotalDebtCapitalHealth = (value: number): HealthConfig => {
-  if (value < 0.3) return { level: 'excellent', color: '#22c55e', percentage: 100 };
-  if (value <= 0.5) return { level: 'good', color: '#84cc16', percentage: 80 };
-  if (value <= 0.6) return { level: 'adequate', color: '#eab308', percentage: 60 };
-  if (value <= 0.7) return { level: 'weak', color: '#f97316', percentage: 40 };
+  if (value < 0.3)
+    return { level: 'excellent', color: '#22c55e', percentage: 100 };
+  if (value <= 0.5)
+    return { level: 'good', color: '#84cc16', percentage: 80 };
+  if (value <= 0.6)
+    return { level: 'adequate', color: '#eab308', percentage: 60 };
+  if (value <= 0.7)
+    return { level: 'weak', color: '#f97316', percentage: 40 };
   return { level: 'poor', color: '#ef4444', percentage: 20 };
 };
 
@@ -158,8 +189,15 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
   if (value == null) {
     return (
       <div className="flex flex-col items-center p-4">
-        <div className="relative" style={{ width: size, height: size }}>
-          <svg width={size} height={size} className="transform -rotate-90">
+        <div
+          className="relative"
+          style={{ width: size, height: size }}
+        >
+          <svg
+            width={size}
+            height={size}
+            className="transform -rotate-90"
+          >
             <circle
               cx={size / 2}
               cy={size / 2}
@@ -170,7 +208,9 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-gray-400">N/A</span>
+            <span className="text-2xl font-bold text-gray-400">
+              N/A
+            </span>
             <span className="text-sm text-gray-500">{label}</span>
           </div>
         </div>
@@ -179,13 +219,18 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
   }
 
   const health = getHealth(value);
-  const strokeDashoffset = circumference - (health.percentage / 100) * circumference;
+  const strokeDashoffset =
+    circumference - (health.percentage / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center p-4">
       <div className="relative" style={{ width: size, height: size }}>
         {/* Background circle with tick marks */}
-        <svg width={size} height={size} className="transform -rotate-90">
+        <svg
+          width={size}
+          height={size}
+          className="transform -rotate-90"
+        >
           {/* Background track */}
           <circle
             cx={size / 2}
@@ -225,10 +270,18 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
             const outerRadius = radius + strokeWidth / 2 + 2;
             const innerRadius = outerRadius - tickLength;
 
-            const x1 = size / 2 + outerRadius * Math.cos((angle * Math.PI) / 180);
-            const y1 = size / 2 + outerRadius * Math.sin((angle * Math.PI) / 180);
-            const x2 = size / 2 + innerRadius * Math.cos((angle * Math.PI) / 180);
-            const y2 = size / 2 + innerRadius * Math.sin((angle * Math.PI) / 180);
+            const x1 =
+              size / 2 +
+              outerRadius * Math.cos((angle * Math.PI) / 180);
+            const y1 =
+              size / 2 +
+              outerRadius * Math.sin((angle * Math.PI) / 180);
+            const x2 =
+              size / 2 +
+              innerRadius * Math.cos((angle * Math.PI) / 180);
+            const y2 =
+              size / 2 +
+              innerRadius * Math.sin((angle * Math.PI) / 180);
 
             return (
               <line
@@ -249,7 +302,9 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
           <span className="text-3xl font-bold text-gray-800">
             {formatValue(value)}
           </span>
-          <span className="text-sm text-gray-600 text-center px-2">{label}</span>
+          <span className="text-sm text-gray-600 text-center px-2">
+            {label}
+          </span>
         </div>
       </div>
       {subtitle && (
@@ -259,9 +314,17 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
   );
 };
 
-const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
-  if (!data || !data.metrics_by_year || Object.keys(data.metrics_by_year).length === 0) {
-    return <p className="text-gray-500">No debt metrics available.</p>;
+const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
+  data,
+}) => {
+  if (
+    !data ||
+    !data.metrics_by_year ||
+    Object.keys(data.metrics_by_year).length === 0
+  ) {
+    return (
+      <p className="text-gray-500">No debt metrics available.</p>
+    );
   }
 
   // Get the most recent year's data
@@ -272,8 +335,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Debt Health Indicators</h2>
-        <span className="text-sm text-gray-500">Fiscal Year {latestYear}</span>
+        {/* <h2 className="text-lg font-semibold">Debt Health Indicators</h2> */}
+        <span className="text-sm text-gray-500">
+          Fiscal Year {latestYear}
+        </span>
       </div>
 
       <div className="flex flex-wrap justify-center gap-8">
@@ -304,16 +369,22 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
 
       {/* Calculation Breakdown */}
       <div className="mt-8 space-y-4">
-        <h3 className="text-md font-semibold text-gray-800 border-b pb-2">Calculation Details</h3>
+        <h3 className="text-md font-semibold text-gray-800 border-b pb-2">
+          Calculation Details
+        </h3>
 
         {/* DSCR Calculation */}
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-gray-700">Debt Service Coverage Ratio (DSCR)</h4>
+            <h4 className="font-semibold text-gray-700">
+              Debt Service Coverage Ratio (DSCR)
+            </h4>
             {metrics.dscr != null && (
               <span
                 className="px-2 py-1 rounded text-xs text-white font-medium"
-                style={{ backgroundColor: getDSCRHealth(metrics.dscr).color }}
+                style={{
+                  backgroundColor: getDSCRHealth(metrics.dscr).color,
+                }}
               >
                 {getRatingLabel(getDSCRHealth(metrics.dscr).level)}
               </span>
@@ -324,48 +395,80 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
               DSCR = EBITDA ÷ Debt Service Payments
             </span>
           </div>
-          {metrics.ebitda != null && (metrics.debt_service_payments != null || metrics.interest != null) ? (
+          {metrics.ebitda != null &&
+          (metrics.debt_service_payments != null ||
+            metrics.interest != null) ? (
             <div className="text-sm space-y-1">
               <div className="flex justify-between">
                 <span className="text-gray-500">EBITDA:</span>
-                <span className="font-medium">{formatCurrency(metrics.ebitda)}</span>
+                <span className="font-medium">
+                  {formatCurrency(metrics.ebitda)}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Debt Service Payments:</span>
+                <span className="text-gray-500">
+                  Debt Service Payments:
+                </span>
                 <span className="font-medium">
-                  {formatCurrency(metrics.debt_service_payments ?? metrics.interest)}
-                  {metrics.debt_service_payments == null && metrics.interest != null && (
-                    <span className="text-xs text-gray-400 ml-1">(using interest)</span>
+                  {formatCurrency(
+                    metrics.debt_service_payments ?? metrics.interest
                   )}
+                  {metrics.debt_service_payments == null &&
+                    metrics.interest != null && (
+                      <span className="text-xs text-gray-400 ml-1">
+                        (using interest)
+                      </span>
+                    )}
                 </span>
               </div>
               <div className="flex justify-between border-t pt-1 mt-2">
-                <span className="text-gray-700 font-medium">Result:</span>
+                <span className="text-gray-700 font-medium">
+                  Result:
+                </span>
                 <span className="font-bold text-gray-900">
-                  {formatCurrency(metrics.ebitda)} ÷ {formatCurrency(metrics.debt_service_payments ?? metrics.interest)} = {metrics.dscr?.toFixed(2)}x
+                  {formatCurrency(metrics.ebitda)} ÷{' '}
+                  {formatCurrency(
+                    metrics.debt_service_payments ?? metrics.interest
+                  )}{' '}
+                  = {metrics.dscr?.toFixed(2)}x
                 </span>
               </div>
               {metrics.dscr != null && (
                 <p className="text-xs text-gray-500 mt-2 italic">
-                  {getDSCRReasoning(metrics.dscr, getDSCRHealth(metrics.dscr).level)}
+                  {getDSCRReasoning(
+                    metrics.dscr,
+                    getDSCRHealth(metrics.dscr).level
+                  )}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 italic">Insufficient data to calculate DSCR</p>
+            <p className="text-sm text-gray-400 italic">
+              Insufficient data to calculate DSCR
+            </p>
           )}
         </div>
 
         {/* Senior Debt / EBITDA Calculation */}
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-gray-700">Senior Debt / EBITDA</h4>
+            <h4 className="font-semibold text-gray-700">
+              Senior Debt / EBITDA
+            </h4>
             {metrics.senior_debt_to_ebitda != null && (
               <span
                 className="px-2 py-1 rounded text-xs text-white font-medium"
-                style={{ backgroundColor: getSeniorDebtEBITDAHealth(metrics.senior_debt_to_ebitda).color }}
+                style={{
+                  backgroundColor: getSeniorDebtEBITDAHealth(
+                    metrics.senior_debt_to_ebitda
+                  ).color,
+                }}
               >
-                {getRatingLabel(getSeniorDebtEBITDAHealth(metrics.senior_debt_to_ebitda).level)}
+                {getRatingLabel(
+                  getSeniorDebtEBITDAHealth(
+                    metrics.senior_debt_to_ebitda
+                  ).level
+                )}
               </span>
             )}
           </div>
@@ -381,91 +484,149 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                 <span className="font-medium">
                   {formatCurrency(metrics.senior_debt)}
                   {metrics.senior_debt === metrics.total_debt && (
-                    <span className="text-xs text-gray-400 ml-1">(= Total Debt)</span>
+                    <span className="text-xs text-gray-400 ml-1">
+                      (= Total Debt)
+                    </span>
                   )}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">EBITDA:</span>
-                <span className="font-medium">{formatCurrency(metrics.ebitda)}</span>
+                <span className="font-medium">
+                  {formatCurrency(metrics.ebitda)}
+                </span>
               </div>
               <div className="flex justify-between border-t pt-1 mt-2">
-                <span className="text-gray-700 font-medium">Result:</span>
+                <span className="text-gray-700 font-medium">
+                  Result:
+                </span>
                 <span className="font-bold text-gray-900">
-                  {formatCurrency(metrics.senior_debt)} ÷ {formatCurrency(metrics.ebitda)} = {metrics.senior_debt_to_ebitda?.toFixed(2)}x
+                  {formatCurrency(metrics.senior_debt)} ÷{' '}
+                  {formatCurrency(metrics.ebitda)} ={' '}
+                  {metrics.senior_debt_to_ebitda?.toFixed(2)}x
                 </span>
               </div>
               {metrics.senior_debt_to_ebitda != null && (
                 <p className="text-xs text-gray-500 mt-2 italic">
-                  {getDebtEBITDAReasoning(metrics.senior_debt_to_ebitda, getSeniorDebtEBITDAHealth(metrics.senior_debt_to_ebitda).level)}
+                  {getDebtEBITDAReasoning(
+                    metrics.senior_debt_to_ebitda,
+                    getSeniorDebtEBITDAHealth(
+                      metrics.senior_debt_to_ebitda
+                    ).level
+                  )}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 italic">Insufficient data to calculate Debt/EBITDA</p>
+            <p className="text-sm text-gray-400 italic">
+              Insufficient data to calculate Debt/EBITDA
+            </p>
           )}
         </div>
 
         {/* Total Debt / Total Capital Calculation */}
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-gray-700">Total Debt / Total Capital</h4>
+            <h4 className="font-semibold text-gray-700">
+              Total Debt / Total Capital
+            </h4>
             {metrics.total_debt_to_capital != null && (
               <span
                 className="px-2 py-1 rounded text-xs text-white font-medium"
-                style={{ backgroundColor: getTotalDebtCapitalHealth(metrics.total_debt_to_capital).color }}
+                style={{
+                  backgroundColor: getTotalDebtCapitalHealth(
+                    metrics.total_debt_to_capital
+                  ).color,
+                }}
               >
-                {getRatingLabel(getTotalDebtCapitalHealth(metrics.total_debt_to_capital).level)}
+                {getRatingLabel(
+                  getTotalDebtCapitalHealth(
+                    metrics.total_debt_to_capital
+                  ).level
+                )}
               </span>
             )}
           </div>
           <div className="text-sm text-gray-600 mb-3">
             <span className="font-mono bg-white px-2 py-1 rounded border">
-              Debt/Capital = Total Debt ÷ (Total Debt + Shareholders&apos; Equity)
+              Debt/Capital = Total Debt ÷ (Total Debt +
+              Shareholders&apos; Equity)
             </span>
           </div>
-          {metrics.total_debt != null && metrics.shareholders_equity != null ? (
+          {metrics.total_debt != null &&
+          metrics.shareholders_equity != null ? (
             <div className="text-sm space-y-1">
               <div className="flex justify-between">
                 <span className="text-gray-500">Total Debt:</span>
-                <span className="font-medium">{formatCurrency(metrics.total_debt)}</span>
+                <span className="font-medium">
+                  {formatCurrency(metrics.total_debt)}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Shareholders&apos; Equity:</span>
-                <span className="font-medium">{formatCurrency(metrics.shareholders_equity)}</span>
+                <span className="text-gray-500">
+                  Shareholders&apos; Equity:
+                </span>
+                <span className="font-medium">
+                  {formatCurrency(metrics.shareholders_equity)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Total Capital:</span>
-                <span className="font-medium">{formatCurrency(metrics.total_debt + metrics.shareholders_equity)}</span>
+                <span className="font-medium">
+                  {formatCurrency(
+                    metrics.total_debt + metrics.shareholders_equity
+                  )}
+                </span>
               </div>
               <div className="flex justify-between border-t pt-1 mt-2">
-                <span className="text-gray-700 font-medium">Result:</span>
+                <span className="text-gray-700 font-medium">
+                  Result:
+                </span>
                 <span className="font-bold text-gray-900">
-                  {formatCurrency(metrics.total_debt)} ÷ {formatCurrency(metrics.total_debt + metrics.shareholders_equity)} = {((metrics.total_debt_to_capital ?? 0) * 100).toFixed(0)}%
+                  {formatCurrency(metrics.total_debt)} ÷{' '}
+                  {formatCurrency(
+                    metrics.total_debt + metrics.shareholders_equity
+                  )}{' '}
+                  ={' '}
+                  {(
+                    (metrics.total_debt_to_capital ?? 0) * 100
+                  ).toFixed(0)}
+                  %
                 </span>
               </div>
               {metrics.total_debt_to_capital != null && (
                 <p className="text-xs text-gray-500 mt-2 italic">
-                  {getDebtCapitalReasoning(metrics.total_debt_to_capital, getTotalDebtCapitalHealth(metrics.total_debt_to_capital).level)}
+                  {getDebtCapitalReasoning(
+                    metrics.total_debt_to_capital,
+                    getTotalDebtCapitalHealth(
+                      metrics.total_debt_to_capital
+                    ).level
+                  )}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 italic">Insufficient data to calculate Debt/Capital</p>
+            <p className="text-sm text-gray-400 italic">
+              Insufficient data to calculate Debt/Capital
+            </p>
           )}
         </div>
       </div>
 
       {years.length > 1 && (
         <div className="mt-6 pt-4 border-t">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Historical Comparison</h3>
+          <h3 className="text-sm font-medium text-gray-700 mb-3">
+            Historical Comparison
+          </h3>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-2 pr-4">Metric</th>
                   {years.map((yr) => (
-                    <th key={yr} className="text-right py-2 px-2">{yr}</th>
+                    <th key={yr} className="text-right py-2 px-2">
+                      {yr}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -474,7 +635,8 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                   <td className="py-2 pr-4">DSCR</td>
                   {years.map((yr) => {
                     const val = data.metrics_by_year[yr].dscr;
-                    const health = val != null ? getDSCRHealth(val) : null;
+                    const health =
+                      val != null ? getDSCRHealth(val) : null;
                     return (
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
@@ -484,7 +646,9 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                           >
                             {val.toFixed(2)}x
                           </span>
-                        ) : '—'}
+                        ) : (
+                          '—'
+                        )}
                       </td>
                     );
                   })}
@@ -492,8 +656,12 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                 <tr className="border-b">
                   <td className="py-2 pr-4">Senior Debt / EBITDA</td>
                   {years.map((yr) => {
-                    const val = data.metrics_by_year[yr].senior_debt_to_ebitda;
-                    const health = val != null ? getSeniorDebtEBITDAHealth(val) : null;
+                    const val =
+                      data.metrics_by_year[yr].senior_debt_to_ebitda;
+                    const health =
+                      val != null
+                        ? getSeniorDebtEBITDAHealth(val)
+                        : null;
                     return (
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
@@ -503,7 +671,9 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                           >
                             {val.toFixed(2)}x
                           </span>
-                        ) : '—'}
+                        ) : (
+                          '—'
+                        )}
                       </td>
                     );
                   })}
@@ -511,8 +681,12 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                 <tr>
                   <td className="py-2 pr-4">Total Debt / Capital</td>
                   {years.map((yr) => {
-                    const val = data.metrics_by_year[yr].total_debt_to_capital;
-                    const health = val != null ? getTotalDebtCapitalHealth(val) : null;
+                    const val =
+                      data.metrics_by_year[yr].total_debt_to_capital;
+                    const health =
+                      val != null
+                        ? getTotalDebtCapitalHealth(val)
+                        : null;
                     return (
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
@@ -522,7 +696,9 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                           >
                             {(val * 100).toFixed(0)}%
                           </span>
-                        ) : '—'}
+                        ) : (
+                          '—'
+                        )}
                       </td>
                     );
                   })}
