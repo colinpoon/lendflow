@@ -3,9 +3,17 @@
 import React from 'react';
 
 interface YearMetrics {
+  // Calculated ratios
   dscr: number | null;
   senior_debt_to_ebitda: number | null;
   total_debt_to_capital: number | null;
+  // Source data for calculations
+  ebitda: number | null;
+  debt_service_payments: number | null;
+  interest: number | null;
+  senior_debt: number | null;
+  total_debt: number | null;
+  shareholders_equity: number | null;
 }
 
 interface DebtHealthMetersProps {
@@ -13,6 +21,71 @@ interface DebtHealthMetersProps {
 }
 
 type HealthLevel = 'excellent' | 'good' | 'adequate' | 'weak' | 'poor';
+
+const formatCurrency = (value: number | null): string => {
+  if (value == null) return 'N/A';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const getRatingLabel = (level: HealthLevel): string => {
+  switch (level) {
+    case 'excellent': return 'Excellent';
+    case 'good': return 'Great';
+    case 'adequate': return 'Good';
+    case 'weak': return 'Fair';
+    case 'poor': return 'Poor';
+  }
+};
+
+const getDSCRReasoning = (value: number, level: HealthLevel): string => {
+  switch (level) {
+    case 'excellent':
+      return `Very strong cash flow with ${value.toFixed(2)}x coverage. The company generates more than twice the income needed to cover debt obligations.`;
+    case 'good':
+      return `Highly secure with ${value.toFixed(2)}x coverage. Strong cash flow indicates low repayment risk.`;
+    case 'adequate':
+      return `Healthy ratio at ${value.toFixed(2)}x. This is the standard range accepted by most commercial lenders.`;
+    case 'weak':
+      return `Slim cushion at ${value.toFixed(2)}x. The business is near break-even on debt coverage. Lenders may require stricter terms.`;
+    case 'poor':
+      return `Insufficient coverage at ${value.toFixed(2)}x. The company does not generate enough income to cover debt payments, signaling high default risk.`;
+  }
+};
+
+const getDebtEBITDAReasoning = (value: number, level: HealthLevel): string => {
+  switch (level) {
+    case 'excellent':
+      return `Very low leverage at ${value.toFixed(2)}x. High financial flexibility with a conservative capital structure.`;
+    case 'good':
+      return `Healthy debt levels at ${value.toFixed(2)}x. Manageable leverage with strong cash flow coverage.`;
+    case 'adequate':
+      return `Standard leverage at ${value.toFixed(2)}x. This is the typical "sweet spot" range for senior lenders.`;
+    case 'weak':
+      return `Elevated leverage at ${value.toFixed(2)}x. Risk increases if cash flows decline. Lenders will scrutinize carefully.`;
+    case 'poor':
+      return `High leverage at ${value.toFixed(2)}x. Significant risk of financial distress and potential covenant breaches.`;
+  }
+};
+
+const getDebtCapitalReasoning = (value: number, level: HealthLevel): string => {
+  const pct = (value * 100).toFixed(0);
+  switch (level) {
+    case 'excellent':
+      return `Very low debt at ${pct}% of capital. High financial stability with maximum flexibility.`;
+    case 'good':
+      return `Healthy balance at ${pct}% debt. Reasonable leverage with manageable risk.`;
+    case 'adequate':
+      return `Moderate reliance on debt at ${pct}%. May be normal for capital-intensive industries.`;
+    case 'weak':
+      return `High leverage at ${pct}% debt financing. Borrowing may become difficult; vulnerable to downturns.`;
+    case 'poor':
+      return `Excessive debt at ${pct}% of capital. High risk of financial distress or technical insolvency.`;
+  }
+};
 
 interface HealthConfig {
   level: HealthLevel;
@@ -227,6 +300,160 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
           getHealth={getTotalDebtCapitalHealth}
           subtitle="Target: < 30%"
         />
+      </div>
+
+      {/* Calculation Breakdown */}
+      <div className="mt-8 space-y-4">
+        <h3 className="text-md font-semibold text-gray-800 border-b pb-2">Calculation Details</h3>
+
+        {/* DSCR Calculation */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold text-gray-700">Debt Service Coverage Ratio (DSCR)</h4>
+            {metrics.dscr != null && (
+              <span
+                className="px-2 py-1 rounded text-xs text-white font-medium"
+                style={{ backgroundColor: getDSCRHealth(metrics.dscr).color }}
+              >
+                {getRatingLabel(getDSCRHealth(metrics.dscr).level)}
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-gray-600 mb-3">
+            <span className="font-mono bg-white px-2 py-1 rounded border">
+              DSCR = EBITDA ÷ Debt Service Payments
+            </span>
+          </div>
+          {metrics.ebitda != null && (metrics.debt_service_payments != null || metrics.interest != null) ? (
+            <div className="text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-gray-500">EBITDA:</span>
+                <span className="font-medium">{formatCurrency(metrics.ebitda)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Debt Service Payments:</span>
+                <span className="font-medium">
+                  {formatCurrency(metrics.debt_service_payments ?? metrics.interest)}
+                  {metrics.debt_service_payments == null && metrics.interest != null && (
+                    <span className="text-xs text-gray-400 ml-1">(using interest)</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between border-t pt-1 mt-2">
+                <span className="text-gray-700 font-medium">Result:</span>
+                <span className="font-bold text-gray-900">
+                  {formatCurrency(metrics.ebitda)} ÷ {formatCurrency(metrics.debt_service_payments ?? metrics.interest)} = {metrics.dscr?.toFixed(2)}x
+                </span>
+              </div>
+              {metrics.dscr != null && (
+                <p className="text-xs text-gray-500 mt-2 italic">
+                  {getDSCRReasoning(metrics.dscr, getDSCRHealth(metrics.dscr).level)}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Insufficient data to calculate DSCR</p>
+          )}
+        </div>
+
+        {/* Senior Debt / EBITDA Calculation */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold text-gray-700">Senior Debt / EBITDA</h4>
+            {metrics.senior_debt_to_ebitda != null && (
+              <span
+                className="px-2 py-1 rounded text-xs text-white font-medium"
+                style={{ backgroundColor: getSeniorDebtEBITDAHealth(metrics.senior_debt_to_ebitda).color }}
+              >
+                {getRatingLabel(getSeniorDebtEBITDAHealth(metrics.senior_debt_to_ebitda).level)}
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-gray-600 mb-3">
+            <span className="font-mono bg-white px-2 py-1 rounded border">
+              Debt/EBITDA = Senior Debt ÷ EBITDA
+            </span>
+          </div>
+          {metrics.senior_debt != null && metrics.ebitda != null ? (
+            <div className="text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Senior Debt:</span>
+                <span className="font-medium">
+                  {formatCurrency(metrics.senior_debt)}
+                  {metrics.senior_debt === metrics.total_debt && (
+                    <span className="text-xs text-gray-400 ml-1">(= Total Debt)</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">EBITDA:</span>
+                <span className="font-medium">{formatCurrency(metrics.ebitda)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1 mt-2">
+                <span className="text-gray-700 font-medium">Result:</span>
+                <span className="font-bold text-gray-900">
+                  {formatCurrency(metrics.senior_debt)} ÷ {formatCurrency(metrics.ebitda)} = {metrics.senior_debt_to_ebitda?.toFixed(2)}x
+                </span>
+              </div>
+              {metrics.senior_debt_to_ebitda != null && (
+                <p className="text-xs text-gray-500 mt-2 italic">
+                  {getDebtEBITDAReasoning(metrics.senior_debt_to_ebitda, getSeniorDebtEBITDAHealth(metrics.senior_debt_to_ebitda).level)}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Insufficient data to calculate Debt/EBITDA</p>
+          )}
+        </div>
+
+        {/* Total Debt / Total Capital Calculation */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold text-gray-700">Total Debt / Total Capital</h4>
+            {metrics.total_debt_to_capital != null && (
+              <span
+                className="px-2 py-1 rounded text-xs text-white font-medium"
+                style={{ backgroundColor: getTotalDebtCapitalHealth(metrics.total_debt_to_capital).color }}
+              >
+                {getRatingLabel(getTotalDebtCapitalHealth(metrics.total_debt_to_capital).level)}
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-gray-600 mb-3">
+            <span className="font-mono bg-white px-2 py-1 rounded border">
+              Debt/Capital = Total Debt ÷ (Total Debt + Shareholders&apos; Equity)
+            </span>
+          </div>
+          {metrics.total_debt != null && metrics.shareholders_equity != null ? (
+            <div className="text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Total Debt:</span>
+                <span className="font-medium">{formatCurrency(metrics.total_debt)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Shareholders&apos; Equity:</span>
+                <span className="font-medium">{formatCurrency(metrics.shareholders_equity)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Total Capital:</span>
+                <span className="font-medium">{formatCurrency(metrics.total_debt + metrics.shareholders_equity)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1 mt-2">
+                <span className="text-gray-700 font-medium">Result:</span>
+                <span className="font-bold text-gray-900">
+                  {formatCurrency(metrics.total_debt)} ÷ {formatCurrency(metrics.total_debt + metrics.shareholders_equity)} = {((metrics.total_debt_to_capital ?? 0) * 100).toFixed(0)}%
+                </span>
+              </div>
+              {metrics.total_debt_to_capital != null && (
+                <p className="text-xs text-gray-500 mt-2 italic">
+                  {getDebtCapitalReasoning(metrics.total_debt_to_capital, getTotalDebtCapitalHealth(metrics.total_debt_to_capital).level)}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Insufficient data to calculate Debt/Capital</p>
+          )}
+        </div>
       </div>
 
       {years.length > 1 && (
