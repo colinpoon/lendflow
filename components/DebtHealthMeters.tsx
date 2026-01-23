@@ -16,89 +16,172 @@ type HealthLevel = 'excellent' | 'good' | 'adequate' | 'weak' | 'poor';
 
 interface HealthConfig {
   level: HealthLevel;
-  label: string;
   color: string;
-  bgColor: string;
   percentage: number;
 }
 
 // DSCR: Higher is better (more cash flow to cover debt)
+// Excellent (2.0+): Very strong cash flow, twice the income needed to cover debt
+// Great (1.5–1.99): Highly secure, strong cash flow, low repayment risk
+// Good (1.25–1.49): Healthy/standard ratio accepted by most commercial lenders
+// Fair (1.0–1.24): Break-even or slim cushion, stricter terms may apply
+// Poor (Below 1.0): Insufficient income to cover debt, high risk of default
 const getDSCRHealth = (value: number): HealthConfig => {
-  if (value >= 2.0) return { level: 'excellent', label: 'Excellent', color: 'bg-green-500', bgColor: 'bg-green-100', percentage: 100 };
-  if (value >= 1.5) return { level: 'good', label: 'Good', color: 'bg-green-400', bgColor: 'bg-green-100', percentage: 80 };
-  if (value >= 1.25) return { level: 'adequate', label: 'Adequate', color: 'bg-yellow-400', bgColor: 'bg-yellow-100', percentage: 60 };
-  if (value >= 1.0) return { level: 'weak', label: 'Weak', color: 'bg-orange-400', bgColor: 'bg-orange-100', percentage: 40 };
-  return { level: 'poor', label: 'Poor', color: 'bg-red-500', bgColor: 'bg-red-100', percentage: 20 };
+  if (value >= 2.0) return { level: 'excellent', color: '#22c55e', percentage: 100 };
+  if (value >= 1.5) return { level: 'good', color: '#84cc16', percentage: 80 };
+  if (value >= 1.25) return { level: 'adequate', color: '#eab308', percentage: 60 };
+  if (value >= 1.0) return { level: 'weak', color: '#f97316', percentage: 40 };
+  return { level: 'poor', color: '#ef4444', percentage: 20 };
 };
 
 // Senior Debt/EBITDA: Lower is better (less leverage)
+// Excellent (<1.0x to 1.5x): Very low leverage, high financial flexibility, conservative capital structure
+// Great (1.5x to 2.5x): Healthy, manageable debt levels with strong cash flow coverage
+// Good/Acceptable (2.5x to 3.0x): Standard range for stable companies, "sweet spot" for senior lenders
+// Poor/Elevated (3.0x to 4.0x): High leverage, risk if cash flows decline, lenders scrutinize carefully
+// Bad/Distressed (>4.0x): High risk of financial distress, potential covenant breaches
 const getSeniorDebtEBITDAHealth = (value: number): HealthConfig => {
-  if (value <= 2.0) return { level: 'excellent', label: 'Excellent', color: 'bg-green-500', bgColor: 'bg-green-100', percentage: 100 };
-  if (value <= 3.0) return { level: 'good', label: 'Good', color: 'bg-green-400', bgColor: 'bg-green-100', percentage: 80 };
-  if (value <= 4.0) return { level: 'adequate', label: 'Adequate', color: 'bg-yellow-400', bgColor: 'bg-yellow-100', percentage: 60 };
-  if (value <= 5.0) return { level: 'weak', label: 'Weak', color: 'bg-orange-400', bgColor: 'bg-orange-100', percentage: 40 };
-  return { level: 'poor', label: 'Poor', color: 'bg-red-500', bgColor: 'bg-red-100', percentage: 20 };
+  if (value <= 1.5) return { level: 'excellent', color: '#22c55e', percentage: 100 };
+  if (value <= 2.5) return { level: 'good', color: '#84cc16', percentage: 80 };
+  if (value <= 3.0) return { level: 'adequate', color: '#eab308', percentage: 60 };
+  if (value <= 4.0) return { level: 'weak', color: '#f97316', percentage: 40 };
+  return { level: 'poor', color: '#ef4444', percentage: 20 };
 };
 
 // Total Debt/Total Capital: Lower is better (less debt financing)
+// Excellent (0.0–0.29): Very low debt, high financial stability, maximum financial flexibility
+// Great/Good (0.3–0.5): Healthy balance of debt and equity, manageable risk
+// Moderate/Fair (0.5–0.6): Increasingly reliant on debt, may be normal for capital-intensive industries
+// Poor/High Risk (0.6–0.7+): High leverage, borrowing may become difficult, vulnerable to downturns
+// Bad/Insolvent (>1.0): Total debt exceeds equity, potential technical insolvency
 const getTotalDebtCapitalHealth = (value: number): HealthConfig => {
-  if (value <= 0.3) return { level: 'excellent', label: 'Excellent', color: 'bg-green-500', bgColor: 'bg-green-100', percentage: 100 };
-  if (value <= 0.4) return { level: 'good', label: 'Good', color: 'bg-green-400', bgColor: 'bg-green-100', percentage: 80 };
-  if (value <= 0.5) return { level: 'adequate', label: 'Adequate', color: 'bg-yellow-400', bgColor: 'bg-yellow-100', percentage: 60 };
-  if (value <= 0.7) return { level: 'weak', label: 'Weak', color: 'bg-orange-400', bgColor: 'bg-orange-100', percentage: 40 };
-  return { level: 'poor', label: 'Poor', color: 'bg-red-500', bgColor: 'bg-red-100', percentage: 20 };
+  if (value < 0.3) return { level: 'excellent', color: '#22c55e', percentage: 100 };
+  if (value <= 0.5) return { level: 'good', color: '#84cc16', percentage: 80 };
+  if (value <= 0.6) return { level: 'adequate', color: '#eab308', percentage: 60 };
+  if (value <= 0.7) return { level: 'weak', color: '#f97316', percentage: 40 };
+  return { level: 'poor', color: '#ef4444', percentage: 20 };
 };
 
-interface HealthMeterProps {
-  title: string;
+interface CircularGaugeProps {
   value: number | null;
+  label: string;
   formatValue: (v: number) => string;
   getHealth: (v: number) => HealthConfig;
-  description: string;
-  benchmark: string;
+  subtitle?: string;
 }
 
-const HealthMeter: React.FC<HealthMeterProps> = ({
-  title,
+const CircularGauge: React.FC<CircularGaugeProps> = ({
   value,
+  label,
   formatValue,
   getHealth,
-  description,
-  benchmark,
+  subtitle,
 }) => {
+  const size = 160;
+  const strokeWidth = 8;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
   if (value == null) {
     return (
-      <div className="p-4 border rounded-lg bg-gray-50">
-        <h3 className="font-semibold text-gray-700">{title}</h3>
-        <p className="text-gray-400 text-sm mt-2">Data not available</p>
+      <div className="flex flex-col items-center p-4">
+        <div className="relative" style={{ width: size, height: size }}>
+          <svg width={size} height={size} className="transform -rotate-90">
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="#e5e7eb"
+              strokeWidth={strokeWidth}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-bold text-gray-400">N/A</span>
+            <span className="text-sm text-gray-500">{label}</span>
+          </div>
+        </div>
       </div>
     );
   }
 
   const health = getHealth(value);
+  const strokeDashoffset = circumference - (health.percentage / 100) * circumference;
 
   return (
-    <div className={`p-4 border rounded-lg ${health.bgColor}`}>
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="font-semibold text-gray-800">{title}</h3>
-        <span className={`px-2 py-1 rounded text-xs font-medium text-white ${health.color}`}>
-          {health.label}
-        </span>
-      </div>
+    <div className="flex flex-col items-center p-4">
+      <div className="relative" style={{ width: size, height: size }}>
+        {/* Background circle with tick marks */}
+        <svg width={size} height={size} className="transform -rotate-90">
+          {/* Background track */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+          {/* Progress arc */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={health.color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            className="transition-all duration-700 ease-out"
+          />
+        </svg>
 
-      <div className="text-3xl font-bold text-gray-900 mb-2">
-        {formatValue(value)}
-      </div>
+        {/* Tick marks */}
+        <svg
+          width={size}
+          height={size}
+          className="absolute top-0 left-0"
+          style={{ transform: 'rotate(-90deg)' }}
+        >
+          {Array.from({ length: 60 }).map((_, i) => {
+            const angle = (i / 60) * 360;
+            const isLargeTick = i % 5 === 0;
+            const tickLength = isLargeTick ? 6 : 3;
+            const outerRadius = radius + strokeWidth / 2 + 2;
+            const innerRadius = outerRadius - tickLength;
 
-      <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
-        <div
-          className={`h-3 rounded-full transition-all duration-500 ${health.color}`}
-          style={{ width: `${health.percentage}%` }}
-        />
-      </div>
+            const x1 = size / 2 + outerRadius * Math.cos((angle * Math.PI) / 180);
+            const y1 = size / 2 + outerRadius * Math.sin((angle * Math.PI) / 180);
+            const x2 = size / 2 + innerRadius * Math.cos((angle * Math.PI) / 180);
+            const y2 = size / 2 + innerRadius * Math.sin((angle * Math.PI) / 180);
 
-      <p className="text-xs text-gray-600 mb-1">{description}</p>
-      <p className="text-xs text-gray-500 italic">{benchmark}</p>
+            return (
+              <line
+                key={i}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="#d1d5db"
+                strokeWidth={isLargeTick ? 1.5 : 0.75}
+              />
+            );
+          })}
+        </svg>
+
+        {/* Center content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-bold text-gray-800">
+            {formatValue(value)}
+          </span>
+          <span className="text-sm text-gray-600 text-center px-2">{label}</span>
+        </div>
+      </div>
+      {subtitle && (
+        <span className="text-xs text-gray-500 mt-2">{subtitle}</span>
+      )}
     </div>
   );
 };
@@ -115,37 +198,34 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Debt Health Indicators</h2>
         <span className="text-sm text-gray-500">Fiscal Year {latestYear}</span>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        <HealthMeter
-          title="Debt Service Coverage Ratio"
+      <div className="flex flex-wrap justify-center gap-8">
+        <CircularGauge
           value={metrics.dscr}
-          formatValue={(v) => `${v.toFixed(2)}x`}
+          label="DSCR"
+          formatValue={(v) => v.toFixed(2)}
           getHealth={getDSCRHealth}
-          description="Measures ability to pay debt obligations from operating cash flow"
-          benchmark="Target: > 1.5x"
+          subtitle="Target: > 1.5x"
         />
 
-        <HealthMeter
-          title="Senior Debt / EBITDA"
+        <CircularGauge
           value={metrics.senior_debt_to_ebitda}
-          formatValue={(v) => `${v.toFixed(2)}x`}
+          label="Debt / EBITDA"
+          formatValue={(v) => v.toFixed(2)}
           getHealth={getSeniorDebtEBITDAHealth}
-          description="Measures leverage relative to earnings capacity"
-          benchmark="Target: < 3.0x"
+          subtitle="Target: < 2.5x"
         />
 
-        <HealthMeter
-          title="Total Debt / Total Capital"
+        <CircularGauge
           value={metrics.total_debt_to_capital}
+          label="Debt / Capital"
           formatValue={(v) => `${(v * 100).toFixed(0)}%`}
           getHealth={getTotalDebtCapitalHealth}
-          description="Measures proportion of capital structure financed by debt"
-          benchmark="Target: < 50%"
+          subtitle="Target: < 30%"
         />
       </div>
 
@@ -171,7 +251,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                     return (
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
-                          <span className={`px-2 py-0.5 rounded text-xs ${health?.color} text-white`}>
+                          <span
+                            className="px-2 py-0.5 rounded text-xs text-white"
+                            style={{ backgroundColor: health?.color }}
+                          >
                             {val.toFixed(2)}x
                           </span>
                         ) : '—'}
@@ -187,7 +270,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                     return (
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
-                          <span className={`px-2 py-0.5 rounded text-xs ${health?.color} text-white`}>
+                          <span
+                            className="px-2 py-0.5 rounded text-xs text-white"
+                            style={{ backgroundColor: health?.color }}
+                          >
                             {val.toFixed(2)}x
                           </span>
                         ) : '—'}
@@ -203,7 +289,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({ data }) => {
                     return (
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
-                          <span className={`px-2 py-0.5 rounded text-xs ${health?.color} text-white`}>
+                          <span
+                            className="px-2 py-0.5 rounded text-xs text-white"
+                            style={{ backgroundColor: health?.color }}
+                          >
                             {(val * 100).toFixed(0)}%
                           </span>
                         ) : '—'}
