@@ -1,0 +1,57 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Lendflow is a Next.js 15 application for bank loan risk analysis. It uses AI (OpenAI GPT-4 Turbo) to extract financial metrics from uploaded documents (PDF, Excel, Word) and performs credit risk assessment.
+
+## Commands
+
+```bash
+npm run dev          # Start dev server with Turbopack (http://localhost:3000)
+npm run build        # Production build (includes TypeScript & ESLint checks)
+npm run lint         # Run ESLint
+npm run start        # Start production server
+```
+
+## Environment Variables
+
+Requires `OPENAI_API_KEY` in `.env` file.
+
+## Architecture
+
+### Data Flow
+```
+Document Upload → /api/extractData → aiProcessor.ts → OpenAI GPT-4 → Frontend Display
+```
+
+### Key Files
+
+- `utils/aiProcessor.ts` - Core AI extraction logic. Chunks documents, sends to OpenAI with structured prompts, merges results, and computes financial ratios (DSCR, Senior Debt/EBITDA, Total Debt/Total Capital).
+
+- `app/api/extractData/route.ts` - API endpoint handling file uploads via formidable. Disables body parsing (`bodyParser: false`) to handle multipart form data.
+
+- `app/(dashboard)/(routes)/upload/page.tsx` - Main UI with four tabs: Upload, Extracted Data, Financial Analysis, Credit-Risk Snapshot.
+
+### Display Components
+
+- `FinancialTable.tsx` - Displays financial metrics by year with currency/ratio formatting
+- `EBITDA.tsx` - Dedicated EBITDA display
+- `RiskAssessment.tsx` - Credit risk analysis with 7 pillars (profitability, leverage, liquidity, debt service, interest rate sensitivity, concentration, governance)
+
+### AI Extraction Schema
+
+The AI extracts these metrics per fiscal year:
+- revenue, net_income, expenses, profit_margins
+- interest, taxes, depreciation_amortization, ebitda
+- shareholders_equity, total_debt, senior_debt, debt_service_payments
+
+Computed ratios:
+- DSCR = EBITDA / debt_service_payments
+- Senior Debt/EBITDA = senior_debt / EBITDA
+- Total Debt/Total Capital = total_debt / (total_debt + shareholders_equity)
+
+### UI Framework
+
+Uses Shadcn/UI components in `components/ui/` with Tailwind CSS v4.

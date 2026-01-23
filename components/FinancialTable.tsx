@@ -10,6 +10,13 @@ interface YearMetrics {
   taxes: number | null;
   depreciation_amortization: number | null;
   ebitda: number | null;
+  total_debt: number | null;
+  senior_debt: number | null;
+  debt_service_payments: number | null;
+  shareholders_equity: number | null;
+  dscr: number | null;
+  senior_debt_to_ebitda: number | null;
+  total_debt_to_capital: number | null;
 }
 
 interface FinancialTableProps {
@@ -23,11 +30,11 @@ const rows = [
   { key: 'profit_margins', label: 'Profit Margins' },
   { key: 'interest', label: 'Interest' },
   { key: 'taxes', label: 'Taxes' },
-  {
-    key: 'depreciation_amortization',
-    label: 'Depreciation & Amort.',
-  },
+  { key: 'depreciation_amortization', label: 'Depreciation & Amort.' },
   { key: 'ebitda', label: 'EBITDA' },
+  { key: 'total_debt', label: 'Total Debt' },
+  { key: 'senior_debt', label: 'Senior Debt' },
+  { key: 'shareholders_equity', label: 'Shareholders Equity' },
 ];
 
 const fmtCurrency = (v: number | null | undefined) =>
@@ -74,9 +81,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               <td className="border p-2">{row.label}</td>
               {years.map((y) => (
                 <td key={y} className="border p-2 text-right">
-                  {fmtCurrency(
-                    (data.metrics_by_year[y] as any)?.[row.key]
-                  )}
+                  {fmtCurrency((data.metrics_by_year[y] as Record<string, number | null>)?.[row.key])}
                 </td>
               ))}
             </tr>

@@ -12,6 +12,7 @@ import FileUpload from '@/components/FileUpload';
 import ExtractedData from '@/components/ExtractedData';
 import FinancialTable from '@/components/FinancialTable';
 import EBITDA from '@/components/EBITDA';
+import DebtHealthMeters from '@/components/DebtHealthMeters';
 import RiskAssessment, {
   RiskData,
 } from '@/components/RiskAssessment';
@@ -140,24 +141,35 @@ const Home = () => {
 
         <TabsContent value="analysis" key="analysis">
           {financialData && (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-6">
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle>Financial Table</CardTitle>
+                  <CardTitle>Debt Health Indicators</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <FinancialTable data={financialData} />
+                  <DebtHealthMeters data={financialData} />
                 </CardContent>
               </Card>
 
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>EBITDA Analysis</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <EBITDA data={financialData} />
-                </CardContent>
-              </Card>
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Financial Table</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FinancialTable data={financialData} />
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>EBITDA Analysis</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <EBITDA data={financialData} />
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           )}
         </TabsContent>

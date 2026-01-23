@@ -133,18 +133,24 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "taxes": number|null,
       "depreciation_amortization": number|null,
       "ebitda": number|null,
-      "shareholders_equity": number|null
+      "shareholders_equity": number|null,
+      "total_debt": number|null,
+      "senior_debt": number|null,
+      "debt_service_payments": number|null
     }
   }
 }
 
-RULES  
-• Detect every fiscal year present (e.g. 2025, 2024, 2023) and use it as the JSON key.  
-• Emit numeric values as plain JSON numbers – **no quotes, commas, or currency symbols**.  
-• If a value is unavailable for a metric, output null (do NOT omit the key).  
-• If net_income, interest, taxes, and depreciation_amortization are all non‑null for a year, compute:  
-  "ebitda" = net_income + interest + taxes + depreciation_amortization  
-  (otherwise leave ebitda as null).  
+RULES
+• Detect every fiscal year present (e.g. 2025, 2024, 2023) and use it as the JSON key.
+• Emit numeric values as plain JSON numbers – **no quotes, commas, or currency symbols**.
+• If a value is unavailable for a metric, output null (do NOT omit the key).
+• If net_income, interest, taxes, and depreciation_amortization are all non‑null for a year, compute:
+  "ebitda" = net_income + interest + taxes + depreciation_amortization
+  (otherwise leave ebitda as null).
+• "total_debt" = sum of all short‑term and long‑term debt/borrowings.
+• "senior_debt" = senior/secured debt. If the document does not explicitly mention subordinated, mezzanine, or junior debt, assume ALL debt is senior debt (i.e., senior_debt = total_debt).
+• "debt_service_payments" = annual principal repayments + interest expense. If principal repayments are not stated, use interest expense alone as an estimate.
 • Do not add any keys, explanations, or narrative – JSON object only.
 
 This schema must work for any financial statement worldwide.
@@ -252,6 +258,47 @@ JSON only.`,
         }
       }
     }
+    /* ────────────── compute debt ratios ────────────── */
+    for (const yr of Object.keys(merged)) {
+      const m = merged[yr];
+
+      // Fallback: if senior_debt is null but total_debt exists, assume all debt is senior
+      if (m.senior_debt == null && m.total_debt != null) {
+        m.senior_debt = m.total_debt;
+      }
+
+      // Fallback: if debt_service_payments is null but interest exists, use interest as estimate
+      if (m.debt_service_payments == null && m.interest != null) {
+        m.debt_service_payments = m.interest;
+      }
+
+      // Debt Service Coverage Ratio = EBITDA / Annual Debt Service Payments
+      if (m.ebitda != null && m.debt_service_payments != null && m.debt_service_payments !== 0) {
+        m.dscr = parseFloat((m.ebitda / m.debt_service_payments).toFixed(2));
+      } else {
+        m.dscr = null;
+      }
+
+      // Senior Debt / EBITDA
+      if (m.senior_debt != null && m.ebitda != null && m.ebitda !== 0) {
+        m.senior_debt_to_ebitda = parseFloat((m.senior_debt / m.ebitda).toFixed(2));
+      } else {
+        m.senior_debt_to_ebitda = null;
+      }
+
+      // Total Debt / Total Capital (Total Capital = Total Debt + Shareholders Equity)
+      if (m.total_debt != null && m.shareholders_equity != null) {
+        const totalCapital = m.total_debt + m.shareholders_equity;
+        if (totalCapital !== 0) {
+          m.total_debt_to_capital = parseFloat((m.total_debt / totalCapital).toFixed(2));
+        } else {
+          m.total_debt_to_capital = null;
+        }
+      } else {
+        m.total_debt_to_capital = null;
+      }
+    }
+
     /* if nothing parsed, fall back to raw array */
     const finalResult =
       Object.keys(merged).length > 0 || riskSnapshot
