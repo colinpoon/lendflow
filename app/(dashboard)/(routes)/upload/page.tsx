@@ -12,6 +12,7 @@ import FileUpload from '@/components/FileUpload';
 import ExtractedData from '@/components/ExtractedData';
 import FinancialTable from '@/components/FinancialTable';
 import EBITDA from '@/components/EBITDA';
+import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
 import RiskAssessment, {
   RiskData,
@@ -176,14 +177,25 @@ const Home = () => {
               </Card>
 
               {financialData && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Debt Health Indicators</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DebtHealthMeters data={financialData} />
-                  </CardContent>
-                </Card>
+                <>
+                  <Card className="shadow-lg">
+                    <CardHeader>
+                      <CardTitle>Adjusted EBITDA</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <AdjustedEBITDA data={financialData} />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-lg">
+                    <CardHeader>
+                      <CardTitle>Debt Health Indicators</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <DebtHealthMeters data={financialData} />
+                    </CardContent>
+                  </Card>
+                </>
               )}
             </div>
           ) : (

@@ -112,37 +112,6 @@ function validateMetrics(metrics: Record<string, any>) {
   return issues;
 }
 
-// ────────────── Validation: Detect scale inconsistencies ──────────────
-function validateScaleInconsistencies(
-  metrics: Record<string, any>
-): string[] {
-  const sampleValues: number[] = [];
-
-  for (const year of Object.keys(metrics)) {
-    const yearMetrics = metrics[year];
-    const values = Object.values(yearMetrics).filter(
-      (v) => typeof v === 'number' && isFinite(v)
-    ) as number[];
-
-    sampleValues.push(...values);
-  }
-
-  if (sampleValues.length === 0) return [];
-
-  const max = Math.max(...sampleValues);
-  const min = Math.min(...sampleValues);
-
-  const ratio = max / Math.max(min, 1); // avoid div-by-zero
-
-  if (ratio > 1000) {
-    return [
-      'Detected unusually large spread in financial values. Possible inconsistent scaling (e.g. mixed thousands and full values).',
-    ];
-  }
-
-  return [];
-}
-
 function getCachedAnalysisPath(hash: string): string {
   return path.join(CACHE_DIR, `${hash}.json`);
 }
@@ -240,12 +209,6 @@ export const extractFinancialData = async (filePath: string) => {
       console.log(
         `🤖 Processing chunk ${i + 1}/${textChunks.length}…`
       );
-      // Detect if this chunk references values "in thousands" or "in 000s"
-      const chunkScaleFactor = /in (thousands|000s)/i.test(
-        trimmedChunk
-      )
-        ? 1000
-        : 1;
       const response = await openai.chat.completions.create({
         model: 'gpt-4-turbo-2024-04-09',
         temperature: 0,
@@ -271,30 +234,123 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "taxes": number|null,
       "depreciation_amortization": number|null,
       "ebitda": number|null,
+      "reported_adjusted_ebitda": number|null,
       "shareholders_equity": number|null,
       "total_debt": number|null,
       "senior_debt": number|null,
-      "debt_service_payments": number|null
+      "debt_service_payments": number|null,
+      "adjusted_ebitda_components": {
+        "stock_based_compensation": number|null,
+        "impairment_charges": number|null,
+        "goodwill_impairment": number|null,
+        "bad_debt_provision": number|null,
+        "unrealized_gains_losses": number|null,
+        "deferred_compensation": number|null,
+        "loss_on_disposal": number|null,
+        "other_non_cash": number|null,
+        "restructuring_costs": number|null,
+        "severance_costs": number|null,
+        "transaction_costs": number|null,
+        "legal_settlements": number|null,
+        "professional_fees_one_time": number|null,
+        "casualty_losses": number|null,
+        "other_one_time_expenses": number|null,
+        "gain_on_disposal": number|null,
+        "gain_on_asset_sale": number|null,
+        "other_income_non_operating": number|null,
+        "insurance_proceeds": number|null,
+        "other_one_time_gains": number|null,
+        "owner_compensation_adjustment": number|null,
+        "related_party_adjustments": number|null,
+        "management_fees_adjustment": number|null,
+        "accounting_policy_adjustments": number|null,
+        "foreign_exchange_adjustments": number|null,
+        "pro_forma_cost_savings": number|null,
+        "pro_forma_synergies": number|null
+      }
     }
   }
 }
 
 • Be flexible in identifying synonyms and alternate phrasing for metrics (e.g. "turnover" = revenue, "retained earnings" may contribute to shareholders_equity, "total liabilities" may indicate total_debt).
 
+REPORTED ADJUSTED EBITDA
+• IMPORTANT: If the document explicitly reports an "Adjusted EBITDA" figure (common in MD&A, press releases, or capital management sections), extract it directly into "reported_adjusted_ebitda". This takes priority over calculated values.
+• Look for phrases like "Adjusted EBITDA was", "Adjusted EBITDA of", or reconciliation tables showing Adjusted EBITDA.
+
+ADJUSTED EBITDA COMPONENTS EXTRACTION
+Look for these terms to populate adjusted_ebitda_components. Note: Gains/income items will be SUBTRACTED from EBITDA; Losses/expense items will be ADDED back.
+
+CRITICAL - EXTRACT THESE ADJUSTMENT ITEMS FOR ACCURATE ADJUSTED EBITDA:
+
+Non-Cash Adjustments (ADD BACK to EBITDA):
+• stock_based_compensation: IMPORTANT - Use the value from the CASH FLOW STATEMENT under "Operating activities" adjustments. Look for "Stock based compensation" or "Share-based compensation" or "Stock-based payments". This is the TOTAL non-cash stock compensation. Do NOT use the smaller figure from notes which may only show options.
+• impairment_charges: "impairment", "asset write-down"
+• goodwill_impairment: "goodwill impairment"
+• bad_debt_provision: "bad debt provision", "allowance for doubtful accounts"
+• unrealized_gains_losses: "unrealized loss", "unrealized gain", "mark-to-market"
+• deferred_compensation: "deferred compensation"
+• loss_on_disposal: Sum ALL disposal losses from income statement: "Loss on sale of equipment", "Loss on disposal of right-of-use assets". When shown as "Loss (gain) on sale" with a POSITIVE number, that's a loss - extract it. For 2023 example: 27 + 81 = 108.
+• other_non_cash: "non-cash expense", "noncash", "straight-line rent", "non-cash interest expense"
+
+One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
+• restructuring_costs: "restructuring", "reorganization costs"
+• severance_costs: "severance"
+• transaction_costs: "transaction costs", "deal costs", "integration costs"
+• legal_settlements: "legal settlement", "litigation expense"
+• professional_fees_one_time: one-time "professional fees", "consulting fees"
+• casualty_losses: "casualty loss", "disaster-related costs"
+• other_one_time_expenses: "one-time expense", "non-recurring expense"
+
+SUBTRACT from EBITDA (these inflate net income):
+• gain_on_disposal: Sum ALL disposal gains. When "Loss (gain) on sale" shows a number in PARENTHESES like (139), that's a GAIN of 139 - extract as positive 139. Sum all such gains.
+• gain_on_asset_sale: "gain on sale", "asset sale gain"
+• other_income_non_operating: Look for "Other income" or "Other (income)" on income statement. Values in parentheses like (2,159) mean income of 2,159. Extract as positive number.
+• insurance_proceeds: "insurance proceeds"
+• other_one_time_gains: "settlement income", "extraordinary gain"
+
+FOREIGN EXCHANGE (CRITICAL FOR ACCURACY):
+• foreign_exchange_adjustments: Look for "Foreign exchange (gain) loss" or "FX gain/loss" on income statement.
+  - If shown as POSITIVE number (e.g., 70), it's a LOSS - extract as POSITIVE (add back)
+  - If shown in PARENTHESES like (2), it's a GAIN - extract as NEGATIVE (subtract)
+  Example: "Foreign exchange (gain) loss (2)" means $2 gain, extract as -2
+  Example: "Foreign exchange (gain) loss 70" means $70 loss, extract as 70
+
+PARENTHESES CONVENTION IN FINANCIAL STATEMENTS:
+- Numbers in parentheses = opposite of the label
+- "Loss (gain) on sale (139)" = GAIN of 139 (parentheses reverse "loss" to "gain")
+- "Foreign exchange (gain) loss (2)" = GAIN of 2
+- "Other income (2,159)" = INCOME of 2,159
+
+Owner/Management Adjustments (add back):
+• owner_compensation_adjustment: "owner compensation", "excess compensation", "family payroll", "personal expenses", "owner bonus"
+• related_party_adjustments: "related-party expense", "related-party transactions"
+• management_fees_adjustment: "management fees"
+
+Other Adjustments:
+• accounting_policy_adjustments: "change in accounting policy", "change in estimate"
+• foreign_exchange_adjustments: "foreign exchange", "fx gain", "fx loss", "currency translation"
+• pro_forma_cost_savings: "pro forma", "run-rate", "cost savings", "headcount reduction", "facility closure"
+• pro_forma_synergies: "synergies", "operational efficiencies"
+
 RULES
 • Detect every fiscal year present (e.g. 2025, 2024, 2023) and use it as the JSON key.
 • Emit numeric values as plain JSON numbers – **no quotes, commas, or currency symbols**.
 • If a value is unavailable for a metric, output null (do NOT omit the key).
-• If net_income, interest, taxes, and depreciation_amortization are all non‑null for a year, compute:
-  "ebitda" = net_income + interest + taxes + depreciation_amortization
-  (otherwise leave ebitda as null).
+• For EBITDA calculation: ebitda = net_income + interest + taxes + depreciation_amortization
 • "total_debt" = sum of all short‑term and long‑term debt/borrowings.
 • "senior_debt" = senior/secured debt. If the document does not explicitly mention subordinated, mezzanine, or junior debt, assume ALL debt is senior debt (i.e., senior_debt = total_debt).
 • "debt_service_payments" = annual principal repayments + interest expense. If principal repayments are not stated, use interest expense alone as an estimate.
-• Do not add any keys, explanations, or narrative – JSON object only.
 
-• If the source text indicates that amounts are reported "in thousands" or "$000s", you must multiply extracted numeric values by 1,000 to return full values in absolute dollars.
-• If values are already written as millions (e.g. $9,100,000) but the text says "in thousands", do not apply scaling again.
+CRITICAL - ADJUSTED EBITDA COMPONENTS:
+• You MUST extract adjusted_ebitda_components from the income statement and notes.
+• Look for "Share-based payments expense" line item - extract as stock_based_compensation
+• Look for "Other income" or "Other (income) expense" line items - extract the income amount as other_income_non_operating
+• Look for "Loss (gain) on sale/disposal" line items - extract losses as loss_on_disposal, gains as gain_on_disposal
+• These adjustments are ESSENTIAL for calculating Adjusted EBITDA accurately.
+
+• Do not add any keys, explanations, or narrative – JSON object only.
+• IMPORTANT: Extract numeric values EXACTLY as they appear in the document. Do NOT multiply or scale values. If the document reports values "in thousands" or "$000s", keep them in thousands.
 
 This schema must work for any financial statement worldwide.
 `,
@@ -316,21 +372,6 @@ This schema must work for any financial statement worldwide.
       try {
         const cleaned = cleanJsonFence(extractedText);
         const maybeObj = JSON.parse(cleaned);
-        // scale metrics_by_year values per chunk, if present
-        if (maybeObj?.metrics_by_year) {
-          for (const [year, metrics] of Object.entries<any>(
-            maybeObj.metrics_by_year
-          )) {
-            for (const [key, value] of Object.entries(metrics)) {
-              if (
-                typeof value === 'number' &&
-                Number.isFinite(value)
-              ) {
-                metrics[key] = value;
-              }
-            }
-          }
-        }
         allExtractions.push(maybeObj);
         if (
           !riskSnapshot &&
@@ -355,10 +396,26 @@ This schema must work for any financial statement worldwide.
         for (const [yr, metrics] of Object.entries<any>(
           obj.metrics_by_year
         )) {
-          if (!merged[yr]) merged[yr] = { ...metrics };
-          else {
+          if (!merged[yr]) {
+            merged[yr] = { ...metrics };
+            // Deep copy adjusted_ebitda_components if present
+            if (metrics.adjusted_ebitda_components) {
+              merged[yr].adjusted_ebitda_components = { ...metrics.adjusted_ebitda_components };
+            }
+          } else {
             for (const key of Object.keys(metrics)) {
-              if (merged[yr][key] == null && metrics[key] != null) {
+              // Special handling for nested adjusted_ebitda_components
+              if (key === 'adjusted_ebitda_components' && metrics[key] != null) {
+                if (!merged[yr].adjusted_ebitda_components) {
+                  merged[yr].adjusted_ebitda_components = {};
+                }
+                // Merge each component, keeping non-null values
+                for (const [compKey, compValue] of Object.entries(metrics[key])) {
+                  if (merged[yr].adjusted_ebitda_components[compKey] == null && compValue != null) {
+                    merged[yr].adjusted_ebitda_components[compKey] = compValue;
+                  }
+                }
+              } else if (merged[yr][key] == null && metrics[key] != null) {
                 merged[yr][key] = metrics[key];
               }
             }
@@ -394,7 +451,6 @@ This schema must work for any financial statement worldwide.
 
     const ratiosByYear = buildMetricRatios(merged);
     const validationIssues = validateMetrics(ratiosByYear);
-    const scaleIssues = validateScaleInconsistencies(ratiosByYear);
     if (!riskSnapshot) {
       console.log(
         '🔍 No riskAssessment captured; requesting summary…'
@@ -505,6 +561,91 @@ Use any information available from the financial statement — including governa
       } else {
         m.total_debt_to_capital = null;
       }
+
+      // Calculate Adjusted EBITDA
+      if (m.ebitda != null) {
+        const adj = m.adjusted_ebitda_components || {};
+
+        // Sum non-cash adjustments (add back)
+        const nonCashAdjustments = [
+          adj.stock_based_compensation,
+          adj.impairment_charges,
+          adj.goodwill_impairment,
+          adj.bad_debt_provision,
+          adj.unrealized_gains_losses,
+          adj.deferred_compensation,
+          adj.loss_on_disposal, // Loss on disposal of assets - add back
+          adj.other_non_cash,
+        ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
+
+        // Sum one-time expenses (add back)
+        const oneTimeExpenses = [
+          adj.restructuring_costs,
+          adj.severance_costs,
+          adj.transaction_costs,
+          adj.legal_settlements,
+          adj.professional_fees_one_time,
+          adj.casualty_losses,
+          adj.other_one_time_expenses,
+        ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
+
+        // Sum one-time gains (subtract) - these inflated net income and should be removed
+        const oneTimeGains = [
+          adj.gain_on_disposal, // Gain on disposal of assets
+          adj.gain_on_asset_sale,
+          adj.other_income_non_operating, // Other income (non-operating) like bonuses, vendor rebates
+          adj.insurance_proceeds,
+          adj.other_one_time_gains,
+        ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
+
+        // Sum owner/management adjustments (add back)
+        const ownerManagementAdjustments = [
+          adj.owner_compensation_adjustment,
+          adj.related_party_adjustments,
+          adj.management_fees_adjustment,
+        ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
+
+        // Sum other adjustments
+        const accountingAdjustments = adj.accounting_policy_adjustments ?? 0;
+        const fxAdjustments = adj.foreign_exchange_adjustments ?? 0;
+        const proFormaAdjustments = [
+          adj.pro_forma_cost_savings,
+          adj.pro_forma_synergies,
+        ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
+
+        // Calculate Adjusted EBITDA = Base EBITDA + Add-backs - Gains
+        const calculatedAdjustedEbitda = parseFloat((
+          m.ebitda +
+          nonCashAdjustments +
+          oneTimeExpenses +
+          ownerManagementAdjustments +
+          accountingAdjustments +
+          fxAdjustments +
+          proFormaAdjustments -
+          oneTimeGains
+        ).toFixed(2));
+
+        // Use company-reported Adjusted EBITDA if available, otherwise use calculated
+        m.adjusted_ebitda = m.reported_adjusted_ebitda ?? calculatedAdjustedEbitda;
+        m.calculated_adjusted_ebitda = calculatedAdjustedEbitda;
+
+        // Store breakdown totals for display
+        m.adjusted_ebitda_breakdown = {
+          base_ebitda: m.ebitda,
+          non_cash_adjustments: nonCashAdjustments,
+          one_time_expenses: oneTimeExpenses,
+          one_time_gains: oneTimeGains,
+          owner_management_adjustments: ownerManagementAdjustments,
+          accounting_adjustments: accountingAdjustments,
+          fx_adjustments: fxAdjustments,
+          pro_forma_adjustments: proFormaAdjustments,
+          uses_reported_value: m.reported_adjusted_ebitda != null,
+        };
+      } else {
+        m.adjusted_ebitda = m.reported_adjusted_ebitda ?? null;
+        m.calculated_adjusted_ebitda = null;
+        m.adjusted_ebitda_breakdown = null;
+      }
     }
 
     let finalResult: any;
@@ -516,12 +657,6 @@ Use any information available from the financial statement — including governa
         ...(riskSnapshot && { riskAssessment: riskSnapshot }),
         ...(Object.keys(validationIssues).length > 0 && {
           validation_issues: validationIssues,
-        }),
-        ...(scaleIssues.length > 0 && {
-          validation_issues: {
-            ...validationIssues,
-            scale: scaleIssues,
-          },
         }),
       };
     } else {

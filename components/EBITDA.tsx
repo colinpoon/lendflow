@@ -27,9 +27,12 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
 
   return (
     <div className="p-4 border rounded-lg shadow-md w-full max-w-lg mx-auto mt-4">
-      <h2 className="text-lg font-semibold mb-2">
-        EBITDA Calculation
-      </h2>
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-lg font-semibold">
+          EBITDA Calculation
+        </h2>
+        <span className="text-xs text-gray-500">(Values in thousands)</span>
+      </div>
       {years.map((y) => (
         <p key={y} className="text-gray-700">
           <span className="font-semibold">{y}:</span>{' '}

@@ -34,3 +34,13 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+<!-- This app will be made for corporate bankers, it will streamline determining risk scores for banks to loan to companies and it will use ai and other api's that you suggest to achieve this. 
+
+User journey:
+1. user uploads a financial document (pdf, excel, word)
+2. AI will review the document and extract and display key points. Prompts should never be seen by the user and should be handled by the app. 
+3. 1st key point: any pertinent information that might affect risk factors.
+4. 2nd key point: all pertinent data must be collected and displayed in order for a user to 
+5. 3rd key point: use the document to determine EBITDA. -->

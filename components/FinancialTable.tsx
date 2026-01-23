@@ -62,9 +62,12 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
 
   return (
     <div className="p-4 border rounded-lg shadow-md w-full overflow-x-auto">
-      <h2 className="text-lg font-semibold mb-2">
-        Financial Metrics
-      </h2>
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-lg font-semibold">
+          Financial Metrics
+        </h2>
+        <span className="text-xs text-gray-500">(Values in thousands)</span>
+      </div>
       <table className="min-w-full text-sm border-collapse border border-gray-300">
         <thead>
           <tr className="bg-gray-200">

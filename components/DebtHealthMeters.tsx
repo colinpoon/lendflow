@@ -27,13 +27,12 @@ type HealthLevel =
   | 'weak'
   | 'poor';
 
+/**
+ * Format currency values displayed in thousands (as commonly reported in financial statements)
+ */
 const formatCurrency = (value: number | null): string => {
   if (value == null) return 'N/A';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value);
+  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
 };
 
 const getRatingLabel = (level: HealthLevel): string => {
@@ -335,7 +334,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
-        {/* <h2 className="text-lg font-semibold">Debt Health Indicators</h2> */}
+        <span className="text-xs text-gray-500">(Values in thousands)</span>
         <span className="text-sm text-gray-500">
           Fiscal Year {latestYear}
         </span>
