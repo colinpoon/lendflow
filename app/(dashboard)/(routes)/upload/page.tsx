@@ -182,6 +182,54 @@ const Home = () => {
               </CardHeader>
               <CardContent>
                 <RiskAssessment data={riskData} />
+                {financialData?.metrics_by_year && (
+                  <div className="mt-6">
+                    <h2 className="text-xl font-semibold mb-4">
+                      Key Ratios by Year
+                    </h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(
+                        financialData.metrics_by_year
+                      ).map(([year, metrics]: [string, any]) => {
+                        const interestCoverage =
+                          metrics.ebitda && metrics.interest
+                            ? (
+                                metrics.ebitda / metrics.interest
+                              ).toFixed(2)
+                            : 'N/A';
+                        const debtToEquity =
+                          metrics.total_debt &&
+                          metrics.shareholders_equity
+                            ? (
+                                metrics.total_debt /
+                                metrics.shareholders_equity
+                              ).toFixed(2)
+                            : 'N/A';
+
+                        return (
+                          <div
+                            key={year}
+                            className="border p-4 rounded shadow-sm"
+                          >
+                            <h3 className="text-lg font-bold mb-2">
+                              {year}
+                            </h3>
+                            <p>
+                              <strong>
+                                Interest Coverage Ratio:
+                              </strong>{' '}
+                              {interestCoverage}
+                            </p>
+                            <p>
+                              <strong>Debt-to-Equity Ratio:</strong>{' '}
+                              {debtToEquity}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : (

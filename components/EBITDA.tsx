@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { fmtCurrency } from '@/utils/format';
 
 /** Metrics for a single fiscal year */
 interface YearMetrics {
@@ -12,29 +13,6 @@ interface EBITDAProps {
   /** Backend response shape: { metrics_by_year: { "2024": {...}, "2023": {...} } } */
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
 }
-
-/** Normalise any numeric string or number to a JS number */
-const toNumber = (
-  val: number | string | null | undefined
-): number | null => {
-  if (val == null) return null;
-  if (typeof val === 'number') return val;
-  // strip $ commas and spaces
-  const num = parseFloat(val.replace(/[$,\s]/g, ''));
-  return isNaN(num) ? null : num;
-};
-
-/** Format currency or show “N/A” when null/invalid */
-const fmtCurrency = (v: number | string | null | undefined) => {
-  const num = toNumber(v);
-  return num == null
-    ? 'N/A'
-    : num.toLocaleString(undefined, {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0,
-      });
-};
 
 const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
   if (
@@ -56,7 +34,11 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
         <p key={y} className="text-gray-700">
           <span className="font-semibold">{y}:</span>{' '}
           <strong>
-            {fmtCurrency(data.metrics_by_year[y]?.ebitda)}
+            {fmtCurrency(
+              typeof data.metrics_by_year[y]?.ebitda === 'string'
+                ? parseFloat(data.metrics_by_year[y]?.ebitda)
+                : data.metrics_by_year[y]?.ebitda
+            )}
           </strong>
         </p>
       ))}
