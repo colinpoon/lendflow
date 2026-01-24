@@ -11,7 +11,6 @@ import {
 import FileUpload from '@/components/FileUpload';
 import ExtractedData from '@/components/ExtractedData';
 import FinancialTable from '@/components/FinancialTable';
-import EBITDA from '@/components/EBITDA';
 import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
 import RiskAssessment, {
@@ -23,7 +22,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import {
   Tabs,
   TabsContent,
@@ -142,22 +140,24 @@ const Home = () => {
 
         <TabsContent value="analysis" key="analysis">
           {financialData && (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              {/* Financial Metrics Table - Full Width */}
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle>Financial Table</CardTitle>
+                  <CardTitle>Financial Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <FinancialTable data={financialData} />
                 </CardContent>
               </Card>
 
+              {/* Adjusted EBITDA Breakdown */}
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle>EBITDA Analysis</CardTitle>
+                  <CardTitle>Adjusted EBITDA Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <EBITDA data={financialData} />
+                  <AdjustedEBITDA data={financialData} />
                 </CardContent>
               </Card>
             </div>
@@ -167,35 +167,26 @@ const Home = () => {
         <TabsContent value="credit" key="credit">
           {riskData ? (
             <div className="space-y-6">
+              {/* Credit Risk Assessment */}
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle>Credit‑Risk Snapshot</CardTitle>
+                  <CardTitle>Credit-Risk Assessment</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <RiskAssessment data={riskData} />
                 </CardContent>
               </Card>
 
+              {/* Debt Health Indicators with Gauges and Breakdowns */}
               {financialData && (
-                <>
-                  <Card className="shadow-lg">
-                    <CardHeader>
-                      <CardTitle>Adjusted EBITDA</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <AdjustedEBITDA data={financialData} />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="shadow-lg">
-                    <CardHeader>
-                      <CardTitle>Debt Health Indicators</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <DebtHealthMeters data={financialData} />
-                    </CardContent>
-                  </Card>
-                </>
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Debt Health Indicators</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <DebtHealthMeters data={financialData} />
+                  </CardContent>
+                </Card>
               )}
             </div>
           ) : (

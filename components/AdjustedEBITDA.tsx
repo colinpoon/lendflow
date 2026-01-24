@@ -1,6 +1,12 @@
 'use client';
 
 import React from 'react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 interface AdjustedEBITDAComponents {
   stock_based_compensation?: number | null;
@@ -233,238 +239,245 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
         </span>
       </div>
 
-      {/* Adjustment Breakdown */}
-      {hasAdjustments && breakdown && components && (
-        <div className="border rounded-lg p-4">
-          <h4 className="font-semibold text-gray-800 mb-4 border-b pb-2">
-            Adjustment Breakdown
-          </h4>
+      {/* Accordion Sections */}
+      <Accordion type="multiple" className="w-full">
+        {/* Adjustment Breakdown Accordion */}
+        {hasAdjustments && breakdown && components && (
+          <AccordionItem value="breakdown" className="border rounded-lg px-4">
+            <AccordionTrigger className="hover:no-underline">
+              <div className="flex items-center gap-3">
+                <span className="font-semibold text-gray-800">Adjustment Breakdown</span>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                  {formatCurrency(adjustedEBITDA)}
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              {/* Reported EBITDA */}
+              <div className="flex justify-between items-center mb-4 pb-2 border-b">
+                <span className="font-medium text-gray-700">Reported EBITDA</span>
+                <span className="font-bold text-gray-900">
+                  {formatCurrency(breakdown.reported_ebitda)}
+                </span>
+              </div>
 
-          {/* Reported EBITDA */}
-          <div className="flex justify-between items-center mb-4 pb-2 border-b">
-            <span className="font-medium text-gray-700">Reported EBITDA</span>
-            <span className="font-bold text-gray-900">
-              {formatCurrency(breakdown.reported_ebitda)}
-            </span>
+              {/* Non-Cash Adjustments */}
+              <AdjustmentCategory
+                title="Non-Cash Adjustments"
+                total={breakdown.non_cash_adjustments}
+                items={[
+                  {
+                    label: 'Stock-Based Compensation',
+                    value: components.stock_based_compensation,
+                  },
+                  {
+                    label: 'Impairment Charges',
+                    value: components.impairment_charges,
+                  },
+                  {
+                    label: 'Goodwill Impairment',
+                    value: components.goodwill_impairment,
+                  },
+                  {
+                    label: 'Unrealized Gains/Losses',
+                    value: components.unrealized_gains_losses,
+                  },
+                  {
+                    label: 'Deferred Compensation',
+                    value: components.deferred_compensation,
+                  },
+                  {
+                    label: 'Loss on Disposal of Assets',
+                    value: components.loss_on_disposal,
+                  },
+                  { label: 'Other Non-Cash', value: components.other_non_cash },
+                ]}
+              />
+
+              {/* One-Time Expenses */}
+              <AdjustmentCategory
+                title="One-Time/Non-Recurring Expenses"
+                total={breakdown.one_time_expenses}
+                items={[
+                  {
+                    label: 'Restructuring Costs',
+                    value: components.restructuring_costs,
+                  },
+                  { label: 'Severance Costs', value: components.severance_costs },
+                  {
+                    label: 'Transaction Costs',
+                    value: components.transaction_costs,
+                  },
+                  {
+                    label: 'Legal Settlements',
+                    value: components.legal_settlements,
+                  },
+                  {
+                    label: 'Professional Fees (One-Time)',
+                    value: components.professional_fees_one_time,
+                  },
+                  { label: 'Casualty Losses', value: components.casualty_losses },
+                  {
+                    label: 'Other One-Time Expenses',
+                    value: components.other_one_time_expenses,
+                  },
+                ]}
+              />
+
+              {/* One-Time Gains (subtract) */}
+              <AdjustmentCategory
+                title="One-Time Gains/Income (Subtracted)"
+                total={breakdown.one_time_gains}
+                isSubtraction
+                items={[
+                  {
+                    label: 'Gain on Disposal of Assets',
+                    value: components.gain_on_disposal,
+                  },
+                  {
+                    label: 'Gain on Asset Sale',
+                    value: components.gain_on_asset_sale,
+                  },
+                  {
+                    label: 'Other Income (Non-Operating)',
+                    value: components.other_income_non_operating,
+                  },
+                  {
+                    label: 'Insurance Proceeds',
+                    value: components.insurance_proceeds,
+                  },
+                  {
+                    label: 'Other One-Time Gains',
+                    value: components.other_one_time_gains,
+                  },
+                ]}
+              />
+
+              {/* Owner/Management Adjustments */}
+              <AdjustmentCategory
+                title="Owner/Management Adjustments"
+                total={breakdown.owner_management_adjustments}
+                items={[
+                  {
+                    label: 'Owner Compensation Adjustment',
+                    value: components.owner_compensation_adjustment,
+                  },
+                  {
+                    label: 'Related Party Adjustments',
+                    value: components.related_party_adjustments,
+                  },
+                  {
+                    label: 'Management Fees Adjustment',
+                    value: components.management_fees_adjustment,
+                  },
+                ]}
+              />
+
+              {/* Accounting Policy Adjustments */}
+              {breakdown.accounting_adjustments !== 0 && (
+                <AdjustmentCategory
+                  title="Accounting Policy Adjustments"
+                  total={breakdown.accounting_adjustments}
+                  items={[
+                    {
+                      label: 'Accounting Policy Changes',
+                      value: components.accounting_policy_adjustments,
+                    },
+                  ]}
+                />
+              )}
+
+              {/* FX Adjustments - positive = loss (add), negative = gain (subtract) */}
+              {breakdown.fx_adjustments !== 0 && (
+                <AdjustmentCategory
+                  title={breakdown.fx_adjustments >= 0 ? "Foreign Exchange Loss (Add Back)" : "Foreign Exchange Gain (Subtract)"}
+                  total={Math.abs(breakdown.fx_adjustments)}
+                  isSubtraction={breakdown.fx_adjustments < 0}
+                  items={[
+                    {
+                      label: breakdown.fx_adjustments >= 0 ? 'FX Loss' : 'FX Gain',
+                      value: Math.abs(components.foreign_exchange_adjustments ?? 0),
+                    },
+                  ]}
+                />
+              )}
+
+              {/* Pro Forma Adjustments */}
+              <AdjustmentCategory
+                title="Pro Forma Adjustments"
+                total={breakdown.pro_forma_adjustments}
+                items={[
+                  {
+                    label: 'Cost Savings',
+                    value: components.pro_forma_cost_savings,
+                  },
+                  { label: 'Synergies', value: components.pro_forma_synergies },
+                ]}
+              />
+
+              {/* Total */}
+              <div className="flex justify-between items-center mt-4 pt-4 border-t-2 border-gray-300">
+                <span className="font-bold text-gray-800">Adjusted EBITDA</span>
+                <span className="font-bold text-xl text-green-700">
+                  {formatCurrency(adjustedEBITDA)}
+                </span>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {!hasAdjustments && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-sm text-yellow-700">
+              No EBITDA adjustments were identified in the financial documents.
+              The Adjusted EBITDA equals the Reported EBITDA.
+            </p>
           </div>
+        )}
 
-          {/* Non-Cash Adjustments */}
-          <AdjustmentCategory
-            title="Non-Cash Adjustments"
-            total={breakdown.non_cash_adjustments}
-            items={[
-              {
-                label: 'Stock-Based Compensation',
-                value: components.stock_based_compensation,
-              },
-              {
-                label: 'Impairment Charges',
-                value: components.impairment_charges,
-              },
-              {
-                label: 'Goodwill Impairment',
-                value: components.goodwill_impairment,
-              },
-              {
-                label: 'Bad Debt Provision',
-                value: components.bad_debt_provision,
-              },
-              {
-                label: 'Unrealized Gains/Losses',
-                value: components.unrealized_gains_losses,
-              },
-              {
-                label: 'Deferred Compensation',
-                value: components.deferred_compensation,
-              },
-              {
-                label: 'Loss on Disposal of Assets',
-                value: components.loss_on_disposal,
-              },
-              { label: 'Other Non-Cash', value: components.other_non_cash },
-            ]}
-          />
-
-          {/* One-Time Expenses */}
-          <AdjustmentCategory
-            title="One-Time/Non-Recurring Expenses"
-            total={breakdown.one_time_expenses}
-            items={[
-              {
-                label: 'Restructuring Costs',
-                value: components.restructuring_costs,
-              },
-              { label: 'Severance Costs', value: components.severance_costs },
-              {
-                label: 'Transaction Costs',
-                value: components.transaction_costs,
-              },
-              {
-                label: 'Legal Settlements',
-                value: components.legal_settlements,
-              },
-              {
-                label: 'Professional Fees (One-Time)',
-                value: components.professional_fees_one_time,
-              },
-              { label: 'Casualty Losses', value: components.casualty_losses },
-              {
-                label: 'Other One-Time Expenses',
-                value: components.other_one_time_expenses,
-              },
-            ]}
-          />
-
-          {/* One-Time Gains (subtract) */}
-          <AdjustmentCategory
-            title="One-Time Gains/Income (Subtracted)"
-            total={breakdown.one_time_gains}
-            isSubtraction
-            items={[
-              {
-                label: 'Gain on Disposal of Assets',
-                value: components.gain_on_disposal,
-              },
-              {
-                label: 'Gain on Asset Sale',
-                value: components.gain_on_asset_sale,
-              },
-              {
-                label: 'Other Income (Non-Operating)',
-                value: components.other_income_non_operating,
-              },
-              {
-                label: 'Insurance Proceeds',
-                value: components.insurance_proceeds,
-              },
-              {
-                label: 'Other One-Time Gains',
-                value: components.other_one_time_gains,
-              },
-            ]}
-          />
-
-          {/* Owner/Management Adjustments */}
-          <AdjustmentCategory
-            title="Owner/Management Adjustments"
-            total={breakdown.owner_management_adjustments}
-            items={[
-              {
-                label: 'Owner Compensation Adjustment',
-                value: components.owner_compensation_adjustment,
-              },
-              {
-                label: 'Related Party Adjustments',
-                value: components.related_party_adjustments,
-              },
-              {
-                label: 'Management Fees Adjustment',
-                value: components.management_fees_adjustment,
-              },
-            ]}
-          />
-
-          {/* Accounting Policy Adjustments */}
-          {breakdown.accounting_adjustments !== 0 && (
-            <AdjustmentCategory
-              title="Accounting Policy Adjustments"
-              total={breakdown.accounting_adjustments}
-              items={[
-                {
-                  label: 'Accounting Policy Changes',
-                  value: components.accounting_policy_adjustments,
-                },
-              ]}
-            />
-          )}
-
-          {/* FX Adjustments - positive = loss (add), negative = gain (subtract) */}
-          {breakdown.fx_adjustments !== 0 && (
-            <AdjustmentCategory
-              title={breakdown.fx_adjustments >= 0 ? "Foreign Exchange Loss (Add Back)" : "Foreign Exchange Gain (Subtract)"}
-              total={Math.abs(breakdown.fx_adjustments)}
-              isSubtraction={breakdown.fx_adjustments < 0}
-              items={[
-                {
-                  label: breakdown.fx_adjustments >= 0 ? 'FX Loss' : 'FX Gain',
-                  value: Math.abs(components.foreign_exchange_adjustments ?? 0),
-                },
-              ]}
-            />
-          )}
-
-          {/* Pro Forma Adjustments */}
-          <AdjustmentCategory
-            title="Pro Forma Adjustments"
-            total={breakdown.pro_forma_adjustments}
-            items={[
-              {
-                label: 'Cost Savings',
-                value: components.pro_forma_cost_savings,
-              },
-              { label: 'Synergies', value: components.pro_forma_synergies },
-            ]}
-          />
-
-          {/* Total */}
-          <div className="flex justify-between items-center mt-4 pt-4 border-t-2 border-gray-300">
-            <span className="font-bold text-gray-800">Adjusted EBITDA</span>
-            <span className="font-bold text-xl text-green-700">
-              {formatCurrency(adjustedEBITDA)}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {!hasAdjustments && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-700">
-            No EBITDA adjustments were identified in the financial documents.
-            The Adjusted EBITDA equals the Reported EBITDA.
-          </p>
-        </div>
-      )}
-
-      {/* Historical Comparison */}
-      {years.length > 1 && (
-        <div className="mt-6 pt-4 border-t">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">
-            Historical EBITDA Comparison
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 pr-4">Metric</th>
-                  {years.map((yr) => (
-                    <th key={yr} className="text-right py-2 px-2">
-                      {yr}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-2 pr-4">Reported EBITDA</td>
-                  {years.map((yr) => (
-                    <td key={yr} className="text-right py-2 px-2">
-                      {formatCurrency(data.metrics_by_year[yr].ebitda)}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="border-b bg-green-50">
-                  <td className="py-2 pr-4 font-medium">Adjusted EBITDA</td>
-                  {years.map((yr) => (
-                    <td key={yr} className="text-right py-2 px-2 font-medium">
-                      {formatCurrency(data.metrics_by_year[yr].adjusted_ebitda)}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+        {/* Historical Comparison Accordion */}
+        {years.length > 1 && (
+          <AccordionItem value="historical" className="border rounded-lg px-4 mt-4">
+            <AccordionTrigger className="hover:no-underline">
+              <span className="font-semibold text-gray-800">Historical EBITDA Comparison</span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 pr-4">Metric</th>
+                      {years.map((yr) => (
+                        <th key={yr} className="text-right py-2 px-2">
+                          {yr}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="py-2 pr-4">Reported EBITDA</td>
+                      {years.map((yr) => (
+                        <td key={yr} className="text-right py-2 px-2">
+                          {formatCurrency(data.metrics_by_year[yr].ebitda)}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className="border-b bg-green-50">
+                      <td className="py-2 pr-4 font-medium">Adjusted EBITDA</td>
+                      {years.map((yr) => (
+                        <td key={yr} className="text-right py-2 px-2 font-medium">
+                          {formatCurrency(data.metrics_by_year[yr].adjusted_ebitda)}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+      </Accordion>
     </div>
   );
 };

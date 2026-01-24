@@ -316,7 +316,7 @@ Non-Cash Adjustments (ADD BACK to EBITDA):
 • stock_based_compensation: IMPORTANT - Use the value from the CASH FLOW STATEMENT under "Operating activities" adjustments. Look for "Stock based compensation" or "Share-based compensation" or "Stock-based payments". This is the TOTAL non-cash stock compensation. Do NOT use the smaller figure from notes which may only show options.
 • impairment_charges: "impairment", "asset write-down"
 • goodwill_impairment: "goodwill impairment"
-• bad_debt_provision: "bad debt provision", "allowance for doubtful accounts"
+• NOTE: bad_debt_provision is a CORE OPERATING EXPENSE - do NOT add it back to EBITDA. It reflects the normal cost of extending credit.
 • unrealized_gains_losses: "unrealized loss", "unrealized gain", "mark-to-market"
 • deferred_compensation: "deferred compensation"
 • loss_on_disposal: Sum ALL disposal losses from income statement: "Loss on sale of equipment", "Loss on disposal of right-of-use assets". When shown as "Loss (gain) on sale" with a POSITIVE number, that's a loss - extract it. For 2023 example: 27 + 81 = 108.
@@ -690,17 +690,39 @@ Use any information available from the financial statement — including governa
         m.total_debt = computedTotalDebt;
       }
 
-      // ────────────── Calculate Adjusted EBITDA FIRST ──────────────
+      // ────────────── Calculate EBITDA from components if not provided ──────────────
+      // EBITDA = Net Income + Interest + Taxes + Depreciation & Amortization
+      if (m.ebitda == null) {
+        const netIncome = m.net_income;
+        const interest = m.interest ?? (m.fixed_charges?.interest_expense ?? null);
+        const taxes = m.taxes;
+        const depAmort = m.depreciation_amortization;
+
+        // We need at minimum net_income and depreciation to calculate a meaningful EBITDA
+        if (netIncome != null && depAmort != null) {
+          const calculatedEbitda =
+            netIncome +
+            (interest ?? 0) +
+            (taxes ?? 0) +
+            depAmort;
+
+          m.ebitda = parseFloat(calculatedEbitda.toFixed(2));
+          m.ebitda_calculated = true; // Flag to indicate this was computed, not extracted
+          console.log(`📊 Computed EBITDA for ${yr}: ${m.ebitda} (from components)`);
+        }
+      }
+
+      // ────────────── Calculate Adjusted EBITDA ──────────────
       // This must happen before FCCR and Senior Debt/EBITDA calculations
       if (m.ebitda != null) {
         const adj = m.adjusted_ebitda_components || {};
 
         // Sum non-cash adjustments (add back)
+        // Note: bad_debt_provision is NOT included - it's a core operating expense
         const nonCashAdjustments = [
           adj.stock_based_compensation,
           adj.impairment_charges,
           adj.goodwill_impairment,
-          adj.bad_debt_provision,
           adj.unrealized_gains_losses,
           adj.deferred_compensation,
           adj.loss_on_disposal,

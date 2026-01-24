@@ -1,6 +1,12 @@
 'use client';
 
 import React from 'react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 interface FCCRBreakdown {
   calculation_type: 'basic' | 'enhanced';
@@ -374,7 +380,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
       {years.map((year) => {
         const metrics = data.metrics_by_year[year];
         return (
-          <div key={year} className="border rounded-lg p-4 bg-white shadow-sm">
+          <div
+            key={year}
+            className="border rounded-lg p-4 bg-white shadow-sm"
+          >
             <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">
               Fiscal Year {year}
             </h3>
@@ -412,335 +421,615 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
         const latestYear = years[0];
         const metrics = data.metrics_by_year[latestYear];
         return (
-          <div className="mt-4 space-y-6">
-            <h3 className="text-lg font-semibold text-gray-800">
+          <div className="mt-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
               Ratio Breakdowns ({latestYear})
             </h3>
 
-            {/* FCCR Breakdown */}
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4 border-b pb-2">
-                <h4 className="font-semibold text-gray-800">
-                  Fixed Charge Coverage Ratio (FCCR)
-                </h4>
-                {metrics.fccr != null && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-gray-900">{metrics.fccr.toFixed(2)}x</span>
-                    <span
-                      className="px-2 py-1 rounded text-xs text-white font-medium"
-                      style={{ backgroundColor: getFCCRHealth(metrics.fccr).color }}
-                    >
-                      {getRatingLabel(getFCCRHealth(metrics.fccr).level)}
+            <Accordion type="multiple" className="w-full space-y-3">
+              {/* FCCR Breakdown */}
+              <AccordionItem
+                value="fccr"
+                className="border rounded-lg px-4"
+              >
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <span className="font-semibold text-gray-800">
+                      Fixed Charge Coverage Ratio (FCCR)
                     </span>
-                  </div>
-                )}
-              </div>
-
-              {metrics.fccr_breakdown ? (
-                <>
-                  {/* Calculation Type Badge */}
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                      {metrics.fccr_breakdown.calculation_type === 'enhanced'
-                        ? '(EBITDA + Leases − Taxes − CapEx) ÷ (Interest + Leases + Principal)'
-                        : '(EBITDA + Fixed Charges) ÷ (Interest + Fixed Charges)'}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      metrics.fccr_breakdown.calculation_type === 'enhanced'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {metrics.fccr_breakdown.calculation_type === 'enhanced' ? 'Enhanced' : 'Basic'}
-                    </span>
-                  </div>
-
-                  {/* Numerator Breakdown */}
-                  <div className="mb-4">
-                    <div className="text-sm font-semibold text-blue-700 mb-2">Numerator (Earnings Available)</div>
-                    <div className="pl-4 border-l-2 border-blue-200 space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">EBITDA (Adjusted)</span>
-                        <span className="font-medium">{formatCurrency(metrics.fccr_breakdown.ebitda)}</span>
+                    {metrics.fccr != null && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-gray-900">
+                          {metrics.fccr.toFixed(2)}x
+                        </span>
+                        <span
+                          className="px-2 py-0.5 rounded text-xs text-white font-medium"
+                          style={{
+                            backgroundColor: getFCCRHealth(
+                              metrics.fccr,
+                            ).color,
+                          }}
+                        >
+                          {getRatingLabel(
+                            getFCCRHealth(metrics.fccr).level,
+                          )}
+                        </span>
                       </div>
-                      {metrics.fccr_breakdown.has_lease_payments && metrics.fccr_breakdown.lease_rent_add_back != null && (
-                        <div className="flex justify-between text-green-600">
-                          <span>+ Lease/Rent (Fixed Charges)</span>
-                          <span className="font-medium">+ {formatCurrency(metrics.fccr_breakdown.lease_rent_add_back)}</span>
-                        </div>
-                      )}
-                      {metrics.fccr_breakdown.has_taxes && metrics.fccr_breakdown.taxes_deducted != null && (
-                        <div className="flex justify-between text-red-600">
-                          <span>− Taxes Paid</span>
-                          <span className="font-medium">− {formatCurrency(metrics.fccr_breakdown.taxes_deducted)}</span>
-                        </div>
-                      )}
-                      {metrics.fccr_breakdown.has_capex && metrics.fccr_breakdown.capex_deducted != null && (
-                        <div className="flex justify-between text-red-600">
-                          <span>− Capital Expenditures</span>
-                          <span className="font-medium">− {formatCurrency(metrics.fccr_breakdown.capex_deducted)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-blue-800">
-                      <span>Available Cash Flow</span>
-                      <span>{formatCurrency(metrics.fccr_breakdown.numerator)}</span>
-                    </div>
+                    )}
                   </div>
-
-                  {/* Denominator Breakdown */}
-                  <div className="mb-4">
-                    <div className="text-sm font-semibold text-orange-700 mb-2">Denominator (Fixed Obligations)</div>
-                    <div className="pl-4 border-l-2 border-orange-200 space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Interest Expense</span>
-                        <span className="font-medium">{formatCurrency(metrics.fccr_breakdown.interest_expense)}</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  {metrics.fccr_breakdown ? (
+                    <>
+                      {/* Calculation Type Badge */}
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                          {metrics.fccr_breakdown.calculation_type ===
+                          'enhanced'
+                            ? '(EBITDA + Leases − Taxes − CapEx) ÷ (Interest + Leases + Principal)'
+                            : '(EBITDA + Fixed Charges) ÷ (Interest + Fixed Charges)'}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded ${
+                            metrics.fccr_breakdown
+                              .calculation_type === 'enhanced'
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {metrics.fccr_breakdown.calculation_type ===
+                          'enhanced'
+                            ? 'Enhanced'
+                            : 'Basic'}
+                        </span>
                       </div>
-                      {metrics.fccr_breakdown.has_lease_payments && metrics.fccr_breakdown.lease_payments != null && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">+ Lease Payments</span>
-                          <span className="font-medium">+ {formatCurrency(metrics.fccr_breakdown.lease_payments)}</span>
-                        </div>
-                      )}
-                      {metrics.fccr_breakdown.has_principal && metrics.fccr_breakdown.principal_payments != null && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">+ Principal Payments</span>
-                          <span className="font-medium">+ {formatCurrency(metrics.fccr_breakdown.principal_payments)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-orange-800">
-                      <span>Total Fixed Charges</span>
-                      <span>{formatCurrency(metrics.fccr_breakdown.denominator)}</span>
-                    </div>
-                  </div>
 
-                  {/* Reasoning */}
-                  {metrics.fccr != null && (
-                    <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
-                      {getFCCRReasoning(metrics.fccr, getFCCRHealth(metrics.fccr).level)}
+                      {/* Numerator Breakdown */}
+                      <div className="mb-4">
+                        <div className="text-sm font-semibold text-blue-700 mb-2">
+                          Numerator (Earnings Available)
+                        </div>
+                        <div className="pl-4 border-l-2 border-blue-200 space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">
+                              EBITDA (Adjusted)
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(
+                                metrics.fccr_breakdown.ebitda,
+                              )}
+                            </span>
+                          </div>
+                          {metrics.fccr_breakdown
+                            .has_lease_payments &&
+                            metrics.fccr_breakdown
+                              .lease_rent_add_back != null && (
+                              <div className="flex justify-between text-green-600">
+                                <span>
+                                  + Lease/Rent (Fixed Charges)
+                                </span>
+                                <span className="font-medium">
+                                  +{' '}
+                                  {formatCurrency(
+                                    metrics.fccr_breakdown
+                                      .lease_rent_add_back,
+                                  )}
+                                </span>
+                              </div>
+                            )}
+                          {metrics.fccr_breakdown.has_taxes &&
+                            metrics.fccr_breakdown.taxes_deducted !=
+                              null && (
+                              <div className="flex justify-between text-red-600">
+                                <span>− Taxes Paid</span>
+                                <span className="font-medium">
+                                  −{' '}
+                                  {formatCurrency(
+                                    metrics.fccr_breakdown
+                                      .taxes_deducted,
+                                  )}
+                                </span>
+                              </div>
+                            )}
+                          {metrics.fccr_breakdown.has_capex &&
+                            metrics.fccr_breakdown.capex_deducted !=
+                              null && (
+                              <div className="flex justify-between text-red-600">
+                                <span>− Capital Expenditures</span>
+                                <span className="font-medium">
+                                  −{' '}
+                                  {formatCurrency(
+                                    metrics.fccr_breakdown
+                                      .capex_deducted,
+                                  )}
+                                </span>
+                              </div>
+                            )}
+                        </div>
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-blue-800">
+                          <span>Available Cash Flow</span>
+                          <span>
+                            {formatCurrency(
+                              metrics.fccr_breakdown.numerator,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Denominator Breakdown */}
+                      <div className="mb-4">
+                        <div className="text-sm font-semibold text-orange-700 mb-2">
+                          Denominator (Fixed Obligations)
+                        </div>
+                        <div className="pl-4 border-l-2 border-orange-200 space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">
+                              Interest Expense
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(
+                                metrics.fccr_breakdown
+                                  .interest_expense,
+                              )}
+                            </span>
+                          </div>
+                          {metrics.fccr_breakdown
+                            .has_lease_payments &&
+                            metrics.fccr_breakdown.lease_payments !=
+                              null && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">
+                                  + Lease Payments
+                                </span>
+                                <span className="font-medium">
+                                  +{' '}
+                                  {formatCurrency(
+                                    metrics.fccr_breakdown
+                                      .lease_payments,
+                                  )}
+                                </span>
+                              </div>
+                            )}
+                          {metrics.fccr_breakdown.has_principal &&
+                            metrics.fccr_breakdown
+                              .principal_payments != null && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">
+                                  + Principal Payments
+                                </span>
+                                <span className="font-medium">
+                                  +{' '}
+                                  {formatCurrency(
+                                    metrics.fccr_breakdown
+                                      .principal_payments,
+                                  )}
+                                </span>
+                              </div>
+                            )}
+                        </div>
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-orange-800">
+                          <span>Total Fixed Charges</span>
+                          <span>
+                            {formatCurrency(
+                              metrics.fccr_breakdown.denominator,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Reasoning */}
+                      {metrics.fccr != null && (
+                        <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
+                          {getFCCRReasoning(
+                            metrics.fccr,
+                            getFCCRHealth(metrics.fccr).level,
+                          )}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">
+                      Insufficient data. Minimum required: EBITDA and
+                      Interest Expense.
                     </p>
                   )}
-                </>
-              ) : (
-                <p className="text-sm text-gray-400 italic">
-                  Insufficient data. Minimum required: EBITDA and Interest Expense.
-                </p>
-              )}
-            </div>
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* Senior Debt / EBITDA Breakdown */}
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4 border-b pb-2">
-                <h4 className="font-semibold text-gray-800">
-                  Senior Debt / Adjusted EBITDA
-                </h4>
-                {metrics.senior_debt_to_ebitda != null && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-gray-900">{metrics.senior_debt_to_ebitda.toFixed(2)}x</span>
-                    <span
-                      className="px-2 py-1 rounded text-xs text-white font-medium"
-                      style={{ backgroundColor: getSeniorDebtEBITDAHealth(metrics.senior_debt_to_ebitda).color }}
-                    >
-                      {getRatingLabel(getSeniorDebtEBITDAHealth(metrics.senior_debt_to_ebitda).level)}
+              {/* Senior Debt / EBITDA Breakdown */}
+              <AccordionItem
+                value="senior-debt-ebitda"
+                className="border rounded-lg px-4"
+              >
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <span className="font-semibold text-gray-800">
+                      Senior Debt / Adjusted EBITDA
                     </span>
+                    {metrics.senior_debt_to_ebitda != null && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-gray-900">
+                          {metrics.senior_debt_to_ebitda.toFixed(2)}x
+                        </span>
+                        <span
+                          className="px-2 py-0.5 rounded text-xs text-white font-medium"
+                          style={{
+                            backgroundColor:
+                              getSeniorDebtEBITDAHealth(
+                                metrics.senior_debt_to_ebitda,
+                              ).color,
+                          }}
+                        >
+                          {getRatingLabel(
+                            getSeniorDebtEBITDAHealth(
+                              metrics.senior_debt_to_ebitda,
+                            ).level,
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  {metrics.senior_debt != null &&
+                  (metrics.adjusted_ebitda != null ||
+                    metrics.ebitda != null) ? (
+                    <>
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                          Senior Debt ÷ Adjusted EBITDA
+                        </span>
+                      </div>
 
-              {metrics.senior_debt != null && (metrics.adjusted_ebitda != null || metrics.ebitda != null) ? (
-                <>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                      Senior Debt ÷ Adjusted EBITDA
-                    </span>
-                  </div>
+                      {/* Senior Debt Breakdown */}
+                      <div className="mb-4">
+                        <div className="text-sm font-semibold text-indigo-700 mb-2">
+                          Numerator (Senior Debt)
+                        </div>
+                        <div className="pl-4 border-l-2 border-indigo-200 space-y-1 text-sm">
+                          {metrics.debt_breakdown ? (
+                            <>
+                              {metrics.debt_breakdown.bank_debt >
+                                0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">
+                                    Bank Debt (Current + Long-term)
+                                  </span>
+                                  <span className="font-medium">
+                                    {formatCurrency(
+                                      metrics.debt_breakdown
+                                        .bank_debt,
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              {metrics.debt_breakdown
+                                .lease_liabilities > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">
+                                    + Lease Liabilities (Current +
+                                    Long-term)
+                                  </span>
+                                  <span className="font-medium">
+                                    +{' '}
+                                    {formatCurrency(
+                                      metrics.debt_breakdown
+                                        .lease_liabilities,
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              {metrics.debt_breakdown.bank_debt ===
+                                0 &&
+                                metrics.debt_breakdown
+                                  .lease_liabilities === 0 && (
+                                  <div className="flex justify-between text-gray-500 italic">
+                                    <span>
+                                      No debt component breakdown
+                                      available
+                                    </span>
+                                    <span>
+                                      {formatCurrency(
+                                        metrics.senior_debt,
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">
+                                  Bank Debt (Current + Long-term)
+                                </span>
+                                <span className="font-medium text-gray-400">
+                                  Included
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">
+                                  + Lease Liabilities (Current +
+                                  Long-term)
+                                </span>
+                                <span className="font-medium text-gray-400">
+                                  + Included
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-indigo-800">
+                          <span>Total Senior Debt</span>
+                          <span>
+                            {formatCurrency(metrics.senior_debt)}
+                          </span>
+                        </div>
+                      </div>
 
-                  {/* Senior Debt Breakdown */}
-                  <div className="mb-4">
-                    <div className="text-sm font-semibold text-indigo-700 mb-2">Numerator (Senior Debt)</div>
-                    <div className="pl-4 border-l-2 border-indigo-200 space-y-1 text-sm">
-                      {metrics.debt_breakdown ? (
-                        <>
-                          {metrics.debt_breakdown.bank_debt > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Bank Debt (Current + Long-term)</span>
-                              <span className="font-medium">{formatCurrency(metrics.debt_breakdown.bank_debt)}</span>
-                            </div>
+                      {/* EBITDA */}
+                      <div className="mb-4">
+                        <div className="text-sm font-semibold text-teal-700 mb-2">
+                          Denominator (Adjusted EBITDA)
+                        </div>
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-teal-800">
+                          <span>Adjusted EBITDA</span>
+                          <span>
+                            {formatCurrency(
+                              metrics.adjusted_ebitda ??
+                                metrics.ebitda,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Reasoning */}
+                      {metrics.senior_debt_to_ebitda != null && (
+                        <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
+                          {getDebtEBITDAReasoning(
+                            metrics.senior_debt_to_ebitda,
+                            getSeniorDebtEBITDAHealth(
+                              metrics.senior_debt_to_ebitda,
+                            ).level,
                           )}
-                          {metrics.debt_breakdown.lease_liabilities > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">+ Lease Liabilities (Current + Long-term)</span>
-                              <span className="font-medium">+ {formatCurrency(metrics.debt_breakdown.lease_liabilities)}</span>
-                            </div>
-                          )}
-                          {metrics.debt_breakdown.bank_debt === 0 && metrics.debt_breakdown.lease_liabilities === 0 && (
-                            <div className="flex justify-between text-gray-500 italic">
-                              <span>No debt component breakdown available</span>
-                              <span>{formatCurrency(metrics.senior_debt)}</span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Bank Debt (Current + Long-term)</span>
-                            <span className="font-medium text-gray-400">Included</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">+ Lease Liabilities (Current + Long-term)</span>
-                            <span className="font-medium text-gray-400">+ Included</span>
-                          </div>
-                        </>
+                        </p>
                       )}
-                    </div>
-                    <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-indigo-800">
-                      <span>Total Senior Debt</span>
-                      <span>{formatCurrency(metrics.senior_debt)}</span>
-                    </div>
-                  </div>
-
-                  {/* EBITDA */}
-                  <div className="mb-4">
-                    <div className="text-sm font-semibold text-teal-700 mb-2">Denominator (Adjusted EBITDA)</div>
-                    <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-teal-800">
-                      <span>Adjusted EBITDA</span>
-                      <span>{formatCurrency(metrics.adjusted_ebitda ?? metrics.ebitda)}</span>
-                    </div>
-                  </div>
-
-                  {/* Reasoning */}
-                  {metrics.senior_debt_to_ebitda != null && (
-                    <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
-                      {getDebtEBITDAReasoning(metrics.senior_debt_to_ebitda, getSeniorDebtEBITDAHealth(metrics.senior_debt_to_ebitda).level)}
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">
+                      Insufficient data to calculate Debt/EBITDA
                     </p>
                   )}
-                </>
-              ) : (
-                <p className="text-sm text-gray-400 italic">
-                  Insufficient data to calculate Debt/EBITDA
-                </p>
-              )}
-            </div>
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* Total Debt / Total Capital Breakdown */}
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4 border-b pb-2">
-                <h4 className="font-semibold text-gray-800">
-                  Total Debt / Total Capital
-                </h4>
-                {metrics.total_debt_to_capital != null && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-gray-900">{((metrics.total_debt_to_capital) * 100).toFixed(0)}%</span>
-                    <span
-                      className="px-2 py-1 rounded text-xs text-white font-medium"
-                      style={{ backgroundColor: getTotalDebtCapitalHealth(metrics.total_debt_to_capital).color }}
-                    >
-                      {getRatingLabel(getTotalDebtCapitalHealth(metrics.total_debt_to_capital).level)}
+              {/* Total Debt / Total Capital Breakdown */}
+              <AccordionItem
+                value="total-debt-capital"
+                className="border rounded-lg px-4"
+              >
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <span className="font-semibold text-gray-800">
+                      Total Debt / Total Capital
                     </span>
+                    {metrics.total_debt_to_capital != null && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-gray-900">
+                          {(
+                            metrics.total_debt_to_capital * 100
+                          ).toFixed(0)}
+                          %
+                        </span>
+                        <span
+                          className="px-2 py-0.5 rounded text-xs text-white font-medium"
+                          style={{
+                            backgroundColor:
+                              getTotalDebtCapitalHealth(
+                                metrics.total_debt_to_capital,
+                              ).color,
+                          }}
+                        >
+                          {getRatingLabel(
+                            getTotalDebtCapitalHealth(
+                              metrics.total_debt_to_capital,
+                            ).level,
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  {metrics.total_debt != null &&
+                  metrics.shareholders_equity != null ? (
+                    <>
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                          Total Debt ÷ (Total Debt +
+                          Shareholders&apos; Equity)
+                        </span>
+                      </div>
 
-              {metrics.total_debt != null && metrics.shareholders_equity != null ? (
-                <>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                      Total Debt ÷ (Total Debt + Shareholders&apos; Equity)
-                    </span>
-                  </div>
+                      {/* Total Debt Breakdown */}
+                      <div className="mb-4">
+                        <div className="text-sm font-semibold text-rose-700 mb-2">
+                          Numerator (Total Debt)
+                        </div>
+                        <div className="pl-4 border-l-2 border-rose-200 space-y-1 text-sm">
+                          {metrics.debt_breakdown ? (
+                            <>
+                              {/* Senior Debt Components */}
+                              {metrics.debt_breakdown.bank_debt >
+                                0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">
+                                    Bank Debt
+                                  </span>
+                                  <span className="font-medium">
+                                    {formatCurrency(
+                                      metrics.debt_breakdown
+                                        .bank_debt,
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              {metrics.debt_breakdown
+                                .lease_liabilities > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">
+                                    + Lease Liabilities
+                                  </span>
+                                  <span className="font-medium">
+                                    +{' '}
+                                    {formatCurrency(
+                                      metrics.debt_breakdown
+                                        .lease_liabilities,
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              {/* Non-Senior Debt Components */}
+                              {metrics.debt_breakdown.notes_payable >
+                                0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">
+                                    + Notes Payable
+                                  </span>
+                                  <span className="font-medium">
+                                    +{' '}
+                                    {formatCurrency(
+                                      metrics.debt_breakdown
+                                        .notes_payable,
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              {metrics.debt_breakdown
+                                .subordinated_debt > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">
+                                    + Subordinated Debt
+                                  </span>
+                                  <span className="font-medium">
+                                    +{' '}
+                                    {formatCurrency(
+                                      metrics.debt_breakdown
+                                        .subordinated_debt,
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              {metrics.debt_breakdown
+                                .other_non_senior_debt > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">
+                                    + Other Debt
+                                  </span>
+                                  <span className="font-medium">
+                                    +{' '}
+                                    {formatCurrency(
+                                      metrics.debt_breakdown
+                                        .other_non_senior_debt,
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">
+                                  Senior Debt (Bank + Leases)
+                                </span>
+                                <span className="font-medium">
+                                  {formatCurrency(
+                                    metrics.senior_debt,
+                                  )}
+                                </span>
+                              </div>
+                              {metrics.total_debt !==
+                                metrics.senior_debt && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">
+                                    + Subordinated Debt
+                                  </span>
+                                  <span className="font-medium">
+                                    +{' '}
+                                    {formatCurrency(
+                                      (metrics.total_debt ?? 0) -
+                                        (metrics.senior_debt ?? 0),
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-rose-800">
+                          <span>Total Debt</span>
+                          <span>
+                            {formatCurrency(metrics.total_debt)}
+                          </span>
+                        </div>
+                      </div>
 
-                  {/* Total Debt Breakdown */}
-                  <div className="mb-4">
-                    <div className="text-sm font-semibold text-rose-700 mb-2">Numerator (Total Debt)</div>
-                    <div className="pl-4 border-l-2 border-rose-200 space-y-1 text-sm">
-                      {metrics.debt_breakdown ? (
-                        <>
-                          {/* Senior Debt Components */}
-                          {metrics.debt_breakdown.bank_debt > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Bank Debt</span>
-                              <span className="font-medium">{formatCurrency(metrics.debt_breakdown.bank_debt)}</span>
-                            </div>
-                          )}
-                          {metrics.debt_breakdown.lease_liabilities > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">+ Lease Liabilities</span>
-                              <span className="font-medium">+ {formatCurrency(metrics.debt_breakdown.lease_liabilities)}</span>
-                            </div>
-                          )}
-                          {/* Non-Senior Debt Components */}
-                          {metrics.debt_breakdown.notes_payable > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">+ Notes Payable</span>
-                              <span className="font-medium">+ {formatCurrency(metrics.debt_breakdown.notes_payable)}</span>
-                            </div>
-                          )}
-                          {metrics.debt_breakdown.subordinated_debt > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">+ Subordinated Debt</span>
-                              <span className="font-medium">+ {formatCurrency(metrics.debt_breakdown.subordinated_debt)}</span>
-                            </div>
-                          )}
-                          {metrics.debt_breakdown.other_non_senior_debt > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">+ Other Debt</span>
-                              <span className="font-medium">+ {formatCurrency(metrics.debt_breakdown.other_non_senior_debt)}</span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
+                      {/* Total Capital Breakdown */}
+                      <div className="mb-4">
+                        <div className="text-sm font-semibold text-emerald-700 mb-2">
+                          Denominator (Total Capital)
+                        </div>
+                        <div className="pl-4 border-l-2 border-emerald-200 space-y-1 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Senior Debt (Bank + Leases)</span>
-                            <span className="font-medium">{formatCurrency(metrics.senior_debt)}</span>
+                            <span className="text-gray-600">
+                              Total Debt
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(metrics.total_debt)}
+                            </span>
                           </div>
-                          {metrics.total_debt !== metrics.senior_debt && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">+ Subordinated Debt</span>
-                              <span className="font-medium">+ {formatCurrency((metrics.total_debt ?? 0) - (metrics.senior_debt ?? 0))}</span>
-                            </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">
+                              + Shareholders&apos; Equity
+                            </span>
+                            <span className="font-medium">
+                              +{' '}
+                              {formatCurrency(
+                                metrics.shareholders_equity,
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-emerald-800">
+                          <span>Total Capital</span>
+                          <span>
+                            {formatCurrency(
+                              metrics.total_debt +
+                                metrics.shareholders_equity,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Reasoning */}
+                      {metrics.total_debt_to_capital != null && (
+                        <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
+                          {getDebtCapitalReasoning(
+                            metrics.total_debt_to_capital,
+                            getTotalDebtCapitalHealth(
+                              metrics.total_debt_to_capital,
+                            ).level,
                           )}
-                        </>
+                        </p>
                       )}
-                    </div>
-                    <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-rose-800">
-                      <span>Total Debt</span>
-                      <span>{formatCurrency(metrics.total_debt)}</span>
-                    </div>
-                  </div>
-
-                  {/* Total Capital Breakdown */}
-                  <div className="mb-4">
-                    <div className="text-sm font-semibold text-emerald-700 mb-2">Denominator (Total Capital)</div>
-                    <div className="pl-4 border-l-2 border-emerald-200 space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Debt</span>
-                        <span className="font-medium">{formatCurrency(metrics.total_debt)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">+ Shareholders&apos; Equity</span>
-                        <span className="font-medium">+ {formatCurrency(metrics.shareholders_equity)}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-emerald-800">
-                      <span>Total Capital</span>
-                      <span>{formatCurrency(metrics.total_debt + metrics.shareholders_equity)}</span>
-                    </div>
-                  </div>
-
-                  {/* Reasoning */}
-                  {metrics.total_debt_to_capital != null && (
-                    <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
-                      {getDebtCapitalReasoning(metrics.total_debt_to_capital, getTotalDebtCapitalHealth(metrics.total_debt_to_capital).level)}
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">
+                      Insufficient data to calculate Debt/Capital
                     </p>
                   )}
-                </>
-              ) : (
-                <p className="text-sm text-gray-400 italic">
-                  Insufficient data to calculate Debt/Capital
-                </p>
-              )}
-            </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         );
       })()}
@@ -786,7 +1075,9 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                   })}
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2 pr-4">Senior Debt / Adj. EBITDA</td>
+                  <td className="py-2 pr-4">
+                    Senior Debt / Adj. EBITDA
+                  </td>
                   {years.map((yr) => {
                     const val =
                       data.metrics_by_year[yr].senior_debt_to_ebitda;
