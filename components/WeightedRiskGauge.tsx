@@ -233,7 +233,6 @@ interface MetricBadgeProps {
   label: string;
   value: number | null;
   score: number;
-  weight: number;
   format: (v: number) => string;
 }
 
@@ -241,29 +240,19 @@ const MetricBadge: React.FC<MetricBadgeProps> = ({
   label,
   value,
   score,
-  weight,
   format,
 }) => {
   const config = getRiskConfig(score);
-  const contribution = (score * weight).toFixed(1);
 
   return (
     <div className="flex flex-col items-center p-3 bg-gray-50 rounded-lg">
       <span className="text-xs text-gray-500 mb-1">{label}</span>
-      <span className="text-lg font-bold text-gray-800">
+      <span
+        className="text-lg font-bold"
+        style={{ color: config.color }}
+      >
         {value != null ? format(value) : 'N/A'}
       </span>
-      <div className="flex items-center gap-2 mt-1">
-        <span
-          className="px-2 py-0.5 rounded text-xs font-medium text-white"
-          style={{ backgroundColor: config.color }}
-        >
-          {score.toFixed(0)}/10
-        </span>
-        <span className="text-xs text-gray-400">
-          ({weight * 100}% = {contribution})
-        </span>
-      </div>
     </div>
   );
 };
@@ -340,32 +329,20 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             label="FCCR (50%)"
             value={metrics.fccr}
             score={fccrScore}
-            weight={0.5}
             format={(v) => `${v.toFixed(2)}x`}
           />
           <MetricBadge
             label="Senior Debt / EBITDA (35%)"
             value={metrics.senior_debt_to_ebitda}
             score={debtEbitdaScore}
-            weight={0.35}
             format={(v) => `${v.toFixed(2)}x`}
           />
           <MetricBadge
             label="Total Debt / Capital (15%)"
             value={metrics.total_debt_to_capital}
             score={debtCapitalScore}
-            weight={0.15}
             format={(v) => `${(v * 100).toFixed(0)}%`}
           />
-        </div>
-      </div>
-
-      {/* Score Calculation Summary */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <div className="text-sm text-gray-600 text-center">
-          <span className="font-mono">
-            Weighted Score = ({fccrScore.toFixed(0)} × 0.50) + ({debtEbitdaScore.toFixed(0)} × 0.35) + ({debtCapitalScore.toFixed(0)} × 0.15) = <strong>{weightedScore.toFixed(1)}</strong>
-          </span>
         </div>
       </div>
 

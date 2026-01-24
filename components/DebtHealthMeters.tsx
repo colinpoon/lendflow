@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/accordion';
 
 interface FCCRBreakdown {
-  calculation_type: 'basic' | 'enhanced';
+  calculation_type: 'standard' | 'enhanced';
   // Numerator components
   ebitda: number;
   lease_rent_add_back: number | null;
@@ -461,87 +461,72 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                 <AccordionContent>
                   {metrics.fccr_breakdown ? (
                     <>
-                      {/* Calculation Type Badge */}
+                      {/* Calculation Formula - Dynamic based on available data */}
                       <div className="flex justify-between items-center mb-3">
                         <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                          {metrics.fccr_breakdown.calculation_type ===
-                          'enhanced'
-                            ? '(EBITDA + Leases − Taxes − CapEx) ÷ (Interest + Leases + Principal)'
-                            : '(EBITDA + Fixed Charges) ÷ (Interest + Fixed Charges)'}
+                          {(() => {
+                            const b = metrics.fccr_breakdown;
+                            let numerator = 'EBITDA';
+                            if (b.has_lease_payments) numerator += ' + Leases';
+                            if (b.has_taxes) numerator += ' − Taxes';
+                            if (b.has_capex) numerator += ' − CapEx';
+
+                            let denominator = 'Interest';
+                            if (b.has_lease_payments) denominator += ' + Leases';
+                            if (b.has_principal) denominator += ' + Principal';
+
+                            return `(${numerator}) ÷ (${denominator})`;
+                          })()}
                         </span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded ${
-                            metrics.fccr_breakdown
-                              .calculation_type === 'enhanced'
-                              ? 'bg-purple-100 text-purple-700'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {metrics.fccr_breakdown.calculation_type ===
-                          'enhanced'
-                            ? 'Enhanced'
-                            : 'Basic'}
-                        </span>
+                        {metrics.fccr_breakdown.calculation_type === 'enhanced' && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700">
+                            {metrics.fccr_breakdown.has_taxes && metrics.fccr_breakdown.has_capex
+                              ? 'Taxes + CapEx'
+                              : metrics.fccr_breakdown.has_taxes
+                              ? 'Taxes Adj.'
+                              : 'CapEx Adj.'}
+                          </span>
+                        )}
                       </div>
 
                       {/* Numerator Breakdown */}
                       <div className="mb-4">
                         <div className="text-sm font-semibold text-blue-700 mb-2">
-                          Numerator (Earnings Available)
+                          Numerator (Cash Available)
                         </div>
                         <div className="pl-4 border-l-2 border-blue-200 space-y-1 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-600">
-                              EBITDA (Adjusted)
+                              Adjusted EBITDA
                             </span>
                             <span className="font-medium">
-                              {formatCurrency(
-                                metrics.fccr_breakdown.ebitda,
-                              )}
+                              {formatCurrency(metrics.fccr_breakdown.ebitda)}
                             </span>
                           </div>
-                          {metrics.fccr_breakdown
-                            .has_lease_payments &&
-                            metrics.fccr_breakdown
-                              .lease_rent_add_back != null && (
+                          {metrics.fccr_breakdown.has_lease_payments &&
+                            metrics.fccr_breakdown.lease_rent_add_back != null && (
                               <div className="flex justify-between text-green-600">
-                                <span>
-                                  + Lease/Rent (Fixed Charges)
-                                </span>
+                                <span>+ Lease/Rent Payments</span>
                                 <span className="font-medium">
-                                  +{' '}
-                                  {formatCurrency(
-                                    metrics.fccr_breakdown
-                                      .lease_rent_add_back,
-                                  )}
+                                  + {formatCurrency(metrics.fccr_breakdown.lease_rent_add_back)}
                                 </span>
                               </div>
                             )}
                           {metrics.fccr_breakdown.has_taxes &&
-                            metrics.fccr_breakdown.taxes_deducted !=
-                              null && (
+                            metrics.fccr_breakdown.taxes_deducted != null && (
                               <div className="flex justify-between text-red-600">
                                 <span>− Taxes Paid</span>
                                 <span className="font-medium">
-                                  −{' '}
-                                  {formatCurrency(
-                                    metrics.fccr_breakdown
-                                      .taxes_deducted,
-                                  )}
+                                  − {formatCurrency(metrics.fccr_breakdown.taxes_deducted)}
                                 </span>
                               </div>
                             )}
                           {metrics.fccr_breakdown.has_capex &&
-                            metrics.fccr_breakdown.capex_deducted !=
-                              null && (
+                            metrics.fccr_breakdown.capex_deducted != null && (
                               <div className="flex justify-between text-red-600">
                                 <span>− Capital Expenditures</span>
                                 <span className="font-medium">
-                                  −{' '}
-                                  {formatCurrency(
-                                    metrics.fccr_breakdown
-                                      .capex_deducted,
-                                  )}
+                                  − {formatCurrency(metrics.fccr_breakdown.capex_deducted)}
                                 </span>
                               </div>
                             )}
@@ -549,9 +534,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-blue-800">
                           <span>Available Cash Flow</span>
                           <span>
-                            {formatCurrency(
-                              metrics.fccr_breakdown.numerator,
-                            )}
+                            {formatCurrency(metrics.fccr_breakdown.numerator)}
                           </span>
                         </div>
                       </div>

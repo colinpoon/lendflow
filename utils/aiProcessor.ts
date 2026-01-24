@@ -371,30 +371,41 @@ RULES
 DEBT EXTRACTION - CRITICAL FOR ACCURACY:
 Extract all debt components from the Balance Sheet liabilities section:
 
-debt_components extraction:
+IMPORTANT - DEBT ORDERING INDICATES SENIORITY:
+Financial statements list debt in descending order of seniority (most senior first). Use this ordering as a classification signal:
+• Items listed FIRST (top of debt section) = Most senior (secured bank debt, credit facilities)
+• Items listed in MIDDLE = Typically senior secured (leases, term loans)
+• Items listed LAST (bottom of debt section) = Usually subordinated (notes payable, mezzanine, convertible)
+
+debt_components extraction (in typical seniority order):
+SENIOR DEBT (highest priority - listed first in reports):
 • bank_debt_current: Current portion of bank debt, credit facilities, term loans due within 1 year
 • bank_debt_long_term: Long-term bank debt, term loans due after 1 year
 • term_loans: Named term loans (e.g., "Term Loan" at specific interest rate)
 • revolving_credit_facilities: Revolving equipment financing, revolving credit lines
 • overdraft_facilities: Authorized overdraft, bank overdraft facilities
+• lines_of_credit: General lines of credit, credit lines
 • lease_liabilities_current: Current portion of lease liabilities (operating + finance)
 • lease_liabilities_long_term: Non-current lease liabilities
 • finance_lease_liabilities: Finance/capital lease obligations
 • operating_lease_liabilities: Operating lease liabilities under IFRS 16/ASC 842
+
+SUBORDINATED/JUNIOR DEBT (lower priority - listed last in reports):
 • notes_payable: Notes payable, promissory notes, vendor take-back notes (often subordinated)
 • subordinated_debt: Explicitly subordinated debt, mezzanine debt, junior debt
 • convertible_debt: Convertible notes, convertible bonds
-• bonds_debentures: Corporate bonds, debentures
-• lines_of_credit: General lines of credit, credit lines
+• bonds_debentures: Corporate bonds, debentures (unless explicitly senior secured)
 • other_borrowings: Any other debt not categorized above
 
 CRITICAL DEBT CALCULATION RULES:
+• LEVERAGE DOCUMENT ORDER: When unsure of seniority, use position in the document. Debt items appearing earlier in the liabilities section or debt schedules are typically more senior.
 • Look for debt breakdowns in the notes to financial statements (e.g., "Note 8: Credit Facilities", "Note 9: Lease Liabilities", "Note 10: Note Payable")
 • "senior_debt" = bank_debt (current + long-term) + ALL lease_liabilities (current + long-term). Senior debt is secured debt that has priority in bankruptcy.
 • Notes payable, especially vendor take-back notes or those described as "subordinated", are NOT senior debt.
 • "total_debt" = senior_debt + notes_payable + subordinated_debt + any other non-senior debt
 • If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities.
 • Lease liabilities are often shown separately from bank debt on the balance sheet.
+• When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority.
 
 FIXED CHARGES EXTRACTION (CRITICAL FOR FCCR CALCULATION):
 Extract from CASH FLOW STATEMENT and INCOME STATEMENT:
@@ -799,16 +810,8 @@ Use any information available from the financial statement — including governa
       }
 
       // Calculate Fixed Charge Coverage Ratio (FCCR)
-      // Flexible calculation based on available data:
-      //
-      // MINIMUM REQUIRED:
-      //   - Numerator: EBITDA (or Adjusted EBITDA) + Fixed Charges (lease/rent)
-      //   - Denominator: Interest + Fixed Charges (lease/rent)
-      //   Formula: (EBIT + Fixed Charges) / (Interest + Fixed Charges)
-      //
-      // ENHANCED (when more data available):
-      //   - Numerator: EBITDA - Taxes - CapEx
-      //   - Denominator: Interest + Principal + Lease Payments
+      // Base formula: (EBITDA + Lease Payments) / (Interest + Lease Payments + Principal)
+      // Enhanced formula (when data available): Deduct Taxes and/or CapEx from numerator
       //
       const fc = m.fixed_charges || {};
 
@@ -824,26 +827,23 @@ Use any information available from the financial statement — including governa
       const hasMinimumData = ebitdaValue != null && ebitdaValue > 0 && interestExpense != null && interestExpense > 0;
 
       if (hasMinimumData) {
-        // Build numerator: Start with EBITDA + Fixed Charges (lease/rent)
-        // Traditional FCCR adds fixed charges to numerator to show cash available before these obligations
+        // Build numerator: EBITDA + Lease Payments
         let fccrNumerator = ebitdaValue + leasePayments;
 
-        // ENHANCED: Subtract taxes if available
+        // Conditionally subtract taxes if provided
         const hasTaxes = taxesPaid > 0;
         if (hasTaxes) {
           fccrNumerator -= taxesPaid;
         }
 
-        // ENHANCED: Subtract CapEx if available
+        // Conditionally subtract CapEx if provided
         const hasCapEx = capitalExpenditures > 0;
         if (hasCapEx) {
           fccrNumerator -= capitalExpenditures;
         }
 
-        // Build denominator: Interest + Fixed Charges (lease payments)
+        // Denominator: Interest + Lease Payments + Principal
         let fccrDenominator = interestExpense + leasePayments;
-
-        // ENHANCED: Add principal payments if available
         const hasPrincipal = principalPayments > 0;
         if (hasPrincipal) {
           fccrDenominator += principalPayments;
@@ -855,8 +855,8 @@ Use any information available from the financial statement — including governa
           m.fccr_numerator = parseFloat(fccrNumerator.toFixed(2));
           m.total_fixed_charges = parseFloat(fccrDenominator.toFixed(2));
 
-          // Determine calculation type for display
-          const calculationType = (hasTaxes || hasCapEx || hasPrincipal) ? 'enhanced' : 'basic';
+          // Determine calculation type
+          const calculationType = (hasTaxes || hasCapEx) ? 'enhanced' : 'standard';
 
           m.fccr_breakdown = {
             calculation_type: calculationType,
