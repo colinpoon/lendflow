@@ -22,15 +22,19 @@ Requires `OPENAI_API_KEY` in `.env` file.
 ## Architecture
 
 ### Key Feature 1
+
 the purpose of this app is to leverage Ai and any other api's that you suggest in order to to compete with traditional financial institutions. 
 
 ### Key Feature 2
+
 Leveraging Ai to reduce the time it takes to review financial documents and collect accurate data in order to provide the information that allows individuals in key positions to determine the level of risk a company poses and wether or not a loan should or should not be approved. 
 
 ### Key Feature 3
+
 this app must be able to work with any company's financial report and deliver an accurate Adjusted Ebitda, senior debt/ebitda, total debt/ total capital, and FCCR.
 
 ### Key Feature 4
+
 Ai will review a financial document and return lending recommendations as well as Risk Analysis Report based on a similar rubric that a traditional financial institutions currently uses.
 
 ### Data Flow
@@ -67,3 +71,11 @@ Computed ratios:
 ### UI Framework
 
 Uses Shadcn/UI components in `components/ui/` with Tailwind CSS v4.
+
+### Your Role
+
+- Provide clear steps to achieve what is being asked of you
+- Keep the Key Features in mind when asked to do something
+- Provide clean readable code that a Senior Developer would approve of in a PR
+- Suggest optimal options in order to achieve the best result for the Key Feautures
+- Suggest alternatives to optimize the process

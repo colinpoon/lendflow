@@ -240,9 +240,34 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "ebitda": number|null,
       "reported_adjusted_ebitda": number|null,
       "shareholders_equity": number|null,
+      "capital_expenditures": number|null,
+      "debt_components": {
+        "bank_debt_current": number|null,
+        "bank_debt_long_term": number|null,
+        "term_loans": number|null,
+        "revolving_credit_facilities": number|null,
+        "overdraft_facilities": number|null,
+        "lease_liabilities_current": number|null,
+        "lease_liabilities_long_term": number|null,
+        "finance_lease_liabilities": number|null,
+        "operating_lease_liabilities": number|null,
+        "notes_payable": number|null,
+        "subordinated_debt": number|null,
+        "convertible_debt": number|null,
+        "bonds_debentures": number|null,
+        "lines_of_credit": number|null,
+        "other_borrowings": number|null
+      },
       "total_debt": number|null,
       "senior_debt": number|null,
-      "debt_service_payments": number|null,
+      "fixed_charges": {
+        "interest_expense": number|null,
+        "lease_payments": number|null,
+        "principal_payments": number|null,
+        "rent_expense": number|null,
+        "preferred_dividends": number|null,
+        "other_fixed_charges": number|null
+      },
       "adjusted_ebitda_components": {
         "stock_based_compensation": number|null,
         "impairment_charges": number|null,
@@ -342,9 +367,54 @@ RULES
 • Emit numeric values as plain JSON numbers – **no quotes, commas, or currency symbols**.
 • If a value is unavailable for a metric, output null (do NOT omit the key).
 • For EBITDA calculation: ebitda = net_income + interest + taxes + depreciation_amortization
-• "total_debt" = sum of all short‑term and long‑term debt/borrowings.
-• "senior_debt" = senior/secured debt. If the document does not explicitly mention subordinated, mezzanine, or junior debt, assume ALL debt is senior debt (i.e., senior_debt = total_debt).
-• "debt_service_payments" = annual principal repayments + interest expense. If principal repayments are not stated, use interest expense alone as an estimate.
+
+DEBT EXTRACTION - CRITICAL FOR ACCURACY:
+Extract all debt components from the Balance Sheet liabilities section:
+
+debt_components extraction:
+• bank_debt_current: Current portion of bank debt, credit facilities, term loans due within 1 year
+• bank_debt_long_term: Long-term bank debt, term loans due after 1 year
+• term_loans: Named term loans (e.g., "Term Loan" at specific interest rate)
+• revolving_credit_facilities: Revolving equipment financing, revolving credit lines
+• overdraft_facilities: Authorized overdraft, bank overdraft facilities
+• lease_liabilities_current: Current portion of lease liabilities (operating + finance)
+• lease_liabilities_long_term: Non-current lease liabilities
+• finance_lease_liabilities: Finance/capital lease obligations
+• operating_lease_liabilities: Operating lease liabilities under IFRS 16/ASC 842
+• notes_payable: Notes payable, promissory notes, vendor take-back notes (often subordinated)
+• subordinated_debt: Explicitly subordinated debt, mezzanine debt, junior debt
+• convertible_debt: Convertible notes, convertible bonds
+• bonds_debentures: Corporate bonds, debentures
+• lines_of_credit: General lines of credit, credit lines
+• other_borrowings: Any other debt not categorized above
+
+CRITICAL DEBT CALCULATION RULES:
+• Look for debt breakdowns in the notes to financial statements (e.g., "Note 8: Credit Facilities", "Note 9: Lease Liabilities", "Note 10: Note Payable")
+• "senior_debt" = bank_debt (current + long-term) + ALL lease_liabilities (current + long-term). Senior debt is secured debt that has priority in bankruptcy.
+• Notes payable, especially vendor take-back notes or those described as "subordinated", are NOT senior debt.
+• "total_debt" = senior_debt + notes_payable + subordinated_debt + any other non-senior debt
+• If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities.
+• Lease liabilities are often shown separately from bank debt on the balance sheet.
+
+FIXED CHARGES EXTRACTION (CRITICAL FOR FCCR CALCULATION):
+Extract from CASH FLOW STATEMENT and INCOME STATEMENT:
+• interest_expense: From income statement "Finance costs" or "Interest expense". Include interest on debt, leases, and notes payable.
+• lease_payments: From cash flow statement "Payment of lease liability" or "Lease payments". This is the TOTAL cash paid for leases during the year.
+• principal_payments: From cash flow statement "Repayment of debt" or "Principal repayments". Cash paid to reduce debt principal.
+• rent_expense: Operating lease rent NOT capitalized under IFRS 16 (short-term or low-value leases). Often in notes or G&A breakdown.
+• preferred_dividends: Cash dividends paid on preferred shares (if any).
+• other_fixed_charges: Any other recurring fixed obligations that must be paid regardless of business performance.
+
+IMPORTANT: For IFRS 16 companies, lease_payments from cash flow statement captures the full lease obligation. Do NOT double-count with rent_expense.
+
+CAPITAL EXPENDITURES (CRITICAL FOR FCCR CALCULATION):
+• capital_expenditures: From CASH FLOW STATEMENT under "Investing activities". Look for:
+  - "Purchase of property, plant and equipment" or "PP&E additions"
+  - "Acquisition of fixed assets" or "Capital additions"
+  - "Purchase of intangible assets" (if significant)
+  - Sum ALL capital asset purchases to get total CapEx
+  - This represents cash spent on maintaining/growing the business
+  - Extract as POSITIVE number (even though shown as negative cash outflow on statement)
 
 CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • You MUST extract adjusted_ebitda_components from the income statement and notes.
@@ -406,6 +476,14 @@ This schema must work for any financial statement worldwide.
             if (metrics.adjusted_ebitda_components) {
               merged[yr].adjusted_ebitda_components = { ...metrics.adjusted_ebitda_components };
             }
+            // Deep copy debt_components if present
+            if (metrics.debt_components) {
+              merged[yr].debt_components = { ...metrics.debt_components };
+            }
+            // Deep copy fixed_charges if present
+            if (metrics.fixed_charges) {
+              merged[yr].fixed_charges = { ...metrics.fixed_charges };
+            }
           } else {
             for (const key of Object.keys(metrics)) {
               // Special handling for nested adjusted_ebitda_components
@@ -417,6 +495,28 @@ This schema must work for any financial statement worldwide.
                 for (const [compKey, compValue] of Object.entries(metrics[key])) {
                   if (merged[yr].adjusted_ebitda_components[compKey] == null && compValue != null) {
                     merged[yr].adjusted_ebitda_components[compKey] = compValue;
+                  }
+                }
+              // Special handling for nested debt_components
+              } else if (key === 'debt_components' && metrics[key] != null) {
+                if (!merged[yr].debt_components) {
+                  merged[yr].debt_components = {};
+                }
+                // Merge each component, keeping non-null values
+                for (const [compKey, compValue] of Object.entries(metrics[key])) {
+                  if (merged[yr].debt_components[compKey] == null && compValue != null) {
+                    merged[yr].debt_components[compKey] = compValue;
+                  }
+                }
+              // Special handling for nested fixed_charges
+              } else if (key === 'fixed_charges' && metrics[key] != null) {
+                if (!merged[yr].fixed_charges) {
+                  merged[yr].fixed_charges = {};
+                }
+                // Merge each component, keeping non-null values
+                for (const [compKey, compValue] of Object.entries(metrics[key])) {
+                  if (merged[yr].fixed_charges[compKey] == null && compValue != null) {
+                    merged[yr].fixed_charges[compKey] = compValue;
                   }
                 }
               } else if (merged[yr][key] == null && metrics[key] != null) {
@@ -529,44 +629,69 @@ Use any information available from the financial statement — including governa
     /* ────────────── compute debt ratios ────────────── */
     for (const yr of Object.keys(merged)) {
       const m = merged[yr];
+      const dc = m.debt_components || {};
 
-      // Fallback: if senior_debt is null but total_debt exists, assume all debt is senior
-      if (m.senior_debt == null && m.total_debt != null) {
+      // Calculate bank debt from components
+      const bankDebtCurrent = dc.bank_debt_current ?? 0;
+      const bankDebtLongTerm = dc.bank_debt_long_term ?? 0;
+      const termLoans = dc.term_loans ?? 0;
+      const revolvingCredit = dc.revolving_credit_facilities ?? 0;
+      const overdraft = dc.overdraft_facilities ?? 0;
+      const linesOfCredit = dc.lines_of_credit ?? 0;
+
+      // Total bank debt = explicit bank debt OR sum of loan components
+      let totalBankDebt = bankDebtCurrent + bankDebtLongTerm;
+      if (totalBankDebt === 0) {
+        totalBankDebt = termLoans + revolvingCredit + overdraft + linesOfCredit;
+      }
+
+      // Calculate lease liabilities from components
+      const leaseCurrentDirect = dc.lease_liabilities_current ?? 0;
+      const leaseLongTermDirect = dc.lease_liabilities_long_term ?? 0;
+      const financeLease = dc.finance_lease_liabilities ?? 0;
+      const operatingLease = dc.operating_lease_liabilities ?? 0;
+
+      // Total lease liabilities = explicit lease liabilities OR sum of lease types
+      let totalLeaseDebt = leaseCurrentDirect + leaseLongTermDirect;
+      if (totalLeaseDebt === 0) {
+        totalLeaseDebt = financeLease + operatingLease;
+      }
+
+      // Calculate non-senior debt (subordinated)
+      const notesPayable = dc.notes_payable ?? 0;
+      const subordinatedDebt = dc.subordinated_debt ?? 0;
+      const convertibleDebt = dc.convertible_debt ?? 0;
+      const bondsDebentures = dc.bonds_debentures ?? 0;
+      const otherBorrowings = dc.other_borrowings ?? 0;
+
+      const totalNonSeniorDebt = notesPayable + subordinatedDebt + convertibleDebt + bondsDebentures + otherBorrowings;
+
+      // Store computed debt breakdown for display
+      m.debt_breakdown = {
+        bank_debt: totalBankDebt,
+        lease_liabilities: totalLeaseDebt,
+        notes_payable: notesPayable,
+        subordinated_debt: subordinatedDebt,
+        other_non_senior_debt: convertibleDebt + bondsDebentures + otherBorrowings,
+      };
+
+      // Compute senior_debt = bank debt + lease liabilities (secured/priority debt)
+      const computedSeniorDebt = totalBankDebt + totalLeaseDebt;
+      if (computedSeniorDebt > 0) {
+        m.senior_debt = computedSeniorDebt;
+      } else if (m.senior_debt == null && m.total_debt != null) {
+        // Fallback: if no components extracted but total_debt exists, assume all debt is senior
         m.senior_debt = m.total_debt;
       }
 
-      // Fallback: if debt_service_payments is null but interest exists, use interest as estimate
-      if (m.debt_service_payments == null && m.interest != null) {
-        m.debt_service_payments = m.interest;
+      // Compute total_debt = senior_debt + non-senior debt
+      const computedTotalDebt = computedSeniorDebt + totalNonSeniorDebt;
+      if (computedTotalDebt > 0) {
+        m.total_debt = computedTotalDebt;
       }
 
-      // Debt Service Coverage Ratio = EBITDA / Annual Debt Service Payments
-      if (m.ebitda != null && m.debt_service_payments != null && m.debt_service_payments !== 0) {
-        m.dscr = parseFloat((m.ebitda / m.debt_service_payments).toFixed(2));
-      } else {
-        m.dscr = null;
-      }
-
-      // Senior Debt / EBITDA
-      if (m.senior_debt != null && m.ebitda != null && m.ebitda !== 0) {
-        m.senior_debt_to_ebitda = parseFloat((m.senior_debt / m.ebitda).toFixed(2));
-      } else {
-        m.senior_debt_to_ebitda = null;
-      }
-
-      // Total Debt / Total Capital (Total Capital = Total Debt + Shareholders Equity)
-      if (m.total_debt != null && m.shareholders_equity != null) {
-        const totalCapital = m.total_debt + m.shareholders_equity;
-        if (totalCapital !== 0) {
-          m.total_debt_to_capital = parseFloat((m.total_debt / totalCapital).toFixed(2));
-        } else {
-          m.total_debt_to_capital = null;
-        }
-      } else {
-        m.total_debt_to_capital = null;
-      }
-
-      // Calculate Adjusted EBITDA
+      // ────────────── Calculate Adjusted EBITDA FIRST ──────────────
+      // This must happen before FCCR and Senior Debt/EBITDA calculations
       if (m.ebitda != null) {
         const adj = m.adjusted_ebitda_components || {};
 
@@ -578,7 +703,7 @@ Use any information available from the financial statement — including governa
           adj.bad_debt_provision,
           adj.unrealized_gains_losses,
           adj.deferred_compensation,
-          adj.loss_on_disposal, // Loss on disposal of assets - add back
+          adj.loss_on_disposal,
           adj.other_non_cash,
         ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
 
@@ -593,11 +718,11 @@ Use any information available from the financial statement — including governa
           adj.other_one_time_expenses,
         ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
 
-        // Sum one-time gains (subtract) - these inflated net income and should be removed
+        // Sum one-time gains (subtract)
         const oneTimeGains = [
-          adj.gain_on_disposal, // Gain on disposal of assets
+          adj.gain_on_disposal,
           adj.gain_on_asset_sale,
-          adj.other_income_non_operating, // Other income (non-operating) like bonuses, vendor rebates
+          adj.other_income_non_operating,
           adj.insurance_proceeds,
           adj.other_one_time_gains,
         ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
@@ -617,7 +742,7 @@ Use any information available from the financial statement — including governa
           adj.pro_forma_synergies,
         ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
 
-        // Calculate Adjusted EBITDA = Base EBITDA + Add-backs - Gains
+        // Calculate Adjusted EBITDA
         const calculatedAdjustedEbitda = parseFloat((
           m.ebitda +
           nonCashAdjustments +
@@ -635,7 +760,7 @@ Use any information available from the financial statement — including governa
 
         // Store breakdown totals for display
         m.adjusted_ebitda_breakdown = {
-          base_ebitda: m.ebitda,
+          reported_ebitda: m.ebitda,
           non_cash_adjustments: nonCashAdjustments,
           one_time_expenses: oneTimeExpenses,
           one_time_gains: oneTimeGains,
@@ -649,6 +774,119 @@ Use any information available from the financial statement — including governa
         m.adjusted_ebitda = m.reported_adjusted_ebitda ?? null;
         m.calculated_adjusted_ebitda = null;
         m.adjusted_ebitda_breakdown = null;
+      }
+
+      // Calculate Fixed Charge Coverage Ratio (FCCR)
+      // Flexible calculation based on available data:
+      //
+      // MINIMUM REQUIRED:
+      //   - Numerator: EBITDA (or Adjusted EBITDA) + Fixed Charges (lease/rent)
+      //   - Denominator: Interest + Fixed Charges (lease/rent)
+      //   Formula: (EBIT + Fixed Charges) / (Interest + Fixed Charges)
+      //
+      // ENHANCED (when more data available):
+      //   - Numerator: EBITDA - Taxes - CapEx
+      //   - Denominator: Interest + Principal + Lease Payments
+      //
+      const fc = m.fixed_charges || {};
+
+      // Get available data components
+      const ebitdaValue = m.adjusted_ebitda ?? m.ebitda;
+      const interestExpense = fc.interest_expense ?? m.interest;
+      const leasePayments = fc.lease_payments ?? fc.rent_expense ?? 0;
+      const principalPayments = fc.principal_payments ?? 0;
+      const taxesPaid = m.taxes ?? 0;
+      const capitalExpenditures = m.capital_expenditures ?? 0;
+
+      // MINIMUM REQUIRED: EBITDA and Interest
+      const hasMinimumData = ebitdaValue != null && ebitdaValue > 0 && interestExpense != null && interestExpense > 0;
+
+      if (hasMinimumData) {
+        // Build numerator: Start with EBITDA + Fixed Charges (lease/rent)
+        // Traditional FCCR adds fixed charges to numerator to show cash available before these obligations
+        let fccrNumerator = ebitdaValue + leasePayments;
+
+        // ENHANCED: Subtract taxes if available
+        const hasTaxes = taxesPaid > 0;
+        if (hasTaxes) {
+          fccrNumerator -= taxesPaid;
+        }
+
+        // ENHANCED: Subtract CapEx if available
+        const hasCapEx = capitalExpenditures > 0;
+        if (hasCapEx) {
+          fccrNumerator -= capitalExpenditures;
+        }
+
+        // Build denominator: Interest + Fixed Charges (lease payments)
+        let fccrDenominator = interestExpense + leasePayments;
+
+        // ENHANCED: Add principal payments if available
+        const hasPrincipal = principalPayments > 0;
+        if (hasPrincipal) {
+          fccrDenominator += principalPayments;
+        }
+
+        // Calculate FCCR
+        if (fccrDenominator > 0) {
+          m.fccr = parseFloat((fccrNumerator / fccrDenominator).toFixed(2));
+          m.fccr_numerator = parseFloat(fccrNumerator.toFixed(2));
+          m.total_fixed_charges = parseFloat(fccrDenominator.toFixed(2));
+
+          // Determine calculation type for display
+          const calculationType = (hasTaxes || hasCapEx || hasPrincipal) ? 'enhanced' : 'basic';
+
+          m.fccr_breakdown = {
+            calculation_type: calculationType,
+            // Numerator components
+            ebitda: ebitdaValue,
+            lease_rent_add_back: leasePayments || null,
+            taxes_deducted: hasTaxes ? taxesPaid : null,
+            capex_deducted: hasCapEx ? capitalExpenditures : null,
+            numerator: fccrNumerator,
+            // Denominator components
+            interest_expense: interestExpense,
+            lease_payments: leasePayments || null,
+            principal_payments: hasPrincipal ? principalPayments : null,
+            denominator: fccrDenominator,
+            // Data availability flags
+            has_taxes: hasTaxes,
+            has_capex: hasCapEx,
+            has_principal: hasPrincipal,
+            has_lease_payments: leasePayments > 0
+          };
+        } else {
+          m.fccr = null;
+          m.fccr_numerator = null;
+          m.total_fixed_charges = null;
+          m.fccr_breakdown = null;
+        }
+      } else {
+        // Not enough data to calculate FCCR
+        m.fccr = null;
+        m.fccr_numerator = null;
+        m.total_fixed_charges = null;
+        m.fccr_breakdown = null;
+      }
+
+      // Total Debt / Total Capital (Total Capital = Total Debt + Shareholders Equity)
+      if (m.total_debt != null && m.shareholders_equity != null) {
+        const totalCapital = m.total_debt + m.shareholders_equity;
+        if (totalCapital !== 0) {
+          m.total_debt_to_capital = parseFloat((m.total_debt / totalCapital).toFixed(2));
+        } else {
+          m.total_debt_to_capital = null;
+        }
+      } else {
+        m.total_debt_to_capital = null;
+      }
+
+      // Senior Debt / Adjusted EBITDA (uses Adjusted EBITDA for more accurate leverage assessment)
+      const ebitdaForLeverage = m.adjusted_ebitda ?? m.ebitda;
+      if (m.senior_debt != null && ebitdaForLeverage != null && ebitdaForLeverage !== 0) {
+        m.senior_debt_to_ebitda = parseFloat((m.senior_debt / ebitdaForLeverage).toFixed(2));
+      } else {
+        m.senior_debt_to_ebitda = null;
       }
     }
 

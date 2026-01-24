@@ -33,7 +33,7 @@ interface AdjustedEBITDAComponents {
 }
 
 interface AdjustedEBITDABreakdown {
-  base_ebitda: number;
+  reported_ebitda: number;
   non_cash_adjustments: number;
   one_time_expenses: number;
   one_time_gains: number;
@@ -210,7 +210,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       {/* Main EBITDA values */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-blue-50 rounded-lg p-4 text-center">
-          <p className="text-sm text-blue-600 font-medium">Base EBITDA</p>
+          <p className="text-sm text-blue-600 font-medium">Reported EBITDA</p>
           <p className="text-2xl font-bold text-blue-800">
             {formatCurrency(metrics.ebitda)}
           </p>
@@ -228,7 +228,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       {/* Formula */}
       <div className="bg-gray-50 rounded-lg p-3 text-center">
         <span className="font-mono text-xs text-gray-600">
-          Adjusted EBITDA = Base EBITDA + Non-Cash + One-Time Expenses +
+          Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time Expenses +
           Owner/Mgmt + Accounting + FX + Pro Forma - One-Time Gains/Income
         </span>
       </div>
@@ -240,11 +240,11 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
             Adjustment Breakdown
           </h4>
 
-          {/* Base EBITDA */}
+          {/* Reported EBITDA */}
           <div className="flex justify-between items-center mb-4 pb-2 border-b">
-            <span className="font-medium text-gray-700">Base EBITDA</span>
+            <span className="font-medium text-gray-700">Reported EBITDA</span>
             <span className="font-bold text-gray-900">
-              {formatCurrency(breakdown.base_ebitda)}
+              {formatCurrency(breakdown.reported_ebitda)}
             </span>
           </div>
 
@@ -420,7 +420,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-sm text-yellow-700">
             No EBITDA adjustments were identified in the financial documents.
-            The Adjusted EBITDA equals the Base EBITDA.
+            The Adjusted EBITDA equals the Reported EBITDA.
           </p>
         </div>
       )}
@@ -445,7 +445,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               </thead>
               <tbody>
                 <tr className="border-b">
-                  <td className="py-2 pr-4">Base EBITDA</td>
+                  <td className="py-2 pr-4">Reported EBITDA</td>
                   {years.map((yr) => (
                     <td key={yr} className="text-right py-2 px-2">
                       {formatCurrency(data.metrics_by_year[yr].ebitda)}
