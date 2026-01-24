@@ -14,7 +14,10 @@ import {
   FileText,
   TrendingUp,
   TrendingDown,
+  BarChart3,
+  ClipboardList,
 } from 'lucide-react';
+import { RiskData, PillarScore } from '@/components/RiskAssessment';
 
 interface DebtHealthAssessment {
   weighted_score: number;
@@ -37,6 +40,7 @@ interface YearMetrics {
 interface WeightedRiskGaugeProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
   debtHealthAssessment: DebtHealthAssessment | null;
+  riskData?: RiskData | null;
 }
 
 type RiskLevel = 'very-low' | 'low' | 'moderate' | 'elevated' | 'high';
@@ -49,38 +53,57 @@ interface RiskConfig {
   textColor: string;
 }
 
+// Pillar keys for lending analysis
+const PILLAR_KEYS = [
+  'profitability_cashflow',
+  'leverage',
+  'liquidity',
+  'debt_service',
+  'interest_rate_sensitivity',
+  'concentration_sector',
+  'governance',
+] as const;
+
+// Pillar display names aligned with lending focus
+const PILLAR_LABELS: Record<string, string> = {
+  profitability_cashflow: 'Profitability & Cash Flow',
+  leverage: 'Leverage Position',
+  liquidity: 'Liquidity',
+  debt_service: 'Debt Service Capacity',
+  interest_rate_sensitivity: 'Interest Rate Exposure',
+  concentration_sector: 'Industry & Concentration',
+  governance: 'Management & Governance',
+};
+
 // Convert FCCR to risk score (0-10, higher = worse)
-// FCCR: Higher is better, so invert the scoring
 const getFCCRRiskScore = (value: number | null): number => {
-  if (value == null) return 5; // Default to moderate if missing
-  if (value >= 2.0) return 1;   // Excellent
-  if (value >= 1.5) return 3;   // Good
-  if (value >= 1.2) return 5;   // Adequate
-  if (value >= 1.0) return 7;   // Weak
-  if (value >= 0) return 9;     // Poor but positive
-  return 10;                    // Negative FCCR is worst
+  if (value == null) return 5;
+  if (value >= 2.0) return 1;
+  if (value >= 1.5) return 3;
+  if (value >= 1.2) return 5;
+  if (value >= 1.0) return 7;
+  if (value >= 0) return 9;
+  return 10;
 };
 
 // Convert Senior Debt/EBITDA to risk score (0-10, higher = worse)
-// Lower ratio is better
 const getDebtEBITDARiskScore = (value: number | null): number => {
   if (value == null) return 5;
-  if (value <= 1.5) return 1;   // Excellent
-  if (value <= 2.5) return 3;   // Good
-  if (value <= 3.0) return 5;   // Adequate
-  if (value <= 4.0) return 7;   // Weak
-  return 9;                     // Poor
+  if (value <= 1.5) return 1;
+  if (value <= 2.5) return 3;
+  if (value <= 3.0) return 5;
+  if (value <= 4.0) return 7;
+  return 9;
 };
 
 // Convert Total Debt/Capital to risk score (0-10, higher = worse)
-// Lower ratio is better
 const getDebtCapitalRiskScore = (value: number | null): number => {
   if (value == null) return 5;
-  if (value < 0.3) return 1;    // Excellent
-  if (value <= 0.5) return 3;   // Good
-  if (value <= 0.6) return 5;   // Adequate
-  if (value <= 0.7) return 7;   // Weak
-  return 9;                     // Poor
+  if (value < 0.3) return 1;
+  if (value <= 0.5) return 3;
+  if (value <= 0.6) return 5;
+  if (value <= 0.7) return 7;
+  return 9;
 };
 
 // Get risk configuration based on weighted score
@@ -125,7 +148,7 @@ const getRiskConfig = (score: number): RiskConfig => {
 // Get lending decision styling
 const getLendingDecisionStyle = (decision: string): { bg: string; text: string } => {
   const lower = decision.toLowerCase();
-  if (lower.includes('strong approve') || lower.includes('approve') && !lower.includes('conditional')) {
+  if (lower.includes('strong approve') || (lower.includes('approve') && !lower.includes('conditional'))) {
     return { bg: 'bg-green-100', text: 'text-green-800' };
   }
   if (lower.includes('conditional')) {
@@ -135,6 +158,21 @@ const getLendingDecisionStyle = (decision: string): { bg: string; text: string }
     return { bg: 'bg-red-100', text: 'text-red-800' };
   }
   return { bg: 'bg-gray-100', text: 'text-gray-800' };
+};
+
+// Get impact color for pillar observations
+const getImpactStyle = (impact: string): string => {
+  const lower = impact.toLowerCase();
+  if (lower.includes('positive') || lower.includes('strong')) {
+    return 'bg-green-100 text-green-800';
+  }
+  if (lower.includes('negative') || lower.includes('weak') || lower.includes('concern')) {
+    return 'bg-red-100 text-red-800';
+  }
+  if (lower.includes('manageable') || lower.includes('moderate') || lower.includes('neutral')) {
+    return 'bg-yellow-100 text-yellow-800';
+  }
+  return 'bg-gray-100 text-gray-800';
 };
 
 interface RiskGaugeProps {
@@ -148,14 +186,12 @@ const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200 }) => {
   const circumference = 2 * Math.PI * radius;
 
   const config = getRiskConfig(score);
-  // Convert score (0-10) to percentage for gauge (invert so low risk shows more fill)
   const percentage = Math.max(0, Math.min(100, ((10 - score) / 10) * 100));
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="transform -rotate-90">
-        {/* Background circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -165,7 +201,6 @@ const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200 }) => {
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
-        {/* Progress arc */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -180,7 +215,6 @@ const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200 }) => {
         />
       </svg>
 
-      {/* Tick marks */}
       <svg
         width={size}
         height={size}
@@ -213,7 +247,6 @@ const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200 }) => {
         })}
       </svg>
 
-      {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-4xl font-bold" style={{ color: config.color }}>
           {score.toFixed(1)}
@@ -257,9 +290,116 @@ const MetricBadge: React.FC<MetricBadgeProps> = ({
   );
 };
 
+// Simple bar chart component for historical metrics
+interface HistoricalChartProps {
+  data: { metrics_by_year: Record<string, YearMetrics> };
+}
+
+const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
+  const years = Object.keys(data.metrics_by_year).sort();
+
+  // Calculate metrics for each year
+  const chartData = years.map((year) => {
+    const m = data.metrics_by_year[year];
+    return {
+      year,
+      fccr: m.fccr,
+      debtEbitda: m.senior_debt_to_ebitda,
+      debtCapital: m.total_debt_to_capital ? m.total_debt_to_capital * 100 : null,
+    };
+  });
+
+  // Get max values for scaling
+  const maxFccr = Math.max(...chartData.map(d => d.fccr ?? 0), 3);
+  const maxDebtEbitda = Math.max(...chartData.map(d => d.debtEbitda ?? 0), 5);
+  const maxDebtCapital = 100;
+
+  const barHeight = 24;
+  const barGap = 8;
+  const labelWidth = 80;
+  const chartWidth = 300;
+
+  return (
+    <div className="space-y-6">
+      {/* FCCR Chart */}
+      <div>
+        <h5 className="text-sm font-medium text-gray-700 mb-2">FCCR (Target: &gt; 1.2x)</h5>
+        <div className="space-y-2">
+          {chartData.map((d) => (
+            <div key={`fccr-${d.year}`} className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">{d.year}</span>
+              <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                  style={{
+                    width: d.fccr != null ? `${Math.min((d.fccr / maxFccr) * 100, 100)}%` : '0%',
+                    backgroundColor: d.fccr != null ? (d.fccr >= 1.2 ? '#22c55e' : d.fccr >= 1.0 ? '#eab308' : '#ef4444') : '#d1d5db',
+                  }}
+                />
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                  {d.fccr != null ? `${d.fccr.toFixed(2)}x` : 'N/A'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Senior Debt / EBITDA Chart */}
+      <div>
+        <h5 className="text-sm font-medium text-gray-700 mb-2">Senior Debt / EBITDA (Target: &lt; 2.5x)</h5>
+        <div className="space-y-2">
+          {chartData.map((d) => (
+            <div key={`debt-${d.year}`} className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">{d.year}</span>
+              <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                  style={{
+                    width: d.debtEbitda != null ? `${Math.min((d.debtEbitda / maxDebtEbitda) * 100, 100)}%` : '0%',
+                    backgroundColor: d.debtEbitda != null ? (d.debtEbitda <= 2.5 ? '#22c55e' : d.debtEbitda <= 3.5 ? '#eab308' : '#ef4444') : '#d1d5db',
+                  }}
+                />
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                  {d.debtEbitda != null ? `${d.debtEbitda.toFixed(2)}x` : 'N/A'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Debt / Capital Chart */}
+      <div>
+        <h5 className="text-sm font-medium text-gray-700 mb-2">Debt / Capital (Target: &lt; 50%)</h5>
+        <div className="space-y-2">
+          {chartData.map((d) => (
+            <div key={`cap-${d.year}`} className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">{d.year}</span>
+              <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                  style={{
+                    width: d.debtCapital != null ? `${Math.min(d.debtCapital, 100)}%` : '0%',
+                    backgroundColor: d.debtCapital != null ? (d.debtCapital <= 50 ? '#22c55e' : d.debtCapital <= 65 ? '#eab308' : '#ef4444') : '#d1d5db',
+                  }}
+                />
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                  {d.debtCapital != null ? `${d.debtCapital.toFixed(0)}%` : 'N/A'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   data,
   debtHealthAssessment,
+  riskData,
 }) => {
   if (!data || !data.metrics_by_year || Object.keys(data.metrics_by_year).length === 0) {
     return <p className="text-gray-500">No metrics available for risk assessment.</p>;
@@ -302,7 +442,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
       {/* Header */}
       <div className="text-center">
         <h3 className="text-xl font-bold text-gray-800">
-          Debt Health Risk Assessment
+          Risk Assessment
         </h3>
         <p className="text-sm text-gray-500">
           Fiscal Year {latestYear} | Weighted Score Analysis
@@ -346,12 +486,37 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         </div>
       </div>
 
-      {/* AI Recommendations */}
-      {(assessment.key_risk_factors?.length > 0 ||
-        assessment.positive_factors?.length > 0 ||
-        assessment.recommendations?.length > 0 ||
-        assessment.suggested_loan_structure) && (
-        <Accordion type="multiple" defaultValue={['risks', 'recommendations']} className="w-full space-y-3">
+      {/* Lending Recommendations Section */}
+      {(assessment.recommendations?.length > 0 || assessment.suggested_loan_structure) && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ClipboardList className="h-5 w-5 text-blue-600" />
+            <h4 className="font-semibold text-blue-900">Lending Recommendations</h4>
+          </div>
+
+          {assessment.recommendations?.length > 0 && (
+            <ul className="space-y-2 mb-3">
+              {assessment.recommendations.map((rec, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-blue-800">
+                  <span className="text-blue-500 font-bold mt-0.5">-</span>
+                  <span>{rec}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {assessment.suggested_loan_structure && (
+            <div className="bg-white rounded p-3 mt-2">
+              <p className="text-xs text-gray-500 mb-1">Suggested Structure:</p>
+              <p className="text-sm text-gray-700">{assessment.suggested_loan_structure}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Risk Factors Accordion */}
+      {(assessment.key_risk_factors?.length > 0 || assessment.positive_factors?.length > 0) && (
+        <Accordion type="multiple" defaultValue={['risks']} className="w-full space-y-3">
           {/* Key Risk Factors */}
           {assessment.key_risk_factors?.length > 0 && (
             <AccordionItem value="risks" className="border rounded-lg px-4">
@@ -405,54 +570,6 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
               </AccordionContent>
             </AccordionItem>
           )}
-
-          {/* Recommendations */}
-          {assessment.recommendations?.length > 0 && (
-            <AccordionItem value="recommendations" className="border rounded-lg px-4">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-blue-500" />
-                  <span className="font-semibold text-gray-800">
-                    Recommendations
-                  </span>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                    {assessment.recommendations.length}
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <ul className="space-y-2">
-                  {assessment.recommendations.map((rec, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-blue-500 font-bold mt-0.5">•</span>
-                      <span className="text-sm text-gray-700">{rec}</span>
-                    </li>
-                  ))}
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
-          )}
-
-          {/* Suggested Loan Structure */}
-          {assessment.suggested_loan_structure && (
-            <AccordionItem value="structure" className="border rounded-lg px-4">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-purple-500" />
-                  <span className="font-semibold text-gray-800">
-                    Suggested Loan Structure
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700">
-                    {assessment.suggested_loan_structure}
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          )}
         </Accordion>
       )}
 
@@ -502,6 +619,81 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
               </tbody>
             </table>
           </div>
+
+          {/* Historical Chart Accordion */}
+          <Accordion type="single" collapsible className="w-full mt-4">
+            <AccordionItem value="chart" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-indigo-500" />
+                  <span className="font-semibold text-gray-800">
+                    Historical Metrics Chart
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <HistoricalChart data={data} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      )}
+
+      {/* Credit Risk Pillar Observations */}
+      {riskData && riskData.pillars && Object.keys(riskData.pillars).length > 0 && (
+        <div className="mt-6 pt-4 border-t">
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="pillars" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-purple-500" />
+                  <span className="font-semibold text-gray-800">
+                    Credit Risk Pillar Analysis
+                  </span>
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                    {PILLAR_KEYS.filter(k => riskData.pillars[k]).length} pillars
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3">
+                  {PILLAR_KEYS.map((key) => {
+                    const p = riskData.pillars[key] as PillarScore | undefined;
+                    if (!p) return null;
+
+                    return (
+                      <div key={key} className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-800 text-sm">
+                            {PILLAR_LABELS[key] || key.replace(/_/g, ' ')}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {p.impact && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${getImpactStyle(p.impact)}`}>
+                                {p.impact}
+                              </span>
+                            )}
+                            {p.score != null && (
+                              <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
+                                {typeof p.score === 'number' && p.score > 10
+                                  ? (p.score / 10).toFixed(1)
+                                  : p.score.toFixed(1)}/10
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {p.observations && (
+                          <p className="text-xs text-gray-600">
+                            {typeof p.observations === 'string' ? p.observations : ''}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       )}
     </div>

@@ -9,23 +9,22 @@ import {
 } from '@/components/ui/accordion';
 
 interface FCCRBreakdown {
-  calculation_type: 'standard' | 'enhanced';
-  // Numerator components
-  ebitda: number;
-  lease_rent_add_back: number | null;
-  taxes_deducted: number | null;
-  capex_deducted: number | null;
+  calculation_type: 'lender_defined';
+  // Numerator (simple - just Adjusted EBITDA)
+  adjusted_ebitda: number;
   numerator: number;
-  // Denominator components
-  interest_expense: number;
-  lease_payments: number | null;
-  principal_payments: number | null;
+  // Denominator components (Total Fixed Charges)
+  senior_debt_interest: number;
+  senior_debt_interest_rate: number;
+  senior_debt_balance: number | null;
+  subordinated_debt_interest: number;
+  lease_payments: number;
+  other_fixed_charges: number;
+  total_fixed_charges: number;
   denominator: number;
-  // Data availability flags
-  has_taxes: boolean;
-  has_capex: boolean;
-  has_principal: boolean;
-  has_lease_payments: boolean;
+  // Data source flags
+  interest_calculated: boolean;
+  interest_rate_assumed: boolean;
 }
 
 interface DebtBreakdown {
@@ -42,12 +41,10 @@ interface YearMetrics {
   fccr_numerator: number | null;
   senior_debt_to_ebitda: number | null;
   total_debt_to_capital: number | null;
+  total_fixed_charges: number | null;
   // Source data for calculations
   ebitda: number | null;
   adjusted_ebitda: number | null;
-  taxes: number | null;
-  capital_expenditures: number | null;
-  total_fixed_charges: number | null;
   fccr_breakdown: FCCRBreakdown | null;
   debt_breakdown: DebtBreakdown | null;
   senior_debt: number | null;
@@ -95,15 +92,15 @@ const getFCCRReasoning = (
 ): string => {
   switch (level) {
     case 'excellent':
-      return `Exceptional coverage at ${value.toFixed(2)}x. Adjusted EBITDA comfortably exceeds all fixed obligations including interest, principal, and lease payments.`;
+      return `Exceptional coverage at ${value.toFixed(2)}x. Adjusted EBITDA covers total fixed charges (interest + lease payments) more than twice over, indicating strong debt service capacity.`;
     case 'good':
-      return `Strong coverage at ${value.toFixed(2)}x. The company has ample cash flow to meet all fixed charge obligations with a healthy buffer.`;
+      return `Strong coverage at ${value.toFixed(2)}x. Ample cash flow to service all fixed obligations with healthy cushion for variability in earnings.`;
     case 'adequate':
-      return `Acceptable coverage at ${value.toFixed(2)}x. This is the typical minimum threshold for most commercial lenders.`;
+      return `Acceptable coverage at ${value.toFixed(2)}x. Meets typical lender minimum thresholds. Monitor for any earnings volatility.`;
     case 'weak':
-      return `Thin margin at ${value.toFixed(2)}x. Near break-even on fixed charge coverage. Lenders may require additional covenants or collateral.`;
+      return `Thin margin at ${value.toFixed(2)}x. Cash flow barely covers fixed charges. Lenders will scrutinize and may require tighter covenants.`;
     case 'poor':
-      return `Insufficient coverage at ${value.toFixed(2)}x. Cash flow does not cover fixed obligations, signaling high risk of covenant breach or default.`;
+      return `Insufficient coverage at ${value.toFixed(2)}x. Adjusted EBITDA does not cover fixed obligations, signaling high default risk.`;
   }
 };
 
@@ -461,38 +458,23 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                 <AccordionContent>
                   {metrics.fccr_breakdown ? (
                     <>
-                      {/* Calculation Formula - Dynamic based on available data */}
+                      {/* Calculation Formula */}
                       <div className="flex justify-between items-center mb-3">
                         <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                          {(() => {
-                            const b = metrics.fccr_breakdown;
-                            let numerator = 'EBITDA';
-                            if (b.has_lease_payments) numerator += ' + Leases';
-                            if (b.has_taxes) numerator += ' − Taxes';
-                            if (b.has_capex) numerator += ' − CapEx';
-
-                            let denominator = 'Interest';
-                            if (b.has_lease_payments) denominator += ' + Leases';
-                            if (b.has_principal) denominator += ' + Principal';
-
-                            return `(${numerator}) ÷ (${denominator})`;
-                          })()}
+                          Adjusted EBITDA ÷ Total Fixed Charges
                         </span>
-                        {metrics.fccr_breakdown.calculation_type === 'enhanced' && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700">
-                            {metrics.fccr_breakdown.has_taxes && metrics.fccr_breakdown.has_capex
-                              ? 'Taxes + CapEx'
-                              : metrics.fccr_breakdown.has_taxes
-                              ? 'Taxes Adj.'
-                              : 'CapEx Adj.'}
+                        {metrics.fccr_breakdown.interest_calculated && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700">
+                            Interest @ {(metrics.fccr_breakdown.senior_debt_interest_rate * 100).toFixed(0)}%
+                            {metrics.fccr_breakdown.interest_rate_assumed && ' (assumed)'}
                           </span>
                         )}
                       </div>
 
-                      {/* Numerator Breakdown */}
+                      {/* Numerator - Adjusted EBITDA */}
                       <div className="mb-4">
                         <div className="text-sm font-semibold text-blue-700 mb-2">
-                          Numerator (Cash Available)
+                          Numerator
                         </div>
                         <div className="pl-4 border-l-2 border-blue-200 space-y-1 text-sm">
                           <div className="flex justify-between">
@@ -500,102 +482,68 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               Adjusted EBITDA
                             </span>
                             <span className="font-medium">
-                              {formatCurrency(metrics.fccr_breakdown.ebitda)}
+                              {formatCurrency(metrics.fccr_breakdown.adjusted_ebitda)}
                             </span>
                           </div>
-                          {metrics.fccr_breakdown.has_lease_payments &&
-                            metrics.fccr_breakdown.lease_rent_add_back != null && (
-                              <div className="flex justify-between text-green-600">
-                                <span>+ Lease/Rent Payments</span>
-                                <span className="font-medium">
-                                  + {formatCurrency(metrics.fccr_breakdown.lease_rent_add_back)}
-                                </span>
-                              </div>
-                            )}
-                          {metrics.fccr_breakdown.has_taxes &&
-                            metrics.fccr_breakdown.taxes_deducted != null && (
-                              <div className="flex justify-between text-red-600">
-                                <span>− Taxes Paid</span>
-                                <span className="font-medium">
-                                  − {formatCurrency(metrics.fccr_breakdown.taxes_deducted)}
-                                </span>
-                              </div>
-                            )}
-                          {metrics.fccr_breakdown.has_capex &&
-                            metrics.fccr_breakdown.capex_deducted != null && (
-                              <div className="flex justify-between text-red-600">
-                                <span>− Capital Expenditures</span>
-                                <span className="font-medium">
-                                  − {formatCurrency(metrics.fccr_breakdown.capex_deducted)}
-                                </span>
-                              </div>
-                            )}
-                        </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-blue-800">
-                          <span>Available Cash Flow</span>
-                          <span>
-                            {formatCurrency(metrics.fccr_breakdown.numerator)}
-                          </span>
                         </div>
                       </div>
 
-                      {/* Denominator Breakdown */}
+                      {/* Denominator - Total Fixed Charges */}
                       <div className="mb-4">
                         <div className="text-sm font-semibold text-orange-700 mb-2">
-                          Denominator (Fixed Obligations)
+                          Denominator (Total Fixed Charges)
                         </div>
                         <div className="pl-4 border-l-2 border-orange-200 space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Interest Expense
-                            </span>
-                            <span className="font-medium">
-                              {formatCurrency(
-                                metrics.fccr_breakdown
-                                  .interest_expense,
-                              )}
-                            </span>
-                          </div>
-                          {metrics.fccr_breakdown
-                            .has_lease_payments &&
-                            metrics.fccr_breakdown.lease_payments !=
-                              null && (
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">
-                                  + Lease Payments
-                                </span>
-                                <span className="font-medium">
-                                  +{' '}
-                                  {formatCurrency(
-                                    metrics.fccr_breakdown
-                                      .lease_payments,
-                                  )}
-                                </span>
-                              </div>
-                            )}
-                          {metrics.fccr_breakdown.has_principal &&
-                            metrics.fccr_breakdown
-                              .principal_payments != null && (
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">
-                                  + Principal Payments
-                                </span>
-                                <span className="font-medium">
-                                  +{' '}
-                                  {formatCurrency(
-                                    metrics.fccr_breakdown
-                                      .principal_payments,
-                                  )}
-                                </span>
-                              </div>
-                            )}
+                          {metrics.fccr_breakdown.senior_debt_interest > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                Cash Interest on Senior Debt
+                                {metrics.fccr_breakdown.interest_calculated && metrics.fccr_breakdown.senior_debt_balance && (
+                                  <span className="text-xs text-gray-400 ml-1">
+                                    ({(metrics.fccr_breakdown.senior_debt_interest_rate * 100).toFixed(0)}% × {formatCurrency(metrics.fccr_breakdown.senior_debt_balance)})
+                                  </span>
+                                )}
+                              </span>
+                              <span className="font-medium">
+                                {formatCurrency(metrics.fccr_breakdown.senior_debt_interest)}
+                              </span>
+                            </div>
+                          )}
+                          {metrics.fccr_breakdown.subordinated_debt_interest > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                + Subordinated Note Interest
+                              </span>
+                              <span className="font-medium">
+                                + {formatCurrency(metrics.fccr_breakdown.subordinated_debt_interest)}
+                              </span>
+                            </div>
+                          )}
+                          {metrics.fccr_breakdown.lease_payments > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                + Finance Lease / Min. Lease Payments
+                              </span>
+                              <span className="font-medium">
+                                + {formatCurrency(metrics.fccr_breakdown.lease_payments)}
+                              </span>
+                            </div>
+                          )}
+                          {metrics.fccr_breakdown.other_fixed_charges > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                + Other Fixed Charges
+                              </span>
+                              <span className="font-medium">
+                                + {formatCurrency(metrics.fccr_breakdown.other_fixed_charges)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-orange-800">
                           <span>Total Fixed Charges</span>
                           <span>
-                            {formatCurrency(
-                              metrics.fccr_breakdown.denominator,
-                            )}
+                            {formatCurrency(metrics.fccr_breakdown.total_fixed_charges)}
                           </span>
                         </div>
                       </div>
@@ -612,8 +560,8 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     </>
                   ) : (
                     <p className="text-sm text-gray-400 italic">
-                      Insufficient data. Minimum required: EBITDA and
-                      Interest Expense.
+                      Insufficient data. Minimum required: Adjusted EBITDA and
+                      Senior Debt (or Interest Expense).
                     </p>
                   )}
                 </AccordionContent>

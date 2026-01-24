@@ -261,10 +261,15 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "total_debt": number|null,
       "senior_debt": number|null,
       "fixed_charges": {
-        "interest_expense": number|null,
-        "lease_payments": number|null,
+        "senior_debt_interest": number|null,
+        "subordinated_debt_interest": number|null,
+        "lease_interest": number|null,
+        "total_interest_expense": number|null,
+        "senior_debt_interest_rate": number|null,
+        "minimum_lease_payments": number|null,
+        "finance_lease_payments": number|null,
+        "operating_lease_payments": number|null,
         "principal_payments": number|null,
-        "rent_expense": number|null,
         "preferred_dividends": number|null,
         "other_fixed_charges": number|null
       },
@@ -408,15 +413,26 @@ CRITICAL DEBT CALCULATION RULES:
 • When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority.
 
 FIXED CHARGES EXTRACTION (CRITICAL FOR FCCR CALCULATION):
-Extract from CASH FLOW STATEMENT and INCOME STATEMENT:
-• interest_expense: From income statement "Finance costs" or "Interest expense". Include interest on debt, leases, and notes payable.
-• lease_payments: From cash flow statement "Payment of lease liability" or "Lease payments". This is the TOTAL cash paid for leases during the year.
-• principal_payments: From cash flow statement "Repayment of debt" or "Principal repayments". Cash paid to reduce debt principal.
-• rent_expense: Operating lease rent NOT capitalized under IFRS 16 (short-term or low-value leases). Often in notes or G&A breakdown.
+Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES:
+
+INTEREST COMPONENTS (separate by debt type for accurate FCCR):
+• senior_debt_interest: Interest expense on bank debt, credit facilities, term loans. Look in finance costs breakdown or notes.
+• subordinated_debt_interest: Interest on subordinated notes, vendor take-back notes, mezzanine debt. Often disclosed separately in notes.
+• lease_interest: Interest portion of lease payments (IFRS 16 "Interest on lease liabilities"). From finance costs breakdown.
+• total_interest_expense: Total interest/finance costs from income statement (for validation).
+• senior_debt_interest_rate: If disclosed, extract the interest rate on senior debt (e.g., "prime + 2%", "8%"). If not stated, will assume 8% typical mid-market rate.
+
+LEASE PAYMENTS (for fixed charge coverage):
+• minimum_lease_payments: From cash flow statement "Payment of lease liability" or notes showing annual minimum lease obligations. This is the TOTAL cash paid for leases.
+• finance_lease_payments: Finance/capital lease payments if shown separately.
+• operating_lease_payments: Operating lease payments if shown separately.
+
+OTHER FIXED CHARGES:
+• principal_payments: From cash flow statement "Repayment of debt" or "Principal repayments". Only include if required for debt service coverage.
 • preferred_dividends: Cash dividends paid on preferred shares (if any).
 • other_fixed_charges: Any other recurring fixed obligations that must be paid regardless of business performance.
 
-IMPORTANT: For IFRS 16 companies, lease_payments from cash flow statement captures the full lease obligation. Do NOT double-count with rent_expense.
+IMPORTANT: For FCCR calculation, we need CASH interest costs, not accrued. If only total interest is available, we'll allocate based on debt composition.
 
 CAPITAL EXPENDITURES (CRITICAL FOR FCCR CALCULATION):
 • capital_expenditures: From CASH FLOW STATEMENT under "Investing activities". Look for:
@@ -810,72 +826,97 @@ Use any information available from the financial statement — including governa
       }
 
       // Calculate Fixed Charge Coverage Ratio (FCCR)
-      // Base formula: (EBITDA + Lease Payments) / (Interest + Lease Payments + Principal)
-      // Enhanced formula (when data available): Deduct Taxes and/or CapEx from numerator
+      // Lender-defined formula:
+      //   FCCR = Adjusted EBITDA / Total Fixed Charges
+      //   Total Fixed Charges = Senior Debt Interest + Sub Debt Interest + Lease Payments + Other Fixed Charges
       //
       const fc = m.fixed_charges || {};
 
-      // Get available data components
-      const ebitdaValue = m.adjusted_ebitda ?? m.ebitda;
-      const interestExpense = fc.interest_expense ?? m.interest;
-      const leasePayments = fc.lease_payments ?? fc.rent_expense ?? 0;
-      const principalPayments = fc.principal_payments ?? 0;
-      const taxesPaid = m.taxes ?? 0;
-      const capitalExpenditures = m.capital_expenditures ?? 0;
+      // Get Adjusted EBITDA (numerator is simple - just adjusted EBITDA)
+      const adjustedEbitdaValue = m.adjusted_ebitda ?? m.ebitda;
 
-      // MINIMUM REQUIRED: EBITDA and Interest
-      const hasMinimumData = ebitdaValue != null && ebitdaValue > 0 && interestExpense != null && interestExpense > 0;
+      // Calculate SENIOR DEBT INTEREST
+      // Priority: extracted senior_debt_interest > calculated from rate > allocated from total
+      let seniorDebtInterest = fc.senior_debt_interest ?? null;
+      const seniorDebtInterestRate = fc.senior_debt_interest_rate ?? 0.08; // Default 8% mid-market assumption
+
+      if (seniorDebtInterest == null && m.senior_debt != null && m.senior_debt > 0) {
+        // Calculate: interest rate × senior debt balance
+        seniorDebtInterest = m.senior_debt * seniorDebtInterestRate;
+      }
+
+      // Get SUBORDINATED DEBT INTEREST (from extraction or notes)
+      const subordinatedDebtInterest = fc.subordinated_debt_interest ?? 0;
+
+      // Get LEASE PAYMENTS (minimum lease payments for fixed charge coverage)
+      // Priority: minimum_lease_payments > finance_lease_payments + operating_lease_payments > lease_interest
+      let leasePaymentsForFCCR = fc.minimum_lease_payments ?? null;
+      if (leasePaymentsForFCCR == null) {
+        const financeLease = fc.finance_lease_payments ?? 0;
+        const operatingLease = fc.operating_lease_payments ?? 0;
+        if (financeLease > 0 || operatingLease > 0) {
+          leasePaymentsForFCCR = financeLease + operatingLease;
+        }
+      }
+      // Fallback to lease interest component if no lease payment data
+      if (leasePaymentsForFCCR == null && fc.lease_interest != null) {
+        leasePaymentsForFCCR = fc.lease_interest;
+      }
+      leasePaymentsForFCCR = leasePaymentsForFCCR ?? 0;
+
+      // Get OTHER FIXED CHARGES
+      const otherFixedCharges = fc.other_fixed_charges ?? 0;
+      const preferredDividends = fc.preferred_dividends ?? 0;
+
+      // MINIMUM REQUIRED: Adjusted EBITDA and at least some fixed charges
+      const hasAdjustedEbitda = adjustedEbitdaValue != null && adjustedEbitdaValue > 0;
+      const hasSeniorInterest = seniorDebtInterest != null && seniorDebtInterest > 0;
+      const totalInterestFromStatement = fc.total_interest_expense ?? m.interest ?? 0;
+
+      // If we don't have senior debt interest but have total interest, use total as fallback
+      if (!hasSeniorInterest && totalInterestFromStatement > 0) {
+        seniorDebtInterest = totalInterestFromStatement - subordinatedDebtInterest;
+        if (seniorDebtInterest < 0) seniorDebtInterest = totalInterestFromStatement;
+      }
+
+      const hasMinimumData = hasAdjustedEbitda && (seniorDebtInterest != null && seniorDebtInterest > 0);
 
       if (hasMinimumData) {
-        // Build numerator: EBITDA + Lease Payments
-        let fccrNumerator = ebitdaValue + leasePayments;
+        // NUMERATOR: Simply Adjusted EBITDA
+        const fccrNumerator = adjustedEbitdaValue;
 
-        // Conditionally subtract taxes if provided
-        const hasTaxes = taxesPaid > 0;
-        if (hasTaxes) {
-          fccrNumerator -= taxesPaid;
-        }
-
-        // Conditionally subtract CapEx if provided
-        const hasCapEx = capitalExpenditures > 0;
-        if (hasCapEx) {
-          fccrNumerator -= capitalExpenditures;
-        }
-
-        // Denominator: Interest + Lease Payments + Principal
-        let fccrDenominator = interestExpense + leasePayments;
-        const hasPrincipal = principalPayments > 0;
-        if (hasPrincipal) {
-          fccrDenominator += principalPayments;
-        }
+        // DENOMINATOR: Total Fixed Charges
+        // = Senior Debt Interest + Subordinated Debt Interest + Lease Payments + Other
+        const totalFixedCharges =
+          (seniorDebtInterest ?? 0) +
+          subordinatedDebtInterest +
+          leasePaymentsForFCCR +
+          otherFixedCharges +
+          preferredDividends;
 
         // Calculate FCCR
-        if (fccrDenominator > 0) {
-          m.fccr = parseFloat((fccrNumerator / fccrDenominator).toFixed(2));
+        if (totalFixedCharges > 0) {
+          m.fccr = parseFloat((fccrNumerator / totalFixedCharges).toFixed(2));
           m.fccr_numerator = parseFloat(fccrNumerator.toFixed(2));
-          m.total_fixed_charges = parseFloat(fccrDenominator.toFixed(2));
-
-          // Determine calculation type
-          const calculationType = (hasTaxes || hasCapEx) ? 'enhanced' : 'standard';
+          m.total_fixed_charges = parseFloat(totalFixedCharges.toFixed(2));
 
           m.fccr_breakdown = {
-            calculation_type: calculationType,
-            // Numerator components
-            ebitda: ebitdaValue,
-            lease_rent_add_back: leasePayments || null,
-            taxes_deducted: hasTaxes ? taxesPaid : null,
-            capex_deducted: hasCapEx ? capitalExpenditures : null,
+            calculation_type: 'lender_defined',
+            // Numerator (simple)
+            adjusted_ebitda: adjustedEbitdaValue,
             numerator: fccrNumerator,
-            // Denominator components
-            interest_expense: interestExpense,
-            lease_payments: leasePayments || null,
-            principal_payments: hasPrincipal ? principalPayments : null,
-            denominator: fccrDenominator,
-            // Data availability flags
-            has_taxes: hasTaxes,
-            has_capex: hasCapEx,
-            has_principal: hasPrincipal,
-            has_lease_payments: leasePayments > 0
+            // Denominator components (Total Fixed Charges)
+            senior_debt_interest: seniorDebtInterest ?? 0,
+            senior_debt_interest_rate: seniorDebtInterestRate,
+            senior_debt_balance: m.senior_debt ?? null,
+            subordinated_debt_interest: subordinatedDebtInterest,
+            lease_payments: leasePaymentsForFCCR,
+            other_fixed_charges: otherFixedCharges + preferredDividends,
+            total_fixed_charges: totalFixedCharges,
+            denominator: totalFixedCharges,
+            // Data source flags
+            interest_calculated: fc.senior_debt_interest == null,
+            interest_rate_assumed: fc.senior_debt_interest_rate == null,
           };
         } else {
           m.fccr = null;

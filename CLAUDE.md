@@ -82,9 +82,10 @@ Uses Shadcn/UI components in `components/ui/` with Tailwind CSS v4.
 
 ### TO DO LIST
 
-- PDF file sizes can vary, our 5 mb limit is lacking, how can we process more efficiently and accept larger files?
-- key information may sometimes be displayed as and images or a graphs are we prepared for that senario? 
+
+- PDF file sizes can vary, our 5 mb limit is lacking, how can we process more efficiently and accept larger files?✅
+- key information may sometimes be displayed as and images or a graphs are we prepared for that senario? ✅
 - The cost to analyize a pdf is also becoming an issue is there anything we can do? 
-- add an estimated time to complete an analysis while a a pdf is processing and add percentage completed to tge progress bar.
-- lets remove the Extracted Data tab and lets add "Data Extraction Completed ✅" or something similar to the file upload tab.
+- add an estimated time to complete an analysis while a a pdf is processing and add percentage completed to the progress bar. ❎
+
 
