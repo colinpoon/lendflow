@@ -3,16 +3,48 @@
 import { useState, useEffect, useRef } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { PDFDocument } from 'pdf-lib';
 
 interface FileUploadProps {
   onDataExtracted: (data: any) => void;
   onUploadStart?: () => void;
 }
 
-type ProcessingStage = 'idle' | 'processing' | 'complete' | 'error';
+type ProcessingStage = 'idle' | 'compressing' | 'processing' | 'complete' | 'error';
 
-const STAGES = ['Uploading', 'Extracting', 'Analyzing', 'Finalizing'];
-const TOTAL_ESTIMATED_SECONDS = 30;
+const STAGES = ['Compressing', 'Uploading', 'Extracting', 'Analyzing', 'Finalizing'];
+const TOTAL_ESTIMATED_SECONDS = 35;
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+
+/**
+ * Compress a PDF file by re-saving it with pdf-lib
+ * This removes unused objects, optimizes structure, and can reduce file size
+ */
+async function compressPDF(file: File): Promise<File> {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer, {
+      ignoreEncryption: true,
+      updateMetadata: false
+    });
+
+    // Save with optimization - this removes unused objects
+    const compressedBytes = await pdfDoc.save({
+      useObjectStreams: true,
+      addDefaultPage: false,
+    });
+
+    const compressedBlob = new Blob([compressedBytes], { type: 'application/pdf' });
+    const compressedFile = new File([compressedBlob], file.name, { type: 'application/pdf' });
+
+    console.log(`📄 PDF compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+
+    return compressedFile;
+  } catch (error) {
+    console.warn('⚠️ PDF compression failed, using original file:', error);
+    return file;
+  }
+}
 
 const FileUpload: React.FC<FileUploadProps> = ({
   onDataExtracted,
@@ -24,8 +56,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const [currentStageIndex, setCurrentStageIndex] = useState<number>(0);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [extractedFileName, setExtractedFileName] = useState<string | null>(null);
+  const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const maxFileSize = 5 * 1024 * 1024;
 
   useEffect(() => {
     return () => {
@@ -46,18 +78,55 @@ const FileUpload: React.FC<FileUploadProps> = ({
     }, 200);
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files?.[0]) {
       const selectedFile = event.target.files[0];
-      if (selectedFile.size > maxFileSize) {
-        alert('File size exceeds 5MB limit.');
+      const originalSize = selectedFile.size;
+
+      if (originalSize > MAX_FILE_SIZE * 3) {
+        // Reject files over 30MB even before compression
+        alert('File size exceeds 30MB. Please use a smaller file.');
         return;
       }
-      setFile(selectedFile);
-      if (stage === 'complete') {
+
+      // Reset state
+      if (stage === 'complete' || stage === 'error') {
         setStage('idle');
         setProgress(0);
         setExtractedFileName(null);
+        setCompressionInfo(null);
+      }
+
+      // Compress PDF files
+      if (selectedFile.type === 'application/pdf' || selectedFile.name.toLowerCase().endsWith('.pdf')) {
+        setStage('compressing');
+        setCompressionInfo('Optimizing PDF...');
+
+        const compressedFile = await compressPDF(selectedFile);
+        const savedPercent = Math.round((1 - compressedFile.size / originalSize) * 100);
+
+        if (compressedFile.size > MAX_FILE_SIZE) {
+          alert(`File is still ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB after compression. Maximum is 10MB.`);
+          setStage('idle');
+          setCompressionInfo(null);
+          return;
+        }
+
+        if (savedPercent > 5) {
+          setCompressionInfo(`Optimized: saved ${savedPercent}%`);
+        } else {
+          setCompressionInfo(null);
+        }
+
+        setFile(compressedFile);
+        setStage('idle');
+      } else {
+        // Non-PDF files
+        if (originalSize > MAX_FILE_SIZE) {
+          alert('File size exceeds 10MB limit.');
+          return;
+        }
+        setFile(selectedFile);
       }
     }
   };
@@ -103,6 +172,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   const isProcessing = stage === 'processing';
+  const isCompressing = stage === 'compressing';
 
   return (
     <div className="p-6 border rounded-lg shadow-sm w-full max-w-md mx-auto space-y-4">
@@ -125,27 +195,30 @@ const FileUpload: React.FC<FileUploadProps> = ({
           onChange={handleFileChange}
           className="hidden"
           id="file-input"
-          disabled={isProcessing}
+          disabled={isProcessing || isCompressing}
         />
         <label
           htmlFor="file-input"
           className={`w-full text-center py-3 px-4 border-2 border-dashed rounded-md cursor-pointer transition-colors
-            ${isProcessing ? 'opacity-50 cursor-not-allowed border-gray-200' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}
+            ${isProcessing || isCompressing ? 'opacity-50 cursor-not-allowed border-gray-200' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}
         >
           <span className="text-sm text-gray-600">
-            {file ? file.name : 'Click to select a file'}
+            {isCompressing ? 'Optimizing PDF...' : file ? file.name : 'Click to select a file'}
           </span>
+          {compressionInfo && !isCompressing && (
+            <span className="block text-xs text-green-600 mt-1">{compressionInfo}</span>
+          )}
         </label>
 
         <button
           type="submit"
-          disabled={isProcessing || !file}
+          disabled={isProcessing || isCompressing || !file}
           className={`w-full py-2 rounded-md font-medium text-sm transition-colors
-            ${isProcessing || !file
+            ${isProcessing || isCompressing || !file
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : 'bg-blue-500 text-white hover:bg-blue-600'}`}
         >
-          {isProcessing ? 'Processing...' : stage === 'complete' ? 'Process Another' : 'Process File'}
+          {isCompressing ? 'Optimizing...' : isProcessing ? 'Processing...' : stage === 'complete' ? 'Process Another' : 'Process File'}
         </button>
       </form>
 

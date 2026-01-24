@@ -9,7 +9,6 @@ import {
 
 import FileUpload from '@/components/FileUpload';
 import FinancialTable from '@/components/FinancialTable';
-import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
 import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import RiskAssessment, {
@@ -139,27 +138,14 @@ const Home = () => {
 
         <TabsContent value="analysis" key="analysis">
           {financialData && (
-            <div className="space-y-6">
-              {/* Financial Metrics Table - Full Width */}
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>Financial Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FinancialTable data={financialData} />
-                </CardContent>
-              </Card>
-
-              {/* Adjusted EBITDA Breakdown */}
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>Adjusted EBITDA Breakdown</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <AdjustedEBITDA data={financialData} />
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Financial Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FinancialTable data={financialData} />
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
