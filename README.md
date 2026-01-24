@@ -36,11 +36,19 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 
-<!-- This app will be made for corporate bankers, it will streamline determining risk scores for banks to loan to companies and it will use ai and other api's that you suggest to achieve this. 
-
-User journey:
-1. user uploads a financial document (pdf, excel, word)
-2. AI will review the document and extract and display key points. Prompts should never be seen by the user and should be handled by the app. 
-3. 1st key point: any pertinent information that might affect risk factors.
-4. 2nd key point: all pertinent data must be collected and displayed in order for a user to 
-5. 3rd key point: use the document to determine EBITDA. -->
+<!--  instead of DSCR lets change it to show FCCR. Gather Data: Find Adjusted EBITDA(which we have already done),
+  interest expense, lease payments, capital expenditures, and taxes from financial statements.
+  Calculate Numerator: Determine your available cash flow, usually EBITDA minus necessary cash outflows like
+  taxes and non-financed CapEx.
+  Calculate Denominator: Sum your total fixed obligations, including interest and principal (or lease
+  payments).
+  Divide: Divide the numerator by the denominator to get the FCCR.
+  use this scale to grade FCCR:
+  Excellent: > 2.0x (A ratio above 2.0 indicates a very strong, stable position with a large cushion for
+  unexpected dips).
+  Good: 1.5x - 2.0x (A robust, healthy position often preferred by lenders).
+  Adequate: 1.2x - 1.49x (Considered acceptable by many lenders, as it is above the critical 1.0 threshold but
+  warrants monitoring).
+  Weak: 1.0x - 1.19x (Technically solvent, but leaves little room for error and indicates high financial risk).
+  Poor: < 1.0x (A red flag indicating the company is not generating enough earnings to cover its fixed
+  obligations). -->

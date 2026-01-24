@@ -1,3 +1,7 @@
+// Suppress Buffer() deprecation warning from pdf-parse dependency
+// This is a known issue in the pdf-parse library
+process.noDeprecation = true;
+
 // ───────────────────────── helper: strip ``` fences ─────────────────────────
 function cleanJsonFence(input: string): string {
   return (
