@@ -3,16 +3,15 @@
 import { useState } from 'react';
 import {
   FileSpreadsheet,
-  ArrowDownToLine,
   BarChart4,
   Shield,
 } from 'lucide-react';
 
 import FileUpload from '@/components/FileUpload';
-import ExtractedData from '@/components/ExtractedData';
 import FinancialTable from '@/components/FinancialTable';
 import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
+import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import RiskAssessment, {
   RiskData,
 } from '@/components/RiskAssessment';
@@ -34,6 +33,16 @@ import {
   AlertTitle,
 } from '@/components/ui/alert';
 
+interface DebtHealthAssessment {
+  weighted_score: number;
+  risk_band: string;
+  lending_decision: string;
+  key_risk_factors: string[];
+  positive_factors: string[];
+  recommendations: string[];
+  suggested_loan_structure: string;
+}
+
 const Home = () => {
   const [extractedData, setExtractedData] = useState<any>(null);
 
@@ -43,6 +52,8 @@ const Home = () => {
   } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [riskData, setRiskData] = useState<RiskData | null>(null);
+  const [debtHealthAssessment, setDebtHealthAssessment] =
+    useState<DebtHealthAssessment | null>(null);
 
   const handleDataUpdate = (data: any) => {
     console.log('🐞 page.tsx received payload:', data);
@@ -66,13 +77,18 @@ const Home = () => {
       setRiskData(nestedRisk);
     }
 
-    // decide default tab
-    if (nestedRisk && !financialData) {
-      setActiveTab('credit');
-    } else if (financialData) {
+    // Debt health assessment from AI
+    const nestedDebtHealth =
+      data.debtHealthAssessment ??
+      data.financialMetrics?.debtHealthAssessment ??
+      null;
+    if (nestedDebtHealth) {
+      setDebtHealthAssessment(nestedDebtHealth);
+    }
+
+    // decide default tab - go to analysis after successful extraction
+    if (data.metrics_by_year || data.financialMetrics) {
       setActiveTab('analysis');
-    } else if (data.extracted) {
-      setActiveTab('extracted');
     } else {
       setActiveTab('upload');
     }
@@ -97,18 +113,14 @@ const Home = () => {
         onValueChange={setActiveTab}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="upload">
             <FileSpreadsheet className="mr-2 h-4 w-4" /> File Upload
-          </TabsTrigger>
-          <TabsTrigger value="extracted" disabled={!extractedData}>
-            <ArrowDownToLine className="mr-2 h-4 w-4" /> Extracted
-            Data
           </TabsTrigger>
           <TabsTrigger value="analysis" disabled={!financialData}>
             <BarChart4 className="mr-2 h-4 w-4" /> Financial Analysis
           </TabsTrigger>
-          <TabsTrigger value="credit" disabled={!riskData}>
+          <TabsTrigger value="credit" disabled={!financialData}>
             <Shield className="mr-2 h-4 w-4" />
             Credit‑Risk Snapshot
           </TabsTrigger>
@@ -123,19 +135,6 @@ const Home = () => {
               <FileUpload onDataExtracted={handleDataUpdate} />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="extracted" key="extracted">
-          {extractedData && (
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Extracted Document Data</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ExtractedData data={extractedData} />
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         <TabsContent value="analysis" key="analysis">
@@ -165,17 +164,34 @@ const Home = () => {
         </TabsContent>
 
         <TabsContent value="credit" key="credit">
-          {riskData ? (
+          {riskData || financialData ? (
             <div className="space-y-6">
+              {/* Weighted Risk Gauge - Primary Risk Assessment */}
+              {financialData && (
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Debt Health Risk Assessment</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <WeightedRiskGauge
+                      data={financialData}
+                      debtHealthAssessment={debtHealthAssessment}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Credit Risk Assessment */}
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>Credit-Risk Assessment</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <RiskAssessment data={riskData} />
-                </CardContent>
-              </Card>
+              {riskData && (
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Credit-Risk Assessment</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <RiskAssessment data={riskData} />
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Debt Health Indicators with Gauges and Breakdowns */}
               {financialData && (

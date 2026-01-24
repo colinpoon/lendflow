@@ -912,13 +912,159 @@ Use any information available from the financial statement — including governa
       }
     }
 
+    /* ────────────── Generate Debt Health Assessment with AI ────────────── */
+    let debtHealthAssessment: any = null;
+
+    // Check if we have the required metrics for debt health assessment
+    const latestYear = Object.keys(merged).sort().reverse()[0];
+    const latestMetrics = merged[latestYear];
+
+    if (
+      latestMetrics &&
+      (latestMetrics.fccr != null ||
+        latestMetrics.senior_debt_to_ebitda != null ||
+        latestMetrics.total_debt_to_capital != null)
+    ) {
+      // Calculate weighted risk score for context
+      const getFCCRScore = (v: number | null) => {
+        if (v == null) return 5;
+        if (v >= 2.0) return 1;
+        if (v >= 1.5) return 3;
+        if (v >= 1.2) return 5;
+        if (v >= 1.0) return 7;
+        if (v >= 0) return 9;
+        return 10;
+      };
+
+      const getDebtEBITDAScore = (v: number | null) => {
+        if (v == null) return 5;
+        if (v <= 1.5) return 1;
+        if (v <= 2.5) return 3;
+        if (v <= 3.0) return 5;
+        if (v <= 4.0) return 7;
+        return 9;
+      };
+
+      const getDebtCapitalScore = (v: number | null) => {
+        if (v == null) return 5;
+        if (v < 0.3) return 1;
+        if (v <= 0.5) return 3;
+        if (v <= 0.6) return 5;
+        if (v <= 0.7) return 7;
+        return 9;
+      };
+
+      const fccrScore = getFCCRScore(latestMetrics.fccr);
+      const debtEbitdaScore = getDebtEBITDAScore(latestMetrics.senior_debt_to_ebitda);
+      const debtCapitalScore = getDebtCapitalScore(latestMetrics.total_debt_to_capital);
+      const calculatedWeightedScore =
+        fccrScore * 0.5 + debtEbitdaScore * 0.35 + debtCapitalScore * 0.15;
+
+      const getRiskBand = (score: number) => {
+        if (score <= 2) return 'Very Low Risk';
+        if (score <= 4) return 'Low Risk';
+        if (score <= 6) return 'Moderate Risk';
+        if (score <= 8) return 'Elevated Risk';
+        return 'High Risk';
+      };
+
+      try {
+        console.log('🎯 Generating AI debt health assessment...');
+        const debtHealthResp = await openai.chat.completions.create({
+          model: 'gpt-4-turbo-2024-04-09',
+          temperature: 0,
+          max_tokens: 1500,
+          messages: [
+            {
+              role: 'system',
+              content: `
+You are a senior credit analyst. Based on the financial metrics provided, generate a debt health assessment.
+
+Return EXACT JSON matching this schema — no markdown, no fences, no extra keys:
+
+{
+  "weighted_score": number (0-10 scale, higher = worse risk),
+  "risk_band": "Very Low Risk" | "Low Risk" | "Moderate Risk" | "Elevated Risk" | "High Risk",
+  "lending_decision": string (one of: "Strong Approve", "Approve", "Conditional Approval", "Further Review Required", "Decline"),
+  "key_risk_factors": string[] (3-5 specific concerns based on the numbers),
+  "positive_factors": string[] (2-4 strengths if any exist),
+  "recommendations": string[] (3-5 actionable suggestions for loan structuring or risk mitigation),
+  "suggested_loan_structure": string (specific loan terms recommendation based on risk profile)
+}
+
+SCORING WEIGHTS:
+- FCCR (Fixed Charge Coverage Ratio): 50% weight
+- Senior Debt / Adjusted EBITDA: 35% weight
+- Total Debt / Total Capital: 15% weight
+
+SCORING THRESHOLDS (each metric scored 0-10, higher = worse):
+- FCCR: >=2.0x=1 (excellent), 1.5-2.0=3 (good), 1.2-1.5=5 (adequate), 1.0-1.2=7 (weak), <1.0=9 (poor), negative=10 (critical)
+- Debt/EBITDA: <=1.5x=1, 1.5-2.5x=3, 2.5-3.0x=5, 3.0-4.0x=7, >4.0x=9
+- Debt/Capital: <30%=1, 30-50%=3, 50-60%=5, 60-70%=7, >70%=9
+
+LENDING DECISION GUIDANCE:
+- Score 0-2: Strong Approve
+- Score 2-4: Approve
+- Score 4-6: Conditional Approval
+- Score 6-8: Further Review Required
+- Score 8-10: Decline
+
+Be specific and reference actual values from the metrics. Consider year-over-year trends if multiple years provided.
+`.trim(),
+            },
+            {
+              role: 'user',
+              content: JSON.stringify({
+                latest_year: latestYear,
+                metrics_by_year: merged,
+                calculated_scores: {
+                  fccr_score: fccrScore,
+                  debt_ebitda_score: debtEbitdaScore,
+                  debt_capital_score: debtCapitalScore,
+                  weighted_score: calculatedWeightedScore,
+                  risk_band: getRiskBand(calculatedWeightedScore),
+                },
+              }),
+            },
+          ],
+        });
+
+        const rawDebtHealth =
+          debtHealthResp.choices[0]?.message?.content ?? '{}';
+        debtHealthAssessment = JSON.parse(cleanJsonFence(rawDebtHealth));
+        console.log('✅ AI debt health assessment generated');
+      } catch (e) {
+        console.warn('⚠️ Debt health assessment generation failed:', e);
+        // Fallback to calculated values
+        debtHealthAssessment = {
+          weighted_score: calculatedWeightedScore,
+          risk_band: getRiskBand(calculatedWeightedScore),
+          lending_decision:
+            calculatedWeightedScore <= 2
+              ? 'Strong Approve'
+              : calculatedWeightedScore <= 4
+              ? 'Approve'
+              : calculatedWeightedScore <= 6
+              ? 'Conditional Approval'
+              : calculatedWeightedScore <= 8
+              ? 'Further Review Required'
+              : 'Decline',
+          key_risk_factors: [],
+          positive_factors: [],
+          recommendations: [],
+          suggested_loan_structure: '',
+        };
+      }
+    }
+
     let finalResult: any;
-    if (Object.keys(merged).length > 0 || riskSnapshot) {
+    if (Object.keys(merged).length > 0 || riskSnapshot || debtHealthAssessment) {
       finalResult = {
         ...(Object.keys(merged).length > 0 && {
           metrics_by_year: merged,
         }),
         ...(riskSnapshot && { riskAssessment: riskSnapshot }),
+        ...(debtHealthAssessment && { debtHealthAssessment }),
         ...(Object.keys(validationIssues).length > 0 && {
           validation_issues: validationIssues,
         }),
