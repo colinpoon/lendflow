@@ -30,7 +30,7 @@ const navItems = [
     icon: Home,
   },
   {
-    title: 'Risk Analysis',
+    title: 'Projects',
     href: '/dashboard',
     icon: LayoutDashboard,
   },
@@ -77,7 +77,7 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.href}
+                    isActive={item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)}
                   >
                     <Link href={item.href}>
                       <item.icon className="h-4 w-4" />

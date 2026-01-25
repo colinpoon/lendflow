@@ -1,178 +1,204 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
-  FileSpreadsheet,
-  BarChart4,
-  Shield,
+  Plus,
+  FolderOpen,
+  Clock,
+  MoreHorizontal,
+  Search,
+  Filter,
 } from 'lucide-react';
-
-import FileUpload from '@/components/FileUpload';
-import FinancialTable from '@/components/FinancialTable';
-import DebtHealthMeters from '@/components/DebtHealthMeters';
-import WeightedRiskGauge from '@/components/WeightedRiskGauge';
-import { RiskData } from '@/components/RiskAssessment';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 
-interface DebtHealthAssessment {
-  weighted_score: number;
-  risk_band: string;
-  lending_decision: string;
-  key_risk_factors: string[];
-  positive_factors: string[];
-  recommendations: string[];
-  suggested_loan_structure: string;
-}
+// Mock project data - will be replaced with real data later
+const mockProjects = [
+  {
+    id: '1',
+    name: 'Zedcor Inc. Analysis',
+    description: 'Q4 2023 Financial Review',
+    status: 'completed',
+    riskScore: 5.5,
+    lastUpdated: '2024-01-15',
+  },
+  {
+    id: '2',
+    name: 'TechStart Holdings',
+    description: 'Series B Due Diligence',
+    status: 'in_progress',
+    riskScore: null,
+    lastUpdated: '2024-01-18',
+  },
+  {
+    id: '3',
+    name: 'Metro Manufacturing',
+    description: 'Annual Credit Review',
+    status: 'completed',
+    riskScore: 3.2,
+    lastUpdated: '2024-01-10',
+  },
+];
+
+const getRiskColor = (score: number | null) => {
+  if (score === null) return 'bg-gray-100 text-gray-600';
+  if (score <= 4) return 'bg-green-100 text-green-700';
+  if (score <= 6) return 'bg-yellow-100 text-yellow-700';
+  if (score <= 8) return 'bg-orange-100 text-orange-700';
+  return 'bg-red-100 text-red-700';
+};
+
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return 'bg-green-100 text-green-700';
+    case 'in_progress':
+      return 'bg-blue-100 text-blue-700';
+    default:
+      return 'bg-gray-100 text-gray-600';
+  }
+};
 
 export default function DashboardPage() {
-  const [extractedData, setExtractedData] = useState<any>(null);
-  const [financialData, setFinancialData] = useState<{
-    metrics_by_year: Record<string, any>;
-  } | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('upload');
-  const [riskData, setRiskData] = useState<RiskData | null>(null);
-  const [debtHealthAssessment, setDebtHealthAssessment] =
-    useState<DebtHealthAssessment | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleDataUpdate = (data: any) => {
-    console.log('Dashboard received payload:', data);
-
-    setExtractedData(data);
-
-    if (data.financialMetrics) {
-      setFinancialData(data.financialMetrics);
-    } else if (data.metrics_by_year) {
-      setFinancialData({ metrics_by_year: data.metrics_by_year });
-    }
-
-    const nestedRisk =
-      data.riskAssessment ??
-      data.financialMetrics?.riskAssessment ??
-      data.metrics_by_year?.riskAssessment ??
-      null;
-    if (nestedRisk) {
-      setRiskData(nestedRisk);
-    }
-
-    const nestedDebtHealth =
-      data.debtHealthAssessment ??
-      data.financialMetrics?.debtHealthAssessment ??
-      null;
-    if (nestedDebtHealth) {
-      setDebtHealthAssessment(nestedDebtHealth);
-    }
-
-    if (data.metrics_by_year || data.financialMetrics) {
-      setActiveTab('analysis');
-    } else {
-      setActiveTab('upload');
-    }
-  };
+  const filteredProjects = mockProjects.filter(
+    (project) =>
+      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
-      {!extractedData && (
-        <Alert variant="default">
-          <AlertTitle>Get Started</AlertTitle>
-          <AlertDescription>
-            Upload a financial document to begin your bank loan risk analysis.
-          </AlertDescription>
-        </Alert>
-      )}
+    <div className="container mx-auto max-w-6xl px-4 py-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Manage your financial analysis projects
+          </p>
+        </div>
+        <Button asChild className="gap-2">
+          <Link href="/dashboard/new">
+            <Plus className="h-4 w-4" />
+            New Project
+          </Link>
+        </Button>
+      </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="w-full"
-      >
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="upload">
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Upload
-          </TabsTrigger>
-          <TabsTrigger value="analysis" disabled={!financialData}>
-            <BarChart4 className="mr-2 h-4 w-4" /> Analysis
-          </TabsTrigger>
-          <TabsTrigger value="credit" disabled={!financialData}>
-            <Shield className="mr-2 h-4 w-4" /> Risk
-          </TabsTrigger>
-        </TabsList>
+      {/* Search and Filter */}
+      <div className="flex gap-3 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search projects..."
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Button variant="outline" className="gap-2">
+          <Filter className="h-4 w-4" />
+          Filter
+        </Button>
+      </div>
 
-        <TabsContent value="upload">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload Financial Document</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FileUpload onDataExtracted={handleDataUpdate} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analysis">
-          {financialData && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FinancialTable data={financialData} />
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="credit">
-          {(riskData || financialData) ? (
-            <div className="space-y-6">
-              {financialData && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Risk Assessment</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <WeightedRiskGauge
-                      data={financialData}
-                      debtHealthAssessment={debtHealthAssessment}
-                      riskData={riskData}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-
-              {financialData && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Debt Health Indicators</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DebtHealthMeters data={financialData} />
-                  </CardContent>
-                </Card>
-              )}
+      {/* Project Grid */}
+      {filteredProjects.length > 0 ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredProjects.map((project) => (
+            <Link key={project.id} href={`/dashboard/${project.id}`}>
+              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <FolderOpen className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base group-hover:text-primary transition-colors">
+                          {project.name}
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                          {project.description}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(
+                          project.status
+                        )}`}
+                      >
+                        {project.status === 'in_progress'
+                          ? 'In Progress'
+                          : 'Completed'}
+                      </span>
+                      {project.riskScore !== null && (
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${getRiskColor(
+                            project.riskScore
+                          )}`}
+                        >
+                          Risk: {project.riskScore.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-400">
+                      <Clock className="h-3 w-3" />
+                      {project.lastUpdated}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <Card className="p-12 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+              <FolderOpen className="h-8 w-8 text-gray-400" />
             </div>
-          ) : (
-            <p className="text-muted-foreground">
-              No risk assessment available.
-            </p>
-          )}
-        </TabsContent>
-      </Tabs>
+            <div>
+              <h3 className="font-semibold text-gray-900">No projects found</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {searchQuery
+                  ? 'Try adjusting your search'
+                  : 'Create your first project to get started'}
+              </p>
+            </div>
+            {!searchQuery && (
+              <Button asChild className="mt-2">
+                <Link href="/dashboard/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Project
+                </Link>
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

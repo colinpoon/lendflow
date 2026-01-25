@@ -202,6 +202,9 @@ export const extractFinancialData = async (filePath: string) => {
     const allExtractions: any[] = [];
     let riskSnapshot: any | null = null;
     const seenChunks = new Set<string>();
+
+    // Deduplicate chunks first
+    const uniqueChunks: { index: number; content: string }[] = [];
     for (let i = 0; i < textChunks.length; i++) {
       const trimmedChunk = textChunks[i].trim();
       const hash = hashChunk(trimmedChunk);
@@ -210,18 +213,14 @@ export const extractFinancialData = async (filePath: string) => {
         continue;
       }
       seenChunks.add(hash);
-      console.log(
-        `🤖 Processing chunk ${i + 1}/${textChunks.length}…`
-      );
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-2024-04-09',
-        temperature: 0,
-        max_tokens: 2_000,
-        messages: [
-          {
-            role: 'system',
-            content: `
-You are a deterministic **financial‑statement extraction engine**.
+      uniqueChunks.push({ index: i + 1, content: trimmedChunk });
+    }
+
+    console.log(`📊 Processing ${uniqueChunks.length} unique chunks (${textChunks.length - uniqueChunks.length} duplicates removed)`);
+
+    // Process chunks in parallel batches
+    const BATCH_SIZE = 4;
+    const systemPrompt = `You are a deterministic **financial‑statement extraction engine**.
 The user text may come from any kind of financial filing (annual report, 10‑K, MD&A, notes, etc.).
 
 OUTPUT REQUIREMENTS
@@ -454,41 +453,59 @@ CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • IMPORTANT: Extract numeric values EXACTLY as they appear in the document. Do NOT multiply or scale values. If the document reports values "in thousands" or "$000s", keep them in thousands.
 
 This schema must work for any financial statement worldwide.
-`,
-          },
-          {
-            role: 'user',
-            content: textChunks[i],
-          },
-        ],
-      });
+`;
 
-      const extractedText =
-        response.choices?.[0]?.message?.content ?? '{}';
-      console.log(
-        `🤖 Raw AI response for chunk ${i + 1}:`,
-        extractedText
-      );
-
+    // Helper function to process a single chunk
+    const processChunk = async (chunk: { index: number; content: string }): Promise<{ index: number; result: any | null }> => {
       try {
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4-turbo-2024-04-09',
+          temperature: 0,
+          max_tokens: 2_000,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: chunk.content },
+          ],
+        });
+
+        const extractedText = response.choices?.[0]?.message?.content ?? '{}';
+        console.log(`🤖 Chunk ${chunk.index} response received`);
+
         const cleaned = cleanJsonFence(extractedText);
-        const maybeObj = JSON.parse(cleaned);
-        allExtractions.push(maybeObj);
-        if (
-          !riskSnapshot &&
-          maybeObj &&
-          typeof maybeObj === 'object' &&
-          maybeObj.riskAssessment
-        ) {
-          riskSnapshot = maybeObj.riskAssessment;
-        }
+        const parsed = JSON.parse(cleaned);
+        return { index: chunk.index, result: parsed };
       } catch (err) {
-        console.warn(
-          `⚠️  Failed to parse chunk ${i + 1} as JSON:`,
-          err
-        );
+        console.warn(`⚠️ Failed to process chunk ${chunk.index}:`, err);
+        return { index: chunk.index, result: null };
       }
+    };
+
+    // Process chunks in parallel batches
+    const totalBatches = Math.ceil(uniqueChunks.length / BATCH_SIZE);
+    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      const batchStart = batchIndex * BATCH_SIZE;
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, uniqueChunks.length);
+      const batchChunks = uniqueChunks.slice(batchStart, batchEnd);
+
+      console.log(`⚡ Processing batch ${batchIndex + 1}/${totalBatches} (chunks ${batchStart + 1}-${batchEnd})`);
+
+      const batchPromises = batchChunks.map(chunk => processChunk(chunk));
+      const batchResults = await Promise.allSettled(batchPromises);
+
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled' && result.value.result) {
+          allExtractions.push(result.value.result);
+          // Capture risk snapshot if present
+          if (!riskSnapshot && result.value.result.riskAssessment) {
+            riskSnapshot = result.value.result.riskAssessment;
+          }
+        }
+      }
+
+      console.log(`✅ Batch ${batchIndex + 1} complete`);
     }
+
+    console.log(`🎯 All ${uniqueChunks.length} chunks processed`);
 
     // Consolidate all partial JSONs
     const merged: Record<string, any> = {};
@@ -791,7 +808,11 @@ Use any information available from the financial statement — including governa
           adj.pro_forma_synergies,
         ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
 
-        // Calculate Adjusted EBITDA
+        // Capital Expenditures (subtract - represents cash required to maintain business)
+        const capitalExpenditures = m.capital_expenditures ?? 0;
+
+        // Calculate Adjusted EBITDA (Lender-focused: cash available for debt service)
+        // Formula: EBITDA + Add-backs - One-time Gains - CapEx
         const calculatedAdjustedEbitda = parseFloat((
           m.ebitda +
           nonCashAdjustments +
@@ -800,7 +821,8 @@ Use any information available from the financial statement — including governa
           accountingAdjustments +
           fxAdjustments +
           proFormaAdjustments -
-          oneTimeGains
+          oneTimeGains -
+          capitalExpenditures
         ).toFixed(2));
 
         // Use company-reported Adjusted EBITDA if available, otherwise use calculated
@@ -817,6 +839,7 @@ Use any information available from the financial statement — including governa
           accounting_adjustments: accountingAdjustments,
           fx_adjustments: fxAdjustments,
           pro_forma_adjustments: proFormaAdjustments,
+          capital_expenditures: capitalExpenditures,
           uses_reported_value: m.reported_adjusted_ebitda != null,
         };
       } else {
@@ -1011,6 +1034,7 @@ Use any information available from the financial statement — including governa
 
       try {
         console.log('🎯 Generating AI debt health assessment...');
+        console.log(`   FCCR: ${latestMetrics.fccr}, Debt/EBITDA: ${latestMetrics.senior_debt_to_ebitda}, Debt/Capital: ${latestMetrics.total_debt_to_capital}`);
         const debtHealthResp = await openai.chat.completions.create({
           model: 'gpt-4-turbo-2024-04-09',
           temperature: 0,
@@ -1074,6 +1098,7 @@ Be specific and reference actual values from the metrics. Consider year-over-yea
           debtHealthResp.choices[0]?.message?.content ?? '{}';
         debtHealthAssessment = JSON.parse(cleanJsonFence(rawDebtHealth));
         console.log('✅ AI debt health assessment generated');
+        console.log(`   Recommendations: ${debtHealthAssessment.recommendations?.length || 0} items`);
       } catch (e) {
         console.warn('⚠️ Debt health assessment generation failed:', e);
         // Fallback to calculated values

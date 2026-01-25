@@ -47,6 +47,7 @@ interface AdjustedEBITDABreakdown {
   accounting_adjustments: number;
   fx_adjustments: number;
   pro_forma_adjustments: number;
+  capital_expenditures: number;
   uses_reported_value?: boolean;
 }
 
@@ -190,7 +191,8 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       breakdown.owner_management_adjustments !== 0 ||
       breakdown.accounting_adjustments !== 0 ||
       breakdown.fx_adjustments !== 0 ||
-      breakdown.pro_forma_adjustments !== 0);
+      breakdown.pro_forma_adjustments !== 0 ||
+      breakdown.capital_expenditures !== 0);
 
   return (
     <div className="space-y-4">
@@ -234,8 +236,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       {/* Formula */}
       <div className="bg-gray-50 rounded-lg p-3 text-center">
         <span className="font-mono text-xs text-gray-600">
-          Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time Expenses +
-          Owner/Mgmt + Accounting + FX + Pro Forma - One-Time Gains/Income
+          Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time Expenses - One-Time Gains - CapEx
         </span>
       </div>
 
@@ -414,6 +415,21 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                   { label: 'Synergies', value: components.pro_forma_synergies },
                 ]}
               />
+
+              {/* Capital Expenditures (subtract) */}
+              {breakdown.capital_expenditures !== 0 && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h5 className="text-sm font-semibold text-gray-700">Capital Expenditures (Maintenance CapEx)</h5>
+                    <span className="text-sm font-bold text-red-600">
+                      {formatSignedCurrency(breakdown.capital_expenditures, true)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 pl-4">
+                    Cash required to maintain productive capacity of the business
+                  </p>
+                </div>
+              )}
 
               {/* Total */}
               <div className="flex justify-between items-center mt-4 pt-4 border-t-2 border-gray-300">

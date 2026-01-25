@@ -79,13 +79,68 @@ Uses Shadcn/UI components in `components/ui/` with Tailwind CSS v4.
 - Provide clean readable code that a Senior Developer would approve of in a PR
 - Suggest optimal options in order to achieve the best result for the Key Feautures
 - Suggest alternatives to optimize the process
+- don't only agree with me, challenge me if my prompt will negatively affect the overall accuracy and effeciency of the app.
 
 ### TO DO LIST
 
+- continue to implement parallel processing
+- Debt Health Indicators, lets change "debt/adj. EBITDA" to "sr. debt/ adj. EBITDA"
+- in the ratio breakdowns, add what all the items are that contribute to the overall calculation. Example: 
+Stock-Based Compensation +$562K what is everything included to get +$562K
+- I'm going to add an image of a Bank employee's internal method, lets refine the logic because our ratios's are still off.
+- we have been testing with zedcor inc's report, we are now going to test with Taiga. review this pdf, so we can compare your findings to the apps.
+- we will do the same with ADENA
 
-- PDF file sizes can vary, our 5 mb limit is lacking, how can we process more efficiently and accept larger files?✅
-- key information may sometimes be displayed as and images or a graphs are we prepared for that senario? ✅
-- The cost to analyize a pdf is also becoming an issue is there anything we can do? 
+<!-- Reported EBITDA
+18,121
+Adjusted EBITDA
+7,954
+
+ let’s walk through why your reported EBITDA is $18,021 while mine was initially $18,121 and then revised to $18,121 again. That discrepancy of exactly 100 likely comes down to tax treatment or a rounding or label mismatch in the source.
+
+Let’s break this down carefully:
+
+⸻
+
+🔍 Your Version (EBITDA = 18,021)
+
+You likely used the standard formula:
+\[
+\text{EBITDA} = \text{Net Income} + \text{Interest} + \text{Depreciation & Amortization} + \text{Taxes}
+\]
+
+Your input values might be:
+	•	Net income = 5,992
+	•	Interest = 4,804
+	•	Amortization = 7,211
+	•	Tax expense = 14 ← (this is the likely difference)
+
+Total:
+5,992 + 4,804 + 7,211 + 14 = \boxed{18,021}
+
+⸻
+
+🧮 My Version (EBITDA = 18,121)
+
+I used:
+	•	Tax expense = 114 (from the OCR text):
+“Current tax expense: 114”
+
+So my total:
+5,992 + 4,804 + 7,211 + 114 = \boxed{18,121}
+
+⸻
+
+✅ What’s the real number?
+
+From the OCR extract:
+
+Current tax expense 114 4,390
+
+Looks like the 2024 tax is 114, not 14 — the OCR might blur small numbers, and if you read it as 14 instead of 114, that would cause the exact 100-point difference. -->
+
+
+- remove/ hide the next.js logo from all pages. 
 - add an estimated time to complete an analysis while a a pdf is processing and add percentage completed to the progress bar. ❎
 
 
