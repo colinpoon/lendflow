@@ -219,7 +219,9 @@ export const extractFinancialData = async (filePath: string) => {
     console.log(`📊 Processing ${uniqueChunks.length} unique chunks (${textChunks.length - uniqueChunks.length} duplicates removed)`);
 
     // Process chunks in parallel batches
-    const BATCH_SIZE = 4;
+    // Reduced batch size and added delay to stay under OpenAI rate limits (30k TPM)
+    const BATCH_SIZE = 2;
+    const BATCH_DELAY_MS = 12_000; // 12 second delay between batches to respect rate limits
     const systemPrompt = `You are a deterministic **financial‑statement extraction engine**.
 The user text may come from any kind of financial filing (annual report, 10‑K, MD&A, notes, etc.).
 
@@ -455,29 +457,55 @@ CRITICAL - ADJUSTED EBITDA COMPONENTS:
 This schema must work for any financial statement worldwide.
 `;
 
-    // Helper function to process a single chunk
+    // Helper function to delay execution
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Helper function to process a single chunk with retry logic
     const processChunk = async (chunk: { index: number; content: string }): Promise<{ index: number; result: any | null }> => {
-      try {
-        const response = await openai.chat.completions.create({
-          model: 'gpt-4-turbo-2024-04-09',
-          temperature: 0,
-          max_tokens: 2_000,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: chunk.content },
-          ],
-        });
+      const MAX_RETRIES = 3;
+      let lastError: any;
 
-        const extractedText = response.choices?.[0]?.message?.content ?? '{}';
-        console.log(`🤖 Chunk ${chunk.index} response received`);
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const response = await openai.chat.completions.create({
+            model: 'gpt-4-turbo-2024-04-09',
+            temperature: 0,
+            max_tokens: 2_000,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: chunk.content },
+            ],
+          });
 
-        const cleaned = cleanJsonFence(extractedText);
-        const parsed = JSON.parse(cleaned);
-        return { index: chunk.index, result: parsed };
-      } catch (err) {
-        console.warn(`⚠️ Failed to process chunk ${chunk.index}:`, err);
-        return { index: chunk.index, result: null };
+          const extractedText = response.choices?.[0]?.message?.content ?? '{}';
+          console.log(`🤖 Chunk ${chunk.index} response received`);
+          console.log(`📄 Raw AI response for chunk ${chunk.index}:\n${extractedText}\n${'─'.repeat(80)}`);
+
+          const cleaned = cleanJsonFence(extractedText);
+          const parsed = JSON.parse(cleaned);
+          return { index: chunk.index, result: parsed };
+        } catch (err: any) {
+          lastError = err;
+
+          // Check if it's a rate limit error (429)
+          const isRateLimit = err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('Rate limit');
+
+          if (isRateLimit && attempt < MAX_RETRIES) {
+            // Extract wait time from error message or use exponential backoff
+            const waitMatch = err?.message?.match(/try again in (\d+\.?\d*)/i);
+            const waitTime = waitMatch ? Math.ceil(parseFloat(waitMatch[1]) * 1000) + 1000 : (attempt * 15_000);
+            console.log(`⏳ Rate limited on chunk ${chunk.index}, waiting ${waitTime / 1000}s before retry ${attempt + 1}/${MAX_RETRIES}...`);
+            await delay(waitTime);
+            continue;
+          }
+
+          // For non-rate-limit errors or final attempt, break out
+          break;
+        }
       }
+
+      console.warn(`⚠️ Failed to process chunk ${chunk.index} after ${MAX_RETRIES} attempts:`, lastError?.message || lastError);
+      return { index: chunk.index, result: null };
     };
 
     // Process chunks in parallel batches
@@ -503,6 +531,12 @@ This schema must work for any financial statement worldwide.
       }
 
       console.log(`✅ Batch ${batchIndex + 1} complete`);
+
+      // Add delay between batches to respect rate limits (skip delay after last batch)
+      if (batchIndex < totalBatches - 1) {
+        console.log(`⏳ Waiting ${BATCH_DELAY_MS / 1000}s before next batch to respect rate limits...`);
+        await delay(BATCH_DELAY_MS);
+      }
     }
 
     console.log(`🎯 All ${uniqueChunks.length} chunks processed`);
