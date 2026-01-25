@@ -1,0 +1,1187 @@
+
+ ▐▛███▜▌   Claude Code v2.1.17
+▝▜█████▛▘  Opus 4.5 · Claude Pro
+  ▘▘ ▝▝    ~/Dev/lendflow
+
+❯ Implement the following plan:                                             
+                                                                            
+  # Plan: Fix FCCR Calculation Accuracy                                     
+                                                                            
+  ## Problem Statement                                                      
+  The app's FCCR calculations are inaccurate compared to manual             
+  calculations:                                                             
+                                                                            
+  | Year | Manual FCCR | App FCCR (likely wrong) |                          
+  |------|-------------|------------------------|                           
+  | 2022 | 4.59x | Incorrect |                                              
+  | 2023 | 2.91x | Incorrect |                                              
+                                                                            
+  **User's correct calculations:**                                          
+  - 2022: 7,569k / 1,651k = 4.59x (Sr Int 976k + Sub Int 175k + Lease 500k) 
+  - 2023: 7,645k / 2,624k = 2.91x (Sr Int 1,949k + Sub Int 175k + Lease     
+  500k)                                                                     
+                                                                            
+  ## Root Causes Identified                                                 
+                                                                            
+  ### 1. Interest Fallback Logic (Critical)                                 
+  **File:** `utils/aiProcessor.ts` (lines 897-937)                          
+                                                                            
+  The code calculates interest from `senior_debt × 8% assumed rate` when    
+  `senior_debt_interest` is null, even if total interest expense was        
+  extracted. This overwrites accurate extracted data with an approximation. 
+                                                                            
+  ### 2. Lease Payment Extraction                                           
+  **File:** `utils/aiProcessor.ts` (lines 908-922)                          
+                                                                            
+  Falls back to 0 if `minimum_lease_payments` isn't explicitly extracted,   
+  missing the 500k lease payments entirely.                                 
+                                                                            
+  ### 3. Adjusted EBITDA Formula (Wrong)                                    
+  **File:** `utils/aiProcessor.ts` (line 859)                               
+                                                                            
+  Currently subtracts CapEx from Adjusted EBITDA - this is incorrect. CapEx 
+  affects Free Cash Flow, not Adjusted EBITDA.                              
+                                                                            
+  ### 4. AI Extraction Prompt Gaps                                          
+  **File:** `utils/aiProcessor.ts` (lines 416-436)                          
+                                                                            
+  The extraction prompt doesn't clearly guide the AI to find interest       
+  expense by debt type.                                                     
+                                                                            
+  ---                                                                       
+                                                                            
+  ## Implementation Plan                                                    
+                                                                            
+  ### Step 1: Fix Interest Extraction Priority (aiProcessor.ts)             
+                                                                            
+  **Current logic (wrong):**                                                
+  ```                                                                       
+  1. Use fc.senior_debt_interest if extracted                               
+  2. ELSE calculate: senior_debt × 8% assumed rate  ← PROBLEM               
+  3. ELSE allocate from total interest                                      
+  ```                                                                       
+                                                                            
+  **New logic:**                                                            
+  ```                                                                       
+  1. Use fc.senior_debt_interest if extracted                               
+  2. ELSE use total_interest_expense - subordinated_debt_interest           
+  3. ONLY as last resort: calculate from debt balance × rate                
+  ```                                                                       
+                                                                            
+  ### Step 2: Fix Lease Payment Extraction (aiProcessor.ts)                 
+                                                                            
+  **Change:** Before defaulting to 0, use `total_interest_expense` data or  
+  flag as missing.                                                          
+                                                                            
+  Update fallback chain:                                                    
+  ```typescript                                                             
+  // If no lease payments extracted, check if there's lease debt            
+  // If lease_liabilities exist but no payment, estimate conservatively     
+  ```                                                                       
+                                                                            
+  ### Step 3: Remove CapEx from Adjusted EBITDA (aiProcessor.ts) ✓          
+  CONFIRMED                                                                 
+                                                                            
+  **Current (line 859):**                                                   
+  ```typescript                                                             
+  - oneTimeGains -                                                          
+  - capitalExpenditures  // REMOVE THIS LINE                                
+  ```                                                                       
+                                                                            
+  CapEx should NOT reduce Adjusted EBITDA. Standard EBITDA adjustments only 
+  include non-cash and one-time items.                                      
+                                                                            
+  **User confirmed:** Remove CapEx deduction from Adjusted EBITDA           
+  calculation.                                                              
+                                                                            
+  ### Step 4: Enhance AI Extraction Prompt (aiProcessor.ts)                 
+                                                                            
+  Add clearer extraction guidance for fixed charges:                        
+  ```                                                                       
+  FIXED CHARGES EXTRACTION - CRITICAL:                                      
+  • senior_debt_interest: Look for "Interest on bank debt", "Interest on    
+  credit facilities",                                                       
+  "Finance costs" breakdown. If only total interest is shown, allocate to   
+  senior debt                                                               
+  minus any subordinated interest.                                          
+  • subordinated_debt_interest: Interest on notes payable, mezzanine debt,  
+  vendor take-back notes                                                    
+  • minimum_lease_payments: Annual lease payment obligation (from cash flow 
+  or footnotes)                                                             
+  ```                                                                       
+                                                                            
+  ---                                                                       
+                                                                            
+  ## Files to Modify                                                        
+                                                                            
+  1. **`utils/aiProcessor.ts`**                                             
+  - Lines 897-937: Fix interest extraction fallback priority                
+  - Lines 908-922: Improve lease payment handling                           
+  - Line 859: Remove CapEx subtraction from Adjusted EBITDA                 
+  - Lines 416-436: Enhance fixed_charges extraction prompt                  
+                                                                            
+  ---                                                                       
+                                                                            
+  ## Verification                                                           
+                                                                            
+  After changes:                                                            
+  1. Clear cache: `npm run dev` (already clears cache)                      
+  2. Re-upload Zedcor PDF                                                   
+  3. Verify FCCR shows:                                                     
+  - 2022: ~4.59x                                                            
+  - 2023: ~2.91x                                                            
+  4. Expand FCCR breakdown accordion to verify:                             
+  - Senior Debt Interest matches (976k / 1,949k)                            
+  - Subordinated Interest shows 175k                                        
+  - Lease Payments shows 500k                                               
+                                                                            
+                                                                            
+  If you need specific details from before exiting plan mode (like exact    
+  code snippets, error messages, or content you generated), read the full   
+  transcript at: /Users/colinpoon/.claude/projects/-Users-colinpoon-Dev-len 
+  dflow/9e4de8e1-2a27-40ae-89ea-c5878f573124.jsonl                          
+
+⏺ I'll implement the plan to fix the FCCR calculation accuracy. Let me start by
+  reading the relevant sections of the aiProcessor.ts file.
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 1190 lines
+
+⏺ I've read the file. Now let me implement the four changes from the plan. I'll
+  make them in a logical order.
+
+  Step 3: Remove CapEx from Adjusted EBITDA (line 859)
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 6 lines, removed 5 lines
+      842            adj.pro_forma_synergies,
+      843          ].filter((v): v is number => v != null).reduce((sum, v
+           ) => sum + v, 0);
+      844  
+      845 -        // Capital Expenditures (subtract - represents cash re
+          -quired to maintain business)                                  
+      845 +        // NOTE: Capital Expenditures are NOT subtracted from 
+          +Adjusted EBITDA                                               
+      846 +        // CapEx affects Free Cash Flow, not Adjusted EBITDA. 
+          +Standard EBITDA adjustments                                   
+      847 +        // only include non-cash and one-time items.          
+      848          const capitalExpenditures = m.capital_expenditures ?? 
+           0;
+      849  
+      848 -        // Calculate Adjusted EBITDA (Lender-focused: cash ava
+          -ilable for debt service)                                      
+      849 -        // Formula: EBITDA + Add-backs - One-time Gains - CapE
+          -x                                                             
+      850 +        // Calculate Adjusted EBITDA (Standard: non-cash and o
+          +ne-time adjustments only)                                     
+      851 +        // Formula: EBITDA + Non-cash Add-backs + One-time Exp
+          +enses - One-time Gains                                        
+      852          const calculatedAdjustedEbitda = parseFloat((
+      853            m.ebitda +
+      854            nonCashAdjustments +
+     ...
+      857            accountingAdjustments +
+      858            fxAdjustments +
+      859            proFormaAdjustments -
+      858 -          oneTimeGains -                                      
+      859 -          capitalExpenditures                                 
+      860 +          oneTimeGains                                        
+      861          ).toFixed(2));
+      862  
+      863          // Use company-reported Adjusted EBITDA if available, 
+           otherwise use calculated
+
+⏺ Step 1 & 2: Fix Interest and Lease Payment Extraction Priority (lines 897-937)
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 38 lines, removed 15 lines
+      894        const adjustedEbitdaValue = m.adjusted_ebitda ?? m.ebitd
+           a;
+      895  
+      896        // Calculate SENIOR DEBT INTEREST
+      897 -      // Priority: extracted senior_debt_interest > calculated
+          - from rate > allocated from total                             
+      897 +      // Priority:                                            
+      898 +      //   1. Extracted senior_debt_interest (most accurate)  
+      899 +      //   2. Total interest expense - subordinated interest (
+          +derived from statement)                                       
+      900 +      //   3. ONLY as last resort: calculated from senior_debt
+          + × assumed rate                                               
+      901        let seniorDebtInterest = fc.senior_debt_interest ?? null
+           ;
+      902        const seniorDebtInterestRate = fc.senior_debt_interest_r
+           ate ?? 0.08; // Default 8% mid-market assumption
+      903 +      let interestCalculationMethod = 'extracted';            
+      904  
+      901 -      if (seniorDebtInterest == null && m.senior_debt != null 
+          -&& m.senior_debt > 0) {                                       
+      902 -        // Calculate: interest rate × senior debt balance     
+      903 -        seniorDebtInterest = m.senior_debt * seniorDebtInteres
+          -tRate;                                                        
+      904 -      }                                                       
+      905 -                                                              
+      905        // Get SUBORDINATED DEBT INTEREST (from extraction or no
+           tes)
+      906        const subordinatedDebtInterest = fc.subordinated_debt_in
+           terest ?? 0;
+      907  
+      908 +      // Get total interest from income statement for allocati
+          +on                                                            
+      909 +      const totalInterestFromStatement = fc.total_interest_exp
+          +ense ?? m.interest ?? 0;                                      
+      910 +                                                              
+      911 +      if (seniorDebtInterest == null) {                       
+      912 +        // Priority 2: Derive from total interest expense (mor
+          +e accurate than rate calculation)                             
+      913 +        if (totalInterestFromStatement > 0) {                 
+      914 +          seniorDebtInterest = totalInterestFromStatement - su
+          +bordinatedDebtInterest;                                       
+      915 +          if (seniorDebtInterest < 0) seniorDebtInterest = tot
+          +alInterestFromStatement;                                      
+      916 +          interestCalculationMethod = 'derived_from_total';   
+      917 +        }                                                     
+      918 +        // Priority 3: Only calculate from rate if no interest
+          + expense data at all                                          
+      919 +        else if (m.senior_debt != null && m.senior_debt > 0) {
+      920 +          seniorDebtInterest = m.senior_debt * seniorDebtInter
+          +estRate;                                                      
+      921 +          interestCalculationMethod = 'calculated_from_rate'; 
+      922 +        }                                                     
+      923 +      }                                                       
+      924 +                                                              
+      925        // Get LEASE PAYMENTS (minimum lease payments for fixed 
+           charge coverage)
+      910 -      // Priority: minimum_lease_payments > finance_lease_paym
+          -ents + operating_lease_payments > lease_interest              
+      926 +      // Priority: minimum_lease_payments > finance_lease_paym
+          +ents + operating_lease_payments >                             
+      927 +      //           estimated from lease liabilities > lease_in
+          +terest                                                        
+      928        let leasePaymentsForFCCR = fc.minimum_lease_payments ?? 
+           null;
+      929 +      let leasePaymentSource = 'extracted';                   
+      930 +                                                              
+      931        if (leasePaymentsForFCCR == null) {
+      932          const financeLease = fc.finance_lease_payments ?? 0;
+      933          const operatingLease = fc.operating_lease_payments ?? 
+           0;
+      934          if (financeLease > 0 || operatingLease > 0) {
+      935            leasePaymentsForFCCR = financeLease + operatingLease
+           ;
+      936 +          leasePaymentSource = 'sum_of_lease_types';          
+      937          }
+      938        }
+      919 -      // Fallback to lease interest component if no lease paym
+          -ent data                                                      
+      939 +                                                              
+      940 +      // Fallback: If we have lease liabilities but no payment
+          + data, estimate conservatively                                
+      941 +      // Typical lease term ~5 years, so annual payment ≈ tota
+          +l liability / 5                                               
+      942 +      if (leasePaymentsForFCCR == null && totalLeaseDebt > 0) 
+          +{                                                             
+      943 +        // More conservative estimate: assume ~5 year average 
+          +lease term                                                    
+      944 +        leasePaymentsForFCCR = totalLeaseDebt / 5;            
+      945 +        leasePaymentSource = 'estimated_from_liability';      
+      946 +      }                                                       
+      947 +                                                              
+      948 +      // Fallback to lease interest component if still no leas
+          +e payment data                                                
+      949        if (leasePaymentsForFCCR == null && fc.lease_interest !=
+            null) {
+      950          leasePaymentsForFCCR = fc.lease_interest;
+      951 +        leasePaymentSource = 'lease_interest_only';           
+      952        }
+      953        leasePaymentsForFCCR = leasePaymentsForFCCR ?? 0;
+      954  
+     ...
+      959        // MINIMUM REQUIRED: Adjusted EBITDA and at least some f
+           ixed charges
+      960        const hasAdjustedEbitda = adjustedEbitdaValue != null &&
+            adjustedEbitdaValue > 0;
+      961        const hasSeniorInterest = seniorDebtInterest != null && 
+           seniorDebtInterest > 0;
+      932 -      const totalInterestFromStatement = fc.total_interest_exp
+          -ense ?? m.interest ?? 0;                                      
+      962  
+      934 -      // If we don't have senior debt interest but have total 
+          -interest, use total as fallback                               
+      935 -      if (!hasSeniorInterest && totalInterestFromStatement > 0
+          -) {                                                           
+      936 -        seniorDebtInterest = totalInterestFromStatement - subo
+          -rdinatedDebtInterest;                                         
+      937 -        if (seniorDebtInterest < 0) seniorDebtInterest = total
+          -InterestFromStatement;                                        
+      938 -      }                                                       
+      939 -                                                              
+      963        const hasMinimumData = hasAdjustedEbitda && (seniorDebtI
+           nterest != null && seniorDebtInterest > 0);
+      964  
+      965        if (hasMinimumData) {
+
+⏺ Now let me update the FCCR breakdown to include the new tracking variables.
+  Let me read the current state around the fccr_breakdown:
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 100 lines
+
+⏺ Let me update the fccr_breakdown to include the new source tracking:
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 6 lines, removed 3 lines
+       995              other_fixed_charges: otherFixedCharges + preferre
+            dDividends,
+       996              total_fixed_charges: totalFixedCharges,
+       997              denominator: totalFixedCharges,
+       998 -            // Data source flags                             
+       999 -            interest_calculated: fc.senior_debt_interest == n
+           -ull,                                                         
+      1000 -            interest_rate_assumed: fc.senior_debt_interest_ra
+           -te == null,                                                  
+       998 +            // Data source flags for transparency            
+       999 +            interest_source: interestCalculationMethod, // 'e
+           +xtracted', 'derived_from_total', or 'calculated_from_rate'   
+      1000 +            interest_calculated: interestCalculationMethod !=
+           += 'extracted',                                               
+      1001 +            interest_rate_assumed: fc.senior_debt_interest_ra
+           +te == null && interestCalculationMethod === 'calculated_from_
+           +rate',                                                       
+      1002 +            lease_payment_source: leasePaymentSource, // 'ext
+           +racted', 'sum_of_lease_types', 'estimated_from_liability', 'l
+           +ease_interest_only'                                          
+      1003 +            total_interest_from_statement: totalInterestFromS
+           +tatement,                                                    
+      1004            };
+      1005          } else {
+      1006            m.fccr = null;
+
+⏺ Step 4: Enhance AI Extraction Prompt for Fixed Charges
+
+  Now let me find and update the extraction prompt to give clearer guidance:
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 50 lines
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 35 lines, removed 13 lines
+      414  • When a note or schedule lists multiple debt facilities, the 
+           ORDER they appear indicates relative seniority.
+      415  
+      416  FIXED CHARGES EXTRACTION (CRITICAL FOR FCCR CALCULATION):
+      417 -Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES:
+      417 +Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES.
+          + This is essential for accurate FCCR.                         
+      418  
+      419 -INTEREST COMPONENTS (separate by debt type for accurate FCCR):
+      420 -• senior_debt_interest: Interest expense on bank debt, credit 
+          -facilities, term loans. Look in finance costs breakdown or not
+          -es.                                                           
+      421 -• subordinated_debt_interest: Interest on subordinated notes, 
+          -vendor take-back notes, mezzanine debt. Often disclosed separa
+          -tely in notes.                                                
+      422 -• lease_interest: Interest portion of lease payments (IFRS 16 
+          -"Interest on lease liabilities"). From finance costs breakdown
+          -.                                                             
+      423 -• total_interest_expense: Total interest/finance costs from in
+          -come statement (for validation).                              
+      424 -• senior_debt_interest_rate: If disclosed, extract the interes
+          -t rate on senior debt (e.g., "prime + 2%", "8%"). If not state
+          -d, will assume 8% typical mid-market rate.                    
+      419 +INTEREST COMPONENTS - EXTRACT WITH PRECISION:                 
+      420 +• senior_debt_interest: Interest on bank debt, credit faciliti
+          +es, term loans.                                               
+      421 +  WHERE TO FIND IT:                                           
+      422 +  - Look for "Finance costs" breakdown in notes (e.g., "Note 1
+          +6: Finance costs")                                            
+      423 +  - "Interest on bank indebtedness" or "Interest on credit fac
+          +ilities"                                                      
+      424 +  - "Interest expense" allocated to senior debt in footnotes  
+      425 +  - If only total interest shown AND you found subordinated de
+          +bt interest separately, calculate: total_interest - subordinat
+          +ed_debt_interest                                              
+      426  
+      426 -LEASE PAYMENTS (for fixed charge coverage):                   
+      427 -• minimum_lease_payments: From cash flow statement "Payment of
+          - lease liability" or notes showing annual minimum lease obliga
+          -tions. This is the TOTAL cash paid for leases.                
+      427 +• subordinated_debt_interest: Interest on subordinated notes, 
+          +vendor take-back notes, mezzanine debt.                       
+      428 +  WHERE TO FIND IT:                                           
+      429 +  - Look for "Interest on vendor take-back note" or "Interest 
+          +on note payable"                                              
+      430 +  - Often disclosed separately in notes or debt schedules     
+      431 +  - May be described as "below-market rate" or "5% note"      
+      432 +                                                              
+      433 +• lease_interest: Interest portion of lease payments (IFRS 16 
+          +"Interest on lease liabilities").                             
+      434 +  WHERE TO FIND IT:                                           
+      435 +  - Finance costs breakdown showing "Interest on lease liabili
+          +ties"                                                         
+      436 +  - Separate from interest on bank debt                       
+      437 +                                                              
+      438 +• total_interest_expense: CRITICAL - Extract the TOTAL interes
+          +t/finance costs from income statement.                        
+      439 +  This serves as validation and fallback for senior debt inter
+          +est calculation.                                              
+      440 +                                                              
+      441 +• senior_debt_interest_rate: If disclosed, extract the interes
+          +t rate (e.g., "prime + 2%", "8%", "BA + 3.5%").               
+      442 +                                                              
+      443 +LEASE PAYMENTS (CRITICAL for fixed charge coverage):          
+      444 +• minimum_lease_payments: PRIORITY - Look for this in multiple
+          + places:                                                      
+      445 +  - Cash flow statement: "Payment of lease liability" or "Leas
+          +e payments"                                                   
+      446 +  - Notes: "Minimum lease obligations" or lease maturity sched
+          +ule showing next 12 months                                    
+      447 +  - IFRS 16 disclosures showing contractual cash flows        
+      448 +  This is the TOTAL annual cash paid for leases (principal + i
+          +nterest).                                                     
+      449 +                                                              
+      450  • finance_lease_payments: Finance/capital lease payments if sh
+           own separately.
+      451  • operating_lease_payments: Operating lease payments if shown 
+           separately.
+      452  
+      453  OTHER FIXED CHARGES:
+      432 -• principal_payments: From cash flow statement "Repayment of d
+          -ebt" or "Principal repayments". Only include if required for d
+          -ebt service coverage.                                         
+      433 -• preferred_dividends: Cash dividends paid on preferred shares
+          - (if any).                                                    
+      434 -• other_fixed_charges: Any other recurring fixed obligations t
+          -hat must be paid regardless of business performance.          
+      454 +• principal_payments: From cash flow statement "Repayment of d
+          +ebt" or "Principal repayments".                               
+      455 +• preferred_dividends: Cash dividends paid on preferred shares
+          +.                                                             
+      456 +• other_fixed_charges: Any other recurring fixed obligations. 
+      457  
+      436 -IMPORTANT: For FCCR calculation, we need CASH interest costs, 
+          -not accrued. If only total interest is available, we'll alloca
+          -te based on debt composition.                                 
+      458 +IMPORTANT: For FCCR calculation, we need CASH interest costs. 
+          +Always try to extract total_interest_expense as it provides th
+          +e most reliable basis for fixed charge calculations.          
+      459  
+      460  CAPITAL EXPENDITURES (CRITICAL FOR FCCR CALCULATION):
+      461  • capital_expenditures: From CASH FLOW STATEMENT under "Invest
+           ing activities". Look for:
+
+⏺ Now let me update the adjusted_ebitda_breakdown to reflect that CapEx is
+  tracked but not used in the calculation. Let me find that section:
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 30 lines
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 20 lines
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 2 lines, removed 1 line
+      896            accounting_adjustments: accountingAdjustments,
+      897            fx_adjustments: fxAdjustments,
+      898            pro_forma_adjustments: proFormaAdjustments,
+      899 -          capital_expenditures: capitalExpenditures,          
+      899 +          // CapEx is tracked for Free Cash Flow but NOT used 
+          +in Adjusted EBITDA calculation                                
+      900 +          capital_expenditures_not_in_calc: capitalExpenditure
+          +s,                                                            
+      901            uses_reported_value: m.reported_adjusted_ebitda != n
+           ull,
+      902          };
+      903        } else {
+
+⏺ Let me verify all changes were applied correctly:
+
+⏺ Bash(grep -n "capitalExpenditures" utils/aiProcessor.ts)
+  ⎿  870:        const capitalExpenditures = m.capital_expenditures ?? 0;
+     900:          capital_expenditures_not_in_calc: capitalExpenditures,
+
+⏺ Bash(grep -n
+      "interestCalculationMethod\|derived_from_total\|calculated_from_rate"
+      utils/aiProcessor.ts)
+  ⎿  926:      let interestCalculationMethod = 'extracted';
+     939:          interestCalculationMethod = 'derived_from_total';
+     944:          interestCalculationMethod = 'calculated_from_rate';
+     … +6 lines (ctrl+o to expand)
+
+⏺ Bash(grep -n "leasePaymentSource\|estimated_from_liability"
+      utils/aiProcessor.ts)
+  ⎿  952:      let leasePaymentSource = 'extracted';
+     959:          leasePaymentSource = 'sum_of_lease_types';
+     968:        leasePaymentSource = 'estimated_from_liability';
+     … +4 lines (ctrl+o to expand)
+
+⏺ All changes have been applied. Let me verify the prompt enhancement:
+
+⏺ Bash(grep -A 3 "WHERE TO FIND IT"
+      /Users/colinpoon/Dev/lendflow/utils/aiProcessor.ts | head -20)
+  ⎿   WHERE TO FIND IT:
+      - Look for "Finance costs" breakdown in notes (e.g., "Note 16: Financ
+    e costs")
+    … +12 lines (ctrl+o to expand)
+
+
+⏺ Let me run a TypeScript check to ensure there are no syntax errors:
+
+⏺ Bash(npx tsc --noEmit 2>&1 | head -50)
+  ⎿ next.config.ts(10,7): error TS7053: Element implicitly has an 'any' typ
+    e because expression of type '"canvas"' can't be used to index type '{
+    alias: string | false | string[]; name: string; onlyModule?: boolean |
+    … +6 lines (ctrl+o to expand)
+
+
+⏺ The TypeScript errors are pre-existing (not introduced by my changes). Let me
+  create a summary of all the changes made:
+
+  Summary of Changes to Fix FCCR Calculation Accuracy
+
+  All changes were made to /Users/colinpoon/Dev/lendflow/utils/aiProcessor.ts:
+
+  1. Removed CapEx from Adjusted EBITDA Calculation (lines 867-883)
+
+  - CapEx no longer subtracted from Adjusted EBITDA
+  - CapEx is still tracked separately (for Free Cash Flow reference) as
+  capital_expenditures_not_in_calc
+  - Standard Adjusted EBITDA formula now: EBITDA + non-cash adjustments +
+  one-time expenses - one-time gains
+
+  2. Fixed Interest Extraction Priority (lines 921-945)
+
+  New priority order:
+  1. Use extracted senior_debt_interest (most accurate)
+  2. Derive from total_interest_expense - subordinated_debt_interest (from
+  statement)
+  3. Only as last resort: calculate from senior_debt × 8% assumed rate
+
+  The fccr_breakdown now includes interest_source field showing which method was
+   used.
+
+  3. Improved Lease Payment Extraction (lines 949-976)
+
+  New fallback chain:
+  1. Extracted minimum_lease_payments
+  2. Sum of finance_lease_payments + operating_lease_payments
+  3. Estimated from lease_liabilities / 5 (assumes ~5 year lease term)
+  4. Fall back to lease_interest component
+
+  The fccr_breakdown now includes lease_payment_source field showing which
+  method was used.
+
+  4. Enhanced AI Extraction Prompt (lines 416-463)
+
+  Added detailed guidance for finding fixed charges:
+  - "WHERE TO FIND IT" sections for each interest component
+  - Specific document locations (finance costs breakdown, notes, cash flow
+  statement)
+  - Clear instructions to extract total_interest_expense as critical fallback
+
+  ---
+  To verify the fix:
+  1. Run npm run dev
+  2. Re-upload the Zedcor PDF
+  3. Check FCCR values: should show ~4.59x (2022) and ~2.91x (2023)
+  4. Expand FCCR breakdown accordion to verify:
+    - Senior Debt Interest matches (976k / 1,949k)
+    - Subordinated Interest shows 175k
+    - Lease Payments shows 500k
+
+✻ Baked for 2m 14s
+
+❯ /export 
+  ⎿  Conversation copied to clipboard
+ ▐▛███▜▌   Claude Code v2.1.17
+▝▜█████▛▘  Opus 4.5 · Claude Pro
+  ▘▘ ▝▝    ~/Dev/lendflow
+
+❯ Implement the following plan:                                             
+                                                                            
+  # Plan: Fix FCCR Calculation Accuracy                                     
+                                                                            
+  ## Problem Statement                                                      
+  The app's FCCR calculations are inaccurate compared to manual             
+  calculations:                                                             
+                                                                            
+  | Year | Manual FCCR | App FCCR (likely wrong) |                          
+  |------|-------------|------------------------|                           
+  | 2022 | 4.59x | Incorrect |                                              
+  | 2023 | 2.91x | Incorrect |                                              
+                                                                            
+  **User's correct calculations:**                                          
+  - 2022: 7,569k / 1,651k = 4.59x (Sr Int 976k + Sub Int 175k + Lease 500k) 
+  - 2023: 7,645k / 2,624k = 2.91x (Sr Int 1,949k + Sub Int 175k + Lease     
+  500k)                                                                     
+                                                                            
+  ## Root Causes Identified                                                 
+                                                                            
+  ### 1. Interest Fallback Logic (Critical)                                 
+  **File:** `utils/aiProcessor.ts` (lines 897-937)                          
+                                                                            
+  The code calculates interest from `senior_debt × 8% assumed rate` when    
+  `senior_debt_interest` is null, even if total interest expense was        
+  extracted. This overwrites accurate extracted data with an approximation. 
+                                                                            
+  ### 2. Lease Payment Extraction                                           
+  **File:** `utils/aiProcessor.ts` (lines 908-922)                          
+                                                                            
+  Falls back to 0 if `minimum_lease_payments` isn't explicitly extracted,   
+  missing the 500k lease payments entirely.                                 
+                                                                            
+  ### 3. Adjusted EBITDA Formula (Wrong)                                    
+  **File:** `utils/aiProcessor.ts` (line 859)                               
+                                                                            
+  Currently subtracts CapEx from Adjusted EBITDA - this is incorrect. CapEx 
+  affects Free Cash Flow, not Adjusted EBITDA.                              
+                                                                            
+  ### 4. AI Extraction Prompt Gaps                                          
+  **File:** `utils/aiProcessor.ts` (lines 416-436)                          
+                                                                            
+  The extraction prompt doesn't clearly guide the AI to find interest       
+  expense by debt type.                                                     
+                                                                            
+  ---                                                                       
+                                                                            
+  ## Implementation Plan                                                    
+                                                                            
+  ### Step 1: Fix Interest Extraction Priority (aiProcessor.ts)             
+                                                                            
+  **Current logic (wrong):**                                                
+  ```                                                                       
+  1. Use fc.senior_debt_interest if extracted                               
+  2. ELSE calculate: senior_debt × 8% assumed rate  ← PROBLEM               
+  3. ELSE allocate from total interest                                      
+  ```                                                                       
+                                                                            
+  **New logic:**                                                            
+  ```                                                                       
+  1. Use fc.senior_debt_interest if extracted                               
+  2. ELSE use total_interest_expense - subordinated_debt_interest           
+  3. ONLY as last resort: calculate from debt balance × rate                
+  ```                                                                       
+                                                                            
+  ### Step 2: Fix Lease Payment Extraction (aiProcessor.ts)                 
+                                                                            
+  **Change:** Before defaulting to 0, use `total_interest_expense` data or  
+  flag as missing.                                                          
+                                                                            
+  Update fallback chain:                                                    
+  ```typescript                                                             
+  // If no lease payments extracted, check if there's lease debt            
+  // If lease_liabilities exist but no payment, estimate conservatively     
+  ```                                                                       
+                                                                            
+  ### Step 3: Remove CapEx from Adjusted EBITDA (aiProcessor.ts) ✓          
+  CONFIRMED                                                                 
+                                                                            
+  **Current (line 859):**                                                   
+  ```typescript                                                             
+  - oneTimeGains -                                                          
+  - capitalExpenditures  // REMOVE THIS LINE                                
+  ```                                                                       
+                                                                            
+  CapEx should NOT reduce Adjusted EBITDA. Standard EBITDA adjustments only 
+  include non-cash and one-time items.                                      
+                                                                            
+  **User confirmed:** Remove CapEx deduction from Adjusted EBITDA           
+  calculation.                                                              
+                                                                            
+  ### Step 4: Enhance AI Extraction Prompt (aiProcessor.ts)                 
+                                                                            
+  Add clearer extraction guidance for fixed charges:                        
+  ```                                                                       
+  FIXED CHARGES EXTRACTION - CRITICAL:                                      
+  • senior_debt_interest: Look for "Interest on bank debt", "Interest on    
+  credit facilities",                                                       
+  "Finance costs" breakdown. If only total interest is shown, allocate to   
+  senior debt                                                               
+  minus any subordinated interest.                                          
+  • subordinated_debt_interest: Interest on notes payable, mezzanine debt,  
+  vendor take-back notes                                                    
+  • minimum_lease_payments: Annual lease payment obligation (from cash flow 
+  or footnotes)                                                             
+  ```                                                                       
+                                                                            
+  ---                                                                       
+                                                                            
+  ## Files to Modify                                                        
+                                                                            
+  1. **`utils/aiProcessor.ts`**                                             
+  - Lines 897-937: Fix interest extraction fallback priority                
+  - Lines 908-922: Improve lease payment handling                           
+  - Line 859: Remove CapEx subtraction from Adjusted EBITDA                 
+  - Lines 416-436: Enhance fixed_charges extraction prompt                  
+                                                                            
+  ---                                                                       
+                                                                            
+  ## Verification                                                           
+                                                                            
+  After changes:                                                            
+  1. Clear cache: `npm run dev` (already clears cache)                      
+  2. Re-upload Zedcor PDF                                                   
+  3. Verify FCCR shows:                                                     
+  - 2022: ~4.59x                                                            
+  - 2023: ~2.91x                                                            
+  4. Expand FCCR breakdown accordion to verify:                             
+  - Senior Debt Interest matches (976k / 1,949k)                            
+  - Subordinated Interest shows 175k                                        
+  - Lease Payments shows 500k                                               
+                                                                            
+                                                                            
+  If you need specific details from before exiting plan mode (like exact    
+  code snippets, error messages, or content you generated), read the full   
+  transcript at: /Users/colinpoon/.claude/projects/-Users-colinpoon-Dev-len 
+  dflow/9e4de8e1-2a27-40ae-89ea-c5878f573124.jsonl                          
+
+⏺ I'll implement the plan to fix the FCCR calculation accuracy. Let me start by
+  reading the relevant sections of the aiProcessor.ts file.
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 1190 lines
+
+⏺ I've read the file. Now let me implement the four changes from the plan. I'll
+  make them in a logical order.
+
+  Step 3: Remove CapEx from Adjusted EBITDA (line 859)
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 6 lines, removed 5 lines
+      842            adj.pro_forma_synergies,
+      843          ].filter((v): v is number => v != null).reduce((sum, v
+           ) => sum + v, 0);
+      844  
+      845 -        // Capital Expenditures (subtract - represents cash re
+          -quired to maintain business)                                  
+      845 +        // NOTE: Capital Expenditures are NOT subtracted from 
+          +Adjusted EBITDA                                               
+      846 +        // CapEx affects Free Cash Flow, not Adjusted EBITDA. 
+          +Standard EBITDA adjustments                                   
+      847 +        // only include non-cash and one-time items.          
+      848          const capitalExpenditures = m.capital_expenditures ?? 
+           0;
+      849  
+      848 -        // Calculate Adjusted EBITDA (Lender-focused: cash ava
+          -ilable for debt service)                                      
+      849 -        // Formula: EBITDA + Add-backs - One-time Gains - CapE
+          -x                                                             
+      850 +        // Calculate Adjusted EBITDA (Standard: non-cash and o
+          +ne-time adjustments only)                                     
+      851 +        // Formula: EBITDA + Non-cash Add-backs + One-time Exp
+          +enses - One-time Gains                                        
+      852          const calculatedAdjustedEbitda = parseFloat((
+      853            m.ebitda +
+      854            nonCashAdjustments +
+     ...
+      857            accountingAdjustments +
+      858            fxAdjustments +
+      859            proFormaAdjustments -
+      858 -          oneTimeGains -                                      
+      859 -          capitalExpenditures                                 
+      860 +          oneTimeGains                                        
+      861          ).toFixed(2));
+      862  
+      863          // Use company-reported Adjusted EBITDA if available, 
+           otherwise use calculated
+
+⏺ Step 1 & 2: Fix Interest and Lease Payment Extraction Priority (lines 897-937)
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 38 lines, removed 15 lines
+      894        const adjustedEbitdaValue = m.adjusted_ebitda ?? m.ebitd
+           a;
+      895  
+      896        // Calculate SENIOR DEBT INTEREST
+      897 -      // Priority: extracted senior_debt_interest > calculated
+          - from rate > allocated from total                             
+      897 +      // Priority:                                            
+      898 +      //   1. Extracted senior_debt_interest (most accurate)  
+      899 +      //   2. Total interest expense - subordinated interest (
+          +derived from statement)                                       
+      900 +      //   3. ONLY as last resort: calculated from senior_debt
+          + × assumed rate                                               
+      901        let seniorDebtInterest = fc.senior_debt_interest ?? null
+           ;
+      902        const seniorDebtInterestRate = fc.senior_debt_interest_r
+           ate ?? 0.08; // Default 8% mid-market assumption
+      903 +      let interestCalculationMethod = 'extracted';            
+      904  
+      901 -      if (seniorDebtInterest == null && m.senior_debt != null 
+          -&& m.senior_debt > 0) {                                       
+      902 -        // Calculate: interest rate × senior debt balance     
+      903 -        seniorDebtInterest = m.senior_debt * seniorDebtInteres
+          -tRate;                                                        
+      904 -      }                                                       
+      905 -                                                              
+      905        // Get SUBORDINATED DEBT INTEREST (from extraction or no
+           tes)
+      906        const subordinatedDebtInterest = fc.subordinated_debt_in
+           terest ?? 0;
+      907  
+      908 +      // Get total interest from income statement for allocati
+          +on                                                            
+      909 +      const totalInterestFromStatement = fc.total_interest_exp
+          +ense ?? m.interest ?? 0;                                      
+      910 +                                                              
+      911 +      if (seniorDebtInterest == null) {                       
+      912 +        // Priority 2: Derive from total interest expense (mor
+          +e accurate than rate calculation)                             
+      913 +        if (totalInterestFromStatement > 0) {                 
+      914 +          seniorDebtInterest = totalInterestFromStatement - su
+          +bordinatedDebtInterest;                                       
+      915 +          if (seniorDebtInterest < 0) seniorDebtInterest = tot
+          +alInterestFromStatement;                                      
+      916 +          interestCalculationMethod = 'derived_from_total';   
+      917 +        }                                                     
+      918 +        // Priority 3: Only calculate from rate if no interest
+          + expense data at all                                          
+      919 +        else if (m.senior_debt != null && m.senior_debt > 0) {
+      920 +          seniorDebtInterest = m.senior_debt * seniorDebtInter
+          +estRate;                                                      
+      921 +          interestCalculationMethod = 'calculated_from_rate'; 
+      922 +        }                                                     
+      923 +      }                                                       
+      924 +                                                              
+      925        // Get LEASE PAYMENTS (minimum lease payments for fixed 
+           charge coverage)
+      910 -      // Priority: minimum_lease_payments > finance_lease_paym
+          -ents + operating_lease_payments > lease_interest              
+      926 +      // Priority: minimum_lease_payments > finance_lease_paym
+          +ents + operating_lease_payments >                             
+      927 +      //           estimated from lease liabilities > lease_in
+          +terest                                                        
+      928        let leasePaymentsForFCCR = fc.minimum_lease_payments ?? 
+           null;
+      929 +      let leasePaymentSource = 'extracted';                   
+      930 +                                                              
+      931        if (leasePaymentsForFCCR == null) {
+      932          const financeLease = fc.finance_lease_payments ?? 0;
+      933          const operatingLease = fc.operating_lease_payments ?? 
+           0;
+      934          if (financeLease > 0 || operatingLease > 0) {
+      935            leasePaymentsForFCCR = financeLease + operatingLease
+           ;
+      936 +          leasePaymentSource = 'sum_of_lease_types';          
+      937          }
+      938        }
+      919 -      // Fallback to lease interest component if no lease paym
+          -ent data                                                      
+      939 +                                                              
+      940 +      // Fallback: If we have lease liabilities but no payment
+          + data, estimate conservatively                                
+      941 +      // Typical lease term ~5 years, so annual payment ≈ tota
+          +l liability / 5                                               
+      942 +      if (leasePaymentsForFCCR == null && totalLeaseDebt > 0) 
+          +{                                                             
+      943 +        // More conservative estimate: assume ~5 year average 
+          +lease term                                                    
+      944 +        leasePaymentsForFCCR = totalLeaseDebt / 5;            
+      945 +        leasePaymentSource = 'estimated_from_liability';      
+      946 +      }                                                       
+      947 +                                                              
+      948 +      // Fallback to lease interest component if still no leas
+          +e payment data                                                
+      949        if (leasePaymentsForFCCR == null && fc.lease_interest !=
+            null) {
+      950          leasePaymentsForFCCR = fc.lease_interest;
+      951 +        leasePaymentSource = 'lease_interest_only';           
+      952        }
+      953        leasePaymentsForFCCR = leasePaymentsForFCCR ?? 0;
+      954  
+     ...
+      959        // MINIMUM REQUIRED: Adjusted EBITDA and at least some f
+           ixed charges
+      960        const hasAdjustedEbitda = adjustedEbitdaValue != null &&
+            adjustedEbitdaValue > 0;
+      961        const hasSeniorInterest = seniorDebtInterest != null && 
+           seniorDebtInterest > 0;
+      932 -      const totalInterestFromStatement = fc.total_interest_exp
+          -ense ?? m.interest ?? 0;                                      
+      962  
+      934 -      // If we don't have senior debt interest but have total 
+          -interest, use total as fallback                               
+      935 -      if (!hasSeniorInterest && totalInterestFromStatement > 0
+          -) {                                                           
+      936 -        seniorDebtInterest = totalInterestFromStatement - subo
+          -rdinatedDebtInterest;                                         
+      937 -        if (seniorDebtInterest < 0) seniorDebtInterest = total
+          -InterestFromStatement;                                        
+      938 -      }                                                       
+      939 -                                                              
+      963        const hasMinimumData = hasAdjustedEbitda && (seniorDebtI
+           nterest != null && seniorDebtInterest > 0);
+      964  
+      965        if (hasMinimumData) {
+
+⏺ Now let me update the FCCR breakdown to include the new tracking variables.
+  Let me read the current state around the fccr_breakdown:
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 100 lines
+
+⏺ Let me update the fccr_breakdown to include the new source tracking:
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 6 lines, removed 3 lines
+       995              other_fixed_charges: otherFixedCharges + preferre
+            dDividends,
+       996              total_fixed_charges: totalFixedCharges,
+       997              denominator: totalFixedCharges,
+       998 -            // Data source flags                             
+       999 -            interest_calculated: fc.senior_debt_interest == n
+           -ull,                                                         
+      1000 -            interest_rate_assumed: fc.senior_debt_interest_ra
+           -te == null,                                                  
+       998 +            // Data source flags for transparency            
+       999 +            interest_source: interestCalculationMethod, // 'e
+           +xtracted', 'derived_from_total', or 'calculated_from_rate'   
+      1000 +            interest_calculated: interestCalculationMethod !=
+           += 'extracted',                                               
+      1001 +            interest_rate_assumed: fc.senior_debt_interest_ra
+           +te == null && interestCalculationMethod === 'calculated_from_
+           +rate',                                                       
+      1002 +            lease_payment_source: leasePaymentSource, // 'ext
+           +racted', 'sum_of_lease_types', 'estimated_from_liability', 'l
+           +ease_interest_only'                                          
+      1003 +            total_interest_from_statement: totalInterestFromS
+           +tatement,                                                    
+      1004            };
+      1005          } else {
+      1006            m.fccr = null;
+
+⏺ Step 4: Enhance AI Extraction Prompt for Fixed Charges
+
+  Now let me find and update the extraction prompt to give clearer guidance:
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 50 lines
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 35 lines, removed 13 lines
+      414  • When a note or schedule lists multiple debt facilities, the 
+           ORDER they appear indicates relative seniority.
+      415  
+      416  FIXED CHARGES EXTRACTION (CRITICAL FOR FCCR CALCULATION):
+      417 -Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES:
+      417 +Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES.
+          + This is essential for accurate FCCR.                         
+      418  
+      419 -INTEREST COMPONENTS (separate by debt type for accurate FCCR):
+      420 -• senior_debt_interest: Interest expense on bank debt, credit 
+          -facilities, term loans. Look in finance costs breakdown or not
+          -es.                                                           
+      421 -• subordinated_debt_interest: Interest on subordinated notes, 
+          -vendor take-back notes, mezzanine debt. Often disclosed separa
+          -tely in notes.                                                
+      422 -• lease_interest: Interest portion of lease payments (IFRS 16 
+          -"Interest on lease liabilities"). From finance costs breakdown
+          -.                                                             
+      423 -• total_interest_expense: Total interest/finance costs from in
+          -come statement (for validation).                              
+      424 -• senior_debt_interest_rate: If disclosed, extract the interes
+          -t rate on senior debt (e.g., "prime + 2%", "8%"). If not state
+          -d, will assume 8% typical mid-market rate.                    
+      419 +INTEREST COMPONENTS - EXTRACT WITH PRECISION:                 
+      420 +• senior_debt_interest: Interest on bank debt, credit faciliti
+          +es, term loans.                                               
+      421 +  WHERE TO FIND IT:                                           
+      422 +  - Look for "Finance costs" breakdown in notes (e.g., "Note 1
+          +6: Finance costs")                                            
+      423 +  - "Interest on bank indebtedness" or "Interest on credit fac
+          +ilities"                                                      
+      424 +  - "Interest expense" allocated to senior debt in footnotes  
+      425 +  - If only total interest shown AND you found subordinated de
+          +bt interest separately, calculate: total_interest - subordinat
+          +ed_debt_interest                                              
+      426  
+      426 -LEASE PAYMENTS (for fixed charge coverage):                   
+      427 -• minimum_lease_payments: From cash flow statement "Payment of
+          - lease liability" or notes showing annual minimum lease obliga
+          -tions. This is the TOTAL cash paid for leases.                
+      427 +• subordinated_debt_interest: Interest on subordinated notes, 
+          +vendor take-back notes, mezzanine debt.                       
+      428 +  WHERE TO FIND IT:                                           
+      429 +  - Look for "Interest on vendor take-back note" or "Interest 
+          +on note payable"                                              
+      430 +  - Often disclosed separately in notes or debt schedules     
+      431 +  - May be described as "below-market rate" or "5% note"      
+      432 +                                                              
+      433 +• lease_interest: Interest portion of lease payments (IFRS 16 
+          +"Interest on lease liabilities").                             
+      434 +  WHERE TO FIND IT:                                           
+      435 +  - Finance costs breakdown showing "Interest on lease liabili
+          +ties"                                                         
+      436 +  - Separate from interest on bank debt                       
+      437 +                                                              
+      438 +• total_interest_expense: CRITICAL - Extract the TOTAL interes
+          +t/finance costs from income statement.                        
+      439 +  This serves as validation and fallback for senior debt inter
+          +est calculation.                                              
+      440 +                                                              
+      441 +• senior_debt_interest_rate: If disclosed, extract the interes
+          +t rate (e.g., "prime + 2%", "8%", "BA + 3.5%").               
+      442 +                                                              
+      443 +LEASE PAYMENTS (CRITICAL for fixed charge coverage):          
+      444 +• minimum_lease_payments: PRIORITY - Look for this in multiple
+          + places:                                                      
+      445 +  - Cash flow statement: "Payment of lease liability" or "Leas
+          +e payments"                                                   
+      446 +  - Notes: "Minimum lease obligations" or lease maturity sched
+          +ule showing next 12 months                                    
+      447 +  - IFRS 16 disclosures showing contractual cash flows        
+      448 +  This is the TOTAL annual cash paid for leases (principal + i
+          +nterest).                                                     
+      449 +                                                              
+      450  • finance_lease_payments: Finance/capital lease payments if sh
+           own separately.
+      451  • operating_lease_payments: Operating lease payments if shown 
+           separately.
+      452  
+      453  OTHER FIXED CHARGES:
+      432 -• principal_payments: From cash flow statement "Repayment of d
+          -ebt" or "Principal repayments". Only include if required for d
+          -ebt service coverage.                                         
+      433 -• preferred_dividends: Cash dividends paid on preferred shares
+          - (if any).                                                    
+      434 -• other_fixed_charges: Any other recurring fixed obligations t
+          -hat must be paid regardless of business performance.          
+      454 +• principal_payments: From cash flow statement "Repayment of d
+          +ebt" or "Principal repayments".                               
+      455 +• preferred_dividends: Cash dividends paid on preferred shares
+          +.                                                             
+      456 +• other_fixed_charges: Any other recurring fixed obligations. 
+      457  
+      436 -IMPORTANT: For FCCR calculation, we need CASH interest costs, 
+          -not accrued. If only total interest is available, we'll alloca
+          -te based on debt composition.                                 
+      458 +IMPORTANT: For FCCR calculation, we need CASH interest costs. 
+          +Always try to extract total_interest_expense as it provides th
+          +e most reliable basis for fixed charge calculations.          
+      459  
+      460  CAPITAL EXPENDITURES (CRITICAL FOR FCCR CALCULATION):
+      461  • capital_expenditures: From CASH FLOW STATEMENT under "Invest
+           ing activities". Look for:
+
+⏺ Now let me update the adjusted_ebitda_breakdown to reflect that CapEx is
+  tracked but not used in the calculation. Let me find that section:
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 30 lines
+
+⏺ Read(utils/aiProcessor.ts)
+  ⎿  Read 20 lines
+
+⏺ Update(utils/aiProcessor.ts)
+  ⎿  Added 2 lines, removed 1 line
+      896            accounting_adjustments: accountingAdjustments,
+      897            fx_adjustments: fxAdjustments,
+      898            pro_forma_adjustments: proFormaAdjustments,
+      899 -          capital_expenditures: capitalExpenditures,          
+      899 +          // CapEx is tracked for Free Cash Flow but NOT used 
+          +in Adjusted EBITDA calculation                                
+      900 +          capital_expenditures_not_in_calc: capitalExpenditure
+          +s,                                                            
+      901            uses_reported_value: m.reported_adjusted_ebitda != n
+           ull,
+      902          };
+      903        } else {
+
+⏺ Let me verify all changes were applied correctly:
+
+⏺ Bash(grep -n "capitalExpenditures" utils/aiProcessor.ts)
+  ⎿  870:        const capitalExpenditures = m.capital_expenditures ?? 0;
+     900:          capital_expenditures_not_in_calc: capitalExpenditures,
+
+⏺ Bash(grep -n
+      "interestCalculationMethod\|derived_from_total\|calculated_from_rate"
+      utils/aiProcessor.ts)
+  ⎿  926:      let interestCalculationMethod = 'extracted';
+     939:          interestCalculationMethod = 'derived_from_total';
+     944:          interestCalculationMethod = 'calculated_from_rate';
+     … +6 lines (ctrl+o to expand)
+
+⏺ Bash(grep -n "leasePaymentSource\|estimated_from_liability"
+      utils/aiProcessor.ts)
+  ⎿  952:      let leasePaymentSource = 'extracted';
+     959:          leasePaymentSource = 'sum_of_lease_types';
+     968:        leasePaymentSource = 'estimated_from_liability';
+     … +4 lines (ctrl+o to expand)
+
+⏺ All changes have been applied. Let me verify the prompt enhancement:
+
+⏺ Bash(grep -A 3 "WHERE TO FIND IT"
+      /Users/colinpoon/Dev/lendflow/utils/aiProcessor.ts | head -20)
+  ⎿   WHERE TO FIND IT:
+      - Look for "Finance costs" breakdown in notes (e.g., "Note 16: Financ
+    e costs")
+    … +12 lines (ctrl+o to expand)
+
+
+⏺ Let me run a TypeScript check to ensure there are no syntax errors:
+
+⏺ Bash(npx tsc --noEmit 2>&1 | head -50)
+  ⎿ next.config.ts(10,7): error TS7053: Element implicitly has an 'any' typ
+    e because expression of type '"canvas"' can't be used to index type '{
+    alias: string | false | string[]; name: string; onlyModule?: boolean |
+    … +6 lines (ctrl+o to expand)
+
+
+⏺ The TypeScript errors are pre-existing (not introduced by my changes). Let me
+  create a summary of all the changes made:
+
+  Summary of Changes to Fix FCCR Calculation Accuracy
+
+  All changes were made to /Users/colinpoon/Dev/lendflow/utils/aiProcessor.ts:
+
+  1. Removed CapEx from Adjusted EBITDA Calculation (lines 867-883)
+
+  - CapEx no longer subtracted from Adjusted EBITDA
+  - CapEx is still tracked separately (for Free Cash Flow reference) as
+  capital_expenditures_not_in_calc
+  - Standard Adjusted EBITDA formula now: EBITDA + non-cash adjustments +
+  one-time expenses - one-time gains
+
+  2. Fixed Interest Extraction Priority (lines 921-945)
+
+  New priority order:
+  1. Use extracted senior_debt_interest (most accurate)
+  2. Derive from total_interest_expense - subordinated_debt_interest (from
+  statement)
+  3. Only as last resort: calculate from senior_debt × 8% assumed rate
+
+  The fccr_breakdown now includes interest_source field showing which method was
+   used.
+
+  3. Improved Lease Payment Extraction (lines 949-976)
+
+  New fallback chain:
+  1. Extracted minimum_lease_payments
+  2. Sum of finance_lease_payments + operating_lease_payments
+  3. Estimated from lease_liabilities / 5 (assumes ~5 year lease term)
+  4. Fall back to lease_interest component
+
+  The fccr_breakdown now includes lease_payment_source field showing which
+  method was used.
+
+  4. Enhanced AI Extraction Prompt (lines 416-463)
+
+  Added detailed guidance for finding fixed charges:
+  - "WHERE TO FIND IT" sections for each interest component
+  - Specific document locations (finance costs breakdown, notes, cash flow
+  statement)
+  - Clear instructions to extract total_interest_expense as critical fallback
+
+  ---
+  To verify the fix:
+  1. Run npm run dev
+  2. Re-upload the Zedcor PDF
+  3. Check FCCR values: should show ~4.59x (2022) and ~2.91x (2023)
+  4. Expand FCCR breakdown accordion to verify:
+    - Senior Debt Interest matches (976k / 1,949k)
+    - Subordinated Interest shows 175k
+    - Lease Payments shows 500k
+
+✻ Baked for 2m 14s
+
+❯ /export 
+  ⎿  Conversation copied to clipboard

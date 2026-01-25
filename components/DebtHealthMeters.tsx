@@ -395,7 +395,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
               <CircularGauge
                 value={metrics.senior_debt_to_ebitda}
-                label="Debt / Adj. EBITDA"
+                label="Sr. Debt / EBITDA"
                 formatValue={(v) => v.toFixed(2)}
                 getHealth={getSeniorDebtEBITDAHealth}
                 subtitle="Target: < 2.5x"
@@ -463,10 +463,17 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
                           Adjusted EBITDA ÷ Total Fixed Charges
                         </span>
-                        {metrics.fccr_breakdown.interest_calculated && (
+                        {metrics.fccr_breakdown
+                          .interest_calculated && (
                           <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700">
-                            Interest @ {(metrics.fccr_breakdown.senior_debt_interest_rate * 100).toFixed(0)}%
-                            {metrics.fccr_breakdown.interest_rate_assumed && ' (assumed)'}
+                            Interest @{' '}
+                            {(
+                              metrics.fccr_breakdown
+                                .senior_debt_interest_rate * 100
+                            ).toFixed(0)}
+                            %
+                            {metrics.fccr_breakdown
+                              .interest_rate_assumed && ' (assumed)'}
                           </span>
                         )}
                       </div>
@@ -482,7 +489,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               Adjusted EBITDA
                             </span>
                             <span className="font-medium">
-                              {formatCurrency(metrics.fccr_breakdown.adjusted_ebitda)}
+                              {formatCurrency(
+                                metrics.fccr_breakdown
+                                  .adjusted_ebitda,
+                              )}
                             </span>
                           </div>
                         </div>
@@ -494,48 +504,81 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           Denominator (Total Fixed Charges)
                         </div>
                         <div className="pl-4 border-l-2 border-orange-200 space-y-1 text-sm">
-                          {metrics.fccr_breakdown.senior_debt_interest > 0 && (
+                          {metrics.fccr_breakdown
+                            .senior_debt_interest > 0 && (
                             <div className="flex justify-between">
                               <span className="text-gray-600">
                                 Cash Interest on Senior Debt
-                                {metrics.fccr_breakdown.interest_calculated && metrics.fccr_breakdown.senior_debt_balance && (
-                                  <span className="text-xs text-gray-400 ml-1">
-                                    ({(metrics.fccr_breakdown.senior_debt_interest_rate * 100).toFixed(0)}% × {formatCurrency(metrics.fccr_breakdown.senior_debt_balance)})
-                                  </span>
-                                )}
+                                {metrics.fccr_breakdown
+                                  .interest_calculated &&
+                                  metrics.fccr_breakdown
+                                    .senior_debt_balance && (
+                                    <span className="text-xs text-gray-400 ml-1">
+                                      (
+                                      {(
+                                        metrics.fccr_breakdown
+                                          .senior_debt_interest_rate *
+                                        100
+                                      ).toFixed(0)}
+                                      % ×{' '}
+                                      {formatCurrency(
+                                        metrics.fccr_breakdown
+                                          .senior_debt_balance,
+                                      )}
+                                      )
+                                    </span>
+                                  )}
                               </span>
                               <span className="font-medium">
-                                {formatCurrency(metrics.fccr_breakdown.senior_debt_interest)}
+                                {formatCurrency(
+                                  metrics.fccr_breakdown
+                                    .senior_debt_interest,
+                                )}
                               </span>
                             </div>
                           )}
-                          {metrics.fccr_breakdown.subordinated_debt_interest > 0 && (
+                          {metrics.fccr_breakdown
+                            .subordinated_debt_interest > 0 && (
                             <div className="flex justify-between">
                               <span className="text-gray-600">
                                 + Subordinated Note Interest
                               </span>
                               <span className="font-medium">
-                                + {formatCurrency(metrics.fccr_breakdown.subordinated_debt_interest)}
+                                +{' '}
+                                {formatCurrency(
+                                  metrics.fccr_breakdown
+                                    .subordinated_debt_interest,
+                                )}
                               </span>
                             </div>
                           )}
-                          {metrics.fccr_breakdown.lease_payments > 0 && (
+                          {metrics.fccr_breakdown.lease_payments >
+                            0 && (
                             <div className="flex justify-between">
                               <span className="text-gray-600">
                                 + Finance Lease / Min. Lease Payments
                               </span>
                               <span className="font-medium">
-                                + {formatCurrency(metrics.fccr_breakdown.lease_payments)}
+                                +{' '}
+                                {formatCurrency(
+                                  metrics.fccr_breakdown
+                                    .lease_payments,
+                                )}
                               </span>
                             </div>
                           )}
-                          {metrics.fccr_breakdown.other_fixed_charges > 0 && (
+                          {metrics.fccr_breakdown
+                            .other_fixed_charges > 0 && (
                             <div className="flex justify-between">
                               <span className="text-gray-600">
                                 + Other Fixed Charges
                               </span>
                               <span className="font-medium">
-                                + {formatCurrency(metrics.fccr_breakdown.other_fixed_charges)}
+                                +{' '}
+                                {formatCurrency(
+                                  metrics.fccr_breakdown
+                                    .other_fixed_charges,
+                                )}
                               </span>
                             </div>
                           )}
@@ -543,7 +586,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-orange-800">
                           <span>Total Fixed Charges</span>
                           <span>
-                            {formatCurrency(metrics.fccr_breakdown.total_fixed_charges)}
+                            {formatCurrency(
+                              metrics.fccr_breakdown
+                                .total_fixed_charges,
+                            )}
                           </span>
                         </div>
                       </div>
@@ -560,8 +606,8 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     </>
                   ) : (
                     <p className="text-sm text-gray-400 italic">
-                      Insufficient data. Minimum required: Adjusted EBITDA and
-                      Senior Debt (or Interest Expense).
+                      Insufficient data. Minimum required: Adjusted
+                      EBITDA and Senior Debt (or Interest Expense).
                     </p>
                   )}
                 </AccordionContent>

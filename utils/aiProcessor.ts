@@ -414,26 +414,48 @@ CRITICAL DEBT CALCULATION RULES:
 • When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority.
 
 FIXED CHARGES EXTRACTION (CRITICAL FOR FCCR CALCULATION):
-Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES:
+Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES. This is essential for accurate FCCR.
 
-INTEREST COMPONENTS (separate by debt type for accurate FCCR):
-• senior_debt_interest: Interest expense on bank debt, credit facilities, term loans. Look in finance costs breakdown or notes.
-• subordinated_debt_interest: Interest on subordinated notes, vendor take-back notes, mezzanine debt. Often disclosed separately in notes.
-• lease_interest: Interest portion of lease payments (IFRS 16 "Interest on lease liabilities"). From finance costs breakdown.
-• total_interest_expense: Total interest/finance costs from income statement (for validation).
-• senior_debt_interest_rate: If disclosed, extract the interest rate on senior debt (e.g., "prime + 2%", "8%"). If not stated, will assume 8% typical mid-market rate.
+INTEREST COMPONENTS - EXTRACT WITH PRECISION:
+• senior_debt_interest: Interest on bank debt, credit facilities, term loans.
+  WHERE TO FIND IT:
+  - Look for "Finance costs" breakdown in notes (e.g., "Note 16: Finance costs")
+  - "Interest on bank indebtedness" or "Interest on credit facilities"
+  - "Interest expense" allocated to senior debt in footnotes
+  - If only total interest shown AND you found subordinated debt interest separately, calculate: total_interest - subordinated_debt_interest
 
-LEASE PAYMENTS (for fixed charge coverage):
-• minimum_lease_payments: From cash flow statement "Payment of lease liability" or notes showing annual minimum lease obligations. This is the TOTAL cash paid for leases.
+• subordinated_debt_interest: Interest on subordinated notes, vendor take-back notes, mezzanine debt.
+  WHERE TO FIND IT:
+  - Look for "Interest on vendor take-back note" or "Interest on note payable"
+  - Often disclosed separately in notes or debt schedules
+  - May be described as "below-market rate" or "5% note"
+
+• lease_interest: Interest portion of lease payments (IFRS 16 "Interest on lease liabilities").
+  WHERE TO FIND IT:
+  - Finance costs breakdown showing "Interest on lease liabilities"
+  - Separate from interest on bank debt
+
+• total_interest_expense: CRITICAL - Extract the TOTAL interest/finance costs from income statement.
+  This serves as validation and fallback for senior debt interest calculation.
+
+• senior_debt_interest_rate: If disclosed, extract the interest rate (e.g., "prime + 2%", "8%", "BA + 3.5%").
+
+LEASE PAYMENTS (CRITICAL for fixed charge coverage):
+• minimum_lease_payments: PRIORITY - Look for this in multiple places:
+  - Cash flow statement: "Payment of lease liability" or "Lease payments"
+  - Notes: "Minimum lease obligations" or lease maturity schedule showing next 12 months
+  - IFRS 16 disclosures showing contractual cash flows
+  This is the TOTAL annual cash paid for leases (principal + interest).
+
 • finance_lease_payments: Finance/capital lease payments if shown separately.
 • operating_lease_payments: Operating lease payments if shown separately.
 
 OTHER FIXED CHARGES:
-• principal_payments: From cash flow statement "Repayment of debt" or "Principal repayments". Only include if required for debt service coverage.
-• preferred_dividends: Cash dividends paid on preferred shares (if any).
-• other_fixed_charges: Any other recurring fixed obligations that must be paid regardless of business performance.
+• principal_payments: From cash flow statement "Repayment of debt" or "Principal repayments".
+• preferred_dividends: Cash dividends paid on preferred shares.
+• other_fixed_charges: Any other recurring fixed obligations.
 
-IMPORTANT: For FCCR calculation, we need CASH interest costs, not accrued. If only total interest is available, we'll allocate based on debt composition.
+IMPORTANT: For FCCR calculation, we need CASH interest costs. Always try to extract total_interest_expense as it provides the most reliable basis for fixed charge calculations.
 
 CAPITAL EXPENDITURES (CRITICAL FOR FCCR CALCULATION):
 • capital_expenditures: From CASH FLOW STATEMENT under "Investing activities". Look for:
@@ -842,11 +864,13 @@ Use any information available from the financial statement — including governa
           adj.pro_forma_synergies,
         ].filter((v): v is number => v != null).reduce((sum, v) => sum + v, 0);
 
-        // Capital Expenditures (subtract - represents cash required to maintain business)
+        // NOTE: Capital Expenditures are NOT subtracted from Adjusted EBITDA
+        // CapEx affects Free Cash Flow, not Adjusted EBITDA. Standard EBITDA adjustments
+        // only include non-cash and one-time items.
         const capitalExpenditures = m.capital_expenditures ?? 0;
 
-        // Calculate Adjusted EBITDA (Lender-focused: cash available for debt service)
-        // Formula: EBITDA + Add-backs - One-time Gains - CapEx
+        // Calculate Adjusted EBITDA (Standard: non-cash and one-time adjustments only)
+        // Formula: EBITDA + Non-cash Add-backs + One-time Expenses - One-time Gains
         const calculatedAdjustedEbitda = parseFloat((
           m.ebitda +
           nonCashAdjustments +
@@ -855,8 +879,7 @@ Use any information available from the financial statement — including governa
           accountingAdjustments +
           fxAdjustments +
           proFormaAdjustments -
-          oneTimeGains -
-          capitalExpenditures
+          oneTimeGains
         ).toFixed(2));
 
         // Use company-reported Adjusted EBITDA if available, otherwise use calculated
@@ -873,7 +896,8 @@ Use any information available from the financial statement — including governa
           accounting_adjustments: accountingAdjustments,
           fx_adjustments: fxAdjustments,
           pro_forma_adjustments: proFormaAdjustments,
-          capital_expenditures: capitalExpenditures,
+          // CapEx is tracked for Free Cash Flow but NOT used in Adjusted EBITDA calculation
+          capital_expenditures_not_in_calc: capitalExpenditures,
           uses_reported_value: m.reported_adjusted_ebitda != null,
         };
       } else {
@@ -893,31 +917,61 @@ Use any information available from the financial statement — including governa
       const adjustedEbitdaValue = m.adjusted_ebitda ?? m.ebitda;
 
       // Calculate SENIOR DEBT INTEREST
-      // Priority: extracted senior_debt_interest > calculated from rate > allocated from total
+      // Priority:
+      //   1. Extracted senior_debt_interest (most accurate)
+      //   2. Total interest expense - subordinated interest (derived from statement)
+      //   3. ONLY as last resort: calculated from senior_debt × assumed rate
       let seniorDebtInterest = fc.senior_debt_interest ?? null;
       const seniorDebtInterestRate = fc.senior_debt_interest_rate ?? 0.08; // Default 8% mid-market assumption
-
-      if (seniorDebtInterest == null && m.senior_debt != null && m.senior_debt > 0) {
-        // Calculate: interest rate × senior debt balance
-        seniorDebtInterest = m.senior_debt * seniorDebtInterestRate;
-      }
+      let interestCalculationMethod = 'extracted';
 
       // Get SUBORDINATED DEBT INTEREST (from extraction or notes)
       const subordinatedDebtInterest = fc.subordinated_debt_interest ?? 0;
 
+      // Get total interest from income statement for allocation
+      const totalInterestFromStatement = fc.total_interest_expense ?? m.interest ?? 0;
+
+      if (seniorDebtInterest == null) {
+        // Priority 2: Derive from total interest expense (more accurate than rate calculation)
+        if (totalInterestFromStatement > 0) {
+          seniorDebtInterest = totalInterestFromStatement - subordinatedDebtInterest;
+          if (seniorDebtInterest < 0) seniorDebtInterest = totalInterestFromStatement;
+          interestCalculationMethod = 'derived_from_total';
+        }
+        // Priority 3: Only calculate from rate if no interest expense data at all
+        else if (m.senior_debt != null && m.senior_debt > 0) {
+          seniorDebtInterest = m.senior_debt * seniorDebtInterestRate;
+          interestCalculationMethod = 'calculated_from_rate';
+        }
+      }
+
       // Get LEASE PAYMENTS (minimum lease payments for fixed charge coverage)
-      // Priority: minimum_lease_payments > finance_lease_payments + operating_lease_payments > lease_interest
+      // Priority: minimum_lease_payments > finance_lease_payments + operating_lease_payments >
+      //           estimated from lease liabilities > lease_interest
       let leasePaymentsForFCCR = fc.minimum_lease_payments ?? null;
+      let leasePaymentSource = 'extracted';
+
       if (leasePaymentsForFCCR == null) {
         const financeLease = fc.finance_lease_payments ?? 0;
         const operatingLease = fc.operating_lease_payments ?? 0;
         if (financeLease > 0 || operatingLease > 0) {
           leasePaymentsForFCCR = financeLease + operatingLease;
+          leasePaymentSource = 'sum_of_lease_types';
         }
       }
-      // Fallback to lease interest component if no lease payment data
+
+      // Fallback: If we have lease liabilities but no payment data, estimate conservatively
+      // Typical lease term ~5 years, so annual payment ≈ total liability / 5
+      if (leasePaymentsForFCCR == null && totalLeaseDebt > 0) {
+        // More conservative estimate: assume ~5 year average lease term
+        leasePaymentsForFCCR = totalLeaseDebt / 5;
+        leasePaymentSource = 'estimated_from_liability';
+      }
+
+      // Fallback to lease interest component if still no lease payment data
       if (leasePaymentsForFCCR == null && fc.lease_interest != null) {
         leasePaymentsForFCCR = fc.lease_interest;
+        leasePaymentSource = 'lease_interest_only';
       }
       leasePaymentsForFCCR = leasePaymentsForFCCR ?? 0;
 
@@ -928,13 +982,6 @@ Use any information available from the financial statement — including governa
       // MINIMUM REQUIRED: Adjusted EBITDA and at least some fixed charges
       const hasAdjustedEbitda = adjustedEbitdaValue != null && adjustedEbitdaValue > 0;
       const hasSeniorInterest = seniorDebtInterest != null && seniorDebtInterest > 0;
-      const totalInterestFromStatement = fc.total_interest_expense ?? m.interest ?? 0;
-
-      // If we don't have senior debt interest but have total interest, use total as fallback
-      if (!hasSeniorInterest && totalInterestFromStatement > 0) {
-        seniorDebtInterest = totalInterestFromStatement - subordinatedDebtInterest;
-        if (seniorDebtInterest < 0) seniorDebtInterest = totalInterestFromStatement;
-      }
 
       const hasMinimumData = hasAdjustedEbitda && (seniorDebtInterest != null && seniorDebtInterest > 0);
 
@@ -971,9 +1018,12 @@ Use any information available from the financial statement — including governa
             other_fixed_charges: otherFixedCharges + preferredDividends,
             total_fixed_charges: totalFixedCharges,
             denominator: totalFixedCharges,
-            // Data source flags
-            interest_calculated: fc.senior_debt_interest == null,
-            interest_rate_assumed: fc.senior_debt_interest_rate == null,
+            // Data source flags for transparency
+            interest_source: interestCalculationMethod, // 'extracted', 'derived_from_total', or 'calculated_from_rate'
+            interest_calculated: interestCalculationMethod !== 'extracted',
+            interest_rate_assumed: fc.senior_debt_interest_rate == null && interestCalculationMethod === 'calculated_from_rate',
+            lease_payment_source: leasePaymentSource, // 'extracted', 'sum_of_lease_types', 'estimated_from_liability', 'lease_interest_only'
+            total_interest_from_statement: totalInterestFromStatement,
           };
         } else {
           m.fccr = null;
