@@ -14,6 +14,48 @@ function cleanJsonFence(input: string): string {
   );
 }
 
+// ─────────────────────── helper: validate extracted metrics ───────────────────────
+// PATTERN: AI extraction can misinterpret financial statement values. Common issues:
+// - Extracting TOTAL future amounts instead of ANNUAL amounts (e.g., lease payments)
+// - Extracting gross values instead of net (or vice versa)
+// - Confusing similar line items (e.g., total liabilities vs total debt)
+//
+// When adding new validations, use this pattern:
+// 1. Define expected relationship (e.g., annual payment < total obligation)
+// 2. Check if extracted value violates the relationship
+// 3. Log a warning and fall back to estimation or null
+// 4. Track validation status in the breakdown for transparency
+interface ValidationResult {
+  isValid: boolean;
+  reason?: string;
+  suggestedValue?: number;
+}
+
+function validateExtractedMetric(
+  metricName: string,
+  extractedValue: number | null,
+  referenceValue: number | null,
+  maxRatio: number, // extracted should be <= referenceValue * maxRatio
+  estimationFallback?: () => number
+): ValidationResult {
+  if (extractedValue == null || referenceValue == null || referenceValue === 0) {
+    return { isValid: true }; // Can't validate without both values
+  }
+
+  const ratio = extractedValue / referenceValue;
+  if (ratio > maxRatio) {
+    const reason = `${metricName} validation failed: extracted ${extractedValue} is ${(ratio * 100).toFixed(0)}% of reference ${referenceValue} (max allowed: ${(maxRatio * 100).toFixed(0)}%)`;
+    console.warn(`⚠️ ${reason}`);
+    return {
+      isValid: false,
+      reason,
+      suggestedValue: estimationFallback ? estimationFallback() : undefined,
+    };
+  }
+
+  return { isValid: true };
+}
+
 // ─────────────────────── helper: build deterministic ratios ───────────────────────
 function buildMetricRatios(
   byYear: Record<string, any>
@@ -440,12 +482,15 @@ INTEREST COMPONENTS - EXTRACT WITH PRECISION:
 
 • senior_debt_interest_rate: If disclosed, extract the interest rate (e.g., "prime + 2%", "8%", "BA + 3.5%").
 
-LEASE PAYMENTS (CRITICAL for fixed charge coverage):
-• minimum_lease_payments: PRIORITY - Look for this in multiple places:
-  - Cash flow statement: "Payment of lease liability" or "Lease payments"
-  - Notes: "Minimum lease obligations" or lease maturity schedule showing next 12 months
-  - IFRS 16 disclosures showing contractual cash flows
-  This is the TOTAL annual cash paid for leases (principal + interest).
+LEASE PAYMENTS (CRITICAL for fixed charge coverage - ANNUAL payments only):
+• minimum_lease_payments: Extract the ANNUAL lease payment (current year or next 12 months ONLY).
+  WHERE TO FIND IT (in order of priority):
+  - Cash flow statement: "Payment of lease liability", "Repayment of lease obligations", or "Lease payments" - this shows ACTUAL cash paid during the year
+  - Lease maturity schedule: Extract ONLY the first/current year amount (e.g., the "2025" or "Year 1" row)
+  - IFRS 16 note showing payments made during the reporting period
+
+  WARNING: Do NOT extract "Total minimum lease payments" or "Total future lease payments" - these sum ALL future years.
+  The annual payment is typically 5-15% of total lease liabilities. If you find a value close to total lease obligations, you likely found the multi-year total instead of the annual amount.
 
 • finance_lease_payments: Finance/capital lease payments if shown separately.
 • operating_lease_payments: Operating lease payments if shown separately.
@@ -951,6 +996,19 @@ Use any information available from the financial statement — including governa
       let leasePaymentsForFCCR = fc.minimum_lease_payments ?? null;
       let leasePaymentSource = 'extracted';
 
+      // VALIDATION: Sanity check for extracted lease payments
+      // Annual lease payments should be a fraction of total lease obligations (typically 5-20%)
+      // If extracted value >= total lease debt, the AI likely extracted TOTAL FUTURE payments instead of ANNUAL
+      if (leasePaymentsForFCCR != null && totalLeaseDebt > 0) {
+        const leasePaymentRatio = leasePaymentsForFCCR / totalLeaseDebt;
+        if (leasePaymentRatio >= 0.8) {
+          // Extracted value is too high - likely total future payments, not annual
+          console.warn(`⚠️ Lease payment validation failed: extracted ${leasePaymentsForFCCR} is ${(leasePaymentRatio * 100).toFixed(0)}% of total lease debt ${totalLeaseDebt}. Likely extracted total future payments instead of annual. Falling back to estimation.`);
+          leasePaymentsForFCCR = null; // Reset to trigger fallback
+          leasePaymentSource = 'validation_failed_reset';
+        }
+      }
+
       if (leasePaymentsForFCCR == null) {
         const financeLease = fc.finance_lease_payments ?? 0;
         const operatingLease = fc.operating_lease_payments ?? 0;
@@ -1022,7 +1080,9 @@ Use any information available from the financial statement — including governa
             interest_source: interestCalculationMethod, // 'extracted', 'derived_from_total', or 'calculated_from_rate'
             interest_calculated: interestCalculationMethod !== 'extracted',
             interest_rate_assumed: fc.senior_debt_interest_rate == null && interestCalculationMethod === 'calculated_from_rate',
-            lease_payment_source: leasePaymentSource, // 'extracted', 'sum_of_lease_types', 'estimated_from_liability', 'lease_interest_only'
+            lease_payment_source: leasePaymentSource, // 'extracted', 'sum_of_lease_types', 'estimated_from_liability', 'lease_interest_only', 'validation_failed_reset'
+            lease_payment_validation_failed: leasePaymentSource === 'validation_failed_reset',
+            original_extracted_lease_payment: leasePaymentSource === 'validation_failed_reset' ? fc.minimum_lease_payments : null,
             total_interest_from_statement: totalInterestFromStatement,
           };
         } else {
