@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2, Upload, FileText } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 
 interface FileUploadProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onDataExtracted: (data: any) => void;
   onUploadStart?: () => void;
 }
@@ -18,7 +18,6 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
 
 /**
  * Compress a PDF file by re-saving it with pdf-lib
- * This removes unused objects, optimizes structure, and can reduce file size
  */
 async function compressPDF(file: File): Promise<File> {
   try {
@@ -28,7 +27,6 @@ async function compressPDF(file: File): Promise<File> {
       updateMetadata: false
     });
 
-    // Save with optimization - this removes unused objects
     const compressedBytes = await pdfDoc.save({
       useObjectStreams: true,
       addDefaultPage: false,
@@ -37,11 +35,9 @@ async function compressPDF(file: File): Promise<File> {
     const compressedBlob = new Blob([compressedBytes], { type: 'application/pdf' });
     const compressedFile = new File([compressedBlob], file.name, { type: 'application/pdf' });
 
-    console.log(`📄 PDF compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
-
     return compressedFile;
   } catch (error) {
-    console.warn('⚠️ PDF compression failed, using original file:', error);
+    console.warn('PDF compression failed, using original file:', error);
     return file;
   }
 }
@@ -84,12 +80,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
       const originalSize = selectedFile.size;
 
       if (originalSize > MAX_FILE_SIZE * 3) {
-        // Reject files over 30MB even before compression
         alert('File size exceeds 30MB. Please use a smaller file.');
         return;
       }
 
-      // Reset state
       if (stage === 'complete' || stage === 'error') {
         setStage('idle');
         setProgress(0);
@@ -97,7 +91,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         setCompressionInfo(null);
       }
 
-      // Compress PDF files
       if (selectedFile.type === 'application/pdf' || selectedFile.name.toLowerCase().endsWith('.pdf')) {
         setStage('compressing');
         setCompressionInfo('Optimizing PDF...');
@@ -121,7 +114,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         setFile(compressedFile);
         setStage('idle');
       } else {
-        // Non-PDF files
         if (originalSize > MAX_FILE_SIZE) {
           alert('File size exceeds 10MB limit.');
           return;
@@ -164,10 +156,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
       setProgress(100);
       setTimeRemaining(0);
       onDataExtracted(data);
-    } catch (error: any) {
+    } catch (error) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setStage('error');
-      alert(error.message);
+      alert(error instanceof Error ? error.message : 'An error occurred');
     }
   };
 
@@ -175,20 +167,20 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const isCompressing = stage === 'compressing';
 
   return (
-    <div className="p-6 border rounded-lg shadow-sm w-full max-w-md mx-auto space-y-4">
+    <div className="w-full max-w-md mx-auto space-y-6">
       {/* Success State */}
       {stage === 'complete' && (
-        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
-          <CheckCircle className="h-5 w-5 text-green-500" />
+        <div className="flex items-center gap-3 p-4 rounded-md border border-success/30 bg-success/5">
+          <CheckCircle className="h-5 w-5 text-success" />
           <div className="text-sm">
-            <span className="font-medium text-green-800">Extraction Complete</span>
-            <span className="text-green-600 ml-1">— {extractedFileName}</span>
+            <span className="font-medium text-success">Extraction Complete</span>
+            <span className="text-muted-foreground ml-2">{extractedFileName}</span>
           </div>
         </div>
       )}
 
       {/* Upload Form */}
-      <form onSubmit={handleUpload} className="flex flex-col items-center gap-3">
+      <form onSubmit={handleUpload} className="flex flex-col items-center gap-4">
         <input
           type="file"
           accept=".pdf,.xls,.xlsx,.doc,.docx"
@@ -196,43 +188,79 @@ const FileUpload: React.FC<FileUploadProps> = ({
           className="hidden"
           id="file-input"
           disabled={isProcessing || isCompressing}
+          aria-label="Select file to upload"
         />
         <label
           htmlFor="file-input"
-          className={`w-full text-center py-3 px-4 border-2 border-dashed rounded-md cursor-pointer transition-colors
-            ${isProcessing || isCompressing ? 'opacity-50 cursor-not-allowed border-gray-200' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}
+          className={`w-full p-6 rounded-lg border-2 border-dashed cursor-pointer transition-colors duration-150
+            ${isProcessing || isCompressing
+              ? 'opacity-50 cursor-not-allowed border-muted'
+              : 'border-border hover:border-primary/50 hover:bg-muted/50'
+            }`}
         >
-          <span className="text-sm text-gray-600">
-            {isCompressing ? 'Optimizing PDF...' : file ? file.name : 'Click to select a file'}
-          </span>
-          {compressionInfo && !isCompressing && (
-            <span className="block text-xs text-green-600 mt-1">{compressionInfo}</span>
-          )}
+          <div className="flex flex-col items-center gap-3 text-center">
+            {file ? (
+              <>
+                <FileText className="h-10 w-10 text-primary" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                  {compressionInfo && !isCompressing && (
+                    <p className="text-xs text-success">{compressionInfo}</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <Upload className="h-10 w-10 text-muted-foreground" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {isCompressing ? 'Optimizing PDF...' : 'Click to select a file'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    PDF, XLS, XLSX, DOC, DOCX supported
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
         </label>
 
         <button
           type="submit"
           disabled={isProcessing || isCompressing || !file}
-          className={`w-full py-2 rounded-md font-medium text-sm transition-colors
+          className={`w-full py-3 px-4 rounded-md text-sm font-medium transition-colors duration-150
             ${isProcessing || isCompressing || !file
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+              ? 'bg-muted text-muted-foreground cursor-not-allowed'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
         >
-          {isCompressing ? 'Optimizing...' : isProcessing ? 'Processing...' : stage === 'complete' ? 'Process Another' : 'Process File'}
+          {isCompressing ? 'Optimizing...' : isProcessing ? 'Processing...' : stage === 'complete' ? 'Process Another File' : 'Process File'}
         </button>
       </form>
 
       {/* Progress */}
       {isProcessing && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center gap-1.5">
+        <div className="space-y-3" role="status" aria-live="polite">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span>{STAGES[currentStageIndex]}</span>
             </div>
-            <span>{progress}% · ~{timeRemaining}s</span>
+            <span>{progress}% · ~{timeRemaining}s remaining</span>
           </div>
-          <Progress value={progress} className="h-1.5" />
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-200 rounded-full"
+              style={{ width: `${progress}%` }}
+              role="progressbar"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </div>
         </div>
       )}
     </div>

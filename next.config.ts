@@ -7,9 +7,10 @@ const nextConfig = {
     { isServer }: { isServer: boolean }
   ) => {
     if (!isServer) {
-      config.resolve!.alias!['canvas'] = false as unknown as
-        | false
-        | string;
+      const alias = config.resolve?.alias as Record<string, string | false> | undefined;
+      if (alias) {
+        alias['canvas'] = false;
+      }
     }
     return config;
   },

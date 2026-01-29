@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(node:*)",
-      "Bash(npx shadcn@latest add sidebar:*)"
+      "Bash(npx shadcn@latest add sidebar:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

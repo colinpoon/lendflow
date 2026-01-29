@@ -4,7 +4,6 @@ import React from 'react';
 import { fmtCurrency } from '@/utils/format';
 
 interface YearMetrics {
-  // Income Statement
   revenue: number | null;
   net_income: number | null;
   expenses: number | null;
@@ -12,28 +11,22 @@ interface YearMetrics {
   interest: number | null;
   taxes: number | null;
   depreciation_amortization: number | null;
-  // EBITDA
   ebitda: number | null;
   ebitda_calculated?: boolean;
   adjusted_ebitda: number | null;
-  // Balance Sheet
   total_debt: number | null;
   senior_debt: number | null;
   shareholders_equity: number | null;
-  // Cash Flow
   capital_expenditures: number | null;
-  // Key Ratios
   fccr: number | null;
   senior_debt_to_ebitda: number | null;
   total_debt_to_capital: number | null;
 }
 
 interface FinancialTableProps {
-  /** Result returned by the backend: { metrics_by_year: { "2024": {...}, "2023": {...} } } */
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
 }
 
-// Row configuration with sections
 interface RowConfig {
   key: keyof YearMetrics;
   label: string;
@@ -109,7 +102,6 @@ const formatValue = (
     case 'percent':
       return `${(value * 100).toFixed(0)}%`;
     case 'margin':
-      // Profit margin may come as decimal or percentage
       if (value <= 1 && value >= -1) {
         return `${(value * 100).toFixed(1)}%`;
       }
@@ -125,23 +117,23 @@ const getRatioColor = (key: keyof YearMetrics, value: number | null): string => 
 
   switch (key) {
     case 'fccr':
-      if (value >= 2.0) return 'text-green-600 font-semibold';
-      if (value >= 1.5) return 'text-lime-600 font-semibold';
-      if (value >= 1.2) return 'text-yellow-600 font-semibold';
-      if (value >= 1.0) return 'text-orange-600 font-semibold';
-      return 'text-red-600 font-semibold';
+      if (value >= 2.0) return 'text-success font-medium';
+      if (value >= 1.5) return 'text-chart-2 font-medium';
+      if (value >= 1.2) return 'text-warning font-medium';
+      if (value >= 1.0) return 'text-chart-4 font-medium';
+      return 'text-danger font-medium';
     case 'senior_debt_to_ebitda':
-      if (value <= 1.5) return 'text-green-600 font-semibold';
-      if (value <= 2.5) return 'text-lime-600 font-semibold';
-      if (value <= 3.0) return 'text-yellow-600 font-semibold';
-      if (value <= 4.0) return 'text-orange-600 font-semibold';
-      return 'text-red-600 font-semibold';
+      if (value <= 1.5) return 'text-success font-medium';
+      if (value <= 2.5) return 'text-chart-2 font-medium';
+      if (value <= 3.0) return 'text-warning font-medium';
+      if (value <= 4.0) return 'text-chart-4 font-medium';
+      return 'text-danger font-medium';
     case 'total_debt_to_capital':
-      if (value < 0.3) return 'text-green-600 font-semibold';
-      if (value <= 0.5) return 'text-lime-600 font-semibold';
-      if (value <= 0.6) return 'text-yellow-600 font-semibold';
-      if (value <= 0.7) return 'text-orange-600 font-semibold';
-      return 'text-red-600 font-semibold';
+      if (value < 0.3) return 'text-success font-medium';
+      if (value <= 0.5) return 'text-chart-2 font-medium';
+      if (value <= 0.6) return 'text-warning font-medium';
+      if (value <= 0.7) return 'text-chart-4 font-medium';
+      return 'text-danger font-medium';
     default:
       return '';
   }
@@ -154,26 +146,26 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
     Object.keys(data.metrics_by_year).length === 0
   ) {
     return (
-      <p className="text-gray-500">No financial data available.</p>
+      <p className="text-sm text-muted-foreground">No financial data available.</p>
     );
   }
 
-  const years = Object.keys(data.metrics_by_year).sort().reverse(); // newest first
+  const years = Object.keys(data.metrics_by_year).sort().reverse();
 
   return (
     <div className="w-full overflow-x-auto">
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-semibold text-gray-800">
-          Financial Metrics
-        </h2>
-        <span className="text-xs text-gray-500">(Values in thousands)</span>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-sm font-medium">Financial Metrics</h3>
+        <span className="text-xs text-muted-foreground">(Values in thousands)</span>
       </div>
-      <table className="min-w-full text-sm border-collapse">
+      <table className="min-w-full text-sm">
         <thead>
-          <tr className="bg-gray-100 border-b-2 border-gray-300">
-            <th className="py-3 px-4 text-left font-semibold text-gray-700">Metric</th>
+          <tr className="border-b border-border">
+            <th className="py-3 px-4 text-left text-xs font-medium text-muted-foreground">
+              Metric
+            </th>
             {years.map((y) => (
-              <th key={y} className="py-3 px-4 text-right font-semibold text-gray-700">
+              <th key={y} className="py-3 px-4 text-right text-xs font-medium text-muted-foreground">
                 {y}
               </th>
             ))}
@@ -182,33 +174,29 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         <tbody>
           {sections.map((section) => (
             <React.Fragment key={section.title}>
-              {/* Section Header */}
-              <tr className="bg-gray-50">
+              <tr className="border-t border-border bg-muted/30">
                 <td
                   colSpan={years.length + 1}
-                  className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-wide border-t border-gray-200"
+                  className="py-2 px-4 text-xs font-medium text-muted-foreground"
                 >
                   {section.title}
                 </td>
               </tr>
-              {/* Section Rows */}
               {section.rows.map((row) => {
-                const value = getMetricValue(data.metrics_by_year[years[0]], row.key);
                 const hasValue = years.some(
                   (y) => getMetricValue(data.metrics_by_year[y], row.key) !== null
                 );
 
-                // Skip rows with no data across all years
                 if (!hasValue) return null;
 
                 return (
                   <tr
                     key={row.key}
-                    className={`border-b border-gray-100 hover:bg-gray-50 ${
-                      row.highlight ? 'bg-blue-50/50' : ''
+                    className={`border-b border-border/50 transition-colors hover:bg-muted/30 ${
+                      row.highlight ? 'bg-muted/20' : ''
                     }`}
                   >
-                    <td className={`py-2 px-4 ${row.highlight ? 'font-medium' : ''}`}>
+                    <td className={`py-2.5 px-4 ${row.highlight ? 'font-medium' : ''}`}>
                       {row.label}
                     </td>
                     {years.map((y) => {
@@ -219,9 +207,9 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                       return (
                         <td
                           key={y}
-                          className={`py-2 px-4 text-right ${colorClass} ${
+                          className={`py-2.5 px-4 text-right tabular-nums ${colorClass} ${
                             row.highlight && !colorClass ? 'font-medium' : ''
-                          }`}
+                          } ${!colorClass && !row.highlight ? 'text-muted-foreground' : ''}`}
                         >
                           {formatValue(val, row.format)}
                         </td>

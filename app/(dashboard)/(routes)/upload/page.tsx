@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   FileSpreadsheet,
   BarChart4,
@@ -14,11 +15,11 @@ import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import RiskAssessment, {
   RiskData,
 } from '@/components/RiskAssessment';
+import { TechnicalLabel } from '@/components/TechnicalLabel';
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Tabs,
@@ -26,11 +27,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
+import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 
 interface DebtHealthAssessment {
   weighted_score: number;
@@ -43,10 +40,12 @@ interface DebtHealthAssessment {
 }
 
 const Home = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [extractedData, setExtractedData] = useState<any>(null);
 
-  // year‑agnostic map returned from aiProcessor:
+  // year-agnostic map returned from aiProcessor:
   const [financialData, setFinancialData] = useState<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metrics_by_year: Record<string, any>;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
@@ -54,8 +53,9 @@ const Home = () => {
   const [debtHealthAssessment, setDebtHealthAssessment] =
     useState<DebtHealthAssessment | null>(null);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDataUpdate = (data: any) => {
-    console.log('🐞 page.tsx received payload:', data);
+    console.log('page.tsx received payload:', data);
 
     setExtractedData(data);
 
@@ -94,111 +94,157 @@ const Home = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
-      <h1 className="text-3xl font-extrabold text-center text-primary mb-8">
-        Bank Loan Risk Analysis
-      </h1>
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+      className="container mx-auto max-w-6xl px-4 py-8 space-y-8"
+    >
+      <motion.div variants={fadeInUp} className="text-center space-y-2">
+        <h1 className="text-2xl font-bold tracking-widest uppercase font-display text-primary">
+          Bank Loan Risk Analysis
+        </h1>
+        <p className="text-xs tracking-wider text-muted-foreground uppercase">
+          AI-Powered Financial Document Processing
+        </p>
+      </motion.div>
+
       {!extractedData && (
-        <Alert variant="default" className="mt-6">
-          <AlertTitle>Get Started</AlertTitle>
-          <AlertDescription>
-            Upload a financial document to begin your bank loan risk
-            analysis.
-          </AlertDescription>
-        </Alert>
+        <motion.div
+          variants={fadeInUp}
+          className="hud-panel p-4"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-primary">[!]</span>
+            <div>
+              <p className="text-xs font-medium tracking-wide uppercase">System Ready</p>
+              <p className="text-xs text-muted-foreground">
+                Upload a financial document to begin risk analysis
+              </p>
+            </div>
+          </div>
+        </motion.div>
       )}
+
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="upload">
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> File Upload
-          </TabsTrigger>
-          <TabsTrigger value="analysis" disabled={!financialData}>
-            <BarChart4 className="mr-2 h-4 w-4" /> Financial Analysis
-          </TabsTrigger>
-          <TabsTrigger value="credit" disabled={!financialData}>
-            <Shield className="mr-2 h-4 w-4" />
-            Credit‑Risk Snapshot
-          </TabsTrigger>
-        </TabsList>
+        <motion.div variants={fadeInUp}>
+          <TabsList className="w-full justify-start mb-6">
+            <TabsTrigger value="upload">
+              <FileSpreadsheet className="h-4 w-4" />
+              Upload
+            </TabsTrigger>
+            <TabsTrigger value="analysis" disabled={!financialData}>
+              <BarChart4 className="h-4 w-4" />
+              Financial Analysis
+            </TabsTrigger>
+            <TabsTrigger value="credit" disabled={!financialData}>
+              <Shield className="h-4 w-4" />
+              Credit-Risk
+            </TabsTrigger>
+          </TabsList>
+        </motion.div>
 
         <TabsContent value="upload" key="upload">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>Upload Financial Document</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FileUpload onDataExtracted={handleDataUpdate} />
-            </CardContent>
-          </Card>
+          <motion.div variants={staggerItem}>
+            <Card>
+              <CardHeader className="border-b border-border">
+                <TechnicalLabel prefix="arrow">Upload Interface</TechnicalLabel>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <FileUpload onDataExtracted={handleDataUpdate} />
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="analysis" key="analysis">
           {financialData && (
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Financial Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FinancialTable data={financialData} />
-              </CardContent>
-            </Card>
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer}
+            >
+              <motion.div variants={staggerItem}>
+                <Card>
+                  <CardHeader className="border-b border-border">
+                    <TechnicalLabel prefix="data">Financial Summary</TechnicalLabel>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <FinancialTable data={financialData} />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
           )}
         </TabsContent>
 
         <TabsContent value="credit" key="credit">
           {riskData || financialData ? (
-            <div className="space-y-6">
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer}
+              className="space-y-6"
+            >
               {/* Weighted Risk Gauge - Primary Risk Assessment */}
               {financialData && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Debt Health Risk Assessment</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <WeightedRiskGauge
-                      data={financialData}
-                      debtHealthAssessment={debtHealthAssessment}
-                    />
-                  </CardContent>
-                </Card>
+                <motion.div variants={staggerItem}>
+                  <Card>
+                    <CardHeader className="border-b border-border">
+                      <TechnicalLabel prefix="alert">Debt Health Risk Assessment</TechnicalLabel>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <WeightedRiskGauge
+                        data={financialData}
+                        debtHealthAssessment={debtHealthAssessment}
+                      />
+                    </CardContent>
+                  </Card>
+                </motion.div>
               )}
 
               {/* Credit Risk Assessment */}
               {riskData && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Credit-Risk Assessment</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <RiskAssessment data={riskData} />
-                  </CardContent>
-                </Card>
+                <motion.div variants={staggerItem}>
+                  <Card>
+                    <CardHeader className="border-b border-border">
+                      <TechnicalLabel prefix="system">Credit-Risk Assessment</TechnicalLabel>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <RiskAssessment data={riskData} />
+                    </CardContent>
+                  </Card>
+                </motion.div>
               )}
 
               {/* Debt Health Indicators with Gauges and Breakdowns */}
               {financialData && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Debt Health Indicators</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DebtHealthMeters data={financialData} />
-                  </CardContent>
-                </Card>
+                <motion.div variants={staggerItem}>
+                  <Card>
+                    <CardHeader className="border-b border-border">
+                      <TechnicalLabel prefix="data">Debt Health Indicators</TechnicalLabel>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <DebtHealthMeters data={financialData} />
+                    </CardContent>
+                  </Card>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
           ) : (
-            <p className="text-gray-500">
-              No risk assessment available.
-            </p>
+            <div className="hud-panel p-6 text-center">
+              <p className="text-xs text-muted-foreground tracking-wider uppercase">
+                No risk assessment data available
+              </p>
+            </div>
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </motion.div>
   );
 };
 

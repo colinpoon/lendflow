@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     const reqStream = Readable.from(Buffer.from(arrayBuffer));
 
     // Manually add headers required by formidable
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (reqStream as any).headers = Object.fromEntries(
       req.headers.entries()
     );
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Parse form data and handle errors
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parseForm = (req: any) =>
       new Promise<{
         fields: formidable.Fields;
@@ -136,19 +138,21 @@ export async function POST(req: NextRequest) {
       filename: file.originalFilename || file.newFilename,
       financialMetrics: extractedData,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace available';
     console.error(
       '❗ Error processing file:',
-      error.message || error,
+      errorMessage,
       '\nStack trace:',
-      error.stack || 'No stack trace available'
+      errorStack
     );
 
     console.log('❗ Returning error response...');
     return NextResponse.json(
       {
         error: 'Internal server error. Please try again.',
-        details: error.message || 'Unknown error',
+        details: errorMessage,
       },
       { status: 500 }
     );

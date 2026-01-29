@@ -67,8 +67,10 @@ export default function ProjectPage() {
   const projectId = params.projectId as string;
   const project = getProjectById(projectId);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [extractedData, setExtractedData] = useState<any>(null);
   const [financialData, setFinancialData] = useState<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metrics_by_year: Record<string, any>;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
@@ -76,6 +78,7 @@ export default function ProjectPage() {
   const [debtHealthAssessment, setDebtHealthAssessment] =
     useState<DebtHealthAssessment | null>(null);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDataUpdate = (data: any) => {
     console.log('Project received payload:', data);
 
