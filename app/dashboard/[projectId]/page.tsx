@@ -1,19 +1,24 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import {
   FileSpreadsheet,
   BarChart4,
   Shield,
+  ChevronRight,
+  Home,
+  FolderOpen,
+  Upload,
 } from 'lucide-react';
 
 import FileUpload from '@/components/FileUpload';
 import FinancialTable from '@/components/FinancialTable';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
 import WeightedRiskGauge from '@/components/WeightedRiskGauge';
-import RiskAssessment, {
-  RiskData,
-} from '@/components/RiskAssessment';
+import AdjustedEBITDA from '@/components/AdjustedEBITDA';
+import { RiskData } from '@/components/RiskAssessment';
 import {
   Card,
   CardContent,
@@ -31,6 +36,14 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 interface DebtHealthAssessment {
   weighted_score: number;
@@ -42,10 +55,19 @@ interface DebtHealthAssessment {
   suggested_loan_structure: string;
 }
 
-const Home = () => {
-  const [extractedData, setExtractedData] = useState<any>(null);
+// Mock project data - will be replaced with real data
+const getProjectById = (id: string) => ({
+  id,
+  name: id === '1' ? 'Zedcor Inc. Analysis' : id === '2' ? 'TechStart Holdings' : 'Metro Manufacturing',
+  description: 'Financial Analysis Project',
+});
 
-  // year‑agnostic map returned from aiProcessor:
+export default function ProjectPage() {
+  const params = useParams();
+  const projectId = params.projectId as string;
+  const project = getProjectById(projectId);
+
+  const [extractedData, setExtractedData] = useState<any>(null);
   const [financialData, setFinancialData] = useState<{
     metrics_by_year: Record<string, any>;
   } | null>(null);
@@ -55,18 +77,16 @@ const Home = () => {
     useState<DebtHealthAssessment | null>(null);
 
   const handleDataUpdate = (data: any) => {
-    console.log('🐞 page.tsx received payload:', data);
+    console.log('Project received payload:', data);
 
     setExtractedData(data);
 
-    // Accept either data.financialMetrics or a root-level metrics_by_year
     if (data.financialMetrics) {
       setFinancialData(data.financialMetrics);
     } else if (data.metrics_by_year) {
       setFinancialData({ metrics_by_year: data.metrics_by_year });
     }
 
-    // Risk assessment may appear at root, inside financialMetrics, or alongside metrics_by_year
     const nestedRisk =
       data.riskAssessment ??
       data.financialMetrics?.riskAssessment ??
@@ -76,7 +96,6 @@ const Home = () => {
       setRiskData(nestedRisk);
     }
 
-    // Debt health assessment from AI
     const nestedDebtHealth =
       data.debtHealthAssessment ??
       data.financialMetrics?.debtHealthAssessment ??
@@ -85,7 +104,6 @@ const Home = () => {
       setDebtHealthAssessment(nestedDebtHealth);
     }
 
-    // decide default tab - go to analysis after successful extraction
     if (data.metrics_by_year || data.financialMetrics) {
       setActiveTab('analysis');
     } else {
@@ -95,18 +113,58 @@ const Home = () => {
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
-      <h1 className="text-3xl font-extrabold text-center text-primary mb-8">
-        Bank Loan Risk Analysis
-      </h1>
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/" className="flex items-center gap-1">
+                <Home className="h-3.5 w-3.5" />
+                Home
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/dashboard" className="flex items-center gap-1">
+                <FolderOpen className="h-3.5 w-3.5" />
+                Projects
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbPage>{project.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* Project Header */}
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+          <FolderOpen className="h-6 w-6 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+          <p className="text-gray-500 text-sm">{project.description}</p>
+        </div>
+      </div>
+
       {!extractedData && (
-        <Alert variant="default" className="mt-6">
+        <Alert variant="default">
+          <Upload className="h-4 w-4" />
           <AlertTitle>Get Started</AlertTitle>
           <AlertDescription>
-            Upload a financial document to begin your bank loan risk
-            analysis.
+            Upload a financial document to begin your bank loan risk analysis.
           </AlertDescription>
         </Alert>
       )}
+
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
@@ -114,19 +172,18 @@ const Home = () => {
       >
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="upload">
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> File Upload
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Upload
           </TabsTrigger>
           <TabsTrigger value="analysis" disabled={!financialData}>
-            <BarChart4 className="mr-2 h-4 w-4" /> Financial Analysis
+            <BarChart4 className="mr-2 h-4 w-4" /> Analysis
           </TabsTrigger>
           <TabsTrigger value="credit" disabled={!financialData}>
-            <Shield className="mr-2 h-4 w-4" />
-            Credit‑Risk Snapshot
+            <Shield className="mr-2 h-4 w-4" /> Risk
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="upload" key="upload">
-          <Card className="shadow-lg">
+        <TabsContent value="upload">
+          <Card>
             <CardHeader>
               <CardTitle>Upload Financial Document</CardTitle>
             </CardHeader>
@@ -136,9 +193,9 @@ const Home = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="analysis" key="analysis">
+        <TabsContent value="analysis">
           {financialData && (
-            <Card className="shadow-lg">
+            <Card>
               <CardHeader>
                 <CardTitle>Financial Summary</CardTitle>
               </CardHeader>
@@ -149,39 +206,37 @@ const Home = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="credit" key="credit">
-          {riskData || financialData ? (
+        <TabsContent value="credit">
+          {(riskData || financialData) ? (
             <div className="space-y-6">
-              {/* Weighted Risk Gauge - Primary Risk Assessment */}
               {financialData && (
-                <Card className="shadow-lg">
+                <Card>
                   <CardHeader>
-                    <CardTitle>Debt Health Risk Assessment</CardTitle>
+                    <CardTitle>Risk Assessment</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <WeightedRiskGauge
                       data={financialData}
                       debtHealthAssessment={debtHealthAssessment}
+                      riskData={riskData}
                     />
                   </CardContent>
                 </Card>
               )}
 
-              {/* Credit Risk Assessment */}
-              {riskData && (
-                <Card className="shadow-lg">
+              {financialData && (
+                <Card>
                   <CardHeader>
-                    <CardTitle>Credit-Risk Assessment</CardTitle>
+                    <CardTitle>Adjusted EBITDA</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <RiskAssessment data={riskData} />
+                    <AdjustedEBITDA data={financialData} />
                   </CardContent>
                 </Card>
               )}
 
-              {/* Debt Health Indicators with Gauges and Breakdowns */}
               {financialData && (
-                <Card className="shadow-lg">
+                <Card>
                   <CardHeader>
                     <CardTitle>Debt Health Indicators</CardTitle>
                   </CardHeader>
@@ -192,7 +247,7 @@ const Home = () => {
               )}
             </div>
           ) : (
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               No risk assessment available.
             </p>
           )}
@@ -200,6 +255,4 @@ const Home = () => {
       </Tabs>
     </div>
   );
-};
-
-export default Home;
+}

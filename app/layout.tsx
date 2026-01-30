@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Lendflow',
-  description: '',
+  description: 'Bank Loan Risk Analysis',
 };
 
 export default function RootLayout({

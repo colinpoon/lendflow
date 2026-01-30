@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env
 .env.local
+CLAUDE.md
+to-do-list.md
+/project_files
 
 # vercel
 .vercel

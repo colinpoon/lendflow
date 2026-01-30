@@ -1,11 +1,16 @@
+/**
+ * Format currency values displayed in thousands (as commonly reported in financial statements)
+ * @param value - The value in thousands
+ * @returns Formatted string like "$1,234K" or "—" for null/undefined
+ */
 export function fmtCurrency(
   value: number | null | undefined
 ): string {
   if (typeof value !== 'number' || isNaN(value)) return '—';
   return `$${value.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}K`;
 }
 export function sanitizeObservationText(text: string): string {
   if (!text) return text;

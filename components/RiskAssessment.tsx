@@ -99,28 +99,6 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
         </tbody>
       </table>
 
-      {(() => {
-        const normalizedScore =
-          typeof data.weighted_score === 'number'
-            ? data.weighted_score > 100
-              ? (data.weighted_score / 100).toFixed(1)
-              : data.weighted_score > 10
-              ? (data.weighted_score / 10).toFixed(1)
-              : data.weighted_score.toFixed(1)
-            : null;
-        return (
-          <p className="mt-2">
-            <strong>Weighted score:</strong>{' '}
-            {normalizedScore != null ? normalizedScore : '—'} / 10 →{' '}
-            <strong>{data.band}</strong> risk band.
-          </p>
-        );
-      })()}
-
-      <h3 className="font-semibold mt-3">Lending recommendation</h3>
-      <p className="whitespace-pre-line">
-        {data.lending_recommendation}
-      </p>
     </section>
   );
 };
