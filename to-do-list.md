@@ -55,83 +55,146 @@ For your risk-scoring app, best practice is:
 - remove/ hide the next.js logo from all pages. 
 - add an estimated time to complete an analysis while a a pdf is processing and add percentage completed to the progress bar. ❎
 
+credit-grade CapEx classifier built entirely around document terms, designed so your system can automatically determine:
+	1.	Is it CapEx?
+	2.	Maintenance vs Growth
+	3.	Financed vs Unfinanced
+	4.	Should it be deducted in FCCR?
 
-<!-- 
-2022
-Adjusted EBITDA 7,569k
-Senior Debt Interest 976k
-Sub Debt Interest 175k
-Lease Payments 500k
-Other Fixed Charges 0
-Total Fixed Charges 1,651k
-FCCR 4.59×
-2023
-Adjusted EBITDA 7,645k
-Senior Debt Interest 1,949k
-Sub Debt Interest 175k
-Lease Payments 500k
-Other Fixed Charges 0
-Total Fixed Charges 2,624k
-FCCR 2.91×
+	1. Classifier Output Schema (what your app should decide)
+	{
+  "is_capex": true,
+  "capex_type": "maintenance | growth | mixed | unknown",
+  "financing_type": "financed | unfinanced | revolver | unknown",
+  "fccr_treatment": "deduct | do_not_deduct | partial_deduct | flag_review",
+  "confidence": 0.0
+}
+ CapEx Detection Terms (Is it CapEx?)
+ {
+  "capex_detection_terms": [
+    "capital expenditure",
+    "capex",
+    "property plant and equipment",
+    "ppe",
+    "fixed assets",
+    "capitalized costs",
+    "additions",
+    "equipment purchases",
+    "asset acquisition",
+    "facility improvement",
+    "leasehold improvement"
+  ]
+} If none of these appear → ❌ Not CapEx
 
-  Calculated FCCR
-  \text{FCCR} = \frac{\text{Adjusted EBITDA}}{\text{Total Fixed Charges}}
-      •    2022: 7.569 / 1.651 ≈ 4.59×
-      •    2023: 7.645 / 2.624 ≈ 2.91×
+Maintenance CapEx Classifier (deduct in FCCR)
+These imply business continuity / replacement.
+{
+  "maintenance_capex_terms": [
+    "replacement",
+    "maintenance",
+    "repair",
+    "refurbishment",
+    "upgrade existing",
+    "sustaining",
+    "safety requirement",
+    "regulatory compliance",
+    "environmental compliance",
+    "it infrastructure upgrade",
+    "software renewal",
+    "system replacement",
+    "fleet replacement",
+    "routine capital spending"
+  ]
+}
+✅ Strong signal → Maintenance CapEx
 
-Total Fixed Charges
-\text{Total Fixed Charges} = \text{Senior Debt Interest} + \text{Sub Debt Interest} + \text{Lease Payments} + \text{Other Fixed Charges}
-	•	2022: 0.976 + 0.175 + 0.5 + 0 ≈ 1.651M
-	•	2023: 1.949 + 0.175 + 0.5 + 0 ≈ 2.624M -->
+Growth / Expansion CapEx Classifier (usually NOT deducted)
+These imply capacity increase or strategic expansion.
+{
+  "growth_capex_terms": [
+    "expansion",
+    "growth",
+    "new facility",
+    "new plant",
+    "capacity increase",
+    "new equipment",
+    "greenfield",
+    "brownfield expansion",
+    "strategic investment",
+    "new product line",
+    "market expansion",
+    "acquisition",
+    "build-out"
+  ]
+}
+⚠️ Strong signal → Growth CapEx
 
+Financing Classifier (critical FCCR logic)
+Financed CapEx (do NOT deduct)
+{
+  "financed_capex_terms": [
+    "capital lease",
+    "finance lease",
+    "equipment financing",
+    "equipment loan",
+    "term loan",
+    "vendor financing",
+    "oem financing",
+    "hire purchase",
+    "debt financed",
+    "lease obligation"
+  ]
+}
+If matched →
+👉 Do NOT deduct CapEx
+👉 Include payments in FCCR denominator
 
-<!-- Reported EBITDA
-18,121
-Adjusted EBITDA
-7,954
+Revolver-Funded CapEx (policy-dependent)
+{
+  "revolver_funded_terms": [
+    "revolving credit facility",
+    "revolver",
+    "line of credit",
+    "working capital facility",
+    "drawn revolver"
+  ]
+}
+⚠️ Usually treated as unfinanced
+→ Often deduct, but flag for policy review
 
- let’s walk through why your reported EBITDA is $18,021 while mine was initially $18,121 and then revised to $18,121 again. That discrepancy of exactly 100 likely comes down to tax treatment or a rounding or label mismatch in the source.
+Unfinanced (Cash) CapEx (deduct if maintenance)
+{
+  "unfinanced_capex_terms": [
+    "cash purchase",
+    "paid in cash",
+    "internally funded",
+    "funded from operations",
+    "no related financing",
+    "cash outlay"
+  ]
+}
+Strong signal → Unfinanced
 
-Let’s break this down carefully:
+FCCR Decision Logic (rules engine)
+Deterministic Rules
+IF maintenance_capex AND unfinanced
+→ deduct
 
-⸻
+IF growth_capex
+→ do_not_deduct
 
-🔍 Your Version (EBITDA = 18,021)
+IF financed_capex
+→ do_not_deduct
 
-You likely used the standard formula:
-\[
-\text{EBITDA} = \text{Net Income} + \text{Interest} + \text{Depreciation & Amortization} + \text{Taxes}
-\]
+IF maintenance_capex AND revolver_funded
+→ partial_deduct OR flag_review
 
-Your input values might be:
-	•	Net income = 5,992
-	•	Interest = 4,804
-	•	Amortization = 7,211
-	•	Tax expense = 14 ← (this is the likely difference)
+IF mixed signals
+→ flag_review
 
-Total:
-5,992 + 4,804 + 7,211 + 14 = \boxed{18,021}
-
-⸻
-
-🧮 My Version (EBITDA = 18,121)
-
-I used:
-	•	Tax expense = 114 (from the OCR text):
-“Current tax expense: 114”
-
-So my total:
-5,992 + 4,804 + 7,211 + 114 = \boxed{18,121}
-
-⸻
-
-✅ What’s the real number?
-
-From the OCR extract:
-
-Current tax expense 114 4,390
-
-Looks like the 2024 tax is 114, not 14 — the OCR might blur small numbers, and if you read it as 14 instead of 114, that would cause the exact 100-point difference. -->
-
-
-
+Why this works for underwriting
+	•	Mirrors credit officer reasoning
+	•	Avoids double counting
+	•	Separates policy decisions from math
+	•	Produces audit-defensible outputs
+	•	Scales cleanly for AI + rules hybrid models
