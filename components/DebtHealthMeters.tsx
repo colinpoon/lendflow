@@ -1,12 +1,18 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+
+interface CustomAdjustment {
+  id: string;
+  amount: number;
+  description: string;
+}
 
 interface FCCRBreakdown {
   calculation_type: 'lender_defined';
@@ -352,6 +358,35 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
 const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
   data,
 }) => {
+  // Custom adjustments state for FCCR numerator
+  const [customAdjustments, setCustomAdjustments] = useState<CustomAdjustment[]>([]);
+  const [newAdjustmentAmount, setNewAdjustmentAmount] = useState<string>('');
+  const [newAdjustmentDescription, setNewAdjustmentDescription] = useState<string>('');
+
+  // Handler to add a new adjustment
+  const handleAddAdjustment = () => {
+    const amount = parseFloat(newAdjustmentAmount);
+    if (isNaN(amount) || !newAdjustmentDescription.trim()) return;
+
+    const newAdjustment: CustomAdjustment = {
+      id: Date.now().toString(),
+      amount,
+      description: newAdjustmentDescription.trim(),
+    };
+
+    setCustomAdjustments([...customAdjustments, newAdjustment]);
+    setNewAdjustmentAmount('');
+    setNewAdjustmentDescription('');
+  };
+
+  // Handler to remove an adjustment
+  const handleRemoveAdjustment = (id: string) => {
+    setCustomAdjustments(customAdjustments.filter(adj => adj.id !== id));
+  };
+
+  // Calculate total custom adjustments
+  const totalCustomAdjustments = customAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
+
   if (
     !data ||
     !data.metrics_by_year ||
@@ -423,7 +458,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
               Ratio Breakdowns ({latestYear})
             </h3>
 
-            <Accordion type="multiple" className="w-full space-y-3">
+            <Accordion type="multiple" defaultValue={['fccr']} className="w-full space-y-3">
               {/* FCCR Breakdown */}
               <AccordionItem
                 value="fccr"
@@ -433,22 +468,33 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                   <div className="flex items-center justify-between w-full pr-4">
                     <span className="font-semibold text-gray-800">
                       Fixed Charge Coverage Ratio (FCCR)
+                      {customAdjustments.length > 0 && (
+                        <span className="text-xs text-blue-600 ml-2">(adjusted)</span>
+                      )}
                     </span>
                     {metrics.fccr != null && (
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold text-gray-900">
-                          {metrics.fccr.toFixed(2)}x
+                          {customAdjustments.length > 0 && metrics.fccr_breakdown?.denominator
+                            ? ((metrics.fccr_breakdown.adjusted_ebitda + totalCustomAdjustments) / metrics.fccr_breakdown.denominator).toFixed(2)
+                            : metrics.fccr.toFixed(2)}x
                         </span>
                         <span
                           className="px-2 py-0.5 rounded text-xs text-white font-medium"
                           style={{
                             backgroundColor: getFCCRHealth(
-                              metrics.fccr,
+                              customAdjustments.length > 0 && metrics.fccr_breakdown?.denominator
+                                ? (metrics.fccr_breakdown.adjusted_ebitda + totalCustomAdjustments) / metrics.fccr_breakdown.denominator
+                                : metrics.fccr,
                             ).color,
                           }}
                         >
                           {getRatingLabel(
-                            getFCCRHealth(metrics.fccr).level,
+                            getFCCRHealth(
+                              customAdjustments.length > 0 && metrics.fccr_breakdown?.denominator
+                                ? (metrics.fccr_breakdown.adjusted_ebitda + totalCustomAdjustments) / metrics.fccr_breakdown.denominator
+                                : metrics.fccr
+                            ).level,
                           )}
                         </span>
                       </div>
@@ -495,6 +541,81 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               )}
                             </span>
                           </div>
+
+                          {/* Custom Adjustments Display */}
+                          {customAdjustments.length > 0 && (
+                            <div className="border-t border-blue-200 pt-2 mt-2">
+                              <div className="text-xs text-blue-700 font-medium mb-2">Custom Adjustments:</div>
+                              <div className="space-y-1">
+                                {customAdjustments.map((adj) => (
+                                  <div key={adj.id} className="flex justify-between items-center text-gray-600 group">
+                                    <span className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => handleRemoveAdjustment(adj.id)}
+                                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity text-xs"
+                                        title="Remove adjustment"
+                                      >
+                                        ×
+                                      </button>
+                                      {adj.description}
+                                    </span>
+                                    <span className={adj.amount >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                      {adj.amount >= 0 ? '+ ' : '- '}{formatCurrency(Math.abs(adj.amount))}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Add New Adjustment Input */}
+                          <div className="border-t border-blue-200 pt-3 mt-2">
+                            <div className="text-xs text-blue-700 font-medium mb-2">Add Adjustment:</div>
+                            <div className="flex gap-2">
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                                <input
+                                  type="number"
+                                  value={newAdjustmentAmount}
+                                  onChange={(e) => setNewAdjustmentAmount(e.target.value)}
+                                  placeholder="0"
+                                  className="w-24 pl-6 pr-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                              <input
+                                type="text"
+                                value={newAdjustmentDescription}
+                                onChange={(e) => setNewAdjustmentDescription(e.target.value)}
+                                placeholder="Description..."
+                                className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleAddAdjustment();
+                                }}
+                              />
+                              <button
+                                onClick={handleAddAdjustment}
+                                disabled={!newAdjustmentAmount || !newAdjustmentDescription.trim()}
+                                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                              >
+                                Add
+                              </button>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">
+                              Use negative values for deductions, positive for additions
+                            </p>
+                          </div>
+
+                          {/* Adjusted Total */}
+                          {customAdjustments.length > 0 && (
+                            <div className="flex justify-between font-bold border-t border-blue-300 pt-2 mt-2">
+                              <span>= Adjusted Numerator</span>
+                              <span className="text-blue-700">
+                                {formatCurrency(
+                                  metrics.fccr_breakdown.adjusted_ebitda + totalCustomAdjustments
+                                )}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -594,12 +715,33 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         </div>
                       </div>
 
+                      {/* Adjusted FCCR Display */}
+                      {customAdjustments.length > 0 && metrics.fccr_breakdown.denominator > 0 && (
+                        <div className="bg-blue-50 rounded-lg p-3 mb-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-blue-800">Adjusted FCCR:</span>
+                            <span className="text-xl font-bold text-blue-700">
+                              {((metrics.fccr_breakdown.adjusted_ebitda + totalCustomAdjustments) / metrics.fccr_breakdown.denominator).toFixed(2)}x
+                            </span>
+                          </div>
+                          <div className="text-xs text-blue-600 mt-1">
+                            Original FCCR: {metrics.fccr?.toFixed(2)}x | Adjustment: {formatCurrency(totalCustomAdjustments)}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Reasoning */}
                       {metrics.fccr != null && (
                         <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
                           {getFCCRReasoning(
-                            metrics.fccr,
-                            getFCCRHealth(metrics.fccr).level,
+                            customAdjustments.length > 0 && metrics.fccr_breakdown?.denominator
+                              ? (metrics.fccr_breakdown.adjusted_ebitda + totalCustomAdjustments) / metrics.fccr_breakdown.denominator
+                              : metrics.fccr,
+                            getFCCRHealth(
+                              customAdjustments.length > 0 && metrics.fccr_breakdown?.denominator
+                                ? (metrics.fccr_breakdown.adjusted_ebitda + totalCustomAdjustments) / metrics.fccr_breakdown.denominator
+                                : metrics.fccr
+                            ).level,
                           )}
                         </p>
                       )}

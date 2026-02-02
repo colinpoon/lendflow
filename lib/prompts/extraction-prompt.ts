@@ -171,6 +171,14 @@ RULES
 • If a value is unavailable for a metric, output null (do NOT omit the key).
 • For EBITDA calculation: ebitda = net_income + interest + taxes + depreciation_amortization
 
+INCOME STATEMENT FIELDS - CRITICAL:
+• "interest": Extract TOTAL finance costs/interest expense from Income Statement. Look for:
+  - "Finance costs" (IFRS) or "Interest expense" (US GAAP)
+  - This is the TOTAL interest for the period, including interest on debt, leases, and notes
+  - For Zedcor-style statements: look under "Other (income) expenses" section for "Finance costs"
+  - Extract as POSITIVE number (e.g., Finance costs of 1,621 → extract 1,621)
+• "taxes": Current tax expense from Income Statement (may be zero or a recovery)
+
 DEBT EXTRACTION - CRITICAL FOR ACCURACY:
 Extract all debt components from the Balance Sheet liabilities section:
 

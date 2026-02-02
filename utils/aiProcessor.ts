@@ -164,12 +164,22 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
   // EBITDA Calculation
   // ─────────────────────────────────────────────────────────────────────────
 
+  // Debug: Show extracted EBITDA components
+  console.log(`\n📊 EBITDA COMPONENTS (Extracted):`);
+  console.log(`   net_income:                ${m.net_income}`);
+  console.log(`   interest:                  ${m.interest}`);
+  console.log(`   taxes:                     ${m.taxes}`);
+  console.log(`   depreciation_amortization: ${m.depreciation_amortization}`);
+  console.log(`   ebitda (if reported):      ${m.ebitda ?? 'N/A (will calculate)'}`);
+
   const ebitda = calculateEBITDA(m);
   if (ebitda != null) {
     if (m.ebitda == null) {
       result.ebitda = ebitda;
       result.ebitda_calculated = true;
-      console.log(`📊 Computed EBITDA: ${ebitda} (from components)`);
+      console.log(`   CALCULATED EBITDA:         ${ebitda} = ${m.net_income} + ${m.interest ?? 0} + ${m.taxes ?? 0} + ${m.depreciation_amortization}`);
+    } else {
+      console.log(`   USING REPORTED EBITDA:     ${m.ebitda}`);
     }
 
     // Adjusted EBITDA
@@ -289,18 +299,37 @@ function logAdjustedEBITDA(
   console.log(`\n📊 ADJUSTED EBITDA CALCULATION DEBUG:`);
   console.log(`   Base EBITDA:                 ${ebitda}`);
   console.log(`   + Non-cash Adjustments:      ${breakdown.non_cash_adjustments}`);
-  console.log(`     (stock_comp: ${adj.stock_based_compensation ?? 0}, impairment: ${adj.impairment_charges ?? 0})`);
+  console.log(`     stock_based_compensation:  ${adj.stock_based_compensation ?? 0}`);
+  console.log(`     impairment_charges:        ${adj.impairment_charges ?? 0}`);
+  console.log(`     goodwill_impairment:       ${adj.goodwill_impairment ?? 0}`);
+  console.log(`     unrealized_gains_losses:   ${adj.unrealized_gains_losses ?? 0}`);
+  console.log(`     deferred_compensation:     ${adj.deferred_compensation ?? 0}`);
+  console.log(`     other_non_cash:            ${adj.other_non_cash ?? 0}`);
+  console.log(`     ⚠️  loss_on_disposal:       ${adj.loss_on_disposal ?? 0} ← EXCLUDED FROM CALC`);
   console.log(`   + One-time Expenses:         ${breakdown.one_time_expenses}`);
   console.log(`   + Owner/Mgmt Adjustments:    ${breakdown.owner_management_adjustments}`);
   console.log(`   + Accounting Adjustments:    ${breakdown.accounting_adjustments}`);
   console.log(`   + FX Adjustments:            ${breakdown.fx_adjustments}`);
   console.log(`   + Pro Forma Adjustments:     ${breakdown.pro_forma_adjustments}`);
   console.log(`   - One-time Gains:            ${breakdown.one_time_gains}`);
-  console.log(`     (other_income_non_operating: ${adj.other_income_non_operating ?? 0})`);
+  console.log(`     other_income_non_operating: ${adj.other_income_non_operating ?? 0}`);
+  console.log(`     ⚠️  gain_on_disposal:        ${adj.gain_on_disposal ?? 0} ← EXCLUDED FROM CALC`);
   console.log(`   ─────────────────────────────────────`);
   console.log(`   = Calculated Adj. EBITDA:    ${result.calculated_adjusted_ebitda}`);
   console.log(`   Reported Adj. EBITDA:        ${m.reported_adjusted_ebitda ?? 'N/A'}`);
-  console.log(`   FINAL Adjusted EBITDA:       ${result.adjusted_ebitda}\n`);
+  console.log(`   FINAL Adjusted EBITDA:       ${result.adjusted_ebitda}`);
+
+  // Show potential value if disposal items were included
+  const lossOnDisposal = adj.loss_on_disposal ?? 0;
+  const gainOnDisposal = adj.gain_on_disposal ?? 0;
+  if (lossOnDisposal !== 0 || gainOnDisposal !== 0) {
+    const potentialValue = (result.adjusted_ebitda ?? 0) + lossOnDisposal - gainOnDisposal;
+    console.log(`\n   🔧 IF DISPOSAL ITEMS INCLUDED:`);
+    console.log(`      + loss_on_disposal:       +${lossOnDisposal}`);
+    console.log(`      - gain_on_disposal:       -${gainOnDisposal}`);
+    console.log(`      = Potential Adj. EBITDA:  ${potentialValue}`);
+  }
+  console.log('');
 }
 
 function logFCCR(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   FileSpreadsheet,
   BarChart4,
@@ -14,6 +14,7 @@ import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import RiskAssessment, {
   RiskData,
 } from '@/components/RiskAssessment';
+import FCCRBreakdown from '@/components/FCCRBreakdown';
 import {
   Card,
   CardContent,
@@ -42,6 +43,12 @@ interface DebtHealthAssessment {
   suggested_loan_structure: string;
 }
 
+interface CustomAdjustment {
+  id: string;
+  amount: number;
+  description: string;
+}
+
 const Home = () => {
   const [extractedData, setExtractedData] = useState<any>(null);
 
@@ -53,6 +60,15 @@ const Home = () => {
   const [riskData, setRiskData] = useState<RiskData | null>(null);
   const [debtHealthAssessment, setDebtHealthAssessment] =
     useState<DebtHealthAssessment | null>(null);
+
+  // Custom adjustments state (lifted from FCCRBreakdown for cross-component sharing)
+  const [customAdjustments, setCustomAdjustments] = useState<CustomAdjustment[]>([]);
+
+  // Calculate total custom adjustments
+  const totalCustomAdjustments = useMemo(
+    () => customAdjustments.reduce((sum, adj) => sum + adj.amount, 0),
+    [customAdjustments]
+  );
 
   const handleDataUpdate = (data: any) => {
     console.log('🐞 page.tsx received payload:', data);
@@ -162,6 +178,7 @@ const Home = () => {
                     <WeightedRiskGauge
                       data={financialData}
                       debtHealthAssessment={debtHealthAssessment}
+                      customFccrAdjustment={totalCustomAdjustments}
                     />
                   </CardContent>
                 </Card>
@@ -187,6 +204,22 @@ const Home = () => {
                   </CardHeader>
                   <CardContent>
                     <DebtHealthMeters data={financialData} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* FCCR/DSCR Ratio Breakdowns */}
+              {financialData && (
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Ratio Breakdowns</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FCCRBreakdown
+                      data={financialData}
+                      customAdjustments={customAdjustments}
+                      onCustomAdjustmentsChange={setCustomAdjustments}
+                    />
                   </CardContent>
                 </Card>
               )}

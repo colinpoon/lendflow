@@ -55,15 +55,16 @@ export function calculateAdjustedEBITDA(
   // Non-Cash Adjustments (add back)
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Note: loss_on_disposal uses Math.max(0, ...) to only include actual losses,
-  // not gains that AI may incorrectly extract as negative values
+  // Non-cash adjustments to add back to EBITDA
+  // NOTE: loss_on_disposal is EXCLUDED per banker's conservative approach -
+  // disposal losses represent real economic events and are not added back
   const nonCashAdjustments = [
     adj.stock_based_compensation,
     adj.impairment_charges,
     adj.goodwill_impairment,
     adj.unrealized_gains_losses,
     adj.deferred_compensation,
-    Math.max(0, adj.loss_on_disposal ?? 0) || null, // Only positive losses
+    // adj.loss_on_disposal - EXCLUDED: disposal losses are real economic events
     adj.other_non_cash,
   ]
     .filter((v): v is number => v != null && v !== 0)

@@ -120,19 +120,38 @@ export interface AdjustedEBITDABreakdown {
   uses_reported_value: boolean;
 }
 
+/**
+ * CapEx treatment modes for FCCR calculation
+ * - 'unfunded': Deduct only unfunded CapEx (CapEx - Proceeds from LT Debt) - DEFAULT
+ * - 'all': Deduct 100% of CapEx regardless of funding
+ * - 'none': Exclude CapEx entirely from calculation
+ * - 'custom': Deduct a custom percentage of CapEx
+ */
+export type CapexTreatmentMode = 'unfunded' | 'all' | 'none' | 'custom';
+
+export interface CapexTreatmentConfig {
+  mode: CapexTreatmentMode;
+  customPercentage?: number; // 0-100, only used when mode is 'custom'
+}
+
 export interface FCCRBreakdown {
   calculation_type: 'lender_defined';
+  // CapEx treatment used
+  capex_treatment: CapexTreatmentMode;
+  capex_custom_percentage?: number; // Only present when mode is 'custom'
   // Numerator components
   adjusted_ebitda: number;
   capital_expenditures: number;
   proceeds_from_lt_debt: number;
   unfunded_capex: number;
+  capex_deduction: number; // The actual amount deducted based on treatment mode
   cash_taxes_paid: number;
   distributions_paid: number;
   numerator: number;
   // Denominator components
   ttm_principal_payments: number;
   ttm_interest_expense: number;
+  lease_payments: number;
   denominator: number;
 }
 

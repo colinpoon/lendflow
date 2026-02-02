@@ -241,7 +241,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       </div>
 
       {/* Accordion Sections */}
-      <Accordion type="multiple" className="w-full">
+      <Accordion type="multiple" defaultValue={['breakdown', 'historical']} className="w-full">
         {/* Adjustment Breakdown Accordion */}
         {hasAdjustments && breakdown && components && (
           <AccordionItem value="breakdown" className="border rounded-lg px-4">

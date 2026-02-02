@@ -35,12 +35,18 @@ interface YearMetrics {
   total_debt_to_capital: number | null;
   adjusted_ebitda: number | null;
   ebitda: number | null;
+  fccr_breakdown?: {
+    numerator: number;
+    denominator: number;
+  } | null;
 }
 
 interface WeightedRiskGaugeProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
   debtHealthAssessment: DebtHealthAssessment | null;
   riskData?: RiskData | null;
+  // Custom FCCR adjustment from FCCRBreakdown (total of all custom adjustments)
+  customFccrAdjustment?: number;
 }
 
 type RiskLevel = 'very-low' | 'low' | 'moderate' | 'elevated' | 'high';
@@ -400,6 +406,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   data,
   debtHealthAssessment,
   riskData,
+  customFccrAdjustment = 0,
 }) => {
   if (!data || !data.metrics_by_year || Object.keys(data.metrics_by_year).length === 0) {
     return <p className="text-gray-500">No metrics available for risk assessment.</p>;
@@ -410,8 +417,17 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   const latestYear = years[0];
   const metrics = data.metrics_by_year[latestYear];
 
-  // Calculate individual risk scores
-  const fccrScore = getFCCRRiskScore(metrics.fccr);
+  // Calculate adjusted FCCR if custom adjustments exist
+  const fccrBreakdown = metrics.fccr_breakdown;
+  const adjustedFccr =
+    customFccrAdjustment !== 0 && fccrBreakdown && fccrBreakdown.denominator > 0
+      ? parseFloat(
+          ((fccrBreakdown.numerator + customFccrAdjustment) / fccrBreakdown.denominator).toFixed(2)
+        )
+      : metrics.fccr;
+
+  // Calculate individual risk scores (use adjusted FCCR if available)
+  const fccrScore = getFCCRRiskScore(adjustedFccr);
   const debtEbitdaScore = getDebtEBITDARiskScore(metrics.senior_debt_to_ebitda);
   const debtCapitalScore = getDebtCapitalRiskScore(metrics.total_debt_to_capital);
 
@@ -466,8 +482,8 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         {/* Component Scores */}
         <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
           <MetricBadge
-            label="FCCR (50%)"
-            value={metrics.fccr}
+            label={customFccrAdjustment !== 0 ? "FCCR (50%) *" : "FCCR (50%)"}
+            value={adjustedFccr}
             score={fccrScore}
             format={(v) => `${v.toFixed(2)}x`}
           />
@@ -483,6 +499,11 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             score={debtCapitalScore}
             format={(v) => `${(v * 100).toFixed(0)}%`}
           />
+          {customFccrAdjustment !== 0 && (
+            <div className="text-xs text-blue-600 bg-blue-50 rounded p-2 text-center">
+              * FCCR includes custom adjustments (${customFccrAdjustment > 0 ? '+' : ''}{customFccrAdjustment.toLocaleString()}K)
+            </div>
+          )}
         </div>
       </div>
 
@@ -516,7 +537,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
 
       {/* Risk Factors Accordion */}
       {(assessment.key_risk_factors?.length > 0 || assessment.positive_factors?.length > 0) && (
-        <Accordion type="multiple" defaultValue={['risks']} className="w-full space-y-3">
+        <Accordion type="multiple" defaultValue={['risks', 'positives']} className="w-full space-y-3">
           {/* Key Risk Factors */}
           {assessment.key_risk_factors?.length > 0 && (
             <AccordionItem value="risks" className="border rounded-lg px-4">
@@ -621,7 +642,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           </div>
 
           {/* Historical Chart Accordion */}
-          <Accordion type="single" collapsible className="w-full mt-4">
+          <Accordion type="single" collapsible defaultValue="chart" className="w-full mt-4">
             <AccordionItem value="chart" className="border rounded-lg px-4">
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-2">
@@ -642,7 +663,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
       {/* Credit Risk Pillar Observations */}
       {riskData && riskData.pillars && Object.keys(riskData.pillars).length > 0 && (
         <div className="mt-6 pt-4 border-t">
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible defaultValue="pillars" className="w-full">
             <AccordionItem value="pillars" className="border rounded-lg px-4">
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-2">
