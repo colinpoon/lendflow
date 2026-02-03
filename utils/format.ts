@@ -9,14 +9,21 @@
 
 /**
  * Format currency values displayed in thousands
+ * Automatically scales to M (millions) or B (billions) for large values
+ * - Millions: 4 significant digits (e.g., $1.234M, $12.34M, $123.4M)
+ * - Billions: 5 significant digits (e.g., $1.2345B, $12.345B, $123.45B)
  * @param value - The value in thousands
- * @returns Formatted string like "$1,234K" or "N/A" for null/undefined
+ * @returns Formatted string like "$1,234K", "$1.234M", "$1.2345B" or "N/A" for null/undefined
  */
 export function formatCurrency(value: number | null | undefined): string {
   if (value == null || (typeof value === 'number' && isNaN(value))) {
     return 'N/A';
   }
-  return `$${value.toLocaleString('en-US', {
+
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  return `${sign}$${absValue.toLocaleString('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })}K`;
@@ -113,7 +120,11 @@ export function sanitizeObservationText(text: string): string {
  */
 export function fmtCurrency(value: number | null | undefined): string {
   if (typeof value !== 'number' || isNaN(value)) return '—';
-  return `$${value.toLocaleString('en-US', {
+
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  return `${sign}$${absValue.toLocaleString('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })}K`;

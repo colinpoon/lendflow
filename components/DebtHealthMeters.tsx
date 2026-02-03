@@ -41,6 +41,22 @@ interface DebtBreakdown {
   other_non_senior_debt: number;
 }
 
+interface DebtComponents {
+  bank_debt_current: number | null;
+  bank_debt_long_term: number | null;
+  term_loans: number | null;
+  revolving_credit_facilities: number | null;
+  lease_liabilities_current: number | null;
+  lease_liabilities_long_term: number | null;
+  finance_lease_liabilities: number | null;
+  operating_lease_liabilities: number | null;
+  notes_payable: number | null;
+  subordinated_debt: number | null;
+  convertible_debt: number | null;
+  bonds_debentures: number | null;
+  other_borrowings: number | null;
+}
+
 interface YearMetrics {
   // Calculated ratios
   fccr: number | null;
@@ -51,8 +67,10 @@ interface YearMetrics {
   // Source data for calculations
   ebitda: number | null;
   adjusted_ebitda: number | null;
+  reported_adjusted_ebitda: number | null;
   fccr_breakdown: FCCRBreakdown | null;
   debt_breakdown: DebtBreakdown | null;
+  debt_components: DebtComponents | null;
   senior_debt: number | null;
   total_debt: number | null;
   shareholders_equity: number | null;
@@ -74,7 +92,30 @@ type HealthLevel =
  */
 const formatCurrency = (value: number | null): string => {
   if (value == null) return 'N/A';
-  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
+
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  return `${sign}$${absValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
+};
+
+// Helper to show source info (extracted value)
+const SourceInfo: React.FC<{
+  value: number | null | undefined;
+  label?: string;
+}> = ({ value, label }) => {
+  if (value == null) {
+    return (
+      <span className="text-xs text-gray-400 ml-1">
+        ({label || 'extracted'}: null)
+      </span>
+    );
+  }
+  return (
+    <span className="text-xs text-gray-400 ml-1">
+      ({label || 'extracted'}: {value.toLocaleString()})
+    </span>
+  );
 };
 
 const getRatingLabel = (level: HealthLevel): string => {
@@ -132,7 +173,7 @@ const getDebtCapitalReasoning = (
   value: number,
   level: HealthLevel,
 ): string => {
-  const pct = (value * 100).toFixed(0);
+  const pct = (value * 100).toFixed(1);
   switch (level) {
     case 'excellent':
       return `Very low debt at ${pct}% of capital. High financial stability with maximum flexibility.`;
@@ -439,7 +480,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
               <CircularGauge
                 value={metrics.total_debt_to_capital}
                 label="Debt / Capital"
-                formatValue={(v) => `${(v * 100).toFixed(0)}%`}
+                formatValue={(v) => `${(v * 100).toFixed(1)}%`}
                 getHealth={getTotalDebtCapitalHealth}
                 subtitle="Target: < 30%"
               />
@@ -806,75 +847,75 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           Numerator (Senior Debt)
                         </div>
                         <div className="pl-4 border-l-2 border-indigo-200 space-y-1 text-sm">
-                          {metrics.debt_breakdown ? (
+                          {metrics.debt_components ? (
                             <>
-                              {metrics.debt_breakdown.bank_debt >
-                                0 && (
+                              {/* Bank Debt Components */}
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600 flex items-center flex-wrap">
+                                  Bank Debt - Current
+                                  <SourceInfo value={metrics.debt_components.bank_debt_current} />
+                                </span>
+                                <span className="font-medium">
+                                  {formatCurrency(metrics.debt_components.bank_debt_current ?? 0)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600 flex items-center flex-wrap">
+                                  + Bank Debt - Long-term
+                                  <SourceInfo value={metrics.debt_components.bank_debt_long_term} />
+                                </span>
+                                <span className="font-medium">
+                                  + {formatCurrency(metrics.debt_components.bank_debt_long_term ?? 0)}
+                                </span>
+                              </div>
+                              {/* Lease Liabilities */}
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600 flex items-center flex-wrap">
+                                  + Lease Liabilities - Current
+                                  <SourceInfo value={metrics.debt_components.lease_liabilities_current} />
+                                </span>
+                                <span className="font-medium">
+                                  + {formatCurrency(metrics.debt_components.lease_liabilities_current ?? 0)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600 flex items-center flex-wrap">
+                                  + Lease Liabilities - Long-term
+                                  <SourceInfo value={metrics.debt_components.lease_liabilities_long_term} />
+                                </span>
+                                <span className="font-medium">
+                                  + {formatCurrency(metrics.debt_components.lease_liabilities_long_term ?? 0)}
+                                </span>
+                              </div>
+                            </>
+                          ) : metrics.debt_breakdown ? (
+                            <>
+                              {metrics.debt_breakdown.bank_debt > 0 && (
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">
                                     Bank Debt (Current + Long-term)
                                   </span>
                                   <span className="font-medium">
-                                    {formatCurrency(
-                                      metrics.debt_breakdown
-                                        .bank_debt,
-                                    )}
+                                    {formatCurrency(metrics.debt_breakdown.bank_debt)}
                                   </span>
                                 </div>
                               )}
-                              {metrics.debt_breakdown
-                                .lease_liabilities > 0 && (
+                              {metrics.debt_breakdown.lease_liabilities > 0 && (
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">
-                                    + Lease Liabilities (Current +
-                                    Long-term)
+                                    + Lease Liabilities (Current + Long-term)
                                   </span>
                                   <span className="font-medium">
-                                    +{' '}
-                                    {formatCurrency(
-                                      metrics.debt_breakdown
-                                        .lease_liabilities,
-                                    )}
+                                    + {formatCurrency(metrics.debt_breakdown.lease_liabilities)}
                                   </span>
                                 </div>
                               )}
-                              {metrics.debt_breakdown.bank_debt ===
-                                0 &&
-                                metrics.debt_breakdown
-                                  .lease_liabilities === 0 && (
-                                  <div className="flex justify-between text-gray-500 italic">
-                                    <span>
-                                      No debt component breakdown
-                                      available
-                                    </span>
-                                    <span>
-                                      {formatCurrency(
-                                        metrics.senior_debt,
-                                      )}
-                                    </span>
-                                  </div>
-                                )}
                             </>
                           ) : (
-                            <>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">
-                                  Bank Debt (Current + Long-term)
-                                </span>
-                                <span className="font-medium text-gray-400">
-                                  Included
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">
-                                  + Lease Liabilities (Current +
-                                  Long-term)
-                                </span>
-                                <span className="font-medium text-gray-400">
-                                  + Included
-                                </span>
-                              </div>
-                            </>
+                            <div className="flex justify-between text-gray-500 italic">
+                              <span>No debt component breakdown available</span>
+                              <span>{formatCurrency(metrics.senior_debt)}</span>
+                            </div>
                           )}
                         </div>
                         <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-indigo-800">
@@ -890,14 +931,42 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         <div className="text-sm font-semibold text-teal-700 mb-2">
                           Denominator (Adjusted EBITDA)
                         </div>
+                        <div className="pl-4 border-l-2 border-teal-200 space-y-1 text-sm">
+                          <div className="flex justify-between items-start">
+                            <span className="text-gray-600 flex items-center flex-wrap">
+                              Reported EBITDA
+                              <SourceInfo value={metrics.ebitda} />
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(metrics.ebitda)}
+                            </span>
+                          </div>
+                          {metrics.reported_adjusted_ebitda != null && (
+                            <div className="flex justify-between items-start">
+                              <span className="text-gray-600 flex items-center flex-wrap">
+                                Company-Reported Adj. EBITDA
+                                <SourceInfo value={metrics.reported_adjusted_ebitda} />
+                              </span>
+                              <span className="font-medium text-purple-600">
+                                {formatCurrency(metrics.reported_adjusted_ebitda)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                         <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-teal-800">
-                          <span>Adjusted EBITDA</span>
+                          <span>Adjusted EBITDA (Used)</span>
                           <span>
-                            {formatCurrency(
-                              metrics.adjusted_ebitda ??
-                                metrics.ebitda,
-                            )}
+                            {formatCurrency(metrics.adjusted_ebitda ?? metrics.ebitda)}
                           </span>
+                        </div>
+                      </div>
+
+                      {/* Calculation Formula */}
+                      <div className="bg-gray-100 rounded-lg p-3 mb-4">
+                        <div className="font-mono text-xs text-gray-600 space-y-1">
+                          <div>
+                            <span className="text-gray-500">Ratio =</span> {(metrics.senior_debt ?? 0).toLocaleString()} / {(metrics.adjusted_ebitda ?? metrics.ebitda ?? 0).toLocaleString()} = <span className="font-semibold">{metrics.senior_debt_to_ebitda?.toFixed(2)}x</span>
+                          </div>
                         </div>
                       </div>
 
@@ -936,7 +1005,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         <span className="text-lg font-bold text-gray-900">
                           {(
                             metrics.total_debt_to_capital * 100
-                          ).toFixed(0)}
+                          ).toFixed(1)}
                           %
                         </span>
                         <span
@@ -975,113 +1044,121 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           Numerator (Total Debt)
                         </div>
                         <div className="pl-4 border-l-2 border-rose-200 space-y-1 text-sm">
-                          {metrics.debt_breakdown ? (
+                          {metrics.debt_components ? (
                             <>
-                              {/* Senior Debt Components */}
-                              {metrics.debt_breakdown.bank_debt >
-                                0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
-                                    Bank Debt
-                                  </span>
-                                  <span className="font-medium">
-                                    {formatCurrency(
-                                      metrics.debt_breakdown
-                                        .bank_debt,
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                              {metrics.debt_breakdown
-                                .lease_liabilities > 0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
-                                    + Lease Liabilities
-                                  </span>
-                                  <span className="font-medium">
-                                    +{' '}
-                                    {formatCurrency(
-                                      metrics.debt_breakdown
-                                        .lease_liabilities,
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                              {/* Non-Senior Debt Components */}
-                              {metrics.debt_breakdown.notes_payable >
-                                0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
+                              {/* Bank Debt */}
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600 flex items-center flex-wrap">
+                                  Bank Debt - Current
+                                  <SourceInfo value={metrics.debt_components.bank_debt_current} />
+                                </span>
+                                <span className="font-medium">
+                                  {formatCurrency(metrics.debt_components.bank_debt_current ?? 0)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600 flex items-center flex-wrap">
+                                  + Bank Debt - Long-term
+                                  <SourceInfo value={metrics.debt_components.bank_debt_long_term} />
+                                </span>
+                                <span className="font-medium">
+                                  + {formatCurrency(metrics.debt_components.bank_debt_long_term ?? 0)}
+                                </span>
+                              </div>
+                              {/* Lease Liabilities */}
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600 flex items-center flex-wrap">
+                                  + Lease Liabilities - Current
+                                  <SourceInfo value={metrics.debt_components.lease_liabilities_current} />
+                                </span>
+                                <span className="font-medium">
+                                  + {formatCurrency(metrics.debt_components.lease_liabilities_current ?? 0)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600 flex items-center flex-wrap">
+                                  + Lease Liabilities - Long-term
+                                  <SourceInfo value={metrics.debt_components.lease_liabilities_long_term} />
+                                </span>
+                                <span className="font-medium">
+                                  + {formatCurrency(metrics.debt_components.lease_liabilities_long_term ?? 0)}
+                                </span>
+                              </div>
+                              {/* Subordinated/Other Debt */}
+                              {metrics.debt_components.notes_payable != null && metrics.debt_components.notes_payable > 0 && (
+                                <div className="flex justify-between items-start">
+                                  <span className="text-gray-600 flex items-center flex-wrap">
                                     + Notes Payable
+                                    <SourceInfo value={metrics.debt_components.notes_payable} />
                                   </span>
                                   <span className="font-medium">
-                                    +{' '}
-                                    {formatCurrency(
-                                      metrics.debt_breakdown
-                                        .notes_payable,
-                                    )}
+                                    + {formatCurrency(metrics.debt_components.notes_payable)}
                                   </span>
                                 </div>
                               )}
-                              {metrics.debt_breakdown
-                                .subordinated_debt > 0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
+                              {metrics.debt_components.subordinated_debt != null && metrics.debt_components.subordinated_debt > 0 && (
+                                <div className="flex justify-between items-start">
+                                  <span className="text-gray-600 flex items-center flex-wrap">
                                     + Subordinated Debt
+                                    <SourceInfo value={metrics.debt_components.subordinated_debt} />
                                   </span>
                                   <span className="font-medium">
-                                    +{' '}
-                                    {formatCurrency(
-                                      metrics.debt_breakdown
-                                        .subordinated_debt,
-                                    )}
+                                    + {formatCurrency(metrics.debt_components.subordinated_debt)}
                                   </span>
                                 </div>
                               )}
-                              {metrics.debt_breakdown
-                                .other_non_senior_debt > 0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
-                                    + Other Debt
+                              {metrics.debt_components.other_borrowings != null && metrics.debt_components.other_borrowings > 0 && (
+                                <div className="flex justify-between items-start">
+                                  <span className="text-gray-600 flex items-center flex-wrap">
+                                    + Other Borrowings
+                                    <SourceInfo value={metrics.debt_components.other_borrowings} />
                                   </span>
                                   <span className="font-medium">
-                                    +{' '}
-                                    {formatCurrency(
-                                      metrics.debt_breakdown
-                                        .other_non_senior_debt,
-                                    )}
+                                    + {formatCurrency(metrics.debt_components.other_borrowings)}
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          ) : metrics.debt_breakdown ? (
+                            <>
+                              {metrics.debt_breakdown.bank_debt > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Bank Debt</span>
+                                  <span className="font-medium">
+                                    {formatCurrency(metrics.debt_breakdown.bank_debt)}
+                                  </span>
+                                </div>
+                              )}
+                              {metrics.debt_breakdown.lease_liabilities > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">+ Lease Liabilities</span>
+                                  <span className="font-medium">
+                                    + {formatCurrency(metrics.debt_breakdown.lease_liabilities)}
+                                  </span>
+                                </div>
+                              )}
+                              {metrics.debt_breakdown.notes_payable > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">+ Notes Payable</span>
+                                  <span className="font-medium">
+                                    + {formatCurrency(metrics.debt_breakdown.notes_payable)}
+                                  </span>
+                                </div>
+                              )}
+                              {metrics.debt_breakdown.subordinated_debt > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">+ Subordinated Debt</span>
+                                  <span className="font-medium">
+                                    + {formatCurrency(metrics.debt_breakdown.subordinated_debt)}
                                   </span>
                                 </div>
                               )}
                             </>
                           ) : (
-                            <>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">
-                                  Senior Debt (Bank + Leases)
-                                </span>
-                                <span className="font-medium">
-                                  {formatCurrency(
-                                    metrics.senior_debt,
-                                  )}
-                                </span>
-                              </div>
-                              {metrics.total_debt !==
-                                metrics.senior_debt && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
-                                    + Subordinated Debt
-                                  </span>
-                                  <span className="font-medium">
-                                    +{' '}
-                                    {formatCurrency(
-                                      (metrics.total_debt ?? 0) -
-                                        (metrics.senior_debt ?? 0),
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                            </>
+                            <div className="flex justify-between text-gray-500 italic">
+                              <span>No debt breakdown available</span>
+                              <span>{formatCurrency(metrics.total_debt)}</span>
+                            </div>
                           )}
                         </div>
                         <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-rose-800">
@@ -1098,7 +1175,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           Denominator (Total Capital)
                         </div>
                         <div className="pl-4 border-l-2 border-emerald-200 space-y-1 text-sm">
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-start">
                             <span className="text-gray-600">
                               Total Debt
                             </span>
@@ -1106,15 +1183,13 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               {formatCurrency(metrics.total_debt)}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
+                          <div className="flex justify-between items-start">
+                            <span className="text-gray-600 flex items-center flex-wrap">
                               + Shareholders&apos; Equity
+                              <SourceInfo value={metrics.shareholders_equity} />
                             </span>
                             <span className="font-medium">
-                              +{' '}
-                              {formatCurrency(
-                                metrics.shareholders_equity,
-                              )}
+                              + {formatCurrency(metrics.shareholders_equity)}
                             </span>
                           </div>
                         </div>
@@ -1126,6 +1201,18 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 metrics.shareholders_equity,
                             )}
                           </span>
+                        </div>
+                      </div>
+
+                      {/* Calculation Formula */}
+                      <div className="bg-gray-100 rounded-lg p-3 mb-4">
+                        <div className="font-mono text-xs text-gray-600 space-y-1">
+                          <div>
+                            <span className="text-gray-500">Total Capital =</span> {(metrics.total_debt ?? 0).toLocaleString()} + {(metrics.shareholders_equity ?? 0).toLocaleString()} = <span className="font-semibold">{((metrics.total_debt ?? 0) + (metrics.shareholders_equity ?? 0)).toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Ratio =</span> {(metrics.total_debt ?? 0).toLocaleString()} / {((metrics.total_debt ?? 0) + (metrics.shareholders_equity ?? 0)).toLocaleString()} = <span className="font-semibold">{((metrics.total_debt_to_capital ?? 0) * 100).toFixed(1)}%</span>
+                          </div>
                         </div>
                       </div>
 
@@ -1236,7 +1323,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             className="px-2 py-0.5 rounded text-xs text-white"
                             style={{ backgroundColor: health?.color }}
                           >
-                            {(val * 100).toFixed(0)}%
+                            {(val * 100).toFixed(1)}%
                           </span>
                         ) : (
                           '—'

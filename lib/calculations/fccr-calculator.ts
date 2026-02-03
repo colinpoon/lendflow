@@ -183,6 +183,19 @@ export function calculateFCCR(
       ttm_interest_expense: ttmInterestExpense,
       lease_payments: leasePayments,
       denominator: totalDebtService,
+      // Source values for transparency
+      sources: {
+        capital_expenditures_extracted: metrics.capital_expenditures,
+        proceeds_from_lt_debt_extracted: metrics.proceeds_from_long_term_debt,
+        cash_taxes_paid_extracted: metrics.cash_taxes_paid,
+        distributions_paid_extracted: metrics.distributions_paid,
+        ttm_principal_payments_extracted: metrics.ttm_principal_payments,
+        repayment_of_debt_fallback: metrics.repayment_of_debt,
+        ttm_interest_expense_extracted: metrics.ttm_interest_expense,
+        cash_interest_paid_fallback: metrics.cash_interest_paid,
+        interest_accrual_fallback: metrics.interest,
+        lease_payments_extracted: metrics.payment_of_lease_liability,
+      },
     },
   };
 }

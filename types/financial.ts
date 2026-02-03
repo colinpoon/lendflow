@@ -153,6 +153,19 @@ export interface FCCRBreakdown {
   ttm_interest_expense: number;
   lease_payments: number;
   denominator: number;
+  // Source values for transparency (what was extracted vs fallback)
+  sources?: {
+    capital_expenditures_extracted: number | null;
+    proceeds_from_lt_debt_extracted: number | null;
+    cash_taxes_paid_extracted: number | null;
+    distributions_paid_extracted: number | null;
+    ttm_principal_payments_extracted: number | null;
+    repayment_of_debt_fallback: number | null;
+    ttm_interest_expense_extracted: number | null;
+    cash_interest_paid_fallback: number | null;
+    interest_accrual_fallback: number | null;
+    lease_payments_extracted: number | null;
+  };
 }
 
 export interface DSCRBreakdown {

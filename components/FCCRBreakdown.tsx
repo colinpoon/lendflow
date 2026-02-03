@@ -32,6 +32,19 @@ interface FCCRBreakdownData {
   ttm_interest_expense: number;
   lease_payments: number;
   denominator: number;
+  // Source values for transparency
+  sources?: {
+    capital_expenditures_extracted: number | null;
+    proceeds_from_lt_debt_extracted: number | null;
+    cash_taxes_paid_extracted: number | null;
+    distributions_paid_extracted: number | null;
+    ttm_principal_payments_extracted: number | null;
+    repayment_of_debt_fallback: number | null;
+    ttm_interest_expense_extracted: number | null;
+    cash_interest_paid_fallback: number | null;
+    interest_accrual_fallback: number | null;
+    lease_payments_extracted: number | null;
+  };
 }
 
 interface DSCRBreakdownData {
@@ -70,12 +83,49 @@ interface FCCRBreakdownProps {
 
 const formatCurrency = (value: number | null | undefined): string => {
   if (value == null) return 'N/A';
-  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
+
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  return `${sign}$${absValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
 };
 
 const formatRatio = (value: number | null | undefined): string => {
   if (value == null) return 'N/A';
   return `${value.toFixed(2)}x`;
+};
+
+// Helper to show source info (extracted vs fallback)
+const SourceInfo: React.FC<{
+  extracted: number | null | undefined;
+  fallback?: number | null | undefined;
+  fallbackLabel?: string;
+  fallback2?: number | null | undefined;
+  fallback2Label?: string;
+}> = ({ extracted, fallback, fallbackLabel, fallback2, fallback2Label }) => {
+  const parts: string[] = [];
+
+  if (extracted != null) {
+    parts.push(`extracted: ${extracted.toLocaleString()}`);
+  } else {
+    parts.push('extracted: null');
+    if (fallback != null) {
+      parts.push(`${fallbackLabel || 'fallback'}: ${fallback.toLocaleString()}`);
+    } else if (fallbackLabel) {
+      parts.push(`${fallbackLabel}: null`);
+    }
+    if (fallback2 != null) {
+      parts.push(`${fallback2Label || 'fallback2'}: ${fallback2.toLocaleString()}`);
+    } else if (fallback2Label) {
+      parts.push(`${fallback2Label}: null`);
+    }
+  }
+
+  return (
+    <span className="text-xs text-gray-400 ml-1">
+      ({parts.join(', ')})
+    </span>
+  );
 };
 
 const getRatioColor = (ratio: number | null, thresholds: { good: number; ok: number; warning: number }): string => {
@@ -286,64 +336,71 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 {/* Numerator Section */}
                 <div className="bg-green-50 rounded-lg p-4">
                   <h5 className="font-semibold text-green-800 mb-3">
-                    Numerator: Cash Available for Debt Service
+                    Numerator Components
                   </h5>
                   <div className="space-y-2">
+                    {/* Adjusted EBITDA */}
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Adjusted EBITDA</span>
-                      <span className="font-medium">{formatCurrency(fccrBreakdown.adjusted_ebitda)}</span>
+                      <span className="text-gray-700 font-medium">Adjusted EBITDA</span>
+                      <span className="font-semibold">{formatCurrency(fccrBreakdown.adjusted_ebitda)}</span>
                     </div>
 
-                    {/* CapEx Breakdown - THE KEY TRANSPARENCY */}
+                    {/* CapEx Section */}
                     <div className="border-t border-green-200 pt-2 mt-2">
-                      <div className="flex items-center gap-2 text-xs text-green-700 font-medium mb-2">
-                        <span>CapEx Deduction</span>
-                        <span className="px-1.5 py-0.5 bg-green-200 rounded text-xs">
-                          {fccrBreakdown.capex_treatment === 'unfunded' && 'Unfunded Only'}
-                          {fccrBreakdown.capex_treatment === 'all' && '100% of CapEx'}
-                          {fccrBreakdown.capex_treatment === 'none' && 'None'}
-                          {fccrBreakdown.capex_treatment === 'custom' && `${fccrBreakdown.capex_custom_percentage ?? 0}% of CapEx`}
+                      <div className="flex justify-between text-gray-600">
+                        <span className="flex items-center flex-wrap">
+                          Capital Expenditures
+                          {fccrBreakdown.sources && (
+                            <SourceInfo extracted={fccrBreakdown.sources.capital_expenditures_extracted} />
+                          )}
+                        </span>
+                        <span>{formatCurrency(fccrBreakdown.capital_expenditures)}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span className="flex items-center flex-wrap">
+                          Proceeds from LT Debt
+                          {fccrBreakdown.sources && (
+                            <SourceInfo extracted={fccrBreakdown.sources.proceeds_from_lt_debt_extracted} />
+                          )}
+                        </span>
+                        <span>{formatCurrency(fccrBreakdown.proceeds_from_lt_debt)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium mt-1">
+                        <span className="flex items-center gap-2">
+                          Unfunded CapEx
+                          <span className="px-1.5 py-0.5 bg-green-200 rounded text-xs text-green-700">
+                            {fccrBreakdown.capex_treatment === 'unfunded' && 'CapEx - Proceeds'}
+                            {fccrBreakdown.capex_treatment === 'all' && '100% CapEx'}
+                            {fccrBreakdown.capex_treatment === 'none' && 'Excluded'}
+                            {fccrBreakdown.capex_treatment === 'custom' && `${fccrBreakdown.capex_custom_percentage ?? 0}%`}
+                          </span>
+                        </span>
+                        <span className="text-red-600">
+                          {fccrBreakdown.unfunded_capex === 0 ? '$0K' : `- ${formatCurrency(fccrBreakdown.unfunded_capex)}`}
                         </span>
                       </div>
-                      <div className="pl-4 space-y-1">
-                        <div className="flex justify-between text-gray-600">
-                          <span>Total CapEx</span>
-                          <span>{formatCurrency(fccrBreakdown.capital_expenditures)}</span>
-                        </div>
-                        {fccrBreakdown.capex_treatment === 'unfunded' && (
-                          <div className="flex justify-between text-gray-600">
-                            <span>Less: Proceeds from LT Debt</span>
-                            <span className="text-green-600">- {formatCurrency(fccrBreakdown.proceeds_from_lt_debt)}</span>
-                          </div>
-                        )}
-                        {fccrBreakdown.capex_treatment === 'custom' && (
-                          <div className="flex justify-between text-gray-600">
-                            <span>Applied Rate</span>
-                            <span>{fccrBreakdown.capex_custom_percentage ?? 0}%</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between font-medium border-t border-green-200 pt-1">
-                          <span>
-                            {fccrBreakdown.capex_treatment === 'none'
-                              ? '= No CapEx Deducted'
-                              : '= CapEx Deduction'}
-                          </span>
-                          <span className="text-red-600">
-                            {fccrBreakdown.capex_deduction === 0
-                              ? '$0'
-                              : `- ${formatCurrency(fccrBreakdown.capex_deduction)}`}
-                          </span>
-                        </div>
-                      </div>
                     </div>
 
-                    <div className="flex justify-between text-gray-600">
-                      <span>Less: Cash Taxes Paid</span>
-                      <span className="text-red-600">- {formatCurrency(fccrBreakdown.cash_taxes_paid)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Less: Distributions</span>
-                      <span className="text-red-600">- {formatCurrency(fccrBreakdown.distributions_paid)}</span>
+                    {/* Other Deductions */}
+                    <div className="border-t border-green-200 pt-2 mt-2">
+                      <div className="flex justify-between text-gray-600">
+                        <span className="flex items-center flex-wrap">
+                          Cash Taxes Paid
+                          {fccrBreakdown.sources && (
+                            <SourceInfo extracted={fccrBreakdown.sources.cash_taxes_paid_extracted} />
+                          )}
+                        </span>
+                        <span className="text-red-600">- {formatCurrency(fccrBreakdown.cash_taxes_paid)}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span className="flex items-center flex-wrap">
+                          Distributions Paid
+                          {fccrBreakdown.sources && (
+                            <SourceInfo extracted={fccrBreakdown.sources.distributions_paid_extracted} />
+                          )}
+                        </span>
+                        <span className="text-red-600">- {formatCurrency(fccrBreakdown.distributions_paid)}</span>
+                      </div>
                     </div>
 
                     {/* Custom Adjustments Section */}
@@ -409,8 +466,9 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       </p>
                     </div>
 
-                    <div className="flex justify-between font-bold border-t border-green-300 pt-2 mt-2">
-                      <span>= Cash Available {customAdjustments.length > 0 && '(Adjusted)'}</span>
+                    {/* Numerator Total */}
+                    <div className="flex justify-between font-bold border-t-2 border-green-400 pt-2 mt-2 bg-green-100 -mx-4 px-4 py-2 rounded-b">
+                      <span>= Cash Available for Debt Service {customAdjustments.length > 0 && '(Adjusted)'}</span>
                       <span className="text-green-700">{formatCurrency(adjustedNumerator ?? fccrBreakdown.numerator)}</span>
                     </div>
                   </div>
@@ -419,37 +477,72 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 {/* Denominator Section */}
                 <div className="bg-blue-50 rounded-lg p-4">
                   <h5 className="font-semibold text-blue-800 mb-3">
-                    Denominator: Total Fixed Charges
+                    Denominator Components
                   </h5>
                   <div className="space-y-2">
                     <div className="flex justify-between text-gray-600">
-                      <span>Principal Payments (TTM)</span>
+                      <span className="flex items-center flex-wrap">
+                        TTM Principal Payments
+                        {fccrBreakdown.sources && (
+                          <SourceInfo
+                            extracted={fccrBreakdown.sources.ttm_principal_payments_extracted}
+                            fallback={fccrBreakdown.sources.repayment_of_debt_fallback}
+                            fallbackLabel="repayment_of_debt"
+                          />
+                        )}
+                      </span>
                       <span>{formatCurrency(fccrBreakdown.ttm_principal_payments)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
-                      <span>Interest Expense (TTM)</span>
+                      <span className="flex items-center flex-wrap">
+                        TTM Interest Expense
+                        {fccrBreakdown.sources && (
+                          <SourceInfo
+                            extracted={fccrBreakdown.sources.ttm_interest_expense_extracted}
+                            fallback={fccrBreakdown.sources.cash_interest_paid_fallback}
+                            fallbackLabel="cash_paid"
+                            fallback2={fccrBreakdown.sources.interest_accrual_fallback}
+                            fallback2Label="accrual"
+                          />
+                        )}
+                      </span>
                       <span>{formatCurrency(fccrBreakdown.ttm_interest_expense)}</span>
                     </div>
                     {fccrBreakdown.lease_payments > 0 && (
                       <div className="flex justify-between text-gray-600">
-                        <span>Lease Payments</span>
+                        <span className="flex items-center flex-wrap">
+                          Lease Payments
+                          {fccrBreakdown.sources && (
+                            <SourceInfo extracted={fccrBreakdown.sources.lease_payments_extracted} />
+                          )}
+                        </span>
                         <span>{formatCurrency(fccrBreakdown.lease_payments)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between font-bold border-t border-blue-300 pt-2">
-                      <span>= Total Fixed Charges</span>
+                    {/* Denominator Total */}
+                    <div className="flex justify-between font-bold border-t-2 border-blue-400 pt-2 mt-2 bg-blue-100 -mx-4 px-4 py-2 rounded-b">
+                      <span>= Total Debt Service</span>
                       <span className="text-blue-700">{formatCurrency(fccrBreakdown.denominator)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Final Calculation */}
-                <div className="bg-gray-100 rounded-lg p-4 text-center">
-                  <div className="font-mono text-sm text-gray-700">
-                    FCCR = {formatCurrency(adjustedNumerator ?? fccrBreakdown.numerator)} / {formatCurrency(fccrBreakdown.denominator)} = <span className={`font-bold text-lg ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })}`}>{formatRatio(adjustedFCCR)}</span>
+                <div className="bg-gray-100 rounded-lg p-4">
+                  <h5 className="font-semibold text-gray-700 mb-3 text-center">FCCR Calculation</h5>
+                  <div className="space-y-2 font-mono text-xs text-gray-600">
+                    <div>
+                      <span className="text-gray-500">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()} - {fccrBreakdown.distributions_paid.toLocaleString()} = <span className="font-semibold text-green-700">{fccrBreakdown.numerator.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Denominator =</span> {fccrBreakdown.ttm_principal_payments.toLocaleString()} + {fccrBreakdown.ttm_interest_expense.toLocaleString()}{fccrBreakdown.lease_payments > 0 ? ` + ${fccrBreakdown.lease_payments.toLocaleString()}` : ''} = <span className="font-semibold text-blue-700">{fccrBreakdown.denominator.toLocaleString()}</span>
+                    </div>
+                    <div className="pt-2 border-t border-gray-300 text-center">
+                      <span className="text-gray-500">FCCR =</span> {(adjustedNumerator ?? fccrBreakdown.numerator).toLocaleString()} / {fccrBreakdown.denominator.toLocaleString()} = <span className={`font-bold text-lg ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })}`}>{formatRatio(adjustedFCCR)}</span>
+                    </div>
                   </div>
                   {customAdjustments.length > 0 && (
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-gray-500 mt-2 text-center">
                       Base FCCR: {formatRatio(metrics.fccr)} | Adjustments: {formatCurrency(totalCustomAdjustments)}
                     </div>
                   )}

@@ -350,7 +350,7 @@ function logFCCR(
   console.log(`     Distributions Paid:        ${breakdown.distributions_paid} (extracted: ${m.distributions_paid})`);
   console.log(`   DENOMINATOR COMPONENTS:`);
   console.log(`     TTM Principal Payments:    ${breakdown.ttm_principal_payments} (extracted: ${m.ttm_principal_payments})`);
-  console.log(`     TTM Interest Expense:      ${breakdown.ttm_interest_expense} (extracted: ${m.ttm_interest_expense}, fallback: ${m.interest})`);
+  console.log(`     TTM Interest Expense:      ${breakdown.ttm_interest_expense} (ttm: ${m.ttm_interest_expense}, cash_paid: ${m.cash_interest_paid}, accrual: ${m.interest})`);
   console.log(`     Total Debt Service:        ${breakdown.denominator}`);
   console.log(`   FCCR CALCULATION:`);
   console.log(`     Numerator = ${adjustedEbitda} - ${breakdown.unfunded_capex} - ${breakdown.cash_taxes_paid} - ${breakdown.distributions_paid} = ${breakdown.numerator}`);

@@ -66,10 +66,15 @@ interface AdjustedEBITDAProps {
 
 /**
  * Format currency values displayed in thousands (as commonly reported in financial statements)
+ * Automatically scales to M (millions) or B (billions) for large values
  */
 const formatCurrency = (value: number | null | undefined): string => {
   if (value == null) return 'N/A';
-  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
+
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  return `${sign}$${absValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
 };
 
 const formatSignedCurrency = (
