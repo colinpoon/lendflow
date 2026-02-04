@@ -7,6 +7,28 @@
  * - 'all': Deduct 100% of CapEx regardless of funding
  * - 'none': Exclude CapEx entirely from calculation
  * - 'custom': Deduct a custom percentage of CapEx
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────────┐
+ * │ ⚠️  PROTECTED CODE - DO NOT MODIFY WITHOUT APPROVAL                         │
+ * │                                                                             │
+ * │ This file contains verified financial calculation logic that has been      │
+ * │ calibrated against known financial statements. Any changes may cause       │
+ * │ calculation discrepancies.                                                 │
+ * │                                                                             │
+ * │ Before making changes:                                                     │
+ * │ 1. Get explicit approval from @colinpoon                                   │
+ * │ 2. Document WHY the change is necessary                                    │
+ * │ 3. Test against Zedcor and other reference documents                       │
+ * │ 4. Verify expected vs actual values match                                  │
+ * │                                                                             │
+ * │ FCCR Formula:                                                              │
+ * │ Numerator = Adjusted EBITDA - Unfunded CapEx - Cash Taxes - Distributions  │
+ * │ Denominator = Principal Payments + Interest Expense + Lease Payments       │
+ * │ FCCR = Numerator / Denominator                                             │
+ * │                                                                             │
+ * │ Expected Reference Values (Zedcor FY2024):                                 │
+ * │ - FCCR: 0.44x                                                              │
+ * └─────────────────────────────────────────────────────────────────────────────┘
  */
 
 import type {

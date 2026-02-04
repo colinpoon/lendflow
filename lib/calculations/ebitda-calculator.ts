@@ -1,6 +1,26 @@
 /**
  * EBITDA calculation utilities
  * Calculates EBITDA and Adjusted EBITDA from components
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────────┐
+ * │ ⚠️  PROTECTED CODE - DO NOT MODIFY WITHOUT APPROVAL                         │
+ * │                                                                             │
+ * │ This file contains verified financial calculation logic that has been      │
+ * │ calibrated against known financial statements. Any changes may cause       │
+ * │ calculation discrepancies.                                                 │
+ * │                                                                             │
+ * │ Before making changes:                                                     │
+ * │ 1. Get explicit approval from @colinpoon                                   │
+ * │ 2. Document WHY the change is necessary                                    │
+ * │ 3. Test against Zedcor and other reference documents                       │
+ * │ 4. Verify expected vs actual values match                                  │
+ * │                                                                             │
+ * │ Expected Reference Values (Zedcor FY2024):                                 │
+ * │ - Adjusted EBITDA: $7,541K                                                 │
+ * │ - FCCR: 0.44x                                                              │
+ * │ - Senior Debt/EBITDA: 3.2x                                                 │
+ * │ - Total Debt/Total Cap: 69.5%                                              │
+ * └─────────────────────────────────────────────────────────────────────────────┘
  */
 
 import type {
@@ -91,6 +111,9 @@ export function calculateAdjustedEBITDA(
   // Note: gain_on_disposal is EXCLUDED per banker's approach
   // ─────────────────────────────────────────────────────────────────────────
 
+  // NOTE: Gains/income values should ALWAYS be subtracted from EBITDA.
+  // The AI may extract them as negative (due to parentheses in financial statements).
+  // We use Math.abs() to normalize: gains are ALWAYS positive, then subtracted.
   const oneTimeGains = [
     // adj.gain_on_disposal - excluded to match banker's calculation
     adj.gain_on_asset_sale,
@@ -99,6 +122,7 @@ export function calculateAdjustedEBITDA(
     adj.other_one_time_gains,
   ]
     .filter((v): v is number => v != null)
+    .map((v) => Math.abs(v)) // Normalize: gains should always be positive
     .reduce((sum, v) => sum + v, 0);
 
   // ─────────────────────────────────────────────────────────────────────────

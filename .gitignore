@@ -35,6 +35,7 @@ yarn-error.log*
 .env.local
 CLAUDE.md
 to-do-list.md
+todo.md
 /project_files
 
 # vercel

@@ -166,6 +166,10 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
   const fccrBreakdown = metrics.fccr_breakdown;
   const dscrBreakdown = metrics.dscr_breakdown;
 
+  // Debug: log the fccr_breakdown to verify sources
+  console.log('🔍 FCCR Breakdown:', fccrBreakdown);
+  console.log('🔍 FCCR Sources:', fccrBreakdown?.sources);
+
   // Calculate total custom adjustments
   const totalCustomAdjustments = customAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
 
@@ -337,6 +341,9 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 <div className="bg-green-50 rounded-lg p-4">
                   <h5 className="font-semibold text-green-800 mb-3">
                     Numerator Components
+                    {!fccrBreakdown.sources && (
+                      <span className="text-xs text-amber-600 ml-2">(Re-upload document to see source values)</span>
+                    )}
                   </h5>
                   <div className="space-y-2">
                     {/* Adjusted EBITDA */}
