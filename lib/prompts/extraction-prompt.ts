@@ -122,7 +122,7 @@ Non-Cash Adjustments (ADD BACK to EBITDA):
 • NOTE: bad_debt_provision is a CORE OPERATING EXPENSE - do NOT add it back to EBITDA. It reflects the normal cost of extending credit.
 • unrealized_gains_losses: "unrealized loss", "unrealized gain", "mark-to-market"
 • deferred_compensation: "deferred compensation"
-• loss_on_disposal: Sum ALL disposal losses from income statement: "Loss on sale of equipment", "Loss on disposal of right-of-use assets". When shown as "Loss (gain) on sale" with a POSITIVE number, that's a loss - extract it. For 2023 example: 27 + 81 = 108.
+• loss_on_disposal: Sum ALL disposal LOSSES from income statement: "Loss on sale of equipment", "Loss on disposal of right-of-use assets". ONLY include lines where the number is POSITIVE (not in parentheses) — positive means a real loss. Extract as a positive number. Example: "Loss (gain) on sale of equipment 27" + "Loss (gain) on disposal of right-of-use assets 81" = 108. IMPORTANT: If the number is in PARENTHESES like (139), that is a GAIN — do NOT put it here, put it in gain_on_disposal instead. Each line item goes into ONLY ONE field. Never put the same amount in both loss_on_disposal and gain_on_disposal.
 • other_non_cash: "non-cash expense", "noncash", "straight-line rent", "non-cash interest expense"
 
 One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
@@ -135,7 +135,7 @@ One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
 • other_one_time_expenses: "one-time expense", "non-recurring expense"
 
 SUBTRACT from EBITDA (these inflate net income):
-• gain_on_disposal: Sum ALL disposal gains. When "Loss (gain) on sale" shows a number in PARENTHESES like (139), that's a GAIN of 139 - extract as positive 139. Sum all such gains.
+• gain_on_disposal: Sum ALL disposal GAINS. When "Loss (gain) on sale" shows a number in PARENTHESES like (139), that's a GAIN of 139 — extract as positive 139. Sum all such gains. IMPORTANT: If the number is NOT in parentheses (e.g., 27), that is a LOSS — do NOT put it here, put it in loss_on_disposal instead. Each disposal line item must go into ONLY ONE of these two fields, never both. Extract values independently for each fiscal year — do not carry values from one year to another.
 • gain_on_asset_sale: "gain on sale", "asset sale gain"
 • other_income_non_operating: Look for "Other income" or "Other (income)" on income statement. Values in parentheses like (2,159) mean income of 2,159. Extract as positive number.
 • insurance_proceeds: "insurance proceeds"
@@ -271,7 +271,7 @@ Extract depreciation by category from INCOME STATEMENT and/or CASH FLOW STATEMEN
 • depreciation_equipment: "Depreciation of equipment", "Depreciation of security towers", "Equipment depreciation"
 • depreciation_rou: "Depreciation of right-of-use assets", "ROU depreciation", "Lease asset depreciation"
 • depreciation_other: "Depreciation of other property and equipment", "Building depreciation", "Leasehold improvements depreciation"
-• depreciation_amortization: TOTAL of all depreciation and amortization (fallback if breakdown not available)
+• depreciation_amortization: MUST equal the SUM of ALL depreciation and amortization lines across ALL sections of the income statement AND cash flow statement. CRITICAL: Depreciation may appear in MULTIPLE sections (e.g., "Direct expenses" AND "Operating expenses" AND "Other expenses"). You MUST sum them ALL. Also check the cash flow statement operating activities section for total depreciation figures which may be more reliable than summing income statement lines. Cross-check: depreciation_amortization should equal depreciation_equipment + depreciation_rou + depreciation_other. If it doesn't, recalculate.
 
 CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
 
@@ -335,7 +335,7 @@ CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • You MUST extract adjusted_ebitda_components from the income statement and notes.
 • Look for "Share-based payments expense" line item - extract as stock_based_compensation
 • Look for "Other income" or "Other (income) expense" line items - extract the income amount as other_income_non_operating
-• Look for "Loss (gain) on sale/disposal" line items - extract losses as loss_on_disposal, gains as gain_on_disposal
+• Look for "Loss (gain) on sale/disposal" line items - positive numbers are LOSSES (loss_on_disposal), numbers in parentheses are GAINS (gain_on_disposal). Each line goes into ONE field only, never both
 • These adjustments are ESSENTIAL for calculating Adjusted EBITDA accurately.
 
 • Do not add any keys, explanations, or narrative – JSON object only.

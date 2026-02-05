@@ -396,7 +396,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
                   style={{ width: d.debtCapital != null ? `${Math.min(d.debtCapital, 100)}%` : '0%' }}
                 />
                 <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
-                  {d.debtCapital != null ? `${d.debtCapital.toFixed(0)}%` : 'N/A'}
+                  {d.debtCapital != null ? `${d.debtCapital.toFixed(1)}%` : 'N/A'}
                 </span>
               </div>
             </div>
@@ -502,7 +502,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             label="Total Debt / Capital (15%)"
             value={metrics.total_debt_to_capital}
             score={debtCapitalScore}
-            format={(v) => `${(v * 100).toFixed(0)}%`}
+            format={(v) => `${(v * 100).toFixed(1)}%`}
           />
           {customFccrAdjustment !== 0 && (
             <div className="text-xs text-blue-600 bg-blue-50 rounded p-2 text-center">

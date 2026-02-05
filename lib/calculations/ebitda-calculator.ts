@@ -35,7 +35,17 @@ export function calculateEBITDA(metrics: ExtractedMetrics): number | null {
   const interest =
     metrics.interest ?? metrics.fixed_charges?.total_interest_expense ?? null;
   const taxes = metrics.taxes;
-  const depAmort = metrics.depreciation_amortization;
+  // Prefer summing component depreciation fields when available (more reliable than AI's total)
+  const componentDepAmort = [
+    metrics.depreciation_equipment,
+    metrics.depreciation_rou,
+    metrics.depreciation_other,
+  ].filter((v): v is number => v != null);
+
+  const depAmort =
+    componentDepAmort.length > 0
+      ? componentDepAmort.reduce((sum, v) => sum + v, 0)
+      : metrics.depreciation_amortization;
 
   // Need at minimum net_income and depreciation to calculate meaningful EBITDA
   if (netIncome != null && depAmort != null) {
@@ -62,14 +72,17 @@ export function calculateAdjustedEBITDA(
   // ─────────────────────────────────────────────────────────────────────────
 
   // Non-cash adjustments to add back to EBITDA
-  // loss_on_disposal is a non-cash write-down — added back per standard underwriting practice
+  // NOTE: loss_on_disposal is intentionally EXCLUDED. Disposal losses are already reflected in
+  // net income (reducing it) and are NOT added back because:
+  // 1. Most companies dispose of assets as a recurring part of operations
+  // 2. Conservative underwriting treats disposal losses as operational, not one-time
+  // 3. Disposal gains are still subtracted via the one-time gains bucket (gain_on_disposal)
   const nonCashAdjustments = [
     adj.stock_based_compensation,
     adj.impairment_charges,
     adj.goodwill_impairment,
     adj.unrealized_gains_losses,
     adj.deferred_compensation,
-    adj.loss_on_disposal,
     adj.other_non_cash,
   ]
     .filter((v): v is number => v != null && v !== 0)
@@ -93,14 +106,14 @@ export function calculateAdjustedEBITDA(
 
   // ─────────────────────────────────────────────────────────────────────────
   // One-Time Gains (subtract)
-  // gain_on_disposal included for symmetry — if losses are added back, gains must be subtracted
+  // NOTE: gain_on_disposal is intentionally EXCLUDED — disposal gains/losses are treated as
+  // operational (symmetric with loss_on_disposal exclusion above). Their impact stays in net income.
   // ─────────────────────────────────────────────────────────────────────────
 
   // NOTE: Gains/income values should ALWAYS be subtracted from EBITDA.
   // The AI may extract them as negative (due to parentheses in financial statements).
   // We use Math.abs() to normalize: gains are ALWAYS positive, then subtracted.
   const oneTimeGains = [
-    adj.gain_on_disposal,
     adj.gain_on_asset_sale,
     adj.other_income_non_operating,
     adj.insurance_proceeds,

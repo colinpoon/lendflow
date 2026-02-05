@@ -312,7 +312,7 @@ function logAdjustedEBITDA(
   console.log(`     unrealized_gains_losses:   ${adj.unrealized_gains_losses ?? 0}`);
   console.log(`     deferred_compensation:     ${adj.deferred_compensation ?? 0}`);
   console.log(`     other_non_cash:            ${adj.other_non_cash ?? 0}`);
-  console.log(`     loss_on_disposal:           ${adj.loss_on_disposal ?? 0}`);
+  console.log(`     (disposal losses excluded - operational: ${adj.loss_on_disposal ?? 0})`);
   console.log(`   + One-time Expenses:         ${breakdown.one_time_expenses}`);
   console.log(`   + Owner/Mgmt Adjustments:    ${breakdown.owner_management_adjustments}`);
   console.log(`   + Accounting Adjustments:    ${breakdown.accounting_adjustments}`);
@@ -320,7 +320,7 @@ function logAdjustedEBITDA(
   console.log(`   + Pro Forma Adjustments:     ${breakdown.pro_forma_adjustments}`);
   console.log(`   - One-time Gains:            ${breakdown.one_time_gains}`);
   console.log(`     other_income_non_operating: ${adj.other_income_non_operating ?? 0}`);
-  console.log(`     gain_on_disposal:            ${adj.gain_on_disposal ?? 0}`);
+  console.log(`     (disposal gains excluded - operational: ${adj.gain_on_disposal ?? 0})`);
   console.log(`   ─────────────────────────────────────`);
   console.log(`   = Calculated Adj. EBITDA:    ${result.calculated_adjusted_ebitda}`);
   console.log(`   Reported Adj. EBITDA:        ${m.reported_adjusted_ebitda ?? 'N/A'}`);
@@ -348,6 +348,7 @@ function logFCCR(
   console.log(`   DENOMINATOR COMPONENTS:`);
   console.log(`     TTM Principal Payments:    ${breakdown.ttm_principal_payments} (extracted: ${m.ttm_principal_payments})`);
   console.log(`     TTM Interest Expense:      ${breakdown.ttm_interest_expense} (ttm: ${m.ttm_interest_expense}, cash_paid: ${m.cash_interest_paid}, accrual: ${m.interest})`);
+  console.log(`     Lease Payments:            ${breakdown.lease_payments} (extracted: ${m.payment_of_lease_liability})`);
   console.log(`     Total Debt Service:        ${breakdown.denominator}`);
   console.log(`   FCCR CALCULATION:`);
   console.log(`     Numerator = ${adjustedEbitda} - ${breakdown.unfunded_capex} - ${breakdown.cash_taxes_paid} - ${breakdown.distributions_paid} = ${breakdown.numerator}`);
