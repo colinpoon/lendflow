@@ -206,6 +206,7 @@ const getDebtCapitalReasoning = (
 interface HealthConfig {
   level: HealthLevel;
   color: string;
+  bgClass: string;
   percentage: number;
 }
 
@@ -217,14 +218,14 @@ interface HealthConfig {
 // Poor (Below 1.0): Insufficient to cover fixed charges, high default risk
 const getFCCRHealth = (value: number): HealthConfig => {
   if (value >= 2.0)
-    return { level: 'excellent', color: '#22c55e', percentage: 100 };
+    return { level: 'excellent', color: '#22c55e', bgClass: 'bg-green-500', percentage: 100 };
   if (value >= 1.5)
-    return { level: 'good', color: '#84cc16', percentage: 80 };
+    return { level: 'good', color: '#84cc16', bgClass: 'bg-lime-500', percentage: 80 };
   if (value >= 1.2)
-    return { level: 'adequate', color: '#eab308', percentage: 60 };
+    return { level: 'adequate', color: '#eab308', bgClass: 'bg-yellow-500', percentage: 60 };
   if (value >= 1.0)
-    return { level: 'weak', color: '#f97316', percentage: 40 };
-  return { level: 'poor', color: '#ef4444', percentage: 20 };
+    return { level: 'weak', color: '#f97316', bgClass: 'bg-orange-500', percentage: 40 };
+  return { level: 'poor', color: '#ef4444', bgClass: 'bg-red-500', percentage: 20 };
 };
 
 // Senior Debt/EBITDA: Lower is better (less leverage)
@@ -235,14 +236,14 @@ const getFCCRHealth = (value: number): HealthConfig => {
 // Bad/Distressed (>4.0x): High risk of financial distress, potential covenant breaches
 const getSeniorDebtEBITDAHealth = (value: number): HealthConfig => {
   if (value <= 1.5)
-    return { level: 'excellent', color: '#22c55e', percentage: 100 };
+    return { level: 'excellent', color: '#22c55e', bgClass: 'bg-green-500', percentage: 100 };
   if (value <= 2.5)
-    return { level: 'good', color: '#84cc16', percentage: 80 };
+    return { level: 'good', color: '#84cc16', bgClass: 'bg-lime-500', percentage: 80 };
   if (value <= 3.0)
-    return { level: 'adequate', color: '#eab308', percentage: 60 };
+    return { level: 'adequate', color: '#eab308', bgClass: 'bg-yellow-500', percentage: 60 };
   if (value <= 4.0)
-    return { level: 'weak', color: '#f97316', percentage: 40 };
-  return { level: 'poor', color: '#ef4444', percentage: 20 };
+    return { level: 'weak', color: '#f97316', bgClass: 'bg-orange-500', percentage: 40 };
+  return { level: 'poor', color: '#ef4444', bgClass: 'bg-red-500', percentage: 20 };
 };
 
 // Total Debt/Total Capital: Lower is better (less debt financing)
@@ -253,14 +254,14 @@ const getSeniorDebtEBITDAHealth = (value: number): HealthConfig => {
 // Bad/Insolvent (>1.0): Total debt exceeds equity, potential technical insolvency
 const getTotalDebtCapitalHealth = (value: number): HealthConfig => {
   if (value < 0.3)
-    return { level: 'excellent', color: '#22c55e', percentage: 100 };
+    return { level: 'excellent', color: '#22c55e', bgClass: 'bg-green-500', percentage: 100 };
   if (value <= 0.5)
-    return { level: 'good', color: '#84cc16', percentage: 80 };
+    return { level: 'good', color: '#84cc16', bgClass: 'bg-lime-500', percentage: 80 };
   if (value <= 0.6)
-    return { level: 'adequate', color: '#eab308', percentage: 60 };
+    return { level: 'adequate', color: '#eab308', bgClass: 'bg-yellow-500', percentage: 60 };
   if (value <= 0.7)
-    return { level: 'weak', color: '#f97316', percentage: 40 };
-  return { level: 'poor', color: '#ef4444', percentage: 20 };
+    return { level: 'weak', color: '#f97316', bgClass: 'bg-orange-500', percentage: 40 };
+  return { level: 'poor', color: '#ef4444', bgClass: 'bg-red-500', percentage: 20 };
 };
 
 interface CircularGaugeProps {
@@ -286,10 +287,7 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
   if (value == null) {
     return (
       <div className="flex flex-col items-center p-4">
-        <div
-          className="relative"
-          style={{ width: size, height: size }}
-        >
+        <div className="relative w-40 h-40">
           <svg
             width={size}
             height={size}
@@ -321,7 +319,7 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
 
   return (
     <div className="flex flex-col items-center p-4">
-      <div className="relative" style={{ width: size, height: size }}>
+      <div className="relative w-40 h-40">
         {/* Background circle with tick marks */}
         <svg
           width={size}
@@ -357,8 +355,7 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
         <svg
           width={size}
           height={size}
-          className="absolute top-0 left-0"
-          style={{ transform: 'rotate(-90deg)' }}
+          className="absolute top-0 left-0 -rotate-90"
         >
           {Array.from({ length: 60 }).map((_, i) => {
             const angle = (i / 60) * 360;
@@ -549,9 +546,8 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           x
                         </span>
                         <span
-                          className="px-2 py-0.5 rounded text-xs text-white font-medium"
-                          style={{
-                            backgroundColor: getFCCRHealth(
+                          className={`px-2 py-0.5 rounded text-xs text-white font-medium ${
+                            getFCCRHealth(
                               customAdjustments.length > 0 &&
                                 metrics.fccr_breakdown?.denominator
                                 ? (metrics.fccr_breakdown
@@ -559,8 +555,8 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                     totalCustomAdjustments) /
                                     metrics.fccr_breakdown.denominator
                                 : metrics.fccr,
-                            ).color,
-                          }}
+                            ).bgClass
+                          }`}
                         >
                           {getRatingLabel(
                             getFCCRHealth(
@@ -970,13 +966,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           {metrics.senior_debt_to_ebitda.toFixed(2)}x
                         </span>
                         <span
-                          className="px-2 py-0.5 rounded text-xs text-white font-medium"
-                          style={{
-                            backgroundColor:
-                              getSeniorDebtEBITDAHealth(
-                                metrics.senior_debt_to_ebitda,
-                              ).color,
-                          }}
+                          className={`px-2 py-0.5 rounded text-xs text-white font-medium ${
+                            getSeniorDebtEBITDAHealth(
+                              metrics.senior_debt_to_ebitda,
+                            ).bgClass
+                          }`}
                         >
                           {getRatingLabel(
                             getSeniorDebtEBITDAHealth(
@@ -1245,13 +1239,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           %
                         </span>
                         <span
-                          className="px-2 py-0.5 rounded text-xs text-white font-medium"
-                          style={{
-                            backgroundColor:
-                              getTotalDebtCapitalHealth(
-                                metrics.total_debt_to_capital,
-                              ).color,
-                          }}
+                          className={`px-2 py-0.5 rounded text-xs text-white font-medium ${
+                            getTotalDebtCapitalHealth(
+                              metrics.total_debt_to_capital,
+                            ).bgClass
+                          }`}
                         >
                           {getRatingLabel(
                             getTotalDebtCapitalHealth(
@@ -1644,8 +1636,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
                           <span
-                            className="px-2 py-0.5 rounded text-xs text-white"
-                            style={{ backgroundColor: health?.color }}
+                            className={`px-2 py-0.5 rounded text-xs text-white ${health?.bgClass}`}
                           >
                             {val.toFixed(2)}x
                           </span>
@@ -1671,8 +1662,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
                           <span
-                            className="px-2 py-0.5 rounded text-xs text-white"
-                            style={{ backgroundColor: health?.color }}
+                            className={`px-2 py-0.5 rounded text-xs text-white ${health?.bgClass}`}
                           >
                             {val.toFixed(2)}x
                           </span>
@@ -1696,8 +1686,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
                           <span
-                            className="px-2 py-0.5 rounded text-xs text-white"
-                            style={{ backgroundColor: health?.color }}
+                            className={`px-2 py-0.5 rounded text-xs text-white ${health?.bgClass}`}
                           >
                             {(val * 100).toFixed(1)}%
                           </span>

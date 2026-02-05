@@ -448,11 +448,7 @@ export default function HomePage() {
 
         {/* Subtle grid pattern */}
         <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)`,
-            backgroundSize: '40px 40px',
-          }}
+          className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] [background-size:40px_40px]"
         />
 
         {/* Floating metrics */}

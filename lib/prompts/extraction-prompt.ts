@@ -353,13 +353,11 @@ Return EXACT JSON matching this schema — no markdown, no fences, no extra keys
 {
   "header": string,
   "pillars": {
-    "profitability_cashflow": { "observations": string, "impact": string, "weight": 20, "score": number|null },
-    "leverage":               { "observations": string, "impact": string, "weight": 20, "score": number|null },
-    "liquidity":              { "observations": string, "impact": string, "weight": 20, "score": number|null },
-    "debt_service":           { "observations": string, "impact": string, "weight": 15, "score": number|null },
-    "interest_rate_sensitivity": { "observations": string, "impact": string, "weight": 10, "score": number|null },
-    "concentration_sector":   { "observations": string, "impact": string, "weight": 15, "score": number|null },
-    "governance":             { "observations": string, "impact": string, "weight": 10, "score": number|null }
+    "debt_service_capacity": { "observations": string, "impact": string, "weight": 30, "score": number|null },
+    "leverage":              { "observations": string, "impact": string, "weight": 25, "score": number|null },
+    "profitability":         { "observations": string, "impact": string, "weight": 20, "score": number|null },
+    "cash_flow":             { "observations": string, "impact": string, "weight": 15, "score": number|null },
+    "financial_trajectory":  { "observations": string, "impact": string, "weight": 10, "score": number|null }
   },
   "weighted_score": number,
   "band": one of {
@@ -373,8 +371,32 @@ Return EXACT JSON matching this schema — no markdown, no fences, no extra keys
   "lending_recommendation": string
 }
 
+PILLAR SCORING GUIDANCE (each pillar scored 1–10, higher = worse risk):
+
+1. debt_service_capacity (weight 30%):
+   Evaluate FCCR, DSCR, and interest coverage ratio.
+   - FCCR >= 2.0x → 1–2; 1.5–2.0x → 3–4; 1.2–1.5x → 5–6; 1.0–1.2x → 7–8; < 1.0x → 9–10
+   - Cross-check with DSCR and interest coverage for consistency.
+
+2. leverage (weight 25%):
+   Evaluate Senior Debt/EBITDA, Total Debt/Capital, and Debt-to-Equity.
+   - Debt/EBITDA <= 1.5x → 1–2; 1.5–2.5x → 3–4; 2.5–3.5x → 5–6; 3.5–4.5x → 7–8; > 4.5x → 9–10
+   - Factor in Total Debt/Capital (< 40% strong, > 70% weak) and Debt-to-Equity.
+
+3. profitability (weight 20%):
+   Evaluate revenue, net income, EBITDA margin, and profit margins.
+   - Positive and growing margins → 1–3; Stable margins → 4–5; Thin or declining margins → 6–8; Negative → 9–10
+
+4. cash_flow (weight 15%):
+   Evaluate CapEx coverage (funded vs unfunded), free cash flow after fixed charges, and operating cash flow.
+   - Strong free cash flow with funded CapEx → 1–3; Adequate → 4–6; Cash flow shortfalls or heavy unfunded CapEx → 7–10
+
+5. financial_trajectory (weight 10%):
+   Evaluate YoY changes in revenue, EBITDA, debt levels, and coverage ratios.
+   - Improving trends across metrics → 1–3; Stable → 4–5; Deteriorating trends → 6–8; Sharp decline → 9–10
+
 Calculate weighted_score = (Σ weight × score) / 100 internally.
-Use any information available from the financial statement — including governance practices, customer concentration, or industry exposure — to generate informed values for all pillars.`;
+Base all observations on the numeric data provided. Reference specific values in observations.`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Debt Health Assessment Prompt
@@ -395,8 +417,8 @@ Return EXACT JSON matching this schema — no markdown, no fences, no extra keys
 }
 
 SCORING WEIGHTS:
-- FCCR (Fixed Charge Coverage Ratio): 50% weight
-- Senior Debt / Adjusted EBITDA: 35% weight
+- FCCR (Fixed Charge Coverage Ratio): 45% weight
+- Senior Debt / Adjusted EBITDA: 40% weight
 - Total Debt / Total Capital: 15% weight
 
 SCORING THRESHOLDS (each metric scored 0-10, higher = worse):

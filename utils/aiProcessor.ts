@@ -5,16 +5,17 @@
  * This module coordinates:
  * 1. Document parsing (PDF/text)
  * 2. Text chunking and deduplication
- * 3. AI-powered metric extraction
- * 4. Financial calculations (debt, EBITDA, FCCR, ratios)
- * 5. Risk assessment generation
+ * 3. AI-powered metric extraction (SEQUENTIAL for determinism)
+ * 4. Conflict reconciliation (AI-powered resolution)
+ * 5. Financial calculations (debt, EBITDA, FCCR, ratios)
+ * 6. Risk assessment generation
  */
 
 import { parseDocument } from '@/lib/document-parser';
 import {
   chunkText,
   deduplicateChunks,
-  processChunksInBatches,
+  processChunksSequentially,
 } from '@/lib/chunk-processor';
 import { mergeExtractions } from '@/lib/extraction-merger';
 import {
@@ -84,13 +85,18 @@ export const extractFinancialData = async (
     );
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Phase 3: AI Extraction
+    // Phase 3: AI Extraction (SEQUENTIAL for determinism)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const allExtractions = await processChunksInBatches(uniqueChunks);
+    const chunkResults = await processChunksSequentially(uniqueChunks);
+
+    // Filter to successful extractions only
+    const allExtractions = chunkResults
+      .filter((r) => r.result !== null)
+      .map((r) => r.result);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Phase 4: Merge & Consolidate
+    // Phase 4: Merge & Consolidate (deterministic first-wins)
     // ─────────────────────────────────────────────────────────────────────────
 
     const merged = mergeExtractions(allExtractions);
@@ -99,31 +105,32 @@ export const extractFinancialData = async (
     // Phase 5: Compute Derived Metrics
     // ─────────────────────────────────────────────────────────────────────────
 
+    const computed: Record<string, ComputedMetrics> = {};
     for (const yr of Object.keys(merged)) {
-      merged[yr] = computeMetrics(merged[yr]);
+      computed[yr] = computeMetrics(merged[yr]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 6: Validation
     // ─────────────────────────────────────────────────────────────────────────
 
-    const validationIssues = validateMetrics(merged);
+    const validationIssues = validateMetrics(computed);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 7: Risk Assessment Generation
     // ─────────────────────────────────────────────────────────────────────────
 
-    const riskSnapshot = await generateRiskAssessment(merged);
-    const debtHealthAssessment = await generateDebtHealthAssessment(merged);
+    const riskSnapshot = await generateRiskAssessment(computed);
+    const debtHealthAssessment = await generateDebtHealthAssessment(computed);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 8: Build Result
     // ─────────────────────────────────────────────────────────────────────────
 
-    if (Object.keys(merged).length > 0 || riskSnapshot || debtHealthAssessment) {
+    if (Object.keys(computed).length > 0 || riskSnapshot || debtHealthAssessment) {
       console.log('✅ Extraction complete. Returning combined result.');
       return {
-        ...(Object.keys(merged).length > 0 && { metrics_by_year: merged }),
+        ...(Object.keys(computed).length > 0 && { metrics_by_year: computed }),
         ...(riskSnapshot && { riskAssessment: riskSnapshot }),
         ...(debtHealthAssessment && { debtHealthAssessment }),
         ...(Object.keys(validationIssues).length > 0 && {
@@ -132,7 +139,7 @@ export const extractFinancialData = async (
       };
     }
 
-    return { raw_chunks: allExtractions };
+    return { raw_chunks: chunkResults };
   } catch (error: any) {
     console.error('❗ AI processing failed:', error?.message || error);
     throw new Error('AI processing failed: ' + (error?.message || 'Unknown error'));
@@ -305,7 +312,7 @@ function logAdjustedEBITDA(
   console.log(`     unrealized_gains_losses:   ${adj.unrealized_gains_losses ?? 0}`);
   console.log(`     deferred_compensation:     ${adj.deferred_compensation ?? 0}`);
   console.log(`     other_non_cash:            ${adj.other_non_cash ?? 0}`);
-  console.log(`     ⚠️  loss_on_disposal:       ${adj.loss_on_disposal ?? 0} ← EXCLUDED FROM CALC`);
+  console.log(`     loss_on_disposal:           ${adj.loss_on_disposal ?? 0}`);
   console.log(`   + One-time Expenses:         ${breakdown.one_time_expenses}`);
   console.log(`   + Owner/Mgmt Adjustments:    ${breakdown.owner_management_adjustments}`);
   console.log(`   + Accounting Adjustments:    ${breakdown.accounting_adjustments}`);
@@ -313,22 +320,12 @@ function logAdjustedEBITDA(
   console.log(`   + Pro Forma Adjustments:     ${breakdown.pro_forma_adjustments}`);
   console.log(`   - One-time Gains:            ${breakdown.one_time_gains}`);
   console.log(`     other_income_non_operating: ${adj.other_income_non_operating ?? 0}`);
-  console.log(`     ⚠️  gain_on_disposal:        ${adj.gain_on_disposal ?? 0} ← EXCLUDED FROM CALC`);
+  console.log(`     gain_on_disposal:            ${adj.gain_on_disposal ?? 0}`);
   console.log(`   ─────────────────────────────────────`);
   console.log(`   = Calculated Adj. EBITDA:    ${result.calculated_adjusted_ebitda}`);
   console.log(`   Reported Adj. EBITDA:        ${m.reported_adjusted_ebitda ?? 'N/A'}`);
   console.log(`   FINAL Adjusted EBITDA:       ${result.adjusted_ebitda}`);
 
-  // Show potential value if disposal items were included
-  const lossOnDisposal = adj.loss_on_disposal ?? 0;
-  const gainOnDisposal = adj.gain_on_disposal ?? 0;
-  if (lossOnDisposal !== 0 || gainOnDisposal !== 0) {
-    const potentialValue = (result.adjusted_ebitda ?? 0) + lossOnDisposal - gainOnDisposal;
-    console.log(`\n   🔧 IF DISPOSAL ITEMS INCLUDED:`);
-    console.log(`      + loss_on_disposal:       +${lossOnDisposal}`);
-    console.log(`      - gain_on_disposal:       -${gainOnDisposal}`);
-    console.log(`      = Potential Adj. EBITDA:  ${potentialValue}`);
-  }
   console.log('');
 }
 

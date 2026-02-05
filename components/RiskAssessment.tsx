@@ -4,13 +4,11 @@ import React from 'react';
 import { fmtCurrency, sanitizeObservationText } from '@/utils/format';
 
 const PILLAR_KEYS = [
-  'profitability_cashflow',
+  'debt_service_capacity',
   'leverage',
-  'liquidity',
-  'debt_service',
-  'interest_rate_sensitivity',
-  'concentration_sector',
-  'governance',
+  'profitability',
+  'cash_flow',
+  'financial_trajectory',
 ] as const;
 
 export interface PillarScore {
@@ -25,13 +23,11 @@ export interface RiskData {
   header: string;
   pillars: Partial<
     Record<
-      | 'profitability_cashflow'
+      | 'debt_service_capacity'
       | 'leverage'
-      | 'liquidity'
-      | 'debt_service'
-      | 'interest_rate_sensitivity'
-      | 'concentration_sector'
-      | 'governance',
+      | 'profitability'
+      | 'cash_flow'
+      | 'financial_trajectory',
       PillarScore
     >
   >;
@@ -80,13 +76,14 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
                   : p.score.toFixed(1)
                 : '—';
             // Format header label
-            const label = key
-              .replace(/_/g, ' ')
-              .replace('cashflow', 'cash flow')
-              .replace(
-                'concentration sector',
-                'concentration & sector'
-              );
+            const LABEL_MAP: Record<string, string> = {
+              debt_service_capacity: 'Debt Service Capacity',
+              leverage: 'Leverage & Capital Structure',
+              profitability: 'Profitability',
+              cash_flow: 'Cash Flow Adequacy',
+              financial_trajectory: 'Financial Trajectory',
+            };
+            const label = LABEL_MAP[key] ?? key.replace(/_/g, ' ');
             return (
               <tr key={key}>
                 <td className="border p-1 capitalize">{label}</td>

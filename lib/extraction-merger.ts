@@ -1,6 +1,10 @@
 /**
  * Extraction merger utilities
  * Consolidates partial JSON extractions from multiple chunks
+ *
+ * Uses "first non-null wins" merge strategy. Combined with sequential
+ * chunk processing (processChunksSequentially), this produces deterministic
+ * results since chunk order is guaranteed.
  */
 
 /**

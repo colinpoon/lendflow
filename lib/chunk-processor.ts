@@ -1,6 +1,11 @@
 /**
  * Text chunking and AI processing utilities
  * Handles document chunking, deduplication, and OpenAI API calls
+ *
+ * DETERMINISTIC PROCESSING:
+ * Chunks are processed sequentially to ensure consistent ordering.
+ * Results are always returned sorted by chunk index, guaranteeing
+ * the same output order regardless of API response timing.
  */
 
 import OpenAI from 'openai';
@@ -77,10 +82,10 @@ export interface ChunkResult {
 
 /**
  * Process a single chunk with the AI model
- * Includes retry logic for rate limit handling
+ * Only retries on rate limit errors (429)
  */
 export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 1; attempt <= AI_CONFIG.MAX_RETRIES; attempt++) {
     try {
@@ -103,18 +108,19 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
       const cleaned = cleanJsonFence(extractedText);
       const parsed = JSON.parse(cleaned);
       return { index: chunk.index, result: parsed };
-    } catch (err: any) {
+    } catch (err: unknown) {
       lastError = err;
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorStatus = (err as { status?: number })?.status;
 
-      // Check if it's a rate limit error (429)
+      // Only retry on rate limit errors (429)
       const isRateLimit =
-        err?.status === 429 ||
-        err?.message?.includes('429') ||
-        err?.message?.includes('Rate limit');
+        errorStatus === 429 ||
+        errorMessage.includes('429') ||
+        errorMessage.includes('Rate limit');
 
       if (isRateLimit && attempt < AI_CONFIG.MAX_RETRIES) {
-        // Extract wait time from error message or use exponential backoff
-        const waitMatch = err?.message?.match(/try again in (\d+\.?\d*)/i);
+        const waitMatch = errorMessage.match(/try again in (\d+\.?\d*)/i);
         const waitTime = waitMatch
           ? Math.ceil(parseFloat(waitMatch[1]) * 1000) + 1000
           : attempt * AI_CONFIG.RATE_LIMIT_BACKOFF_MS;
@@ -125,27 +131,72 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
         continue;
       }
 
-      // For non-rate-limit errors or final attempt, break out
+      // For non-rate-limit errors, don't retry - fail immediately
       break;
     }
   }
 
-  console.warn(
-    `⚠️ Failed to process chunk ${chunk.index} after ${AI_CONFIG.MAX_RETRIES} attempts:`,
-    lastError?.message || lastError
-  );
+  const errorMessage = lastError instanceof Error ? lastError.message : String(lastError);
+  console.warn(`⚠️ Failed to process chunk ${chunk.index}: ${errorMessage}`);
   return { index: chunk.index, result: null };
 }
 
 /**
- * Process chunks in parallel batches
+ * Process chunks SEQUENTIALLY for deterministic results
+ * This replaces parallel batch processing to ensure consistent extraction order.
+ *
+ * @param chunks - Unique chunks to process in order
+ * @returns Array of ChunkResult sorted by chunk index
+ */
+export async function processChunksSequentially(
+  chunks: UniqueChunk[]
+): Promise<ChunkResult[]> {
+  const results: ChunkResult[] = [];
+
+  console.log(
+    `📊 Processing ${chunks.length} unique chunks SEQUENTIALLY for deterministic extraction`
+  );
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    console.log(`\n⚡ Processing chunk ${i + 1}/${chunks.length} (index: ${chunk.index})`);
+
+    const result = await processChunk(chunk);
+    results.push(result);
+
+    console.log(`✅ Chunk ${chunk.index} complete`);
+
+    // Add delay between chunks to respect rate limits (skip delay after last chunk)
+    if (i < chunks.length - 1) {
+      // Shorter delay for sequential processing since we're not batching
+      const delayMs = Math.min(AI_CONFIG.BATCH_DELAY_MS / 2, 3000);
+      console.log(`⏳ Waiting ${delayMs / 1000}s before next chunk...`);
+      await delay(delayMs);
+    }
+  }
+
+  // Sort by chunk index to guarantee deterministic order
+  results.sort((a, b) => a.index - b.index);
+
+  console.log(`\n🎯 All ${chunks.length} chunks processed in deterministic order`);
+  return results;
+}
+
+/**
+ * @deprecated Use processChunksSequentially for deterministic extraction
+ * Process chunks in parallel batches - kept for backward compatibility
+ * WARNING: Parallel processing can cause non-deterministic merge order
  * @param chunks - Unique chunks to process
- * @returns Array of extraction results
+ * @returns Array of extraction results (order may vary between runs)
  */
 export async function processChunksInBatches(
   chunks: UniqueChunk[]
 ): Promise<any[]> {
-  const results: any[] = [];
+  console.warn(
+    '⚠️ processChunksInBatches is deprecated. Use processChunksSequentially for deterministic results.'
+  );
+
+  const results: ChunkResult[] = [];
   const totalBatches = Math.ceil(chunks.length / AI_CONFIG.BATCH_SIZE);
 
   console.log(
@@ -165,8 +216,8 @@ export async function processChunksInBatches(
     const batchResults = await Promise.allSettled(batchPromises);
 
     for (const result of batchResults) {
-      if (result.status === 'fulfilled' && result.value.result) {
-        results.push(result.value.result);
+      if (result.status === 'fulfilled' && result.value) {
+        results.push(result.value);
       }
     }
 
@@ -181,8 +232,13 @@ export async function processChunksInBatches(
     }
   }
 
+  // Sort by chunk index for consistent ordering
+  results.sort((a, b) => a.index - b.index);
+
   console.log(`🎯 All ${chunks.length} chunks processed`);
-  return results;
+
+  // Return only the result objects (for backward compatibility)
+  return results.filter((r) => r.result !== null).map((r) => r.result);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -57,28 +57,26 @@ interface RiskConfig {
   color: string;
   bgColor: string;
   textColor: string;
+  scoreTextClass: string;
+  scoreBgClass: string;
 }
 
 // Pillar keys for lending analysis
 const PILLAR_KEYS = [
-  'profitability_cashflow',
+  'debt_service_capacity',
   'leverage',
-  'liquidity',
-  'debt_service',
-  'interest_rate_sensitivity',
-  'concentration_sector',
-  'governance',
+  'profitability',
+  'cash_flow',
+  'financial_trajectory',
 ] as const;
 
 // Pillar display names aligned with lending focus
 const PILLAR_LABELS: Record<string, string> = {
-  profitability_cashflow: 'Profitability & Cash Flow',
-  leverage: 'Leverage Position',
-  liquidity: 'Liquidity',
-  debt_service: 'Debt Service Capacity',
-  interest_rate_sensitivity: 'Interest Rate Exposure',
-  concentration_sector: 'Industry & Concentration',
-  governance: 'Management & Governance',
+  debt_service_capacity: 'Debt Service Capacity',
+  leverage: 'Leverage & Capital Structure',
+  profitability: 'Profitability',
+  cash_flow: 'Cash Flow Adequacy',
+  financial_trajectory: 'Financial Trajectory',
 };
 
 // Convert FCCR to risk score (0-10, higher = worse)
@@ -120,6 +118,8 @@ const getRiskConfig = (score: number): RiskConfig => {
     color: '#22c55e',
     bgColor: 'bg-green-50',
     textColor: 'text-green-700',
+    scoreTextClass: 'text-green-500',
+    scoreBgClass: 'bg-green-500',
   };
   if (score <= 4) return {
     level: 'low',
@@ -127,6 +127,8 @@ const getRiskConfig = (score: number): RiskConfig => {
     color: '#84cc16',
     bgColor: 'bg-lime-50',
     textColor: 'text-lime-700',
+    scoreTextClass: 'text-lime-500',
+    scoreBgClass: 'bg-lime-500',
   };
   if (score <= 6) return {
     level: 'moderate',
@@ -134,6 +136,8 @@ const getRiskConfig = (score: number): RiskConfig => {
     color: '#eab308',
     bgColor: 'bg-yellow-50',
     textColor: 'text-yellow-700',
+    scoreTextClass: 'text-yellow-500',
+    scoreBgClass: 'bg-yellow-500',
   };
   if (score <= 8) return {
     level: 'elevated',
@@ -141,6 +145,8 @@ const getRiskConfig = (score: number): RiskConfig => {
     color: '#f97316',
     bgColor: 'bg-orange-50',
     textColor: 'text-orange-700',
+    scoreTextClass: 'text-orange-500',
+    scoreBgClass: 'bg-orange-500',
   };
   return {
     level: 'high',
@@ -148,6 +154,8 @@ const getRiskConfig = (score: number): RiskConfig => {
     color: '#ef4444',
     bgColor: 'bg-red-50',
     textColor: 'text-red-700',
+    scoreTextClass: 'text-red-500',
+    scoreBgClass: 'bg-red-500',
   };
 };
 
@@ -181,12 +189,10 @@ const getImpactStyle = (impact: string): string => {
   return 'bg-gray-100 text-gray-800';
 };
 
-interface RiskGaugeProps {
-  score: number;
-  size?: number;
-}
+const GAUGE_SIZE = 200;
 
-const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200 }) => {
+const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
+  const size = GAUGE_SIZE;
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -196,7 +202,7 @@ const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200 }) => {
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative w-[200px] h-[200px]">
       <svg width={size} height={size} className="transform -rotate-90">
         <circle
           cx={size / 2}
@@ -224,8 +230,7 @@ const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200 }) => {
       <svg
         width={size}
         height={size}
-        className="absolute top-0 left-0"
-        style={{ transform: 'rotate(-90deg)' }}
+        className="absolute top-0 left-0 -rotate-90"
       >
         {Array.from({ length: 50 }).map((_, i) => {
           const angle = (i / 50) * 360;
@@ -254,7 +259,7 @@ const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200 }) => {
       </svg>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-bold" style={{ color: config.color }}>
+        <span className={`text-4xl font-bold ${config.scoreTextClass}`}>
           {score.toFixed(1)}
         </span>
         <span className="text-sm text-gray-500">/ 10</span>
@@ -286,10 +291,7 @@ const MetricBadge: React.FC<MetricBadgeProps> = ({
   return (
     <div className="flex flex-col items-center p-3 bg-gray-50 rounded-lg">
       <span className="text-xs text-gray-500 mb-1">{label}</span>
-      <span
-        className="text-lg font-bold"
-        style={{ color: config.color }}
-      >
+      <span className={`text-lg font-bold ${config.scoreTextClass}`}>
         {value != null ? format(value) : 'N/A'}
       </span>
     </div>
@@ -336,11 +338,12 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
               <span className="text-xs text-gray-500 w-12">{d.year}</span>
               <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-                  style={{
-                    width: d.fccr != null ? `${Math.min((d.fccr / maxFccr) * 100, 100)}%` : '0%',
-                    backgroundColor: d.fccr != null ? (d.fccr >= 1.2 ? '#22c55e' : d.fccr >= 1.0 ? '#eab308' : '#ef4444') : '#d1d5db',
-                  }}
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
+                    d.fccr != null
+                      ? d.fccr >= 1.2 ? 'bg-green-500' : d.fccr >= 1.0 ? 'bg-yellow-500' : 'bg-red-500'
+                      : 'bg-gray-300'
+                  }`}
+                  style={{ width: d.fccr != null ? `${Math.min((d.fccr / maxFccr) * 100, 100)}%` : '0%' }}
                 />
                 <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
                   {d.fccr != null ? `${d.fccr.toFixed(2)}x` : 'N/A'}
@@ -360,11 +363,12 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
               <span className="text-xs text-gray-500 w-12">{d.year}</span>
               <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-                  style={{
-                    width: d.debtEbitda != null ? `${Math.min((d.debtEbitda / maxDebtEbitda) * 100, 100)}%` : '0%',
-                    backgroundColor: d.debtEbitda != null ? (d.debtEbitda <= 2.5 ? '#22c55e' : d.debtEbitda <= 3.5 ? '#eab308' : '#ef4444') : '#d1d5db',
-                  }}
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
+                    d.debtEbitda != null
+                      ? d.debtEbitda <= 2.5 ? 'bg-green-500' : d.debtEbitda <= 3.5 ? 'bg-yellow-500' : 'bg-red-500'
+                      : 'bg-gray-300'
+                  }`}
+                  style={{ width: d.debtEbitda != null ? `${Math.min((d.debtEbitda / maxDebtEbitda) * 100, 100)}%` : '0%' }}
                 />
                 <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
                   {d.debtEbitda != null ? `${d.debtEbitda.toFixed(2)}x` : 'N/A'}
@@ -384,11 +388,12 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
               <span className="text-xs text-gray-500 w-12">{d.year}</span>
               <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-                  style={{
-                    width: d.debtCapital != null ? `${Math.min(d.debtCapital, 100)}%` : '0%',
-                    backgroundColor: d.debtCapital != null ? (d.debtCapital <= 50 ? '#22c55e' : d.debtCapital <= 65 ? '#eab308' : '#ef4444') : '#d1d5db',
-                  }}
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
+                    d.debtCapital != null
+                      ? d.debtCapital <= 50 ? 'bg-green-500' : d.debtCapital <= 65 ? 'bg-yellow-500' : 'bg-red-500'
+                      : 'bg-gray-300'
+                  }`}
+                  style={{ width: d.debtCapital != null ? `${Math.min(d.debtCapital, 100)}%` : '0%' }}
                 />
                 <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
                   {d.debtCapital != null ? `${d.debtCapital.toFixed(0)}%` : 'N/A'}
@@ -469,7 +474,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
       <div className="flex flex-col md:flex-row items-center justify-center gap-8">
         {/* Large Gauge */}
         <div className="flex flex-col items-center">
-          <RiskGauge score={displayScore} size={200} />
+          <RiskGauge score={displayScore} />
           <div className="mt-4 text-center">
             <span
               className={`inline-block px-4 py-2 rounded-lg text-sm font-bold ${decisionStyle.bg} ${decisionStyle.text}`}
@@ -482,13 +487,13 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         {/* Component Scores */}
         <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
           <MetricBadge
-            label={customFccrAdjustment !== 0 ? "FCCR (50%) *" : "FCCR (50%)"}
+            label={customFccrAdjustment !== 0 ? "FCCR (45%) *" : "FCCR (45%)"}
             value={adjustedFccr}
             score={fccrScore}
             format={(v) => `${v.toFixed(2)}x`}
           />
           <MetricBadge
-            label="Senior Debt / EBITDA (35%)"
+            label="Senior Debt / EBITDA (40%)"
             value={metrics.senior_debt_to_ebitda}
             score={debtEbitdaScore}
             format={(v) => `${v.toFixed(2)}x`}
@@ -628,8 +633,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
                       <td className="text-right py-2 px-2">{yDebtCap.toFixed(0)}</td>
                       <td className="text-right py-2 px-2">
                         <span
-                          className="px-2 py-0.5 rounded text-xs text-white font-medium"
-                          style={{ backgroundColor: yConfig.color }}
+                          className={`px-2 py-0.5 rounded text-xs text-white font-medium ${yConfig.scoreBgClass}`}
                         >
                           {yWeighted.toFixed(1)}
                         </span>

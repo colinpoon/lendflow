@@ -34,13 +34,11 @@ export interface RiskConfig {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type PillarKey =
-  | 'profitability_cashflow'
+  | 'debt_service_capacity'
   | 'leverage'
-  | 'liquidity'
-  | 'debt_service'
-  | 'interest_rate_sensitivity'
-  | 'concentration_sector'
-  | 'governance';
+  | 'profitability'
+  | 'cash_flow'
+  | 'financial_trajectory';
 
 export interface PillarScore {
   observations: string;

@@ -17,7 +17,7 @@ export function calculateTotalDebtToCapital(
   const totalCapital = totalDebt + shareholdersEquity;
   if (totalCapital === 0) return null;
 
-  return parseFloat((totalDebt / totalCapital).toFixed(2));
+  return parseFloat((totalDebt / totalCapital).toFixed(4));
 }
 
 /**

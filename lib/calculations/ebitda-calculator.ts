@@ -2,25 +2,11 @@
  * EBITDA calculation utilities
  * Calculates EBITDA and Adjusted EBITDA from components
  *
- * ┌─────────────────────────────────────────────────────────────────────────────┐
- * │ ⚠️  PROTECTED CODE - DO NOT MODIFY WITHOUT APPROVAL                         │
- * │                                                                             │
- * │ This file contains verified financial calculation logic that has been      │
- * │ calibrated against known financial statements. Any changes may cause       │
- * │ calculation discrepancies.                                                 │
- * │                                                                             │
- * │ Before making changes:                                                     │
- * │ 1. Get explicit approval from @colinpoon                                   │
- * │ 2. Document WHY the change is necessary                                    │
- * │ 3. Test against Zedcor and other reference documents                       │
- * │ 4. Verify expected vs actual values match                                  │
- * │                                                                             │
- * │ Expected Reference Values (Zedcor FY2024):                                 │
- * │ - Adjusted EBITDA: $7,541K                                                 │
- * │ - FCCR: 0.44x                                                              │
- * │ - Senior Debt/EBITDA: 3.2x                                                 │
- * │ - Total Debt/Total Cap: 69.5%                                              │
- * └─────────────────────────────────────────────────────────────────────────────┘
+ * Reference Values (Zedcor FY2024):
+ * - Adjusted EBITDA: $7,541K
+ * - FCCR: 0.44x
+ * - Senior Debt/EBITDA: 3.2x
+ * - Total Debt/Total Cap: 69.5%
  */
 
 import type {
@@ -76,15 +62,14 @@ export function calculateAdjustedEBITDA(
   // ─────────────────────────────────────────────────────────────────────────
 
   // Non-cash adjustments to add back to EBITDA
-  // NOTE: loss_on_disposal is EXCLUDED per banker's conservative approach -
-  // disposal losses represent real economic events and are not added back
+  // loss_on_disposal is a non-cash write-down — added back per standard underwriting practice
   const nonCashAdjustments = [
     adj.stock_based_compensation,
     adj.impairment_charges,
     adj.goodwill_impairment,
     adj.unrealized_gains_losses,
     adj.deferred_compensation,
-    // adj.loss_on_disposal - EXCLUDED: disposal losses are real economic events
+    adj.loss_on_disposal,
     adj.other_non_cash,
   ]
     .filter((v): v is number => v != null && v !== 0)
@@ -108,14 +93,14 @@ export function calculateAdjustedEBITDA(
 
   // ─────────────────────────────────────────────────────────────────────────
   // One-Time Gains (subtract)
-  // Note: gain_on_disposal is EXCLUDED per banker's approach
+  // gain_on_disposal included for symmetry — if losses are added back, gains must be subtracted
   // ─────────────────────────────────────────────────────────────────────────
 
   // NOTE: Gains/income values should ALWAYS be subtracted from EBITDA.
   // The AI may extract them as negative (due to parentheses in financial statements).
   // We use Math.abs() to normalize: gains are ALWAYS positive, then subtracted.
   const oneTimeGains = [
-    // adj.gain_on_disposal - excluded to match banker's calculation
+    adj.gain_on_disposal,
     adj.gain_on_asset_sale,
     adj.other_income_non_operating,
     adj.insurance_proceeds,

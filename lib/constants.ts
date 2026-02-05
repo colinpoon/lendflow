@@ -13,7 +13,7 @@ export const AI_CONFIG = {
   MAX_TOKENS: 2000,
   CHUNK_SIZE: 8000,
   BATCH_SIZE: 2,
-  BATCH_DELAY_MS: 6000,
+  BATCH_DELAY_MS: 3000,
   MAX_RETRIES: 3,
   RATE_LIMIT_BACKOFF_MS: 15000,
 } as const;
@@ -60,8 +60,8 @@ export const DEBT_CAPITAL_THRESHOLDS = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const RISK_WEIGHTS = {
-  FCCR: 0.5,
-  DEBT_EBITDA: 0.35,
+  FCCR: 0.45,
+  DEBT_EBITDA: 0.40,
   DEBT_CAPITAL: 0.15,
 } as const;
 
@@ -71,10 +71,10 @@ export const RISK_WEIGHTS = {
 
 export const HEALTH_COLORS = {
   excellent: '#22c55e', // green-500
-  good: '#84cc16',      // lime-500
-  adequate: '#eab308',  // yellow-500
-  weak: '#f97316',      // orange-500
-  poor: '#ef4444',      // red-500
+  good: '#84cc16', // lime-500
+  adequate: '#eab308', // yellow-500
+  weak: '#f97316', // orange-500
+  poor: '#ef4444', // red-500
 } as const;
 
 /**
@@ -113,33 +113,27 @@ export const HEALTH_TAILWIND_CLASSES = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const PILLAR_KEYS = [
-  'profitability_cashflow',
+  'debt_service_capacity',
   'leverage',
-  'liquidity',
-  'debt_service',
-  'interest_rate_sensitivity',
-  'concentration_sector',
-  'governance',
+  'profitability',
+  'cash_flow',
+  'financial_trajectory',
 ] as const;
 
 export const PILLAR_LABELS: Record<string, string> = {
-  profitability_cashflow: 'Profitability & Cash Flow',
-  leverage: 'Leverage Position',
-  liquidity: 'Liquidity',
-  debt_service: 'Debt Service Capacity',
-  interest_rate_sensitivity: 'Interest Rate Exposure',
-  concentration_sector: 'Industry & Concentration',
-  governance: 'Management & Governance',
+  debt_service_capacity: 'Debt Service Capacity',
+  leverage: 'Leverage & Capital Structure',
+  profitability: 'Profitability',
+  cash_flow: 'Cash Flow Adequacy',
+  financial_trajectory: 'Financial Trajectory',
 };
 
 export const PILLAR_WEIGHTS: Record<string, number> = {
-  profitability_cashflow: 20,
-  leverage: 20,
-  liquidity: 20,
-  debt_service: 15,
-  interest_rate_sensitivity: 10,
-  concentration_sector: 15,
-  governance: 10,
+  debt_service_capacity: 30,
+  leverage: 25,
+  profitability: 20,
+  cash_flow: 15,
+  financial_trajectory: 10,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
