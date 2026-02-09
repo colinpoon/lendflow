@@ -8,6 +8,7 @@ import {
   FileText,
   Settings,
   HelpCircle,
+  Upload,
 } from 'lucide-react';
 
 import {
@@ -33,6 +34,11 @@ const navItems = [
     title: 'Projects',
     href: '/dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    title: 'New Project',
+    href: '/dashboard/new',
+    icon: Upload,
   },
 ];
 

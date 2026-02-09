@@ -5,7 +5,7 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { Separator } from '@/components/ui/separator';
 import { UserButton } from '@clerk/nextjs';
 
-export default function DashboardLayout({
+export default function DashboardGroupLayout({
   children,
 }: {
   children: React.ReactNode;

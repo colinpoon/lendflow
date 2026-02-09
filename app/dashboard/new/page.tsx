@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  ChevronRight,
-  Home,
-  FolderOpen,
-  ArrowLeft,
-} from 'lucide-react';
+import Link from 'next/link';
+import { ChevronRight, Home, FolderOpen, FolderPlus } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Card,
   CardContent,
@@ -17,9 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -31,27 +27,51 @@ import {
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const [projectName, setProjectName] = useState('');
+  const [name, setName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [description, setDescription] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    // TODO: Save project to database
-    // For now, just redirect to a mock project
-    const mockProjectId = Date.now().toString();
+    if (!name.trim()) {
+      setError('Project name is required');
+      return;
+    }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    setIsCreating(true);
+    setError(null);
 
-    router.push(`/dashboard/${mockProjectId}`);
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          company_name: companyName.trim() || null,
+          description: description.trim() || null,
+        }),
+      });
+
+      if (response.ok) {
+        const project = await response.json();
+        router.push('/dashboard/' + project.id);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to create project');
+      }
+    } catch (err) {
+      console.error('Error creating project:', err);
+      setError('Failed to create project');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8 space-y-6">
-      {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -82,32 +102,44 @@ export default function NewProjectPage() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* Back Link */}
-      <Button variant="ghost" asChild className="gap-2 -ml-2">
-        <Link href="/dashboard">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Projects
-        </Link>
-      </Button>
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+          <FolderPlus className="h-6 w-6 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Create New Project</h1>
+          <p className="text-gray-500 text-sm">Set up a new financial analysis project</p>
+        </div>
+      </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Create New Project</CardTitle>
+          <CardTitle>Project Details</CardTitle>
           <CardDescription>
-            Start a new financial analysis project. You can upload documents and
-            analyze risk after creating the project.
+            Give your project a name to get started. You can upload documents after creating the project.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Project Name *</Label>
               <Input
                 id="name"
-                placeholder="e.g., Acme Corp Q4 Analysis"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                required
+                placeholder="e.g., Q4 2024 Financial Review"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isCreating}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                placeholder="e.g., Acme Corporation"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                disabled={isCreating}
               />
             </div>
 
@@ -115,26 +147,31 @@ export default function NewProjectPage() {
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                placeholder="Brief description of the analysis purpose..."
+                placeholder="Brief description of the analysis..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                disabled={isCreating}
                 rows={3}
               />
             </div>
 
-            <div className="flex gap-3 pt-4">
+            {error && (
+              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? 'Creating...' : 'Create Project'}
+              </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.push('/dashboard')}
+                disabled={isCreating}
               >
                 Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!projectName.trim() || isSubmitting}
-              >
-                {isSubmitting ? 'Creating...' : 'Create Project'}
               </Button>
             </div>
           </form>

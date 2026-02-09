@@ -8,6 +8,7 @@ import { PDFDocument } from 'pdf-lib';
 interface FileUploadProps {
   onDataExtracted: (data: any) => void;
   onUploadStart?: () => void;
+  projectId?: string;
 }
 
 type ProcessingStage = 'idle' | 'compressing' | 'processing' | 'complete' | 'error';
@@ -49,6 +50,7 @@ async function compressPDF(file: File): Promise<File> {
 const FileUpload: React.FC<FileUploadProps> = ({
   onDataExtracted,
   onUploadStart,
+  projectId,
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [stage, setStage] = useState<ProcessingStage>('idle');
@@ -147,6 +149,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     const formData = new FormData();
     formData.append('file', file);
+    if (projectId) {
+      formData.append('projectId', projectId);
+    }
 
     try {
       const response = await fetch('/api/extractData', {

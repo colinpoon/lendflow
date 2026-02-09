@@ -1,0 +1,168 @@
+import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { createClient } from '@/utils/supabase/server';
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+// GET /api/projects/[id] - Get a single project with documents and extractions
+export async function GET(request: Request, { params }: RouteParams) {
+  const { id } = await params;
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const supabase = await createClient();
+
+  const { data: project, error } = await supabase
+    .from('projects')
+    .select(
+      `
+      *,
+      documents (
+        id,
+        file_name,
+        original_file_name,
+        file_type,
+        file_size,
+        storage_path,
+        processing_status,
+        error_message,
+        created_at,
+        updated_at
+      ),
+      extractions (
+        id,
+        document_id,
+        extraction_data,
+        fiscal_years,
+        latest_fccr,
+        latest_dscr,
+        latest_senior_debt_to_ebitda,
+        latest_debt_to_capital,
+        latest_adjusted_ebitda,
+        quantitative_risk_score,
+        quantitative_risk_band,
+        validation_issues,
+        processing_time_ms,
+        created_at,
+        updated_at
+      )
+    `
+    )
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(project);
+}
+
+// PATCH /api/projects/[id] - Update a project
+export async function PATCH(request: Request, { params }: RouteParams) {
+  const { id } = await params;
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const supabase = await createClient();
+
+  try {
+    const body = await request.json();
+    const { name, description, company_name, status } = body;
+
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (company_name !== undefined) updateData.company_name = company_name;
+    if (status !== undefined) updateData.status = status;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No fields to update' },
+        { status: 400 }
+      );
+    }
+
+    const { data: project, error } = await supabase
+      .from('projects')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'Project not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(project);
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+}
+
+// DELETE /api/projects/[id] - Delete a project
+export async function DELETE(request: Request, { params }: RouteParams) {
+  const { id } = await params;
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const supabase = await createClient();
+
+  // First, get the project to find associated files in storage
+  const { data: project, error: fetchError } = await supabase
+    .from('projects')
+    .select('id, documents(storage_path)')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchError) {
+    if (fetchError.code === 'PGRST116') {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  }
+
+  // Delete files from storage
+  if (project?.documents && project.documents.length > 0) {
+    const storagePaths = project.documents.map(
+      (doc: { storage_path: string }) => doc.storage_path
+    );
+    await supabase.storage.from('financial-documents').remove(storagePaths);
+  }
+
+  // Delete the project (cascade will handle documents and extractions)
+  const { error: deleteError } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ message: 'Project deleted successfully' });
+}
