@@ -110,6 +110,8 @@ interface YearMetrics {
   total_debt: number | null;
   senior_debt: number | null;
   shareholders_equity: number | null;
+  current_assets: number | null;
+  current_liabilities: number | null;
   // Cash Flow
   capital_expenditures: number | null;
   proceeds_from_long_term_debt: number | null;
@@ -137,6 +139,7 @@ interface YearMetrics {
   funded_debt_to_ebitda: number | null;
   interest_coverage_ratio: number | null;
   debt_to_equity_ratio: number | null;
+  current_ratio: number | null;
 }
 
 interface FinancialTableProps {
@@ -197,6 +200,8 @@ const sections: SectionConfig[] = [
       { key: 'senior_debt', label: 'Senior Debt', highlight: true },
       { key: 'total_debt', label: 'Total Debt', highlight: true },
       { key: 'shareholders_equity', label: "Shareholders' Equity" },
+      { key: 'current_assets', label: 'Current Assets' },
+      { key: 'current_liabilities', label: 'Current Liabilities' },
     ],
   },
   {
@@ -291,6 +296,7 @@ const sections: SectionConfig[] = [
       { key: 'senior_debt_to_ebitda', label: 'Senior Debt / Adj. EBITDA', format: 'ratio', highlight: true },
       { key: 'funded_debt_to_ebitda', label: 'Funded Debt / EBITDA', format: 'ratio', highlight: true },
       { key: 'total_debt_to_capital', label: 'Total Debt / Capital', format: 'percent', highlight: true },
+      { key: 'current_ratio', label: 'Current Ratio', format: 'ratio', highlight: true },
       { key: 'interest_coverage_ratio', label: 'Interest Coverage Ratio', format: 'ratio' },
       { key: 'debt_to_equity_ratio', label: 'Debt to Equity Ratio', format: 'ratio' },
     ],
@@ -373,6 +379,12 @@ const getRatioColor = (key: string, value: number | null): string => {
       if (value >= 3.0) return 'text-lime-600 font-semibold';
       if (value >= 2.0) return 'text-yellow-600 font-semibold';
       if (value >= 1.5) return 'text-orange-600 font-semibold';
+      return 'text-red-600 font-semibold';
+    case 'current_ratio':
+      if (value >= 2.0) return 'text-green-600 font-semibold';
+      if (value >= 1.5) return 'text-lime-600 font-semibold';
+      if (value >= 1.2) return 'text-yellow-600 font-semibold';
+      if (value >= 1.0) return 'text-orange-600 font-semibold';
       return 'text-red-600 font-semibold';
     default:
       return '';

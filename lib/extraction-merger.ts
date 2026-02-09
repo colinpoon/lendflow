@@ -7,6 +7,36 @@
  * results since chunk order is guaranteed.
  */
 
+// Currency metrics that should be in thousands (not raw dollars)
+const CURRENCY_METRICS = [
+  'revenue',
+  'net_income',
+  'expenses',
+  'interest',
+  'taxes',
+  'depreciation_amortization',
+  'depreciation_equipment',
+  'depreciation_rou',
+  'depreciation_other',
+  'ebitda',
+  'reported_adjusted_ebitda',
+  'shareholders_equity',
+  'capital_expenditures',
+  'proceeds_from_long_term_debt',
+  'cash_taxes_paid',
+  'distributions_paid',
+  'ttm_principal_payments',
+  'ttm_interest_expense',
+  'repayment_of_debt',
+  'payment_of_lease_liability',
+  'cash_interest_paid',
+  'non_cash_interest_expense',
+  'total_debt',
+  'senior_debt',
+  'current_assets',
+  'current_liabilities',
+];
+
 /**
  * Merge multiple extraction results into a single consolidated object
  * Handles nested objects (debt_components, fixed_charges, adjusted_ebitda_components)
@@ -93,4 +123,59 @@ function mergeNestedObject(
   }
 
   return merged;
+}
+
+/**
+ * Normalize scale mismatches across years
+ * Detects when one year's value is ~1000x larger than others (raw dollars vs thousands)
+ * and corrects by dividing by 1000
+ *
+ * @param merged - Merged metrics by year
+ * @returns Normalized metrics with consistent scaling
+ */
+export function normalizeScaleMismatch(
+  merged: Record<string, any>
+): Record<string, any> {
+  const years = Object.keys(merged);
+  if (years.length < 2) return merged; // Need 2+ years to detect mismatch
+
+  const normalized = JSON.parse(JSON.stringify(merged)); // Deep clone
+
+  for (const metric of CURRENCY_METRICS) {
+    // Collect non-null values for this metric across years
+    const values: { year: string; value: number }[] = [];
+    for (const yr of years) {
+      const val = normalized[yr]?.[metric];
+      if (typeof val === 'number' && val !== 0) {
+        values.push({ year: yr, value: val });
+      }
+    }
+
+    if (values.length < 2) continue; // Need 2+ values to compare
+
+    // Sort by absolute value to find min and max
+    const sorted = [...values].sort((a, b) => Math.abs(a.value) - Math.abs(b.value));
+    const minAbs = Math.abs(sorted[0].value);
+    const maxAbs = Math.abs(sorted[sorted.length - 1].value);
+
+    // If max is 500-2000x larger than min, the max values are likely in raw dollars
+    const ratio = maxAbs / minAbs;
+    if (ratio >= 500 && ratio <= 2000) {
+      // Find all values that are close to the max (within 10x) and divide them by 1000
+      for (const { year, value } of values) {
+        const absValue = Math.abs(value);
+        if (absValue > minAbs * 100) {
+          // This value is an outlier (much larger than the min)
+          const corrected = value / 1000;
+          console.log(
+            `⚠️ Scale mismatch detected: ${metric} in ${year} is ~${(absValue / minAbs).toFixed(0)}x larger than smallest value. ` +
+              `Correcting ${value.toLocaleString()} → ${corrected.toLocaleString()} (÷1000)`
+          );
+          normalized[year][metric] = corrected;
+        }
+      }
+    }
+  }
+
+  return normalized;
 }

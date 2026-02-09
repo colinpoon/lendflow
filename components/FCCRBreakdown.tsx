@@ -177,9 +177,13 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
   const adjustedNumerator = fccrBreakdown
     ? fccrBreakdown.numerator + totalCustomAdjustments
     : null;
-  const adjustedFCCR = adjustedNumerator != null && fccrBreakdown && fccrBreakdown.denominator > 0
-    ? parseFloat((adjustedNumerator / fccrBreakdown.denominator).toFixed(2))
-    : metrics.fccr;
+  // Use original FCCR when adjustments sum to zero to avoid floating point precision issues
+  const adjustedFCCR =
+    totalCustomAdjustments === 0
+      ? metrics.fccr
+      : (adjustedNumerator != null && fccrBreakdown && fccrBreakdown.denominator > 0
+          ? parseFloat((adjustedNumerator / fccrBreakdown.denominator).toFixed(2))
+          : metrics.fccr);
 
   // Handler to add a new adjustment
   const handleAddAdjustment = () => {
@@ -218,7 +222,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
             {formatRatio(adjustedFCCR)}
           </p>
           <p className="text-xs text-gray-500 mt-1">Fixed Charge Coverage</p>
-          {customAdjustments.length > 0 && (
+          {totalCustomAdjustments !== 0 && (
             <p className="text-xs text-blue-500 mt-1">(adjusted)</p>
           )}
         </div>
@@ -475,8 +479,10 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
 
                     {/* Numerator Total */}
                     <div className="flex justify-between font-bold border-t-2 border-green-400 pt-2 mt-2 bg-green-100 -mx-4 px-4 py-2 rounded-b">
-                      <span>= Cash Available for Debt Service {customAdjustments.length > 0 && '(Adjusted)'}</span>
-                      <span className="text-green-700">{formatCurrency(adjustedNumerator ?? fccrBreakdown.numerator)}</span>
+                      <span>= Cash Available for Debt Service {totalCustomAdjustments !== 0 && '(Adjusted)'}</span>
+                      <span className="text-green-700">
+                        {formatCurrency(totalCustomAdjustments === 0 ? fccrBreakdown.numerator : (adjustedNumerator ?? fccrBreakdown.numerator))}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -548,7 +554,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <span className="text-gray-500">FCCR =</span> {(adjustedNumerator ?? fccrBreakdown.numerator).toLocaleString()} / {fccrBreakdown.denominator.toLocaleString()} = <span className={`font-bold text-lg ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })}`}>{formatRatio(adjustedFCCR)}</span>
                     </div>
                   </div>
-                  {customAdjustments.length > 0 && (
+                  {totalCustomAdjustments !== 0 && (
                     <div className="text-xs text-gray-500 mt-2 text-center">
                       Base FCCR: {formatRatio(metrics.fccr)} | Adjustments: {formatCurrency(totalCustomAdjustments)}
                     </div>

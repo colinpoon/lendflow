@@ -58,6 +58,8 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       },
       "total_debt": number|null,
       "senior_debt": number|null,
+      "current_assets": number|null,
+      "current_liabilities": number|null,
       "fixed_charges": {
         "senior_debt_interest": number|null,
         "subordinated_debt_interest": number|null,
@@ -217,6 +219,19 @@ CRITICAL DEBT CALCULATION RULES:
 • If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities.
 • Lease liabilities are often shown separately from bank debt on the balance sheet.
 • When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority.
+
+CURRENT ASSETS & LIABILITIES (CRITICAL FOR LIQUIDITY RATIO):
+Extract from Balance Sheet for Current Ratio calculation:
+
+• current_assets: Total current assets from the Balance Sheet. Look for:
+  - "Total current assets" or "Current assets - total"
+  - Sum of: cash, accounts receivable, inventory, prepaid expenses, other current assets
+  - Extract as POSITIVE number
+
+• current_liabilities: Total current liabilities from the Balance Sheet. Look for:
+  - "Total current liabilities" or "Current liabilities - total"
+  - Sum of: accounts payable, accrued liabilities, current portion of debt, current portion of lease liabilities, other current liabilities
+  - Extract as POSITIVE number
 
 FIXED CHARGES EXTRACTION (CRITICAL FOR FCCR CALCULATION):
 Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES. This is essential for accurate FCCR.

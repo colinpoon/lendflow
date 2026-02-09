@@ -63,3 +63,20 @@ export function calculateDebtToEquityRatio(
 
   return totalDebt / shareholdersEquity;
 }
+
+/**
+ * Calculate Current Ratio (Liquidity Ratio)
+ * Current Ratio = Current Assets / Current Liabilities
+ * Measures ability to pay short-term obligations
+ * @returns Ratio value or null if cannot be calculated
+ */
+export function calculateCurrentRatio(
+  currentAssets: number | null,
+  currentLiabilities: number | null
+): number | null {
+  if (currentAssets == null || currentLiabilities == null || currentLiabilities === 0) {
+    return null;
+  }
+
+  return parseFloat((currentAssets / currentLiabilities).toFixed(2));
+}

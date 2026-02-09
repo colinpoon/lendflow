@@ -18,7 +18,9 @@ import FinancialTable from '@/components/FinancialTable';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
 import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import AdjustedEBITDA from '@/components/AdjustedEBITDA';
+import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import { RiskData } from '@/components/RiskAssessment';
+import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 import {
   Card,
   CardContent,
@@ -75,6 +77,8 @@ export default function ProjectPage() {
   const [riskData, setRiskData] = useState<RiskData | null>(null);
   const [debtHealthAssessment, setDebtHealthAssessment] =
     useState<DebtHealthAssessment | null>(null);
+  const [quantitativeRiskAssessment, setQuantitativeRiskAssessment] =
+    useState<QuantitativeRiskAssessment | null>(null);
 
   const handleDataUpdate = (data: any) => {
     console.log('Project received payload:', data);
@@ -102,6 +106,15 @@ export default function ProjectPage() {
       null;
     if (nestedDebtHealth) {
       setDebtHealthAssessment(nestedDebtHealth);
+    }
+
+    // Quantitative risk assessment
+    const nestedQuantRisk =
+      data.quantitativeRiskAssessment ??
+      data.financialMetrics?.quantitativeRiskAssessment ??
+      null;
+    if (nestedQuantRisk) {
+      setQuantitativeRiskAssessment(nestedQuantRisk);
     }
 
     if (data.metrics_by_year || data.financialMetrics) {
@@ -209,6 +222,16 @@ export default function ProjectPage() {
         <TabsContent value="credit">
           {(riskData || financialData) ? (
             <div className="space-y-6">
+              {/* Quantitative Risk Scorecard */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quantitative Risk Scorecard</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <QuantitativeRiskCard data={quantitativeRiskAssessment} />
+                </CardContent>
+              </Card>
+
               {financialData && (
                 <Card>
                   <CardHeader>

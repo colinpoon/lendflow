@@ -17,7 +17,7 @@ import {
   deduplicateChunks,
   processChunksSequentially,
 } from '@/lib/chunk-processor';
-import { mergeExtractions } from '@/lib/extraction-merger';
+import { mergeExtractions, normalizeScaleMismatch } from '@/lib/extraction-merger';
 import {
   generateRiskAssessment,
   generateDebtHealthAssessment,
@@ -32,7 +32,12 @@ import {
   calculateSeniorDebtToEBITDA,
   calculateInterestCoverageRatio,
   calculateDebtToEquityRatio,
+  calculateCurrentRatio,
 } from '@/lib/calculations';
+import {
+  calculateQuantitativeRisk,
+  type QuantitativeRiskAssessment,
+} from '@/lib/quantitative-risk';
 import { AI_CONFIG } from '@/lib/constants';
 import type { ComputedMetrics, ExtractedMetrics, RiskData, DebtHealthAssessment } from '@/types';
 
@@ -44,6 +49,7 @@ export interface ExtractionResult {
   metrics_by_year?: Record<string, ComputedMetrics>;
   riskAssessment?: RiskData | null;
   debtHealthAssessment?: DebtHealthAssessment | null;
+  quantitativeRiskAssessment?: QuantitativeRiskAssessment | null;
   validation_issues?: Record<string, string[]>;
   raw_chunks?: any[];
 }
@@ -99,7 +105,14 @@ export const extractFinancialData = async (
     // Phase 4: Merge & Consolidate (deterministic first-wins)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const merged = mergeExtractions(allExtractions);
+    const rawMerged = mergeExtractions(allExtractions);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4b: Normalize Scale Mismatches
+    // Detect and fix when AI returns raw dollars vs thousands inconsistently
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const merged = normalizeScaleMismatch(rawMerged);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 5: Compute Derived Metrics
@@ -123,16 +136,28 @@ export const extractFinancialData = async (
     const riskSnapshot = await generateRiskAssessment(computed);
     const debtHealthAssessment = await generateDebtHealthAssessment(computed);
 
+    console.log(`📊 Computing quantitative risk for ${Object.keys(computed).length} years:`, Object.keys(computed));
+    const quantitativeRiskAssessment = calculateQuantitativeRisk(computed);
+    console.log(`📊 Quantitative risk result:`, quantitativeRiskAssessment ? 'SUCCESS' : 'NULL');
+
+    if (quantitativeRiskAssessment) {
+      console.log(`\n📊 QUANTITATIVE RISK ASSESSMENT:`);
+      console.log(`   Normalized Score: ${quantitativeRiskAssessment.normalized_score}/100`);
+      console.log(`   Risk Band: ${quantitativeRiskAssessment.risk_band}`);
+      console.log(`   ${quantitativeRiskAssessment.trend_summary}`);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 8: Build Result
     // ─────────────────────────────────────────────────────────────────────────
 
-    if (Object.keys(computed).length > 0 || riskSnapshot || debtHealthAssessment) {
+    if (Object.keys(computed).length > 0 || riskSnapshot || debtHealthAssessment || quantitativeRiskAssessment) {
       console.log('✅ Extraction complete. Returning combined result.');
       return {
         ...(Object.keys(computed).length > 0 && { metrics_by_year: computed }),
         ...(riskSnapshot && { riskAssessment: riskSnapshot }),
         ...(debtHealthAssessment && { debtHealthAssessment }),
+        ...(quantitativeRiskAssessment && { quantitativeRiskAssessment }),
         ...(Object.keys(validationIssues).length > 0 && {
           validation_issues: validationIssues,
         }),
@@ -239,6 +264,11 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
   result.debt_to_equity_ratio = calculateDebtToEquityRatio(
     result.total_debt,
     result.shareholders_equity
+  );
+
+  result.current_ratio = calculateCurrentRatio(
+    result.current_assets,
+    result.current_liabilities
   );
 
   // ─────────────────────────────────────────────────────────────────────────

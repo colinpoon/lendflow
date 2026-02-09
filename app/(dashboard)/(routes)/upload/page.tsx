@@ -15,6 +15,8 @@ import RiskAssessment, {
   RiskData,
 } from '@/components/RiskAssessment';
 import FCCRBreakdown from '@/components/FCCRBreakdown';
+import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
+import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 import {
   Card,
   CardContent,
@@ -60,6 +62,8 @@ const Home = () => {
   const [riskData, setRiskData] = useState<RiskData | null>(null);
   const [debtHealthAssessment, setDebtHealthAssessment] =
     useState<DebtHealthAssessment | null>(null);
+  const [quantitativeRiskAssessment, setQuantitativeRiskAssessment] =
+    useState<QuantitativeRiskAssessment | null>(null);
 
   // Custom adjustments state (lifted from FCCRBreakdown for cross-component sharing)
   const [customAdjustments, setCustomAdjustments] = useState<CustomAdjustment[]>([]);
@@ -72,6 +76,8 @@ const Home = () => {
 
   const handleDataUpdate = (data: any) => {
     console.log('🐞 page.tsx received payload:', data);
+    console.log('🐞 financialMetrics keys:', data.financialMetrics ? Object.keys(data.financialMetrics) : 'no financialMetrics');
+    console.log('🐞 quantitativeRiskAssessment in financialMetrics:', data.financialMetrics?.quantitativeRiskAssessment);
 
     setExtractedData(data);
 
@@ -99,6 +105,24 @@ const Home = () => {
       null;
     if (nestedDebtHealth) {
       setDebtHealthAssessment(nestedDebtHealth);
+    }
+
+    // Quantitative risk assessment
+    const nestedQuantRisk =
+      data.quantitativeRiskAssessment ??
+      data.financialMetrics?.quantitativeRiskAssessment ??
+      null;
+    console.log('🎯 Quantitative Risk Assessment lookup:');
+    console.log('   data.quantitativeRiskAssessment:', data.quantitativeRiskAssessment);
+    console.log('   data.financialMetrics?.quantitativeRiskAssessment:', data.financialMetrics?.quantitativeRiskAssessment);
+    console.log('   Final nestedQuantRisk:', nestedQuantRisk);
+    if (nestedQuantRisk) {
+      console.log('✅ Setting quantitativeRiskAssessment state');
+      setQuantitativeRiskAssessment(nestedQuantRisk);
+    } else {
+      console.warn('⚠️ No quantitative risk assessment found in response');
+      console.warn('   Available keys in data:', Object.keys(data));
+      console.warn('   Available keys in data.financialMetrics:', data.financialMetrics ? Object.keys(data.financialMetrics) : 'N/A');
     }
 
     // decide default tab - go to analysis after successful extraction
@@ -175,11 +199,22 @@ const Home = () => {
                     <CardTitle>Debt Health Risk Assessment</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <WeightedRiskGauge
-                      data={financialData}
-                      debtHealthAssessment={debtHealthAssessment}
-                      customFccrAdjustment={totalCustomAdjustments}
-                    />
+                    <div className="space-y-8">
+                      {/* Quantitative Risk Scorecard */}
+                      <QuantitativeRiskCard data={quantitativeRiskAssessment} />
+
+                      {/* Divider */}
+                      {quantitativeRiskAssessment && (
+                        <hr className="border-gray-200" />
+                      )}
+
+                      {/* Existing Weighted Risk Gauge */}
+                      <WeightedRiskGauge
+                        data={financialData}
+                        debtHealthAssessment={debtHealthAssessment}
+                        customFccrAdjustment={totalCustomAdjustments}
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               )}

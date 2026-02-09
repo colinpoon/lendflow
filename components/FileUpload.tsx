@@ -112,10 +112,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
           return;
         }
 
-        if (savedPercent > 5) {
+        if (savedPercent > 0) {
           setCompressionInfo(`Optimized: saved ${savedPercent}%`);
         } else {
-          setCompressionInfo(null);
+          setCompressionInfo('Already optimized');
         }
 
         setFile(compressedFile);
