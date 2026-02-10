@@ -15,6 +15,8 @@ import {
   Pencil,
   Check,
   X,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 
 import FileUpload from '@/components/FileUpload';
@@ -110,6 +112,9 @@ export default function ProjectDetail({
   const [isSaving, setIsSaving] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
+  // Document deletion
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+
   // Focus input when editing starts
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
@@ -161,6 +166,32 @@ export default function ProjectDetail({
       handleSaveName();
     } else if (e.key === 'Escape') {
       handleCancelEdit();
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: string, fileName: string) => {
+    if (!confirm(`Are you sure you want to delete "${fileName}"? This will remove its data from the analysis.`)) {
+      return;
+    }
+
+    setDeletingDocId(documentId);
+    try {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Reload to get updated merged data
+        window.location.reload();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete document');
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Failed to delete document');
+    } finally {
+      setDeletingDocId(null);
     }
   };
 
@@ -329,11 +360,23 @@ export default function ProjectDetail({
                   {documentCoverage.map((doc) => (
                     <div
                       key={doc.document_id}
-                      className="text-xs bg-white px-2 py-1 rounded border border-blue-200 flex items-center gap-1"
+                      className="text-xs bg-white px-2 py-1 rounded border border-blue-200 flex items-center gap-1.5 group"
                     >
                       <FileText className="h-3 w-3" />
                       <span className="font-medium">{doc.file_name}</span>
                       <span className="text-blue-600">({doc.years.join(', ')})</span>
+                      <button
+                        onClick={() => handleDeleteDocument(doc.document_id, doc.file_name)}
+                        disabled={deletingDocId === doc.document_id}
+                        className="ml-1 p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                        title="Remove document"
+                      >
+                        {deletingDocId === doc.document_id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                      </button>
                     </div>
                   ))}
                 </div>
