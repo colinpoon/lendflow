@@ -664,8 +664,8 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         </div>
       )}
 
-      {/* Credit Risk Pillar Observations */}
-      {riskData && riskData.pillars && Object.keys(riskData.pillars).length > 0 && (
+      {/* Credit Risk Pillar Observations - temporarily disabled */}
+      {/* {riskData && riskData.pillars && Object.keys(riskData.pillars).length > 0 && (
         <div className="mt-6 pt-4 border-t">
           <Accordion type="single" collapsible defaultValue="pillars" className="w-full">
             <AccordionItem value="pillars" className="border rounded-lg px-4">
@@ -720,7 +720,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             </AccordionItem>
           </Accordion>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

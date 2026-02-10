@@ -5,6 +5,8 @@ export interface ExtractionResult {
   debtHealthAssessment?: any;
   quantitativeRiskAssessment?: any;
   validation_issues?: Record<string, string[]>;
+  extraction_warnings?: string[];
+  chunk_stats?: { total: number; successful: number; failed: number };
 }
 
 export type Json =

@@ -7,58 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-
-interface AdjustedEBITDAComponents {
-  stock_based_compensation?: number | null;
-  impairment_charges?: number | null;
-  goodwill_impairment?: number | null;
-  bad_debt_provision?: number | null;
-  unrealized_gains_losses?: number | null;
-  deferred_compensation?: number | null;
-  loss_on_disposal?: number | null;
-  other_non_cash?: number | null;
-  restructuring_costs?: number | null;
-  severance_costs?: number | null;
-  transaction_costs?: number | null;
-  legal_settlements?: number | null;
-  professional_fees_one_time?: number | null;
-  casualty_losses?: number | null;
-  other_one_time_expenses?: number | null;
-  gain_on_disposal?: number | null;
-  gain_on_asset_sale?: number | null;
-  other_income_non_operating?: number | null;
-  insurance_proceeds?: number | null;
-  other_one_time_gains?: number | null;
-  owner_compensation_adjustment?: number | null;
-  related_party_adjustments?: number | null;
-  management_fees_adjustment?: number | null;
-  accounting_policy_adjustments?: number | null;
-  foreign_exchange_adjustments?: number | null;
-  pro_forma_cost_savings?: number | null;
-  pro_forma_synergies?: number | null;
-}
-
-interface AdjustedEBITDABreakdown {
-  reported_ebitda: number;
-  non_cash_adjustments: number;
-  one_time_expenses: number;
-  one_time_gains: number;
-  owner_management_adjustments: number;
-  accounting_adjustments: number;
-  fx_adjustments: number;
-  pro_forma_adjustments: number;
-  capital_expenditures: number;
-  uses_reported_value?: boolean;
-}
-
-interface YearMetrics {
-  ebitda?: number | null;
-  adjusted_ebitda?: number | null;
-  reported_adjusted_ebitda?: number | null;
-  calculated_adjusted_ebitda?: number | null;
-  adjusted_ebitda_components?: AdjustedEBITDAComponents | null;
-  adjusted_ebitda_breakdown?: AdjustedEBITDABreakdown | null;
-}
+import type { YearMetrics } from '@/types';
 
 interface AdjustedEBITDAProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
@@ -197,7 +146,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       breakdown.accounting_adjustments !== 0 ||
       breakdown.fx_adjustments !== 0 ||
       breakdown.pro_forma_adjustments !== 0 ||
-      breakdown.capital_expenditures !== 0);
+      breakdown.capital_expenditures_not_in_calc !== 0);
 
   return (
     <div className="space-y-4">
@@ -422,12 +371,12 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               />
 
               {/* Capital Expenditures (subtract) */}
-              {breakdown.capital_expenditures !== 0 && (
+              {breakdown.capital_expenditures_not_in_calc !== 0 && (
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <h5 className="text-sm font-semibold text-gray-700">Capital Expenditures (Maintenance CapEx)</h5>
                     <span className="text-sm font-bold text-red-600">
-                      {formatSignedCurrency(breakdown.capital_expenditures, true)}
+                      {formatSignedCurrency(breakdown.capital_expenditures_not_in_calc, true)}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 pl-4">

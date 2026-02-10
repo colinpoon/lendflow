@@ -16,6 +16,7 @@ import {
   chunkText,
   deduplicateChunks,
   processChunksSequentially,
+  type ProgressCallback,
 } from '@/lib/chunk-processor';
 import { mergeExtractions, normalizeScaleMismatch } from '@/lib/extraction-merger';
 import {
@@ -51,18 +52,29 @@ export interface ExtractionResult {
   debtHealthAssessment?: DebtHealthAssessment | null;
   quantitativeRiskAssessment?: QuantitativeRiskAssessment | null;
   validation_issues?: Record<string, string[]>;
+  extraction_warnings?: string[];
+  chunk_stats?: {
+    total: number;
+    successful: number;
+    failed: number;
+  };
   raw_chunks?: any[];
 }
+
+// Re-export ProgressCallback for API route
+export type { ProgressCallback };
 
 /**
  * Extract financial data from an uploaded document
  * Main entry point for the AI extraction pipeline
  *
  * @param filePath - Path to the document (PDF, Excel, or text)
+ * @param onProgress - Optional callback for progress updates
  * @returns Extracted financial metrics, ratios, and risk assessments
  */
 export const extractFinancialData = async (
-  filePath: string
+  filePath: string,
+  onProgress?: ProgressCallback
 ): Promise<ExtractionResult> => {
   try {
     // Validate environment
@@ -76,11 +88,23 @@ export const extractFinancialData = async (
     // Phase 1: Document Parsing
     // ─────────────────────────────────────────────────────────────────────────
 
+    onProgress?.({
+      stage: 'parsing',
+      progress: 10,
+      message: 'Parsing document...',
+    });
+
     const fileContent = await parseDocument(filePath);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 2: Text Chunking & Deduplication
     // ─────────────────────────────────────────────────────────────────────────
+
+    onProgress?.({
+      stage: 'chunking',
+      progress: 15,
+      message: 'Chunking document...',
+    });
 
     const textChunks = chunkText(fileContent, AI_CONFIG.CHUNK_SIZE);
     console.log(`✅ Prepared ${textChunks.length} text chunk(s) for analysis.`);
@@ -90,20 +114,49 @@ export const extractFinancialData = async (
       `📊 Processing ${uniqueChunks.length} unique chunks (${textChunks.length - uniqueChunks.length} duplicates removed)`
     );
 
+    onProgress?.({
+      stage: 'extracting',
+      progress: 20,
+      message: `Starting AI extraction on ${uniqueChunks.length} chunks...`,
+      chunk: 0,
+      totalChunks: uniqueChunks.length,
+    });
+
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 3: AI Extraction (SEQUENTIAL for determinism)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const chunkResults = await processChunksSequentially(uniqueChunks);
+    const chunkResults = await processChunksSequentially(uniqueChunks, onProgress);
+
+    // Calculate chunk stats
+    const successfulChunks = chunkResults.filter((r) => r.result !== null);
+    const failedChunkCount = chunkResults.length - successfulChunks.length;
+    const chunkStats = {
+      total: chunkResults.length,
+      successful: successfulChunks.length,
+      failed: failedChunkCount,
+    };
+
+    // Track extraction warnings
+    const extractionWarnings: string[] = [];
+    if (failedChunkCount > 0) {
+      extractionWarnings.push(
+        `${failedChunkCount} of ${chunkResults.length} document sections could not be processed`
+      );
+    }
 
     // Filter to successful extractions only
-    const allExtractions = chunkResults
-      .filter((r) => r.result !== null)
-      .map((r) => r.result);
+    const allExtractions = successfulChunks.map((r) => r.result);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 4: Merge & Consolidate (deterministic first-wins)
     // ─────────────────────────────────────────────────────────────────────────
+
+    onProgress?.({
+      stage: 'merging',
+      progress: 70,
+      message: 'Merging extractions...',
+    });
 
     const rawMerged = mergeExtractions(allExtractions);
 
@@ -118,6 +171,12 @@ export const extractFinancialData = async (
     // Phase 5: Compute Derived Metrics
     // ─────────────────────────────────────────────────────────────────────────
 
+    onProgress?.({
+      stage: 'computing',
+      progress: 75,
+      message: 'Computing financial ratios...',
+    });
+
     const computed: Record<string, ComputedMetrics> = {};
     for (const yr of Object.keys(merged)) {
       computed[yr] = computeMetrics(merged[yr]);
@@ -127,11 +186,23 @@ export const extractFinancialData = async (
     // Phase 6: Validation
     // ─────────────────────────────────────────────────────────────────────────
 
+    onProgress?.({
+      stage: 'validating',
+      progress: 80,
+      message: 'Validating data...',
+    });
+
     const validationIssues = validateMetrics(computed);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 7: Risk Assessment Generation
     // ─────────────────────────────────────────────────────────────────────────
+
+    onProgress?.({
+      stage: 'assessing',
+      progress: 85,
+      message: 'Generating risk assessment...',
+    });
 
     const riskSnapshot = await generateRiskAssessment(computed);
     const debtHealthAssessment = await generateDebtHealthAssessment(computed);
@@ -161,10 +232,16 @@ export const extractFinancialData = async (
         ...(Object.keys(validationIssues).length > 0 && {
           validation_issues: validationIssues,
         }),
+        ...(extractionWarnings.length > 0 && { extraction_warnings: extractionWarnings }),
+        chunk_stats: chunkStats,
       };
     }
 
-    return { raw_chunks: chunkResults };
+    return {
+      raw_chunks: chunkResults,
+      ...(extractionWarnings.length > 0 && { extraction_warnings: extractionWarnings }),
+      chunk_stats: chunkStats,
+    };
   } catch (error: any) {
     console.error('❗ AI processing failed:', error?.message || error);
     throw new Error('AI processing failed: ' + (error?.message || 'Unknown error'));

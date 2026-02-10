@@ -23,8 +23,10 @@ import DebtHealthMeters from '@/components/DebtHealthMeters';
 import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
+import ExtractionWarnings from '@/components/ExtractionWarnings';
 import { RiskData } from '@/components/RiskAssessment';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
+import type { YearMetrics } from '@/types';
 import { Project } from '@/lib/supabase/types';
 import { MergedExtraction } from '@/lib/extraction-utils';
 import { Button } from '@/components/ui/button';
@@ -87,7 +89,7 @@ export default function ProjectDetail({
   extractionCount,
 }: ProjectDetailProps) {
   const [financialData, setFinancialData] = useState<{
-    metrics_by_year: Record<string, any>;
+    metrics_by_year: Record<string, YearMetrics>;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [riskData, setRiskData] = useState<RiskData | null>(null);
@@ -98,6 +100,9 @@ export default function ProjectDetail({
   const [yearSources, setYearSources] = useState<MergedExtraction['year_sources']>({});
   const [mostRecentYear, setMostRecentYear] = useState<string | undefined>();
   const [mostRecentYearSource, setMostRecentYearSource] = useState<MergedExtraction['most_recent_year_source']>();
+  const [validationIssues, setValidationIssues] = useState<Record<string, string[]> | undefined>();
+  const [extractionWarnings, setExtractionWarnings] = useState<string[] | undefined>();
+  const [chunkStats, setChunkStats] = useState<{ total: number; successful: number; failed: number } | undefined>();
 
   // Project name editing
   const [isEditingName, setIsEditingName] = useState(false);
@@ -190,11 +195,23 @@ export default function ProjectDetail({
         setMostRecentYearSource(mergedData.most_recent_year_source);
       }
 
+      if (mergedData.validation_issues) {
+        setValidationIssues(mergedData.validation_issues);
+      }
+
+      if (mergedData.extraction_warnings) {
+        setExtractionWarnings(mergedData.extraction_warnings);
+      }
+
+      if (mergedData.chunk_stats) {
+        setChunkStats(mergedData.chunk_stats);
+      }
+
       setActiveTab('analysis');
     }
   }, [mergedData]);
 
-  const handleDataUpdate = (data: any) => {
+  const handleDataUpdate = (data: unknown) => {
     console.log('Project received payload:', data);
 
     // After new upload, refresh the page to get merged data
@@ -324,6 +341,15 @@ export default function ProjectDetail({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Extraction Warnings */}
+      {hasData && (
+        <ExtractionWarnings
+          validationIssues={validationIssues}
+          extractionWarnings={extractionWarnings}
+          chunkStats={chunkStats}
+        />
       )}
 
       {!hasData && (

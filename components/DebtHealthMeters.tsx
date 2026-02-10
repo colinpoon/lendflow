@@ -461,45 +461,56 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
         </span>
       </div>
 
-      {/* Render gauges for each year */}
-      {years.map((year) => {
-        const metrics = data.metrics_by_year[year];
-        return (
-          <div
-            key={year}
-            className="border rounded-lg p-4 bg-white shadow-sm"
-          >
-            <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">
-              Fiscal Year {year}
-            </h3>
-            <div className="flex flex-wrap justify-center gap-8">
-              <CircularGauge
-                value={metrics.fccr}
-                label="FCCR"
-                formatValue={(v) => v.toFixed(2)}
-                getHealth={getFCCRHealth}
-                subtitle="Target: > 1.2x"
-              />
+      {/* Render gauges for each year in accordions */}
+      <Accordion
+        type="multiple"
+        defaultValue={[years[0]]}
+        className="w-full space-y-3"
+      >
+        {years.map((year) => {
+          const metrics = data.metrics_by_year[year];
+          return (
+            <AccordionItem
+              key={year}
+              value={year}
+              className="border rounded-lg px-4 bg-white shadow-sm"
+            >
+              <AccordionTrigger className="hover:no-underline">
+                <span className="text-lg font-semibold text-gray-700">
+                  Fiscal Year {year}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-wrap justify-center gap-8 py-4">
+                  <CircularGauge
+                    value={metrics.fccr}
+                    label="FCCR"
+                    formatValue={(v) => v.toFixed(2)}
+                    getHealth={getFCCRHealth}
+                    subtitle="Target: > 1.2x"
+                  />
 
-              <CircularGauge
-                value={metrics.senior_debt_to_ebitda}
-                label="Sr. Debt / EBITDA"
-                formatValue={(v) => v.toFixed(2)}
-                getHealth={getSeniorDebtEBITDAHealth}
-                subtitle="Target: < 2.5x"
-              />
+                  <CircularGauge
+                    value={metrics.senior_debt_to_ebitda}
+                    label="Sr. Debt / EBITDA"
+                    formatValue={(v) => v.toFixed(2)}
+                    getHealth={getSeniorDebtEBITDAHealth}
+                    subtitle="Target: < 2.5x"
+                  />
 
-              <CircularGauge
-                value={metrics.total_debt_to_capital}
-                label="Debt / Capital"
-                formatValue={(v) => `${(v * 100).toFixed(1)}%`}
-                getHealth={getTotalDebtCapitalHealth}
-                subtitle="Target: < 30%"
-              />
-            </div>
-          </div>
-        );
-      })}
+                  <CircularGauge
+                    value={metrics.total_debt_to_capital}
+                    label="Debt / Capital"
+                    formatValue={(v) => `${(v * 100).toFixed(1)}%`}
+                    getHealth={getTotalDebtCapitalHealth}
+                    subtitle="Target: < 30%"
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
 
       {/* Calculation Breakdowns - show for most recent year */}
       {(() => {

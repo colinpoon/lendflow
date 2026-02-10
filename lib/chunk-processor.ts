@@ -80,6 +80,18 @@ export interface ChunkResult {
   result: any | null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Progress Callback
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ProgressCallback = (progress: {
+  stage: string;
+  progress: number;
+  message: string;
+  chunk?: number;
+  totalChunks?: number;
+}) => void;
+
 /**
  * Process a single chunk with the AI model
  * Only retries on rate limit errors (429)
@@ -146,10 +158,12 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
  * This replaces parallel batch processing to ensure consistent extraction order.
  *
  * @param chunks - Unique chunks to process in order
+ * @param onProgress - Optional callback for progress updates
  * @returns Array of ChunkResult sorted by chunk index
  */
 export async function processChunksSequentially(
-  chunks: UniqueChunk[]
+  chunks: UniqueChunk[],
+  onProgress?: ProgressCallback
 ): Promise<ChunkResult[]> {
   const results: ChunkResult[] = [];
 
@@ -160,6 +174,15 @@ export async function processChunksSequentially(
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
     console.log(`\n⚡ Processing chunk ${i + 1}/${chunks.length} (index: ${chunk.index})`);
+
+    // Report progress before processing each chunk
+    onProgress?.({
+      stage: 'extracting',
+      progress: Math.round(20 + (i / chunks.length) * 50), // 20-70% range
+      message: `Analyzing chunk ${i + 1} of ${chunks.length}`,
+      chunk: i + 1,
+      totalChunks: chunks.length,
+    });
 
     const result = await processChunk(chunk);
     results.push(result);

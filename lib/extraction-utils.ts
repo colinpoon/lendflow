@@ -6,6 +6,8 @@ export interface MergedExtraction {
   debtHealthAssessment?: any;
   quantitativeRiskAssessment?: any;
   validation_issues?: Record<string, string[]>;
+  extraction_warnings?: string[];
+  chunk_stats?: { total: number; successful: number; failed: number };
   // Track which document each year's data came from
   year_sources: Record<string, { document_id: string; file_name: string; extracted_at: string }>;
   // The most recent fiscal year and its source
@@ -57,6 +59,8 @@ export function mergeExtractions(extractions: ExtractionWithDocument[]): MergedE
       debtHealthAssessment: data.debtHealthAssessment,
       quantitativeRiskAssessment: data.quantitativeRiskAssessment,
       validation_issues: data.validation_issues,
+      extraction_warnings: data.extraction_warnings,
+      chunk_stats: data.chunk_stats,
       year_sources,
       most_recent_year: mostRecentYear,
       most_recent_year_source: mostRecentYear ? {
@@ -121,6 +125,8 @@ export function mergeExtractions(extractions: ExtractionWithDocument[]): MergedE
       merged.debtHealthAssessment = sourceData.debtHealthAssessment;
       merged.quantitativeRiskAssessment = sourceData.quantitativeRiskAssessment;
       merged.validation_issues = sourceData.validation_issues;
+      merged.extraction_warnings = sourceData.extraction_warnings;
+      merged.chunk_stats = sourceData.chunk_stats;
     }
   }
 
@@ -141,6 +147,12 @@ export function mergeExtractions(extractions: ExtractionWithDocument[]): MergedE
       }
       if (!merged.validation_issues && data.validation_issues) {
         merged.validation_issues = data.validation_issues;
+      }
+      if (!merged.extraction_warnings && data.extraction_warnings) {
+        merged.extraction_warnings = data.extraction_warnings;
+      }
+      if (!merged.chunk_stats && data.chunk_stats) {
+        merged.chunk_stats = data.chunk_stats;
       }
     }
   }

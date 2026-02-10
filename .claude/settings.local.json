@@ -4,7 +4,8 @@
       "Bash(node:*)",
       "Bash(npx shadcn@latest add sidebar:*)",
       "Bash(npx tsc:*)",
-      "Bash(timeout 15 npm run dev)"
+      "Bash(timeout 15 npm run dev)",
+      "Bash(npm run build:*)"
     ]
   }
 }

@@ -13,8 +13,29 @@ interface FileUploadProps {
 
 type ProcessingStage = 'idle' | 'compressing' | 'processing' | 'complete' | 'error';
 
-const STAGES = ['Compressing', 'Uploading', 'Extracting', 'Analyzing', 'Finalizing'];
-const TOTAL_ESTIMATED_SECONDS = 35;
+interface SSEProgress {
+  stage: string;
+  progress: number;
+  message: string;
+  chunk?: number;
+  totalChunks?: number;
+  data?: Record<string, unknown>;
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  uploading: 'Uploading',
+  parsing: 'Parsing',
+  chunking: 'Chunking',
+  extracting: 'Extracting',
+  merging: 'Merging',
+  computing: 'Computing',
+  validating: 'Validating',
+  assessing: 'Assessing',
+  saving: 'Saving',
+  complete: 'Complete',
+  error: 'Error',
+};
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
 
 /**
@@ -55,30 +76,17 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [stage, setStage] = useState<ProcessingStage>('idle');
   const [progress, setProgress] = useState<number>(0);
-  const [currentStageIndex, setCurrentStageIndex] = useState<number>(0);
-  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [currentStage, setCurrentStage] = useState<string>('');
+  const [stageMessage, setStageMessage] = useState<string>('');
   const [extractedFileName, setExtractedFileName] = useState<string | null>(null);
   const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      abortControllerRef.current?.abort();
     };
   }, []);
-
-  const startProgressSimulation = () => {
-    const startTime = Date.now();
-
-    intervalRef.current = setInterval(() => {
-      const elapsed = (Date.now() - startTime) / 1000;
-      const newProgress = Math.min(95, (elapsed / TOTAL_ESTIMATED_SECONDS) * 100);
-
-      setProgress(Math.round(newProgress));
-      setTimeRemaining(Math.max(0, Math.ceil(TOTAL_ESTIMATED_SECONDS - elapsed)));
-      setCurrentStageIndex(Math.min(3, Math.floor(newProgress / 25)));
-    }, 200);
-  };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files?.[0]) {
@@ -142,10 +150,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     setStage('processing');
     setProgress(0);
-    setTimeRemaining(TOTAL_ESTIMATED_SECONDS);
+    setCurrentStage('uploading');
+    setStageMessage('Starting upload...');
     setExtractedFileName(file.name);
-    startProgressSimulation();
     onUploadStart?.();
+
+    // Create abort controller for cleanup
+    abortControllerRef.current = new AbortController();
 
     const formData = new FormData();
     formData.append('file', file);
@@ -157,22 +168,61 @@ const FileUpload: React.FC<FileUploadProps> = ({
       const response = await fetch('/api/extractData', {
         method: 'POST',
         body: formData,
+        signal: abortControllerRef.current.signal,
       });
 
       if (response.status === 413) throw new Error('File too large.');
       if (!response.ok) throw new Error('Upload failed');
 
-      const data = await response.json();
+      // Read SSE stream
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response stream');
 
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      setStage('complete');
-      setProgress(100);
-      setTimeRemaining(0);
-      onDataExtracted(data);
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE messages (format: "data: {...}\n\n")
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || ''; // Keep incomplete message in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data: SSEProgress = JSON.parse(line.slice(6));
+
+              // Update UI with progress
+              setProgress(data.progress);
+              setCurrentStage(data.stage);
+              setStageMessage(data.message);
+
+              // Handle completion
+              if (data.stage === 'complete' && data.data) {
+                setStage('complete');
+                onDataExtracted(data.data);
+              }
+
+              // Handle error
+              if (data.stage === 'error') {
+                setStage('error');
+                alert(data.message || 'Processing failed');
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
     } catch (error: any) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      setStage('error');
-      alert(error.message);
+      if (error.name !== 'AbortError') {
+        setStage('error');
+        alert(error.message);
+      }
     }
   };
 
@@ -233,11 +283,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
           <div className="flex items-center justify-between text-xs text-gray-500">
             <div className="flex items-center gap-1.5">
               <Loader2 className="h-3 w-3 animate-spin" />
-              <span>{STAGES[currentStageIndex]}</span>
+              <span>{STAGE_LABELS[currentStage] || currentStage}</span>
             </div>
-            <span>{progress}% · ~{timeRemaining}s</span>
+            <span>{progress}%</span>
           </div>
           <Progress value={progress} className="h-1.5" />
+          <p className="text-xs text-gray-400 text-center">{stageMessage}</p>
         </div>
       )}
     </div>

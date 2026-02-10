@@ -2,6 +2,7 @@ import type { Configuration } from 'webpack';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  devIndicators: false,
   webpack: (
     config: Configuration,
     { isServer }: { isServer: boolean }
