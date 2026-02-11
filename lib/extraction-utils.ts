@@ -209,13 +209,13 @@ export function detectYearConflicts(
         reason = `Existing document has a later fiscal year end (${existing.fiscal_year_end_date}) than new (${newFiscalYearEnd})`;
       }
     } else if (newFiscalYearEnd && !existing.fiscal_year_end_date) {
-      // New has date, existing doesn't - prefer new (has better metadata)
-      recommendation = 'use_new';
-      reason = 'New document has fiscal year end date metadata; existing does not';
-    } else if (!newFiscalYearEnd && existing.fiscal_year_end_date) {
-      // Existing has date, new doesn't - prefer existing
+      // Can't reliably compare - default to keeping existing (safer)
       recommendation = 'keep_existing';
-      reason = 'Existing document has fiscal year end date metadata; new does not';
+      reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
+    } else if (!newFiscalYearEnd && existing.fiscal_year_end_date) {
+      // Can't reliably compare - default to keeping existing (safer)
+      recommendation = 'keep_existing';
+      reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
     } else {
       // Neither has fiscal year end date - fall back to upload timestamp
       if (newIsMoreRecent) {
