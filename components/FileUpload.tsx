@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
+import { YearConflictDialog } from '@/components/YearConflictDialog';
+import type { YearConflict, ConflictResolution } from '@/lib/extraction-utils';
 
 interface FileUploadProps {
   onDataExtracted: (data: any) => void;
@@ -11,7 +13,7 @@ interface FileUploadProps {
   projectId?: string;
 }
 
-type ProcessingStage = 'idle' | 'compressing' | 'processing' | 'complete' | 'error';
+type ProcessingStage = 'idle' | 'compressing' | 'processing' | 'conflict' | 'complete' | 'error';
 
 interface SSEProgress {
   stage: string;
@@ -20,6 +22,9 @@ interface SSEProgress {
   chunk?: number;
   totalChunks?: number;
   data?: Record<string, unknown>;
+  conflicts?: YearConflict[];
+  extractionId?: string;
+  pendingDocumentId?: string;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -81,6 +86,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const [extractedFileName, setExtractedFileName] = useState<string | null>(null);
   const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Conflict handling state
+  const [yearConflicts, setYearConflicts] = useState<YearConflict[] | null>(null);
+  const [pendingExtractionId, setPendingExtractionId] = useState<string | null>(null);
+  const [pendingDocumentId, setPendingDocumentId] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -201,6 +211,16 @@ const FileUpload: React.FC<FileUploadProps> = ({
               setCurrentStage(data.stage);
               setStageMessage(data.message);
 
+              // Handle conflict detection
+              if (data.stage === 'conflict_detected' && data.conflicts) {
+                setStage('conflict');
+                setYearConflicts(data.conflicts);
+                setPendingExtractionId(data.extractionId || null);
+                setPendingDocumentId(data.pendingDocumentId || null);
+                // Don't proceed - wait for user resolution
+                return;
+              }
+
               // Handle completion
               if (data.stage === 'complete' && data.data) {
                 setStage('complete');
@@ -229,7 +249,84 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const isProcessing = stage === 'processing';
   const isCompressing = stage === 'compressing';
 
+  // Handle conflict resolution
+  const handleConflictResolve = async (resolutions: ConflictResolution) => {
+    if (!pendingExtractionId || !projectId) {
+      console.error('Missing extraction ID or project ID for conflict resolution');
+      setYearConflicts(null);
+      setStage('error');
+      return;
+    }
+
+    setStage('processing');
+    setCurrentStage('merging');
+    setStageMessage('Applying conflict resolutions...');
+    setProgress(90);
+
+    try {
+      const response = await fetch('/api/resolve-conflict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          extractionId: pendingExtractionId,
+          projectId,
+          resolutions,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to apply conflict resolutions');
+      }
+
+      const result = await response.json();
+
+      setYearConflicts(null);
+      setPendingExtractionId(null);
+      setPendingDocumentId(null);
+      setStage('complete');
+      onDataExtracted(result.data);
+    } catch (error: any) {
+      setStage('error');
+      alert(error.message || 'Failed to resolve conflicts');
+    }
+  };
+
+  const handleConflictCancel = async () => {
+    // User cancelled - optionally delete the pending extraction
+    if (pendingExtractionId) {
+      try {
+        await fetch('/api/resolve-conflict', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            extractionId: pendingExtractionId,
+            documentId: pendingDocumentId,
+          }),
+        });
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
+    setYearConflicts(null);
+    setPendingExtractionId(null);
+    setPendingDocumentId(null);
+    setStage('idle');
+    setProgress(0);
+  };
+
   return (
+    <>
+    {/* Year Conflict Dialog */}
+    {yearConflicts && yearConflicts.length > 0 && (
+      <YearConflictDialog
+        open={stage === 'conflict'}
+        conflicts={yearConflicts}
+        onResolve={handleConflictResolve}
+        onCancel={handleConflictCancel}
+      />
+    )}
+
     <div className="p-6 border rounded-lg shadow-sm w-full max-w-md mx-auto space-y-4">
       {/* Success State */}
       {stage === 'complete' && (
@@ -292,6 +389,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         </div>
       )}
     </div>
+    </>
   );
 };
 

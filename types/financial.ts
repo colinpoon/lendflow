@@ -188,7 +188,16 @@ export interface DSCRBreakdown {
 // Extracted Metrics (raw AI extraction)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Fiscal period type for document classification
+ */
+export type FiscalPeriodType = 'annual' | 'interim' | 'quarterly';
+
 export interface ExtractedMetrics {
+  // Fiscal Year Metadata (for document recency comparison)
+  fiscal_year_end_date?: string | null; // ISO date (YYYY-MM-DD) or partial (YYYY-MM)
+  fiscal_period_type?: FiscalPeriodType | null;
+
   // Income Statement
   revenue: number | null;
   net_income: number | null;

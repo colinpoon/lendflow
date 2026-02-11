@@ -16,6 +16,8 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
 {
   "metrics_by_year": {
     "<year>": {
+      "fiscal_year_end_date": string|null,
+      "fiscal_period_type": "annual"|"interim"|"quarterly"|null,
       "revenue": number|null,
       "net_income": number|null,
       "expenses": number|null,
@@ -166,6 +168,22 @@ Other Adjustments:
 • foreign_exchange_adjustments: "foreign exchange", "fx gain", "fx loss", "currency translation"
 • pro_forma_cost_savings: "pro forma", "run-rate", "cost savings", "headcount reduction", "facility closure"
 • pro_forma_synergies: "synergies", "operational efficiencies"
+
+FISCAL YEAR END DATE EXTRACTION (CRITICAL FOR DOCUMENT RECENCY):
+• fiscal_year_end_date: Extract the fiscal year end date in ISO format (YYYY-MM-DD) or partial format (YYYY-MM).
+  WHERE TO FIND IT:
+  - Cover page: "For the Year Ended December 31, 2024" → "2024-12-31"
+  - Header: "Fiscal Year Ending March 31, 2024" → "2024-03-31"
+  - Notes: "Our fiscal year ends on the last Saturday of January" → approximate as "YYYY-01-31"
+  - Table headers: "Year Ended June 30" → "YYYY-06-30"
+  - If only month/year visible: "December 2024" → "2024-12"
+  - If only year visible and no other clues, assume calendar year end: "2024" → "2024-12-31"
+
+• fiscal_period_type: Identify the reporting period type:
+  - "annual": Full fiscal year report (10-K, Annual Report, yearly financial statements)
+  - "quarterly": Quarterly report (10-Q, Q1/Q2/Q3/Q4 report, 3-month period)
+  - "interim": Semi-annual, half-year, or other partial period reports
+  - null: If period type cannot be determined
 
 RULES
 • Detect every fiscal year present (e.g. 2025, 2024, 2023) and use it as the JSON key.

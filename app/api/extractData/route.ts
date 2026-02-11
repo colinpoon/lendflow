@@ -5,6 +5,7 @@ import path from 'path';
 import os from 'os';
 import { extractFinancialData, type ProgressCallback } from '@/utils/aiProcessor';
 import { createClient } from '@/utils/supabase/server';
+import { detectYearConflicts, type ExtractionWithDocument } from '@/lib/extraction-utils';
 
 // SSE progress type for complete message with data
 interface SSECompleteProgress {
@@ -206,8 +207,8 @@ export async function POST(req: NextRequest) {
 
         await sendProgress({
           stage: 'saving',
-          progress: 95,
-          message: 'Saving results...',
+          progress: 90,
+          message: 'Checking for conflicts...',
         });
 
         // Extract summary data for denormalized fields
@@ -217,7 +218,7 @@ export async function POST(req: NextRequest) {
           ? extractedData.metrics_by_year?.[latestYear]
           : null;
 
-        // Save extraction to database
+        // Save extraction to database (with pending_conflict status if conflicts exist)
         const { data: extraction, error: extractionError } = await supabase
           .from('extractions')
           .insert({
@@ -248,7 +249,55 @@ export async function POST(req: NextRequest) {
         } else {
           console.log(`✅ Extraction saved: ${extraction?.id}`);
 
-          // Update document status to completed
+          // Check for year conflicts with existing extractions
+          const { data: existingExtractions } = await supabase
+            .from('extractions')
+            .select('*, documents(id, file_name)')
+            .eq('project_id', projectId)
+            .neq('document_id', documentId) // Exclude the one we just inserted
+            .order('created_at', { ascending: false });
+
+          if (existingExtractions && existingExtractions.length > 0) {
+            // Build the new extraction object for conflict detection
+            const newExtractionForConflict: ExtractionWithDocument = {
+              ...extraction,
+              documents: { id: documentId, file_name: file.name },
+            };
+
+            const conflictResult = detectYearConflicts(
+              newExtractionForConflict,
+              existingExtractions as ExtractionWithDocument[]
+            );
+
+            if (conflictResult.hasConflicts) {
+              console.log(`⚠️ Year conflicts detected: ${conflictResult.conflicts.map(c => c.year).join(', ')}`);
+
+              // Update document status to pending_conflict
+              await updateDocumentStatus(supabase, documentId, 'processing');
+
+              // Clean up temp file before returning
+              try {
+                fs.unlinkSync(tempPath);
+              } catch {
+                // Ignore cleanup errors
+              }
+
+              // Send conflict detected message and stop processing
+              await writer.write(encoder.encode(sseMessage({
+                stage: 'conflict_detected',
+                progress: 95,
+                message: `Conflicts detected for years: ${conflictResult.conflicts.map(c => c.year).join(', ')}`,
+                conflicts: conflictResult.conflicts,
+                extractionId: extraction.id,
+                pendingDocumentId: documentId,
+              })));
+
+              await writer.close();
+              return;
+            }
+          }
+
+          // No conflicts - update document status to completed
           await updateDocumentStatus(supabase, documentId, 'completed');
 
           // Update project with risk info
