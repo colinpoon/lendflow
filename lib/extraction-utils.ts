@@ -1,4 +1,5 @@
 import { Extraction, ExtractionResult } from '@/lib/supabase/types';
+import { calculateQuantitativeRisk } from '@/lib/quantitative-risk';
 
 export interface MergedExtraction {
   metrics_by_year: Record<string, any>;
@@ -414,16 +415,19 @@ export function mergeExtractions(
       // Use risk assessments from the document with the most recent fiscal year
       merged.riskAssessment = sourceData.riskAssessment;
       merged.debtHealthAssessment = sourceData.debtHealthAssessment;
-      merged.quantitativeRiskAssessment = sourceData.quantitativeRiskAssessment;
       merged.validation_issues = sourceData.validation_issues;
       merged.extraction_warnings = sourceData.extraction_warnings;
       merged.chunk_stats = sourceData.chunk_stats;
     }
   }
 
+  // RECALCULATE quantitative risk with ALL merged years
+  // (don't copy from one document - it only has partial year coverage)
+  merged.quantitativeRiskAssessment = calculateQuantitativeRisk(merged.metrics_by_year);
+
   // Fallback: if no risk assessments from the most recent year's document,
   // use the first available from any document (sorted by newest upload)
-  if (!merged.riskAssessment || !merged.quantitativeRiskAssessment) {
+  if (!merged.riskAssessment) {
     for (const extraction of extractions) {
       const data = extraction.extraction_data as ExtractionResult;
 
@@ -433,9 +437,7 @@ export function mergeExtractions(
       if (!merged.debtHealthAssessment && data.debtHealthAssessment) {
         merged.debtHealthAssessment = data.debtHealthAssessment;
       }
-      if (!merged.quantitativeRiskAssessment && data.quantitativeRiskAssessment) {
-        merged.quantitativeRiskAssessment = data.quantitativeRiskAssessment;
-      }
+      // Note: quantitativeRiskAssessment is always recalculated above, no fallback needed
       if (!merged.validation_issues && data.validation_issues) {
         merged.validation_issues = data.validation_issues;
       }
