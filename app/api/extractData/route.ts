@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { extractFinancialData, type ProgressCallback } from '@/utils/aiProcessor';
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { detectYearConflicts, type ExtractionWithDocument } from '@/lib/extraction-utils';
 
 // SSE progress type for complete message with data
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = await createClient();
+  const adminSupabase = createAdminClient(); // For storage operations (bypasses RLS UUID issues)
 
   // Parse form data before creating stream
   let formData: FormData;
@@ -42,6 +43,13 @@ export async function POST(req: NextRequest) {
 
   const file = formData.get('file') as File | null;
   let projectId = formData.get('projectId') as string | null;
+
+  // Validate projectId is a valid UUID if provided
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (projectId && !uuidRegex.test(projectId)) {
+    console.error('❗ Invalid projectId format');
+    return NextResponse.json({ error: 'Invalid projectId format' }, { status: 400 });
+  }
 
   if (!file) {
     console.error('❗ No file uploaded');
@@ -56,9 +64,19 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new TransformStream();
   const writer = stream.writable.getWriter();
+  let writerClosed = false;
+
+  // Helper to safely close the writer
+  const closeWriter = async () => {
+    if (!writerClosed) {
+      writerClosed = true;
+      await writer.close();
+    }
+  };
 
   // Helper to send SSE message
   const sendProgress: ProgressCallback = async (data) => {
+    if (writerClosed) return;
     try {
       await writer.write(encoder.encode(sseMessage(data)));
     } catch {
@@ -96,7 +114,7 @@ export async function POST(req: NextRequest) {
             progress: 0,
             message: 'Failed to create project',
           });
-          await writer.close();
+          await closeWriter();
           return;
         }
         projectId = project.id;
@@ -115,9 +133,9 @@ export async function POST(req: NextRequest) {
         message: 'Storing file...',
       });
 
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage (use admin client to bypass RLS UUID casting issues)
       const fileBuffer = await file.arrayBuffer();
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await adminSupabase.storage
         .from('financial-documents')
         .upload(storagePath, fileBuffer, {
           contentType: file.type,
@@ -131,7 +149,7 @@ export async function POST(req: NextRequest) {
           progress: 0,
           message: 'Failed to upload file',
         });
-        await writer.close();
+        await closeWriter();
         return;
       }
 
@@ -152,13 +170,13 @@ export async function POST(req: NextRequest) {
 
       if (docError) {
         console.error('❗ Error creating document record:', docError);
-        await supabase.storage.from('financial-documents').remove([storagePath]);
+        await adminSupabase.storage.from('financial-documents').remove([storagePath]);
         await sendProgress({
           stage: 'error',
           progress: 0,
           message: 'Failed to create document record',
         });
-        await writer.close();
+        await closeWriter();
         return;
       }
 
@@ -170,8 +188,8 @@ export async function POST(req: NextRequest) {
         message: 'File uploaded successfully',
       });
 
-      // Download file to temp for AI processing
-      const { data: fileData, error: downloadError } = await supabase.storage
+      // Download file to temp for AI processing (use admin client to bypass RLS)
+      const { data: fileData, error: downloadError } = await adminSupabase.storage
         .from('financial-documents')
         .download(storagePath);
 
@@ -183,7 +201,7 @@ export async function POST(req: NextRequest) {
           progress: 0,
           message: 'Failed to download file for processing',
         });
-        await writer.close();
+        await closeWriter();
         return;
       }
 
@@ -283,16 +301,18 @@ export async function POST(req: NextRequest) {
               }
 
               // Send conflict detected message and stop processing
-              await writer.write(encoder.encode(sseMessage({
-                stage: 'conflict_detected',
-                progress: 95,
-                message: `Conflicts detected for years: ${conflictResult.conflicts.map(c => c.year).join(', ')}`,
-                conflicts: conflictResult.conflicts,
-                extractionId: extraction.id,
-                pendingDocumentId: documentId,
-              })));
+              if (!writerClosed) {
+                await writer.write(encoder.encode(sseMessage({
+                  stage: 'conflict_detected',
+                  progress: 95,
+                  message: `Conflicts detected for years: ${conflictResult.conflicts.map(c => c.year).join(', ')}`,
+                  conflicts: conflictResult.conflicts,
+                  extractionId: extraction.id,
+                  pendingDocumentId: documentId,
+                })));
+              }
 
-              await writer.close();
+              await closeWriter();
               return;
             }
           }
@@ -324,19 +344,21 @@ export async function POST(req: NextRequest) {
         }
 
         // Send final complete message with data
-        await writer.write(encoder.encode(sseMessage({
-          stage: 'complete',
-          progress: 100,
-          message: 'Complete',
-          data: {
-            message: 'File processed successfully',
-            filename: file.name,
-            projectId,
-            documentId,
-            extractionId: extraction?.id,
-            financialMetrics: extractedData,
-          },
-        })));
+        if (!writerClosed) {
+          await writer.write(encoder.encode(sseMessage({
+            stage: 'complete',
+            progress: 100,
+            message: 'Complete',
+            data: {
+              message: 'File processed successfully',
+              filename: file.name,
+              projectId,
+              documentId,
+              extractionId: extraction?.id,
+              financialMetrics: extractedData,
+            },
+          })));
+        }
       } catch (aiError: unknown) {
         const errorMessage = aiError instanceof Error ? aiError.message : 'AI extraction failed';
         console.error('❗ AI extraction error:', aiError);
@@ -365,7 +387,7 @@ export async function POST(req: NextRequest) {
         message: errorMessage,
       });
     } finally {
-      await writer.close();
+      await closeWriter();
     }
   })();
 
