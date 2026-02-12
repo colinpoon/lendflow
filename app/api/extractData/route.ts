@@ -236,8 +236,12 @@ export async function POST(req: NextRequest) {
           ? extractedData.metrics_by_year?.[latestYear]
           : null;
 
+        // Get a fresh Supabase client with a new JWT token
+        // (AI extraction can take several minutes, original token may have expired)
+        const freshSupabase = await createClient();
+
         // Save extraction to database (with pending_conflict status if conflicts exist)
-        const { data: extraction, error: extractionError } = await supabase
+        const { data: extraction, error: extractionError } = await freshSupabase
           .from('extractions')
           .insert({
             document_id: documentId,
@@ -263,12 +267,12 @@ export async function POST(req: NextRequest) {
 
         if (extractionError) {
           console.error('❗ Error saving extraction:', extractionError);
-          await updateDocumentStatus(supabase, documentId, 'failed', 'Failed to save extraction results');
+          await updateDocumentStatus(freshSupabase, documentId, 'failed', 'Failed to save extraction results');
         } else {
           console.log(`✅ Extraction saved: ${extraction?.id}`);
 
           // Check for year conflicts with existing extractions
-          const { data: existingExtractions } = await supabase
+          const { data: existingExtractions } = await freshSupabase
             .from('extractions')
             .select('*, documents(id, file_name)')
             .eq('project_id', projectId)
@@ -291,7 +295,7 @@ export async function POST(req: NextRequest) {
               console.log(`⚠️ Year conflicts detected: ${conflictResult.conflicts.map(c => c.year).join(', ')}`);
 
               // Update document status to pending_conflict
-              await updateDocumentStatus(supabase, documentId, 'processing');
+              await updateDocumentStatus(freshSupabase, documentId, 'processing');
 
               // Clean up temp file before returning
               try {
@@ -318,11 +322,11 @@ export async function POST(req: NextRequest) {
           }
 
           // No conflicts - update document status to completed
-          await updateDocumentStatus(supabase, documentId, 'completed');
+          await updateDocumentStatus(freshSupabase, documentId, 'completed');
 
           // Update project with risk info
           if (extractedData.quantitativeRiskAssessment) {
-            await supabase
+            await freshSupabase
               .from('projects')
               .update({
                 status: 'completed',
@@ -363,7 +367,9 @@ export async function POST(req: NextRequest) {
         const errorMessage = aiError instanceof Error ? aiError.message : 'AI extraction failed';
         console.error('❗ AI extraction error:', aiError);
 
-        await updateDocumentStatus(supabase, documentId, 'failed', errorMessage);
+        // Get fresh client for error handling (original token may have expired)
+        const errorSupabase = await createClient();
+        await updateDocumentStatus(errorSupabase, documentId, 'failed', errorMessage);
 
         try {
           fs.unlinkSync(tempPath);
