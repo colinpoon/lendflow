@@ -229,7 +229,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
         {/* Left Column: Calculation Breakdown */}
         <div className="space-y-4">
           {/* Formula */}
-          <div className="rounded-lg p-3 border border-black">
+          <div className="rounded-lg p-3 border border-gray-300">
             <code className="text-xs text-gray-600">
               FCCR = (Adj. EBITDA - CapEx - Taxes - Distributions +
               Adjustments) / Debt Service
@@ -293,9 +293,15 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
                 .map((adj) => (
                   <div
                     key={adj.id}
-                    className="flex justify-between px-1 rounded border border-black"
+                    className="flex justify-between px-1 rounded border border-gray-300"
                   >
-                    <span className={adj.type === 'add' ? 'text-green-700' : 'text-red-700'}>
+                    <span
+                      className={
+                        adj.type === 'add'
+                          ? 'text-green-700'
+                          : 'text-red-700'
+                      }
+                    >
                       {adj.type === 'add' ? '+' : '-'}{' '}
                       {adj.label || 'Custom Adjustment'}
                     </span>
@@ -361,7 +367,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
 
           {/* Result */}
           <div
-            className={`rounded-lg p-4 text-center ${isAdjusted ? 'bg-amber-50 border-2 border-amber-300' : 'border border-black'}`}
+            className={`rounded-lg p-4 text-center ${isAdjusted ? 'bg-amber-50 border-2 border-amber-300' : 'border border-gray-300'}`}
           >
             {isAdjusted && (
               <div className="text-xs text-amber-700 font-medium mb-2">
@@ -556,7 +562,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
                   {customAdjustments.map((adj) => (
                     <div
                       key={adj.id}
-                      className="flex items-center gap-2 p-2 rounded border border-black"
+                      className="flex items-center gap-2 p-2 rounded border border-gray-300"
                     >
                       <select
                         value={adj.type}
@@ -616,7 +622,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
                   ))}
                   <button
                     onClick={addCustomAdjustment}
-                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 border border-black rounded px-2 py-1"
+                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded px-2 py-1"
                   >
                     <Plus className="h-4 w-4" />
                     Add Adjustment
@@ -763,9 +769,9 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           <h4 className="text-sm font-semibold text-gray-700">
             Year-over-Year Comparison
           </h4>
-          <div className="border border-black rounded-lg overflow-hidden">
+          <div className="border border-gray-300 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="border-b border-black">
+              <thead className="border-b border-gray-300">
                 <tr>
                   <th className="text-left py-2 px-3 font-medium text-gray-600">
                     Year
@@ -822,7 +828,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
 
           {/* Trend interpretation */}
           {yoyData.length > 1 && (
-            <div className="border border-black rounded-lg p-3 text-sm text-gray-700">
+            <div className="border border-gray-300 rounded-lg p-3 text-sm text-gray-700">
               <strong>Trend Analysis:</strong>{' '}
               {(() => {
                 const latest = yoyData[yoyData.length - 1]?.fccr ?? 0;
@@ -839,7 +845,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           )}
 
           {/* Interpretation */}
-          <div className="border border-black rounded-lg p-3 text-sm text-gray-700">
+          <div className="border border-gray-300 rounded-lg p-3 text-sm text-gray-700">
             <strong>Target:</strong> FCCR &gt; 1.2x indicates strong
             coverage. Values below 1.0x suggest the company cannot
             fully cover its fixed charges from operating cash flow.
@@ -869,7 +875,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
         {/* Left Column: Calculation */}
         <div className="space-y-4">
           {/* Formula */}
-          <div className="rounded-lg p-3 border border-black">
+          <div className="rounded-lg p-3 border border-gray-300">
             <code className="text-xs text-gray-600">
               Senior Debt / EBITDA = Senior Debt / Adjusted EBITDA
             </code>
@@ -900,7 +906,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           </div>
 
           {/* Result */}
-          <div className="rounded-lg p-4 text-center border border-black">
+          <div className="rounded-lg p-4 text-center border border-gray-300">
             <div className="text-sm text-gray-600 mb-2">
               {formatCurrency(latestMetrics.senior_debt)} /{' '}
               {formatCurrency(
@@ -921,7 +927,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           </div>
 
           {/* Interpretation */}
-          <div className="border border-black rounded-lg p-3 text-sm text-gray-700">
+          <div className="border border-gray-300 rounded-lg p-3 text-sm text-gray-700">
             <strong>Target:</strong> &lt;2.5x for investment grade.
             Lower ratios indicate less leverage and greater capacity
             to service debt.
@@ -1037,9 +1043,9 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           <h4 className="text-sm font-semibold text-gray-700">
             Year-over-Year Comparison
           </h4>
-          <div className="border border-black rounded-lg overflow-hidden">
+          <div className="border border-gray-300 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="border-b border-black">
+              <thead className="border-b border-gray-300">
                 <tr>
                   <th className="text-left py-2 px-3 font-medium text-gray-600">
                     Year
@@ -1098,7 +1104,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
 
           {/* Trend interpretation */}
           {yoyData.length > 1 && (
-            <div className="border border-black rounded-lg p-3 text-sm text-gray-700">
+            <div className="border border-gray-300 rounded-lg p-3 text-sm text-gray-700">
               <strong>Trend Analysis:</strong>{' '}
               {(() => {
                 const latest =
@@ -1146,7 +1152,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
         {/* Left Column: Calculation */}
         <div className="space-y-4">
           {/* Formula */}
-          <div className="rounded-lg p-3 border border-black">
+          <div className="rounded-lg p-3 border border-gray-300">
             <code className="text-xs text-gray-600">
               Debt/Capital = Total Debt / (Total Debt +
               Shareholders&apos; Equity)
@@ -1183,7 +1189,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           </div>
 
           {/* Result */}
-          <div className="rounded-lg p-4 text-center border border-black">
+          <div className="rounded-lg p-4 text-center border border-gray-300">
             <div className="text-sm text-gray-600 mb-2">
               {formatCurrency(latestMetrics.total_debt)} /{' '}
               {formatCurrency(totalCapital)} =
@@ -1201,7 +1207,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           </div>
 
           {/* Interpretation */}
-          <div className="border border-black rounded-lg p-3 text-sm text-gray-700">
+          <div className="border border-gray-300 rounded-lg p-3 text-sm text-gray-700">
             <strong>Target:</strong> &lt;50% indicates healthy capital
             structure. Lower ratios suggest stronger equity position
             and reduced financial risk.
@@ -1347,9 +1353,9 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           <h4 className="text-sm font-semibold text-gray-700">
             Year-over-Year Comparison
           </h4>
-          <div className="border border-black rounded-lg overflow-hidden">
+          <div className="border border-gray-300 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="border-b border-black">
+              <thead className="border-b border-gray-300">
                 <tr>
                   <th className="text-left py-2 px-3 font-medium text-gray-600">
                     Year
@@ -1406,7 +1412,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
 
           {/* Trend interpretation */}
           {yoyData.length > 1 && (
-            <div className="border border-black rounded-lg p-3 text-sm text-gray-700">
+            <div className="border border-gray-300 rounded-lg p-3 text-sm text-gray-700">
               <strong>Trend Analysis:</strong>{' '}
               {(() => {
                 const latest =
@@ -1444,14 +1450,14 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
         {/* Left Column: Calculation */}
         <div className="space-y-4">
           {/* Formula */}
-          <div className="rounded-lg p-3 border border-black">
+          <div className="rounded-lg p-3 border border-gray-300">
             <code className="text-xs text-gray-600">
               Current Ratio = Current Assets / Current Liabilities
             </code>
           </div>
 
           {/* Result */}
-          <div className="rounded-lg p-4 text-center border border-black">
+          <div className="rounded-lg p-4 text-center border border-gray-300">
             <div className="flex items-center justify-center gap-2">
               <span className="text-3xl font-bold text-gray-800">
                 {formatRatio(latestMetrics.current_ratio ?? null)}
@@ -1465,7 +1471,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           </div>
 
           {/* Interpretation */}
-          <div className="border border-black rounded-lg p-3 text-sm text-gray-700">
+          <div className="border border-gray-300 rounded-lg p-3 text-sm text-gray-700">
             <strong>Target:</strong> &gt;1.5x indicates strong
             liquidity. A ratio &gt;1 means the company can cover
             current liabilities with current assets.
@@ -1556,9 +1562,9 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
           <h4 className="text-sm font-semibold text-gray-700">
             Year-over-Year Comparison
           </h4>
-          <div className="border border-black rounded-lg overflow-hidden">
+          <div className="border border-gray-300 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="border-b border-black">
+              <thead className="border-b border-gray-300">
                 <tr>
                   <th className="text-left py-2 px-3 font-medium text-gray-600">
                     Year
@@ -1615,7 +1621,7 @@ const MetricCardGrid: React.FC<MetricCardGridProps> = ({
 
           {/* Trend interpretation */}
           {yoyData.length > 1 && (
-            <div className="border border-black rounded-lg p-3 text-sm text-gray-700">
+            <div className="border border-gray-300 rounded-lg p-3 text-sm text-gray-700">
               <strong>Trend Analysis:</strong>{' '}
               {(() => {
                 const latest =

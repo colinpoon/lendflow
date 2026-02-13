@@ -7,7 +7,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { AlertTriangle, CheckCircle2, Lightbulb } from 'lucide-react';
 import type { DebtHealthAssessment } from './types';
 
@@ -26,9 +31,15 @@ const FactorItem: React.FC<{
   type: 'risk' | 'positive' | 'recommendation';
 }> = ({ text, type }) => {
   const icons = {
-    risk: <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />,
-    positive: <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />,
-    recommendation: <Lightbulb className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />,
+    risk: (
+      <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+    ),
+    positive: (
+      <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+    ),
+    recommendation: (
+      <Lightbulb className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+    ),
   };
 
   const styles = {
@@ -38,7 +49,9 @@ const FactorItem: React.FC<{
   };
 
   return (
-    <div className={`flex items-start gap-2 p-2 rounded border ${styles[type]}`}>
+    <div
+      className={`flex items-start gap-2 p-2 rounded border ${styles[type]}`}
+    >
       {icons[type]}
       <span className="text-sm text-gray-700">{text}</span>
     </div>
@@ -65,7 +78,10 @@ const RiskFactorsPanel: React.FC<RiskFactorsPanelProps> = ({
     ...(riskData?.recommendations ?? []),
   ].filter((v, i, a) => a.indexOf(v) === i);
 
-  const hasContent = riskFactors.length > 0 || positiveFactors.length > 0 || recommendations.length > 0;
+  const hasContent =
+    riskFactors.length > 0 ||
+    positiveFactors.length > 0 ||
+    recommendations.length > 0;
 
   if (!hasContent) {
     return null;
@@ -74,7 +90,9 @@ const RiskFactorsPanel: React.FC<RiskFactorsPanelProps> = ({
   return (
     <Card className="shadow-lg">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Risk Factors & Recommendations</CardTitle>
+        <CardTitle className="text-lg">
+          Risk Factors & Recommendations
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <Accordion
@@ -96,7 +114,11 @@ const RiskFactorsPanel: React.FC<RiskFactorsPanelProps> = ({
               <AccordionContent>
                 <div className="space-y-2 pb-2">
                   {positiveFactors.map((factor, idx) => (
-                    <FactorItem key={idx} text={factor} type="positive" />
+                    <FactorItem
+                      key={idx}
+                      text={factor}
+                      type="positive"
+                    />
                   ))}
                 </div>
               </AccordionContent>
@@ -126,7 +148,10 @@ const RiskFactorsPanel: React.FC<RiskFactorsPanelProps> = ({
 
           {/* Recommendations */}
           {recommendations.length > 0 && (
-            <AccordionItem value="recommendations" className="border-b-0">
+            <AccordionItem
+              value="recommendations"
+              className="border-b-0"
+            >
               <AccordionTrigger className="hover:no-underline py-3">
                 <div className="flex items-center gap-2">
                   <Lightbulb className="h-4 w-4 text-blue-600" />
@@ -138,7 +163,11 @@ const RiskFactorsPanel: React.FC<RiskFactorsPanelProps> = ({
               <AccordionContent>
                 <div className="space-y-2 pb-2">
                   {recommendations.map((rec, idx) => (
-                    <FactorItem key={idx} text={rec} type="recommendation" />
+                    <FactorItem
+                      key={idx}
+                      text={rec}
+                      type="recommendation"
+                    />
                   ))}
                 </div>
               </AccordionContent>
@@ -152,7 +181,7 @@ const RiskFactorsPanel: React.FC<RiskFactorsPanelProps> = ({
             <h4 className="text-sm font-medium text-gray-700 mb-2">
               Suggested Loan Structure
             </h4>
-            <p className="text-sm text-gray-600 p-3 rounded border border-black">
+            <p className="text-sm text-gray-600 p-3 rounded border border-gray-300">
               {debtHealth.suggested_loan_structure}
             </p>
           </div>

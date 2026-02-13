@@ -9,7 +9,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Info, TrendingUp, TrendingDown, Minus, X } from 'lucide-react';
+import {
+  Info,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  X,
+} from 'lucide-react';
 import type { HealthConfig } from './types';
 import { getHealthLabel, formatChange } from './utils';
 import { cn } from '@/lib/utils';
@@ -52,11 +58,15 @@ const Sparkline: React.FC<{
   const max = Math.max(...data);
   const range = max - min || 1;
 
-  const points = data.map((value, index) => {
-    const x = padding + (index / (data.length - 1 || 1)) * chartWidth;
-    const y = padding + chartHeight - ((value - min) / range) * chartHeight;
-    return `${x},${y}`;
-  }).join(' ');
+  const points = data
+    .map((value, index) => {
+      const x =
+        padding + (index / (data.length - 1 || 1)) * chartWidth;
+      const y =
+        padding + chartHeight - ((value - min) / range) * chartHeight;
+      return `${x},${y}`;
+    })
+    .join(' ');
 
   return (
     <svg width={width} height={height} className="opacity-80">
@@ -72,7 +82,11 @@ const Sparkline: React.FC<{
       {data.length > 0 && (
         <circle
           cx={padding + chartWidth}
-          cy={padding + chartHeight - ((data[data.length - 1] - min) / range) * chartHeight}
+          cy={
+            padding +
+            chartHeight -
+            ((data[data.length - 1] - min) / range) * chartHeight
+          }
           r="3"
           fill={color}
         />
@@ -122,7 +136,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
           isExpanded
             ? 'col-span-1 sm:col-span-2 lg:col-span-4 shadow-lg'
             : 'col-span-1 hover:shadow-md',
-          isHidden && 'opacity-0 scale-95 pointer-events-none absolute'
+          isHidden &&
+            'opacity-0 scale-95 pointer-events-none absolute',
         )}
       >
         <CardContent className={cn('p-4', isExpanded && 'p-6')}>
@@ -132,8 +147,12 @@ const MetricCard: React.FC<MetricCardProps> = ({
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{breakdownTitle}</h3>
-                  <p className="text-sm text-gray-500">{breakdownSubtitle}</p>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {breakdownTitle}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {breakdownSubtitle}
+                  </p>
                 </div>
                 <button
                   onClick={onCollapse}
@@ -145,9 +164,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
               </div>
 
               {/* Breakdown Content */}
-              <div className="mt-4">
-                {breakdownContent}
-              </div>
+              <div className="mt-4">{breakdownContent}</div>
             </div>
           ) : (
             // Collapsed view (original card content)
@@ -175,8 +192,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
                         trend.direction === 'improving'
                           ? 'text-green-600'
                           : trend.direction === 'worsening'
-                          ? 'text-red-600'
-                          : 'text-gray-500'
+                            ? 'text-red-600'
+                            : 'text-gray-500'
                       }`}
                     >
                       {formatChange(trend.change)}
@@ -187,13 +204,18 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
               {/* Value */}
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-2xl font-bold text-gray-900">{value}</span>
+                <span className="text-2xl font-bold text-gray-900">
+                  {value}
+                </span>
               </div>
 
               {/* Sparkline */}
               {sparklineData && sparklineData.length > 1 && (
                 <div className="mb-2">
-                  <Sparkline data={sparklineData} color={health.color} />
+                  <Sparkline
+                    data={sparklineData}
+                    color={health.color}
+                  />
                 </div>
               )}
 
@@ -205,14 +227,16 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 >
                   {getHealthLabel(health.level)}
                 </Badge>
-                <span className="text-xs text-gray-400">{target}</span>
+                <span className="text-xs text-gray-400">
+                  {target}
+                </span>
               </div>
 
               {/* Details button */}
               {onExpand && (
                 <button
                   onClick={onExpand}
-                  className="mt-3 w-full text-xs text-center text-gray-700 hover:text-gray-900 font-medium py-1.5 border border-black rounded hover:bg-gray-50 transition-colors"
+                  className="mt-3 w-full text-xs text-center text-gray-700 hover:text-gray-900 font-medium py-1.5 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                 >
                   View Details
                 </button>
