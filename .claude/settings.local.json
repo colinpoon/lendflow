@@ -8,7 +8,8 @@
       "Bash(npm run build:*)",
       "Bash(ls:*)",
       "Bash(npx shadcn@latest add:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm run dev:*)"
     ]
   }
 }

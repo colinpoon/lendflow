@@ -21,12 +21,9 @@ import {
 
 import FileUpload from '@/components/FileUpload';
 import FinancialTable from '@/components/FinancialTable';
-import DebtHealthMeters from '@/components/DebtHealthMeters';
-import WeightedRiskGauge from '@/components/WeightedRiskGauge';
-import AdjustedEBITDA from '@/components/AdjustedEBITDA';
-import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import ExtractionWarnings from '@/components/ExtractionWarnings';
 import { RiskData } from '@/components/RiskAssessment';
+import { CreditRiskDashboard } from '@/components/credit-risk';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 import type { YearMetrics } from '@/types';
 import { Project } from '@/lib/supabase/types';
@@ -468,63 +465,17 @@ export default function ProjectDetail({
 
         <TabsContent value="credit">
           {(riskData || financialData) ? (
-            <div className="space-y-6">
-              {/* Risk assessment source info */}
-              {mostRecentYear && extractionCount > 1 && (
-                <div className="text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-md">
-                  Risk metrics based on <span className="font-medium">{mostRecentYear}</span> data
-                  {mostRecentYearSource && (
-                    <> from <span className="font-medium">{mostRecentYearSource.file_name}</span></>
-                  )}
-                </div>
-              )}
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quantitative Risk Scorecard</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <QuantitativeRiskCard data={quantitativeRiskAssessment} />
-                </CardContent>
-              </Card>
-
-              {financialData && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Risk Assessment</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <WeightedRiskGauge
-                      data={financialData}
-                      debtHealthAssessment={debtHealthAssessment}
-                      riskData={riskData}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-
-              {financialData && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Adjusted EBITDA</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <AdjustedEBITDA data={financialData} />
-                  </CardContent>
-                </Card>
-              )}
-
-              {financialData && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Debt Health Indicators</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DebtHealthMeters data={financialData} />
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            <CreditRiskDashboard
+              financialData={financialData}
+              quantitativeRiskAssessment={quantitativeRiskAssessment}
+              debtHealthAssessment={debtHealthAssessment}
+              riskData={riskData}
+              yearSourceInfo={mostRecentYear && mostRecentYearSource ? {
+                year: mostRecentYear,
+                fileName: mostRecentYearSource.file_name,
+              } : undefined}
+              showSourceBanner={extractionCount > 1}
+            />
           ) : (
             <p className="text-muted-foreground">No risk assessment available.</p>
           )}

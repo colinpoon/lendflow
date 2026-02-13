@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   FileSpreadsheet,
   BarChart4,
@@ -9,13 +9,8 @@ import {
 
 import FileUpload from '@/components/FileUpload';
 import FinancialTable from '@/components/FinancialTable';
-import DebtHealthMeters from '@/components/DebtHealthMeters';
-import WeightedRiskGauge from '@/components/WeightedRiskGauge';
-import RiskAssessment, {
-  RiskData,
-} from '@/components/RiskAssessment';
-import FCCRBreakdown from '@/components/FCCRBreakdown';
-import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
+import { RiskData } from '@/components/RiskAssessment';
+import { CreditRiskDashboard } from '@/components/credit-risk';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 import {
   Card,
@@ -45,17 +40,13 @@ interface DebtHealthAssessment {
   suggested_loan_structure: string;
 }
 
-interface CustomAdjustment {
-  id: string;
-  amount: number;
-  description: string;
-}
-
 const Home = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [extractedData, setExtractedData] = useState<any>(null);
 
-  // year‑agnostic map returned from aiProcessor:
+  // year-agnostic map returned from aiProcessor:
   const [financialData, setFinancialData] = useState<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metrics_by_year: Record<string, any>;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
@@ -65,15 +56,7 @@ const Home = () => {
   const [quantitativeRiskAssessment, setQuantitativeRiskAssessment] =
     useState<QuantitativeRiskAssessment | null>(null);
 
-  // Custom adjustments state (lifted from FCCRBreakdown for cross-component sharing)
-  const [customAdjustments, setCustomAdjustments] = useState<CustomAdjustment[]>([]);
-
-  // Calculate total custom adjustments
-  const totalCustomAdjustments = useMemo(
-    () => customAdjustments.reduce((sum, adj) => sum + adj.amount, 0),
-    [customAdjustments]
-  );
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDataUpdate = (data: any) => {
     console.log('🐞 page.tsx received payload:', data);
     console.log('🐞 financialMetrics keys:', data.financialMetrics ? Object.keys(data.financialMetrics) : 'no financialMetrics');
@@ -190,80 +173,12 @@ const Home = () => {
         </TabsContent>
 
         <TabsContent value="credit" key="credit">
-          {riskData || financialData ? (
-            <div className="space-y-6">
-              {/* Weighted Risk Gauge - Primary Risk Assessment */}
-              {financialData && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Debt Health Risk Assessment</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-8">
-                      {/* Quantitative Risk Scorecard */}
-                      <QuantitativeRiskCard data={quantitativeRiskAssessment} />
-
-                      {/* Divider */}
-                      {quantitativeRiskAssessment && (
-                        <hr className="border-gray-200" />
-                      )}
-
-                      {/* Existing Weighted Risk Gauge */}
-                      <WeightedRiskGauge
-                        data={financialData}
-                        debtHealthAssessment={debtHealthAssessment}
-                        customFccrAdjustment={totalCustomAdjustments}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Credit Risk Assessment */}
-              {riskData && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Credit-Risk Assessment</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <RiskAssessment data={riskData} />
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Debt Health Indicators with Gauges and Breakdowns */}
-              {financialData && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Debt Health Indicators</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DebtHealthMeters data={financialData} />
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* FCCR/DSCR Ratio Breakdowns */}
-              {financialData && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Ratio Breakdowns</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FCCRBreakdown
-                      data={financialData}
-                      customAdjustments={customAdjustments}
-                      onCustomAdjustmentsChange={setCustomAdjustments}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          ) : (
-            <p className="text-gray-500">
-              No risk assessment available.
-            </p>
-          )}
+          <CreditRiskDashboard
+            financialData={financialData}
+            quantitativeRiskAssessment={quantitativeRiskAssessment}
+            debtHealthAssessment={debtHealthAssessment}
+            riskData={riskData}
+          />
         </TabsContent>
       </Tabs>
     </div>
