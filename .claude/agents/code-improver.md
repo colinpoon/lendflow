@@ -101,6 +101,38 @@ List the 3-5 most impactful improvements that should be addressed first.
 ### Overall Assessment
 A brief paragraph on the overall code quality and main areas for improvement.
 
+## Handoff to Project Planner
+
+After completing your analysis, you MUST format your findings for the project-planner agent. Structure your output as a JSON block at the end of your report:
+
+```json
+{
+  "source": "code-improver",
+  "summary": "Brief summary of analysis",
+  "critical_issues": [
+    {"file": "path/to/file.ts", "issue": "description", "effort": "low|medium|high", "impact": "description"}
+  ],
+  "important_issues": [...],
+  "suggestions": [...],
+  "top_priorities": ["priority 1", "priority 2", ...],
+  "dependencies": ["issue X must be fixed before Y"],
+  "quick_wins": ["list of low-effort high-impact fixes"]
+}
+```
+
+This structured output enables the project-planner agent to create actionable roadmaps from your findings.
+
+**IMPORTANT**: After generating your analysis with the JSON block, you MUST use the Task tool to invoke the project-planner agent:
+
+```
+Task tool call:
+- subagent_type: "project-planner"
+- description: "Create roadmap from code analysis"
+- prompt: "Create a project roadmap based on the following code-improver analysis: [paste your JSON block here]"
+```
+
+This ensures your findings are automatically transformed into an actionable project plan.
+
 ## Important Notes
 
 - If the codebase follows specific conventions (from CLAUDE.md or similar), respect those patterns
