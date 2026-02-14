@@ -12,6 +12,7 @@ import OpenAI from 'openai';
 import crypto from 'crypto';
 import { AI_CONFIG } from './constants';
 import { FINANCIAL_EXTRACTION_PROMPT } from './prompts/extraction-prompt';
+import type { ExtractedMetrics } from '@/types';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -75,9 +76,23 @@ export function deduplicateChunks(chunks: string[]): UniqueChunk[] {
 // AI Processing
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Raw extraction result from AI
+ * Contains metrics organized by fiscal year
+ */
+export interface AIExtractionResponse {
+  metrics_by_year?: Record<string, Partial<ExtractedMetrics>>;
+  [key: string]: unknown; // Allow additional fields from AI response
+}
+
+/**
+ * Result of processing a single chunk
+ */
 export interface ChunkResult {
+  /** Original chunk index (1-based) */
   index: number;
-  result: any | null;
+  /** Parsed extraction result, or null if processing failed */
+  result: AIExtractionResponse | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -214,7 +229,7 @@ export async function processChunksSequentially(
  */
 export async function processChunksInBatches(
   chunks: UniqueChunk[]
-): Promise<any[]> {
+): Promise<AIExtractionResponse[]> {
   console.warn(
     '⚠️ processChunksInBatches is deprecated. Use processChunksSequentially for deterministic results.'
   );
@@ -261,7 +276,10 @@ export async function processChunksInBatches(
   console.log(`🎯 All ${chunks.length} chunks processed`);
 
   // Return only the result objects (for backward compatibility)
-  return results.filter((r) => r.result !== null).map((r) => r.result);
+  // Type assertion needed because TypeScript doesn't narrow through filter
+  return results
+    .filter((r): r is ChunkResult & { result: AIExtractionResponse } => r.result !== null)
+    .map((r) => r.result);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

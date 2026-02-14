@@ -17,6 +17,8 @@ import {
   deduplicateChunks,
   processChunksSequentially,
   type ProgressCallback,
+  type ChunkResult,
+  type AIExtractionResponse,
 } from '@/lib/chunk-processor';
 import { mergeExtractions, normalizeScaleMismatch } from '@/lib/extraction-merger';
 import {
@@ -58,7 +60,8 @@ export interface ExtractionResult {
     successful: number;
     failed: number;
   };
-  raw_chunks?: any[];
+  /** Raw chunk results when no metrics could be extracted */
+  raw_chunks?: ChunkResult[];
 }
 
 // Re-export ProgressCallback for API route
@@ -242,9 +245,10 @@ export const extractFinancialData = async (
       ...(extractionWarnings.length > 0 && { extraction_warnings: extractionWarnings }),
       chunk_stats: chunkStats,
     };
-  } catch (error: any) {
-    console.error('❗ AI processing failed:', error?.message || error);
-    throw new Error('AI processing failed: ' + (error?.message || 'Unknown error'));
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❗ AI processing failed:', errorMessage);
+    throw new Error('AI processing failed: ' + errorMessage);
   }
 };
 

@@ -67,44 +67,51 @@ export const RISK_WEIGHTS = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Health Colors (Tailwind-compatible hex values)
+// See lib/design-tokens.ts for the complete design system
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const HEALTH_COLORS = {
-  excellent: '#22c55e', // green-500
-  good: '#84cc16', // lime-500
-  adequate: '#eab308', // yellow-500
-  weak: '#f97316', // orange-500
-  poor: '#ef4444', // red-500
+  excellent: '#059669', // emerald-600 - outstanding performance
+  good: '#16a34a',      // green-600 - solid performance
+  adequate: '#d97706',  // amber-600 - acceptable, room for improvement
+  weak: '#ea580c',      // orange-600 - concerning
+  poor: '#dc2626',      // red-600 - critical attention needed
 } as const;
 
 /**
  * Tailwind CSS class mappings for health levels
+ * Improved contrast ratios for WCAG AA compliance
  */
 export const HEALTH_TAILWIND_CLASSES = {
   excellent: {
-    text: 'text-green-600',
-    bg: 'bg-green-50',
-    border: 'border-green-200',
+    text: 'text-emerald-700',
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-300',
+    bgSolid: 'bg-emerald-600',
   },
   good: {
-    text: 'text-lime-600',
-    bg: 'bg-lime-50',
-    border: 'border-lime-200',
+    text: 'text-green-700',
+    bg: 'bg-green-50',
+    border: 'border-green-300',
+    bgSolid: 'bg-green-600',
   },
   adequate: {
-    text: 'text-yellow-600',
-    bg: 'bg-yellow-50',
-    border: 'border-yellow-200',
+    text: 'text-amber-700',
+    bg: 'bg-amber-50',
+    border: 'border-amber-300',
+    bgSolid: 'bg-amber-600',
   },
   weak: {
-    text: 'text-orange-600',
+    text: 'text-orange-700',
     bg: 'bg-orange-50',
-    border: 'border-orange-200',
+    border: 'border-orange-300',
+    bgSolid: 'bg-orange-600',
   },
   poor: {
-    text: 'text-red-600',
+    text: 'text-red-700',
     bg: 'bg-red-50',
-    border: 'border-red-200',
+    border: 'border-red-300',
+    bgSolid: 'bg-red-600',
   },
 } as const;
 
