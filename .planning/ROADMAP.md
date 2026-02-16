@@ -11,7 +11,7 @@
 | 2 | Vision Extraction Pipeline | Build extraction using Claude Vision | EXTR-01, EXTR-02, EXTR-03 |
 | 3 | Validation & Benchmarking | Prove vision > text with measurable results | VAL-01, VAL-02, VAL-03, COST-01, COST-02 |
 
-**Total:** 3 phases | 11 requirements | 100% coverage ✓
+**Total:** 3 phases | 11 requirements | 100% coverage
 
 ---
 
@@ -32,10 +32,17 @@
 
 **Dependencies:** None (first phase)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — PDF-to-image converter with pdf-to-img
+- [ ] 01-02-PLAN.md — Claude Vision client with tool calling
+- [ ] 01-03-PLAN.md — Integration test and end-to-end verification
+
 **Key Decisions:**
-- PDF-to-image library selection (pdf-lib + canvas vs external tool)
-- Image format and quality settings
-- Anthropic SDK version
+- pdf-to-img library (uses existing pdfjs-dist + canvas)
+- Scale factor 4.17 for 300 DPI equivalent
+- claude-sonnet-4-20250514 model ID
 
 ---
 
@@ -55,6 +62,8 @@
 4. Pipeline handles errors gracefully (API failures, malformed responses)
 
 **Dependencies:** Phase 1 (infrastructure must be working)
+
+**Plans:** (created by /gsd:plan-phase)
 
 **Key Decisions:**
 - Page processing strategy (all pages vs selective)
@@ -83,6 +92,8 @@
 6. Clear recommendation: proceed to full migration or pivot
 
 **Dependencies:** Phase 2 (need working extraction to validate)
+
+**Plans:** (created by /gsd:plan-phase)
 
 **Key Decisions:**
 - Ground truth source (manual verification vs external benchmark)
