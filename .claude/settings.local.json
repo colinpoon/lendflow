@@ -8,7 +8,14 @@
       "Bash(npm run build:*)",
       "Bash(ls:*)",
       "Bash(npx shadcn@latest add:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git -C /Users/colinpoon/Dev/lendflow log --oneline -15)",
+      "Bash(git -C /Users/colinpoon/Dev/lendflow branch -a)",
+      "Bash(git -C /Users/colinpoon/Dev/lendflow show --stat ad104ef)",
+      "Bash(git -C /Users/colinpoon/Dev/lendflow diff main..data-extraction --stat)",
+      "WebSearch",
+      "Bash(npm ls:*)",
+      "Skill(gsd:new-milestone)"
     ]
   }
 }

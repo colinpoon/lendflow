@@ -2,10 +2,63 @@
  * Extraction merger utilities
  * Consolidates partial JSON extractions from multiple chunks
  *
- * Uses "first non-null wins" merge strategy. Combined with sequential
- * chunk processing (processChunksSequentially), this produces deterministic
- * results since chunk order is guaranteed.
+ * CONFLICT-AWARE MERGING:
+ * - Collects ALL values for each metric from all chunks
+ * - Scores values by source type (table > primary text > overlap)
+ * - Uses weighted selection for conflicts
+ * - Logs all resolution decisions for debugging
  */
+
+import { MERGE_CONFIG } from './constants';
+import { isTableSource } from './validation';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A candidate value extracted from a chunk
+ */
+interface ValueCandidate {
+  value: number;
+  chunkIndex: number;
+  sourceType: 'table' | 'primary' | 'overlap' | 'inferred';
+  confidence: number;
+}
+
+/**
+ * Conflict information for a metric
+ */
+export interface MetricConflict {
+  year: string;
+  metric: string;
+  candidates: ValueCandidate[];
+  resolvedValue: number;
+  resolution: 'single' | 'highest_confidence' | 'weighted_average' | 'consensus';
+  variancePercent: number;
+}
+
+/** Metric value - can be number, null, or nested object */
+type MetricValue = number | null | Record<string, number | null>;
+
+/** Year metrics - a record of metric names to values */
+type YearMetrics = Record<string, MetricValue>;
+
+/** Extraction input type */
+interface ExtractionInput {
+  metrics_by_year?: Record<string, YearMetrics>;
+  [key: string]: unknown;
+}
+
+/**
+ * Merge result with conflict information
+ */
+export interface MergeResult {
+  metrics: Record<string, YearMetrics>;
+  conflicts: MetricConflict[];
+  totalMetrics: number;
+  conflictsDetected: number;
+}
 
 // Currency metrics that should be in thousands (not raw dollars)
 const CURRENCY_METRICS = [
@@ -37,68 +90,259 @@ const CURRENCY_METRICS = [
   'current_liabilities',
 ];
 
+// Nested object keys that need special handling
+const NESTED_KEYS = ['debt_components', 'fixed_charges', 'adjusted_ebitda_components'];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Value Collection
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Merge multiple extraction results into a single consolidated object
- * Handles nested objects (debt_components, fixed_charges, adjusted_ebitda_components)
- * @param extractions - Array of extraction results from AI
- * @returns Merged metrics by year
+ * Collect all values for each metric across all chunks
+ * Returns a map of "year:metric" -> array of candidates
  */
-export function mergeExtractions(
-  extractions: any[]
-): Record<string, any> {
-  const merged: Record<string, any> = {};
+function collectAllValues(
+  extractions: ExtractionInput[]
+): Map<string, ValueCandidate[]> {
+  const valueMap = new Map<string, ValueCandidate[]>();
 
-  for (const obj of extractions) {
-    if (obj && typeof obj === 'object' && obj.metrics_by_year) {
-      for (const [yr, metrics] of Object.entries<any>(obj.metrics_by_year)) {
-        if (!merged[yr]) {
-          // First occurrence of this year - copy all metrics
-          merged[yr] = { ...metrics };
+  for (let chunkIndex = 0; chunkIndex < extractions.length; chunkIndex++) {
+    const obj = extractions[chunkIndex];
+    if (!obj || typeof obj !== 'object' || !obj.metrics_by_year) continue;
 
-          // Deep copy nested objects if present
-          if (metrics.adjusted_ebitda_components) {
-            merged[yr].adjusted_ebitda_components = {
-              ...metrics.adjusted_ebitda_components,
-            };
-          }
-          if (metrics.debt_components) {
-            merged[yr].debt_components = { ...metrics.debt_components };
-          }
-          if (metrics.fixed_charges) {
-            merged[yr].fixed_charges = { ...metrics.fixed_charges };
-          }
-        } else {
-          // Merge with existing year data
-          for (const key of Object.keys(metrics)) {
-            if (key === 'adjusted_ebitda_components' && metrics[key] != null) {
-              // Merge adjusted_ebitda_components
-              merged[yr].adjusted_ebitda_components = mergeNestedObject(
-                merged[yr].adjusted_ebitda_components,
-                metrics[key]
-              );
-            } else if (key === 'debt_components' && metrics[key] != null) {
-              // Merge debt_components
-              merged[yr].debt_components = mergeNestedObject(
-                merged[yr].debt_components,
-                metrics[key]
-              );
-            } else if (key === 'fixed_charges' && metrics[key] != null) {
-              // Merge fixed_charges
-              merged[yr].fixed_charges = mergeNestedObject(
-                merged[yr].fixed_charges,
-                metrics[key]
-              );
-            } else if (merged[yr][key] == null && metrics[key] != null) {
-              // Only overwrite if current value is null and new value exists
-              merged[yr][key] = metrics[key];
-            }
-          }
+    for (const [year, metrics] of Object.entries(obj.metrics_by_year)) {
+      if (!metrics || typeof metrics !== 'object') continue;
+
+      for (const [metric, value] of Object.entries(metrics)) {
+        // Skip nested objects - handle separately
+        if (NESTED_KEYS.includes(metric)) continue;
+
+        // Only collect numeric values
+        if (typeof value !== 'number' || value === null) continue;
+
+        const key = `${year}:${metric}`;
+        if (!valueMap.has(key)) {
+          valueMap.set(key, []);
         }
+
+        // Determine source type and confidence
+        const sourceType = determineSourceType(obj, year, metric);
+        const confidence = MERGE_CONFIG.SOURCE_WEIGHTS[sourceType];
+
+        valueMap.get(key)!.push({
+          value,
+          chunkIndex,
+          sourceType,
+          confidence,
+        });
       }
     }
   }
 
-  return merged;
+  return valueMap;
+}
+
+/**
+ * Determine the source type for a value
+ * In future, this can use metadata from the AI response
+ */
+function determineSourceType(
+  extraction: Record<string, unknown>,
+  year: string,
+  metric: string
+): 'table' | 'primary' | 'overlap' | 'inferred' {
+  // Check if there's source metadata in the extraction
+  const metricsData = extraction.metrics_by_year as Record<string, Record<string, unknown>> | undefined;
+  const sourceDescription =
+    (metricsData?.[year]?._sources as Record<string, string> | undefined)?.[metric] || '';
+
+  if (isTableSource(sourceDescription)) {
+    return 'table';
+  }
+
+  // Default to primary for now
+  // Future enhancement: detect overlap regions based on chunk boundaries
+  return 'primary';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Conflict Resolution
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Calculate variance between values as a percentage
+ */
+function calculateVariance(values: number[]): number {
+  if (values.length < 2) return 0;
+
+  const min = Math.min(...values.map(Math.abs));
+  const max = Math.max(...values.map(Math.abs));
+
+  if (min === 0) return max === 0 ? 0 : 100;
+
+  return ((max - min) / min) * 100;
+}
+
+/**
+ * Resolve a conflict between multiple candidate values
+ */
+function resolveConflict(
+  candidates: ValueCandidate[]
+): { value: number; resolution: MetricConflict['resolution']; variancePercent: number } {
+  const values = candidates.map((c) => c.value);
+  const variancePercent = calculateVariance(values);
+
+  // Single value - no conflict
+  if (candidates.length === 1) {
+    return {
+      value: candidates[0].value,
+      resolution: 'single',
+      variancePercent: 0,
+    };
+  }
+
+  // Check for consensus (all values within 1% of each other)
+  if (variancePercent < 1) {
+    // Values are essentially the same, use highest confidence
+    const best = candidates.reduce((a, b) => (a.confidence > b.confidence ? a : b));
+    return {
+      value: best.value,
+      resolution: 'consensus',
+      variancePercent,
+    };
+  }
+
+  // Low variance (< threshold) - use weighted average
+  if (variancePercent <= MERGE_CONFIG.CONFLICT_THRESHOLD_PERCENT) {
+    const totalWeight = candidates.reduce((sum, c) => sum + c.confidence, 0);
+    const weightedSum = candidates.reduce((sum, c) => sum + c.value * c.confidence, 0);
+    return {
+      value: Math.round((weightedSum / totalWeight) * 100) / 100,
+      resolution: 'weighted_average',
+      variancePercent,
+    };
+  }
+
+  // High variance - flag as conflict and use highest confidence source
+  const best = candidates.reduce((a, b) => {
+    // Prefer higher confidence
+    if (a.confidence !== b.confidence) {
+      return a.confidence > b.confidence ? a : b;
+    }
+    // Tie-breaker: prefer lower chunk index (earlier in document)
+    return a.chunkIndex < b.chunkIndex ? a : b;
+  });
+
+  return {
+    value: best.value,
+    resolution: 'highest_confidence',
+    variancePercent,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Merge Functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Merge multiple extraction results with conflict detection and resolution
+ * @param extractions - Array of extraction results from AI (with chunk indices)
+ * @returns Merged metrics with conflict report
+ */
+export function mergeExtractionsWithConflicts(
+  extractions: ExtractionInput[]
+): MergeResult {
+  const conflicts: MetricConflict[] = [];
+  const merged: Record<string, YearMetrics> = {};
+
+  // Collect all values
+  const valueMap = collectAllValues(extractions);
+
+  // Resolve each metric
+  let totalMetrics = 0;
+  let conflictsDetected = 0;
+
+  for (const [key, candidates] of valueMap.entries()) {
+    const [year, metric] = key.split(':');
+    totalMetrics++;
+
+    // Initialize year if needed
+    if (!merged[year]) {
+      merged[year] = {};
+    }
+
+    // Resolve conflict
+    const { value, resolution, variancePercent } = resolveConflict(candidates);
+    merged[year][metric] = value;
+
+    // Track conflicts
+    if (candidates.length > 1 && variancePercent > MERGE_CONFIG.CONFLICT_THRESHOLD_PERCENT) {
+      conflictsDetected++;
+      const conflict: MetricConflict = {
+        year,
+        metric,
+        candidates,
+        resolvedValue: value,
+        resolution,
+        variancePercent,
+      };
+      conflicts.push(conflict);
+
+      // Log conflict for debugging
+      console.warn(
+        `⚠️ Conflict detected: ${year}/${metric} - ` +
+          `${candidates.length} values with ${variancePercent.toFixed(1)}% variance. ` +
+          `Resolved to ${value} via ${resolution}. ` +
+          `Values: [${candidates.map((c) => `${c.value} (chunk ${c.chunkIndex}, ${c.sourceType})`).join(', ')}]`
+      );
+    }
+  }
+
+  // Handle nested objects (use legacy merge for now)
+  mergeNestedObjects(extractions, merged);
+
+  console.log(
+    `📊 Merge complete: ${totalMetrics} metrics, ${conflictsDetected} conflicts detected`
+  );
+
+  return {
+    metrics: merged,
+    conflicts,
+    totalMetrics,
+    conflictsDetected,
+  };
+}
+
+/** Nested metric object type */
+type NestedMetrics = Record<string, number | null>;
+
+/**
+ * Merge nested objects (debt_components, fixed_charges, adjusted_ebitda_components)
+ * Uses the legacy first-non-null strategy for nested objects
+ */
+function mergeNestedObjects(
+  extractions: ExtractionInput[],
+  merged: Record<string, YearMetrics>
+): void {
+  for (const obj of extractions) {
+    if (!obj || typeof obj !== 'object' || !obj.metrics_by_year) continue;
+
+    for (const [year, metrics] of Object.entries(obj.metrics_by_year)) {
+      if (!merged[year]) {
+        merged[year] = {};
+      }
+
+      for (const nestedKey of NESTED_KEYS) {
+        const nestedValue = metrics[nestedKey];
+        if (nestedValue != null && typeof nestedValue === 'object') {
+          merged[year][nestedKey] = mergeNestedObject(
+            merged[year][nestedKey] as NestedMetrics | null | undefined,
+            nestedValue as NestedMetrics
+          );
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -108,9 +352,9 @@ export function mergeExtractions(
  * @returns Merged object
  */
 function mergeNestedObject(
-  existing: Record<string, any> | null | undefined,
-  incoming: Record<string, any>
-): Record<string, any> {
+  existing: NestedMetrics | null | undefined,
+  incoming: NestedMetrics
+): NestedMetrics {
   if (!existing) {
     return { ...incoming };
   }
@@ -126,6 +370,19 @@ function mergeNestedObject(
 }
 
 /**
+ * Legacy merge function for backward compatibility
+ * @deprecated Use mergeExtractionsWithConflicts for better conflict handling
+ */
+export function mergeExtractions(extractions: ExtractionInput[]): Record<string, YearMetrics> {
+  const result = mergeExtractionsWithConflicts(extractions);
+  return result.metrics;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scale Normalization
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
  * Normalize scale mismatches across years
  * Detects when one year's value is ~1000x larger than others (raw dollars vs thousands)
  * and corrects by dividing by 1000
@@ -134,8 +391,8 @@ function mergeNestedObject(
  * @returns Normalized metrics with consistent scaling
  */
 export function normalizeScaleMismatch(
-  merged: Record<string, any>
-): Record<string, any> {
+  merged: Record<string, YearMetrics>
+): Record<string, YearMetrics> {
   const years = Object.keys(merged);
   if (years.length < 2) return merged; // Need 2+ years to detect mismatch
 

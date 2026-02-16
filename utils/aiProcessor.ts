@@ -13,14 +13,19 @@
 
 import { parseDocument } from '@/lib/document-parser';
 import {
-  chunkText,
+  chunkTextSemantic,
   deduplicateChunks,
   processChunksSequentially,
   type ProgressCallback,
   type ChunkResult,
   type AIExtractionResponse,
 } from '@/lib/chunk-processor';
-import { mergeExtractions, normalizeScaleMismatch } from '@/lib/extraction-merger';
+import {
+  mergeExtractionsWithConflicts,
+  normalizeScaleMismatch,
+  type MergeResult,
+  type MetricConflict,
+} from '@/lib/extraction-merger';
 import {
   generateRiskAssessment,
   generateDebtHealthAssessment,
@@ -55,10 +60,13 @@ export interface ExtractionResult {
   quantitativeRiskAssessment?: QuantitativeRiskAssessment | null;
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
+  /** Conflicts detected during merge (>20% variance between chunks) */
+  merge_conflicts?: MetricConflict[];
   chunk_stats?: {
     total: number;
     successful: number;
     failed: number;
+    withWarnings: number;
   };
   /** Raw chunk results when no metrics could be extracted */
   raw_chunks?: ChunkResult[];
@@ -106,11 +114,12 @@ export const extractFinancialData = async (
     onProgress?.({
       stage: 'chunking',
       progress: 15,
-      message: 'Chunking document...',
+      message: 'Chunking document with semantic boundaries...',
     });
 
-    const textChunks = chunkText(fileContent, AI_CONFIG.CHUNK_SIZE);
-    console.log(`✅ Prepared ${textChunks.length} text chunk(s) for analysis.`);
+    // Use semantic chunking that respects table/paragraph boundaries
+    const textChunks = chunkTextSemantic(fileContent);
+    console.log(`✅ Prepared ${textChunks.length} semantic chunk(s) for analysis.`);
 
     const uniqueChunks = deduplicateChunks(textChunks);
     console.log(
@@ -134,10 +143,14 @@ export const extractFinancialData = async (
     // Calculate chunk stats
     const successfulChunks = chunkResults.filter((r) => r.result !== null);
     const failedChunkCount = chunkResults.length - successfulChunks.length;
+    const chunksWithWarnings = chunkResults.filter(
+      (r) => r.validationWarnings && r.validationWarnings.length > 0
+    );
     const chunkStats = {
       total: chunkResults.length,
       successful: successfulChunks.length,
       failed: failedChunkCount,
+      withWarnings: chunksWithWarnings.length,
     };
 
     // Track extraction warnings
@@ -148,20 +161,38 @@ export const extractFinancialData = async (
       );
     }
 
+    // Add validation warnings from chunks
+    for (const chunk of chunksWithWarnings) {
+      for (const warning of chunk.validationWarnings || []) {
+        extractionWarnings.push(`Chunk ${chunk.index}: ${warning}`);
+      }
+    }
+
     // Filter to successful extractions only
     const allExtractions = successfulChunks.map((r) => r.result);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Phase 4: Merge & Consolidate (deterministic first-wins)
+    // Phase 4: Merge & Consolidate (conflict-aware weighted merge)
     // ─────────────────────────────────────────────────────────────────────────
 
     onProgress?.({
       stage: 'merging',
       progress: 70,
-      message: 'Merging extractions...',
+      message: 'Merging extractions with conflict resolution...',
     });
 
-    const rawMerged = mergeExtractions(allExtractions);
+    const mergeResult = mergeExtractionsWithConflicts(allExtractions);
+    const rawMerged = mergeResult.metrics;
+
+    // Log merge conflicts for transparency
+    if (mergeResult.conflictsDetected > 0) {
+      console.log(
+        `⚠️ Detected ${mergeResult.conflictsDetected} metric conflicts during merge`
+      );
+      extractionWarnings.push(
+        `${mergeResult.conflictsDetected} metric conflicts detected and resolved (see merge_conflicts for details)`
+      );
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 4b: Normalize Scale Mismatches
@@ -236,6 +267,7 @@ export const extractFinancialData = async (
           validation_issues: validationIssues,
         }),
         ...(extractionWarnings.length > 0 && { extraction_warnings: extractionWarnings }),
+        ...(mergeResult.conflicts.length > 0 && { merge_conflicts: mergeResult.conflicts }),
         chunk_stats: chunkStats,
       };
     }

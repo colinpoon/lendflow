@@ -10,12 +10,52 @@
 export const AI_CONFIG = {
   MODEL: 'gpt-4-turbo-2024-04-09',
   TEMPERATURE: 0,
-  MAX_TOKENS: 2000,
-  CHUNK_SIZE: 8000,
+  MAX_TOKENS: 4000, // Increased for larger chunks with more content
+  CHUNK_SIZE: 8000, // Legacy: kept for backward compatibility
   BATCH_SIZE: 2,
-  BATCH_DELAY_MS: 3000,
+  BATCH_DELAY_MS: 1500, // Reduced - fewer chunks means less rate limit concern
   MAX_RETRIES: 3,
   RATE_LIMIT_BACKOFF_MS: 15000,
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Semantic Chunking Configuration
+// GPT-4 Turbo has 128k context (~400k chars). Use large chunks to minimize API calls.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CHUNKING_CONFIG = {
+  /** Target size for chunks in characters - use large chunks to minimize API calls */
+  TARGET_SIZE: 25000,
+  /** Minimum chunk size to prevent tiny chunks */
+  MIN_SIZE: 2000,
+  /** Maximum chunk size - still well under GPT-4 Turbo's limit */
+  MAX_SIZE: 35000,
+  /** Overlap percentage between chunks (0-100) - reduced to minimize redundancy */
+  OVERLAP_PERCENT: 5,
+  /** Paragraph boundary pattern */
+  PARAGRAPH_BOUNDARY: /\n\n+/,
+  /** Table row pattern (lines starting with | or containing tabs) */
+  TABLE_ROW_PATTERN: /^[\s]*[|]|^\s*\S+\t/,
+  /** Sentence ending pattern */
+  SENTENCE_END: /[.!?]\s+/,
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Merge Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const MERGE_CONFIG = {
+  /** Source type confidence weights (higher = more authoritative) */
+  SOURCE_WEIGHTS: {
+    table: 0.92,      // Values from tables (highest reliability)
+    primary: 0.75,    // Primary financial statement text
+    overlap: 0.68,    // Values from chunk overlap regions
+    inferred: 0.50,   // Calculated or inferred values
+  },
+  /** Variance threshold for flagging conflicts (percentage) */
+  CONFLICT_THRESHOLD_PERCENT: 20,
+  /** Minimum number of values required for weighted average */
+  MIN_VALUES_FOR_AVERAGE: 2,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
