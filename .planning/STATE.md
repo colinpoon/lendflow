@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 1 of 3 — Infrastructure Setup
-Plan: Not started
-Status: Ready to plan
-Progress: ░░░░░░░░░░ 0%
+Plan: 2 of 3 complete (01-02 Claude Vision Client)
+Status: In progress
+Progress: ██░░░░░░░░ 20%
 
-Last activity: 2026-02-15 — Roadmap created (3 phases, 11 requirements)
+Last activity: 2026-02-16 — Completed 01-02-PLAN.md (Claude Vision API client)
 
 ## Accumulated Context
 
@@ -25,6 +25,8 @@ Last activity: 2026-02-15 — Roadmap created (3 phases, 11 requirements)
 | Vision over text for tables | 2026-02-15 | Fundamental approach change |
 | Claude 3.7 Sonnet Vision | 2026-02-15 | Primary model for PoC |
 | PoC-only scope | 2026-02-15 | Validate before full migration |
+| Tool calling for structured output | 2026-02-16 | Forces JSON matching ExtractedMetrics |
+| claude-sonnet-4-20250514 model ID | 2026-02-16 | Current Claude 3.7 Sonnet model |
 
 ### Recent Fixes (Pre-Milestone)
 
@@ -33,12 +35,11 @@ Last activity: 2026-02-15 — Roadmap created (3 phases, 11 requirements)
 
 ### Blockers/Concerns
 
-- Need Anthropic API key for Claude Vision testing
-- Need to verify Claude 3.7 Sonnet current capabilities and pricing
-- PDF-to-image library selection (pdf-lib + Canvas vs pdf2image)
+- Need Anthropic API key for Claude Vision testing (user setup required)
+- Plan 01-01 PDF converter needs to be committed (files created but not staged)
 
 ## Session Continuity
 
-Last session: 2026-02-15
-Stopped at: Creating milestone roadmap
-Resume file: None
+Last session: 2026-02-16 21:06 PST
+Stopped at: Completed 01-02-PLAN.md
+Resume file: .planning/phases/01-infrastructure-setup/01-03-PLAN.md
