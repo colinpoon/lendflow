@@ -7,6 +7,7 @@
  * table structure that text extraction destroys.
  */
 
+// PDF conversion
 export {
   convertPdfToImages,
   convertPdfPage,
@@ -14,3 +15,27 @@ export {
   type ConversionOptions,
   type ConversionResult,
 } from './pdf-converter';
+
+// Claude Vision client
+export {
+  createVisionClient,
+  analyzeFinancialImage,
+  testVisionConnection,
+  validateApiKey,
+  type ExtractionResult,
+} from './claude-client';
+
+// Tool definitions
+export {
+  EXTRACTION_TOOL,
+  EXTRACTION_PROMPT,
+  extractionToolSchema,
+} from './extraction-tool';
+
+// Full extraction pipeline
+export {
+  extractFromPdf,
+  extractFromPdfPage,
+  type ExtractionOptions,
+  type PdfExtractionResult,
+} from './vision-extractor';
