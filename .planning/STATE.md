@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 2 of 3 — Vision Extraction Pipeline (In progress)
-Plan: 1 of 2 complete
-Status: In progress
-Progress: ████░░░░░░ 40%
+Plan: 2 of 2 — Task 1 complete, paused at human-verify checkpoint
+Status: Awaiting human verification
+Progress: ████████░░ 70%
 
-Last activity: 2026-02-17 — Completed 02-01-PLAN.md (Create utils/visionProcessor.ts)
+Last activity: 2026-02-17 — 02-02 Task 1 complete (app/api/extractData/vision/route.ts created)
 
 ## Accumulated Context
 
@@ -34,6 +34,9 @@ Last activity: 2026-02-17 — Completed 02-01-PLAN.md (Create utils/visionProces
 | Buffer-only input for visionProcessor | 2026-02-17 | API route owns temp file lifecycle, cleaner separation |
 | VisionExtractionResult alias | 2026-02-17 | Type alias for callers wanting explicit name without new interface |
 | Last-wins year collision merge | 2026-02-17 | Consistent with Phase 1 page merge behavior |
+| PDF-only guard before SSE stream | 2026-02-17 | Non-PDF validation returns JSON 400, not SSE error |
+| No temp file in vision route | 2026-02-17 | Buffer pipeline: Storage download → arrayBuffer() → Buffer.from() |
+| computing event after extractVisionData | 2026-02-17 | Reflects actual ratio computation completion, not anticipatory |
 
 ### Recent Fixes (Pre-Milestone)
 
@@ -42,7 +45,7 @@ Last activity: 2026-02-17 — Completed 02-01-PLAN.md (Create utils/visionProces
 
 ### Blockers/Concerns
 
-- None currently - 02-01 complete, ready for 02-02 (vision API route with human checkpoint)
+- Awaiting human verification of end-to-end vision pipeline with a real PDF from public/financialReports/
 
 ## Phase 01 Summary
 
@@ -68,13 +71,22 @@ Vision extraction processor bridging Phase 1 output to ExtractionResult shape wi
 Key file delivered:
 - `utils/visionProcessor.ts` — exports `extractVisionData(pdfBuffer: Buffer): Promise<ExtractionResult>`
 
+### 02-02: Create vision API route — IN PROGRESS (awaiting human checkpoint)
+
+SSE endpoint that uploads PDFs to Supabase Storage, runs vision extraction, saves to DB.
+
+Key file delivered:
+- `app/api/extractData/vision/route.ts` — POST SSE endpoint, commit ad10942
+
+Pending: Human verification of end-to-end flow with a real PDF.
+
 ## Session Continuity
 
-Last session: 2026-02-17T18:30:14Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-02-17T18:40:00Z
+Stopped at: 02-02 human-verify checkpoint (Task 1 complete, Task 2 awaiting approval)
 Resume file: .planning/phases/02-vision-extraction-pipeline/02-02-PLAN.md
 
 ## Phase 02 Plans
 
 - 02-01-PLAN.md — Create utils/visionProcessor.ts (Wave 1, autonomous) — **COMPLETE**
-- 02-02-PLAN.md — Create vision API route (Wave 2, has human checkpoint)
+- 02-02-PLAN.md — Create vision API route (Wave 2, has human checkpoint) — **IN PROGRESS**
