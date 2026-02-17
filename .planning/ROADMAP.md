@@ -15,32 +15,34 @@
 
 ---
 
-## Phase 1: Infrastructure Setup
+## Phase 1: Infrastructure Setup ✓
+
+**Status:** Complete (2026-02-17)
 
 **Goal:** Set up the foundational infrastructure for vision-based extraction — PDF-to-image conversion and Claude API integration.
 
 **Requirements:**
-- INFRA-01: PDF-to-image conversion pipeline (300 DPI minimum quality)
-- INFRA-02: Claude 3.7 Sonnet Vision API integration via Anthropic SDK
-- INFRA-03: Structured output via tool calling (same JSON schema as current extraction)
+- ✓ INFRA-01: PDF-to-image conversion pipeline (300 DPI minimum quality)
+- ✓ INFRA-02: Claude 3.7 Sonnet Vision API integration via Anthropic SDK
+- ✓ INFRA-03: Structured output via tool calling (same JSON schema as current extraction)
 
 **Success Criteria:**
-1. Can convert any PDF page to a high-quality PNG image (300 DPI)
-2. Can send an image to Claude Vision API and receive a response
-3. Claude returns structured JSON matching the existing extraction schema
-4. API key and SDK are properly configured in environment
+1. ✓ Can convert any PDF page to a high-quality PNG image (300 DPI)
+2. ✓ Can send an image to Claude Vision API and receive a response
+3. ✓ Claude returns structured JSON matching the existing extraction schema
+4. ✓ API key and SDK are properly configured in environment
 
 **Dependencies:** None (first phase)
 
-**Plans:** 3 plans
+**Plans:** 3 plans (all complete)
 
 Plans:
-- [ ] 01-01-PLAN.md — PDF-to-image converter with pdf-to-img
-- [ ] 01-02-PLAN.md — Claude Vision client with tool calling
-- [ ] 01-03-PLAN.md — Integration test and end-to-end verification
+- [x] 01-01-PLAN.md — PDF-to-image converter with pdf-to-img
+- [x] 01-02-PLAN.md — Claude Vision client with tool calling
+- [x] 01-03-PLAN.md — Integration test and end-to-end verification
 
 **Key Decisions:**
-- pdf-to-img library (uses existing pdfjs-dist + canvas)
+- pdf-to-img v4.5.0 (Node 18 compatible)
 - Scale factor 4.17 for 300 DPI equivalent
 - claude-sonnet-4-20250514 model ID
 
@@ -63,12 +65,17 @@ Plans:
 
 **Dependencies:** Phase 1 (infrastructure must be working)
 
-**Plans:** (created by /gsd:plan-phase)
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Vision processor: extractVisionData() with computed ratios and risk assessments
+- [ ] 02-02-PLAN.md — Vision API route: SSE endpoint at /api/extractData/vision
 
 **Key Decisions:**
-- Page processing strategy (all pages vs selective)
-- Merge strategy for multi-page results
-- Error handling and retry logic
+- Page-by-page Buffer processing (avoid loading all pages into memory simultaneously)
+- Fiscal year key normalization before computeMetrics (strips FY prefix, date suffixes)
+- Separate API endpoint (do not modify existing /api/extractData route)
+- lib/calculations.ts functions called directly (computeMetrics is private in aiProcessor)
 
 ---
 
@@ -131,4 +138,4 @@ Phase 1 (Infrastructure) → Phase 2 (Extraction) → Phase 3 (Validation)
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15*
+*Last updated: 2026-02-17*
