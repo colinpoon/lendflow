@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-Phase: 2 of 3 — Vision Extraction Pipeline (PLANNED)
-Plan: 0 of 2 complete
-Status: Ready for execution
-Progress: ███░░░░░░░ 30%
+Phase: 2 of 3 — Vision Extraction Pipeline (In progress)
+Plan: 1 of 2 complete
+Status: In progress
+Progress: ████░░░░░░ 40%
 
-Last activity: 2026-02-17 — Phase 2 plans created and verified
+Last activity: 2026-02-17 — Completed 02-01-PLAN.md (Create utils/visionProcessor.ts)
 
 ## Accumulated Context
 
@@ -31,6 +31,9 @@ Last activity: 2026-02-17 — Phase 2 plans created and verified
 | Scale factor 4.17 for 300 DPI | 2026-02-17 | High quality for financial tables |
 | Sequential page processing | 2026-02-17 | Avoid Claude API rate limits |
 | Year-based metric merging | 2026-02-17 | Prefer newer page values for same year |
+| Buffer-only input for visionProcessor | 2026-02-17 | API route owns temp file lifecycle, cleaner separation |
+| VisionExtractionResult alias | 2026-02-17 | Type alias for callers wanting explicit name without new interface |
+| Last-wins year collision merge | 2026-02-17 | Consistent with Phase 1 page merge behavior |
 
 ### Recent Fixes (Pre-Milestone)
 
@@ -39,7 +42,7 @@ Last activity: 2026-02-17 — Phase 2 plans created and verified
 
 ### Blockers/Concerns
 
-- None currently - Phase 01 complete, ready for Phase 02
+- None currently - 02-01 complete, ready for 02-02 (vision API route with human checkpoint)
 
 ## Phase 01 Summary
 
@@ -56,13 +59,22 @@ Key files delivered:
 - `lib/vision/index.ts`
 - `scripts/test-vision-extraction.mjs`
 
+## Phase 02 Summary (In Progress)
+
+### 02-01: Create utils/visionProcessor.ts — COMPLETE
+
+Vision extraction processor bridging Phase 1 output to ExtractionResult shape with full ratio and risk assessment computation.
+
+Key file delivered:
+- `utils/visionProcessor.ts` — exports `extractVisionData(pdfBuffer: Buffer): Promise<ExtractionResult>`
+
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Phase 2 planning complete
-Resume file: .planning/phases/02-vision-extraction-pipeline/02-01-PLAN.md
+Last session: 2026-02-17T18:30:14Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: .planning/phases/02-vision-extraction-pipeline/02-02-PLAN.md
 
 ## Phase 02 Plans
 
-- 02-01-PLAN.md — Create utils/visionProcessor.ts (Wave 1, autonomous)
+- 02-01-PLAN.md — Create utils/visionProcessor.ts (Wave 1, autonomous) — **COMPLETE**
 - 02-02-PLAN.md — Create vision API route (Wave 2, has human checkpoint)
