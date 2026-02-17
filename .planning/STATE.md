@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 1 of 3 — Infrastructure Setup
-Plan: 2 of 3 complete (01-02 Claude Vision Client)
+Plan: 2 of 3 complete
 Status: In progress
 Progress: ██░░░░░░░░ 20%
 
-Last activity: 2026-02-16 — Completed 01-02-PLAN.md (Claude Vision API client)
+Last activity: 2026-02-17 — Completed 01-01-PLAN.md (PDF-to-Image Converter)
 
 ## Accumulated Context
 
@@ -27,6 +27,8 @@ Last activity: 2026-02-16 — Completed 01-02-PLAN.md (Claude Vision API client)
 | PoC-only scope | 2026-02-15 | Validate before full migration |
 | Tool calling for structured output | 2026-02-16 | Forces JSON matching ExtractedMetrics |
 | claude-sonnet-4-20250514 model ID | 2026-02-16 | Current Claude 3.7 Sonnet model |
+| pdf-to-img v4.5.0 for Node 18 | 2026-02-17 | v5.0 requires Node 20+, incompatible |
+| Scale factor 4.17 for 300 DPI | 2026-02-17 | High quality for financial tables |
 
 ### Recent Fixes (Pre-Milestone)
 
@@ -36,10 +38,9 @@ Last activity: 2026-02-16 — Completed 01-02-PLAN.md (Claude Vision API client)
 ### Blockers/Concerns
 
 - Need Anthropic API key for Claude Vision testing (user setup required)
-- Plan 01-01 PDF converter needs to be committed (files created but not staged)
 
 ## Session Continuity
 
-Last session: 2026-02-16 21:06 PST
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-02-17 05:07 UTC
+Stopped at: Completed 01-01-PLAN.md
 Resume file: .planning/phases/01-infrastructure-setup/01-03-PLAN.md
