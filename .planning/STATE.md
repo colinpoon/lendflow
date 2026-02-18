@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-Phase: 3 of 3 — Validation & Benchmarking (NOT STARTED)
-Plan: 0 of ? complete
-Status: Ready for planning
-Progress: ██████░░░░ 60%
+Phase: 3 of 3 — Validation & Benchmarking
+Plan: 2 of 3 complete
+Status: In progress
+Progress: ████████░░ 80%
 
-Last activity: 2026-02-17 — Phase 2 complete, accuracy gaps identified
+Last activity: 2026-02-18 — Completed 03-02-PLAN.md (Token Usage Threading)
 
 ## Accumulated Context
 
@@ -33,6 +33,8 @@ Last activity: 2026-02-17 — Phase 2 complete, accuracy gaps identified
 | Year-based metric merging | 2026-02-17 | Prefer newer page values for same year |
 | Buffer-only visionProcessor input | 2026-02-17 | Route owns temp file lifecycle |
 | Proceed to Phase 3 despite gaps | 2026-02-17 | Use benchmarking to quantify and fix |
+| Claude Sonnet 4 pricing: $3/$15 per M | 2026-02-18 | Cost calculation for vision pipeline |
+| GPT-4 Turbo pricing: $10/$30 per M | 2026-02-18 | Cost calculation for text pipeline |
 
 ### Known Issues (from Phase 2 testing)
 
@@ -76,8 +78,22 @@ Tested with real PDFs:
 - FY2023_Q4_Financial_Statements.pdf — extracted successfully
 - test.pdf — showed accuracy gaps vs text extraction
 
+## Phase 03 Summary (In Progress)
+
+Validation & Benchmarking infrastructure:
+- **03-01:** Accuracy calculation utilities (lib/benchmarks/accuracy.ts)
+- **03-02:** Token usage threading (ExtractionResult.token_usage, cost.ts)
+- **03-03:** Benchmark runner (pending)
+
+Key files delivered:
+- `lib/benchmarks/accuracy.ts` — Accuracy metrics calculation
+- `lib/benchmarks/cost.ts` — Token pricing and cost calculation
+- `utils/aiProcessor.ts` — ExtractionResult.token_usage field
+- `utils/visionProcessor.ts` — token_usage with cost_usd
+- `lib/chunk-processor.ts` — ChunkProcessingResult with aggregated token_usage
+
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Phase 2 complete, ready for Phase 3 planning
-Resume command: /gsd:plan-phase 3
+Last session: 2026-02-18
+Stopped at: Completed 03-02-PLAN.md
+Resume file: .planning/phases/03-validation-benchmarking/03-03-PLAN.md
