@@ -13,8 +13,8 @@ export interface DebtCalculationResult {
 
 /**
  * Calculate debt metrics from extracted debt components
- * Senior debt = bank debt + lease liabilities (secured/priority debt)
- * Total debt = senior debt + subordinated debt
+ * Senior debt = funded bank debt ONLY (excludes IFRS 16 lease liabilities per banking covenant convention)
+ * Total debt = bank debt + lease liabilities + subordinated debt (all interest-bearing obligations)
  */
 export function calculateDebtMetrics(
   metrics: ExtractedMetrics
@@ -70,17 +70,19 @@ export function calculateDebtMetrics(
   // Compute Final Values
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Senior debt = bank debt + lease liabilities (secured/priority debt)
-  const computedSeniorDebt = totalBankDebt + totalLeaseDebt;
+  // Senior Debt = funded bank debt ONLY (credit facilities, term loans, revolvers).
+  // IFRS 16/ASC 842 lease liabilities are excluded per banking covenant convention.
+  // Lease obligations are separately captured in FCCR/DSCR via payment_of_lease_liability.
+  const computedSeniorDebt = totalBankDebt;
 
-  // Total debt = senior debt + non-senior debt
-  const computedTotalDebt = computedSeniorDebt + totalNonSeniorDebt;
+  // Total debt = bank debt + lease liabilities + non-senior debt (all interest-bearing obligations)
+  const computedTotalDebt = totalBankDebt + totalLeaseDebt + totalNonSeniorDebt;
 
   return {
     senior_debt:
       computedSeniorDebt > 0
         ? computedSeniorDebt
-        : metrics.senior_debt ?? (metrics.total_debt ?? null),
+        : metrics.senior_debt ?? null,
     total_debt: computedTotalDebt > 0 ? computedTotalDebt : metrics.total_debt,
     debt_breakdown: {
       bank_debt: totalBankDebt,

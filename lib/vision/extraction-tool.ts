@@ -336,7 +336,7 @@ const yearMetricsSchema = {
     },
     senior_debt: {
       type: ['number', 'null'],
-      description: 'SENIOR debt ONLY = bank_debt (current + long-term) + lease_liabilities. Excludes notes payable, subordinated debt. If not explicitly broken out, use null - do NOT copy total_debt. Normalized to thousands USD.',
+      description: 'SENIOR debt = funded bank debt ONLY (bank_debt_current + bank_debt_long_term: credit facilities, term loans, revolvers). EXCLUDE IFRS 16/ASC 842 lease liabilities - they are in total_debt but NOT senior_debt per banking covenant convention. Excludes notes payable, subordinated debt. If bank debt is not broken out separately, use null. Normalized to thousands USD.',
     },
     current_assets: {
       type: ['number', 'null'],
@@ -649,11 +649,12 @@ SUBORDINATED/JUNIOR DEBT (lower priority, listed last):
 - other_borrowings: Any other debt
 
 CRITICAL CALCULATION RULES:
-- senior_debt = bank_debt (current + long-term) + ALL lease_liabilities (current + long-term)
+- senior_debt = bank_debt_current + bank_debt_long_term ONLY (funded bank debt: credit facilities, term loans, revolvers)
+- NEVER include lease liabilities in senior_debt. Leases belong in total_debt and debt_components only.
+- total_debt = bank_debt + lease_liabilities + notes_payable + subordinated_debt + all other obligations
 - Notes payable (especially vendor take-back) are NOT senior debt
-- total_debt = senior_debt + notes_payable + subordinated_debt + other non-senior debt
 - If document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities
-- Lease liabilities are often shown separately
+- Lease liabilities are often shown separately and must be recorded in debt_components
 
 ═══════════════════════════════════════════════════════════════════════════════
 FIXED CHARGES EXTRACTION (fixed_charges) - CRITICAL FOR FCCR

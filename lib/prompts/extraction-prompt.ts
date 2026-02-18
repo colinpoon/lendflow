@@ -281,12 +281,13 @@ SUBORDINATED/JUNIOR DEBT (lower priority - listed last in reports):
 CRITICAL DEBT CALCULATION RULES:
 • LEVERAGE DOCUMENT ORDER: When unsure of seniority, use position in the document. Debt items appearing earlier in the liabilities section or debt schedules are typically more senior.
 • Look for debt breakdowns in the notes to financial statements (e.g., "Note 8: Credit Facilities", "Note 9: Lease Liabilities", "Note 10: Note Payable")
-• "senior_debt" = bank_debt (current + long-term) + ALL lease_liabilities (current + long-term). Senior debt is secured debt that has priority in bankruptcy.
-• Notes payable, especially vendor take-back notes or those described as "subordinated", are NOT senior debt.
-• "total_debt" = senior_debt + notes_payable + subordinated_debt + any other non-senior debt
-• If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities.
-• Lease liabilities are often shown separately from bank debt on the balance sheet.
-• When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority.
+• "senior_debt" = funded bank debt ONLY: bank_debt_current + bank_debt_long_term (credit facilities, term loans, revolvers, lines of credit).
+  CRITICAL: Do NOT include lease liabilities (IFRS 16 / ASC 842) in senior_debt. Lease liabilities are a separate balance sheet gross-up and are excluded from the Senior Debt/EBITDA covenant ratio per standard banking convention.
+• Notes payable, vendor take-back notes, or debt described as "subordinated" are NOT senior debt.
+• "total_debt" = bank_debt + lease_liabilities + notes_payable + subordinated_debt + all other interest-bearing obligations. Total debt includes lease liabilities; senior_debt does not.
+• If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities. Lease liabilities appear as a separate line on the balance sheet.
+• Lease liabilities must always be recorded in debt_components (lease_liabilities_current + lease_liabilities_long_term) but must NOT be added to senior_debt.
+• When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority among bank facilities.
 
 CURRENT ASSETS & LIABILITIES (CRITICAL FOR LIQUIDITY RATIO):
 Extract from Balance Sheet for Current Ratio calculation:
