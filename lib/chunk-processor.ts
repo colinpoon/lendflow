@@ -8,8 +8,6 @@
  * the same output order regardless of API response timing.
  */
 
-// Legacy OpenAI import - commented out for Claude migration test
-// import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
 import { AI_CONFIG, CHUNKING_CONFIG } from './constants';
@@ -17,11 +15,11 @@ import { FINANCIAL_EXTRACTION_PROMPT } from './prompts/extraction-prompt';
 import { validateExtractionResponse } from './validation';
 import type { ExtractedMetrics } from '@/types';
 
-// Legacy OpenAI client - commented out for Claude migration test
-// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 // Anthropic Claude client for text extraction
 const anthropic = new Anthropic();
+
+// Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
+const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Text Chunking
@@ -397,17 +395,6 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
 
   for (let attempt = 1; attempt <= AI_CONFIG.MAX_RETRIES; attempt++) {
     try {
-      // Legacy OpenAI call - commented out for Claude migration test
-      // const response = await openai.chat.completions.create({
-      //   model: AI_CONFIG.MODEL,
-      //   temperature: AI_CONFIG.TEMPERATURE,
-      //   max_tokens: AI_CONFIG.MAX_TOKENS,
-      //   messages: [
-      //     { role: 'system', content: FINANCIAL_EXTRACTION_PROMPT },
-      //     { role: 'user', content: chunk.content },
-      //   ],
-      // });
-
       // Claude API call for text extraction
       const response = await anthropic.messages.create({
         model: AI_CONFIG.MODEL,
@@ -424,9 +411,11 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
       const extractedText = textBlock?.type === 'text' ? textBlock.text : '{}';
 
       console.log(`🤖 Chunk ${chunk.index} response received (Claude)`);
-      console.log(
-        `📄 Raw AI response for chunk ${chunk.index}:\n${extractedText}\n${'─'.repeat(80)}`
-      );
+      if (DEBUG_FINANCIALS) {
+        console.log(
+          `📄 Raw AI response for chunk ${chunk.index}:\n${extractedText}\n${'─'.repeat(80)}`
+        );
+      }
 
       const cleaned = cleanJsonFence(extractedText);
 

@@ -9,8 +9,6 @@
  * 3. Using AI reasoning to resolve conflicts based on source authority
  */
 
-// Legacy OpenAI import - commented out for Claude migration
-// import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { AI_CONFIG } from './constants';
 import {
@@ -18,6 +16,7 @@ import {
   buildReconciliationRequest,
 } from './prompts/reconciliation-prompt';
 import { cleanJsonFence } from './chunk-processor';
+import type { MetricConflict } from './extraction-merger';
 import type {
   ChainOfThoughtValue,
   ExtractionCandidate,
@@ -25,11 +24,11 @@ import type {
   ReconciliationResult,
 } from '@/types';
 
-// Legacy OpenAI client - commented out for Claude migration
-// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 // Anthropic Claude client for reconciliation
 const anthropic = new Anthropic();
+
+// Timeout for AI reconciliation calls (30 seconds)
+const AI_RECONCILIATION_TIMEOUT_MS = 30_000;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -252,28 +251,25 @@ async function resolveConflictsWithAI(
 
   const requestJson = buildReconciliationRequest(requestData);
 
-  try {
-    // Legacy OpenAI call - commented out for Claude migration
-    // const response = await openai.chat.completions.create({
-    //   model: AI_CONFIG.MODEL,
-    //   temperature: 0,
-    //   max_tokens: 2000,
-    //   messages: [
-    //     { role: 'system', content: RECONCILIATION_PROMPT },
-    //     { role: 'user', content: requestJson },
-    //   ],
-    // });
+  // Add AbortController with timeout to prevent hung connections
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), AI_RECONCILIATION_TIMEOUT_MS);
 
+  try {
     // Claude API call for conflict reconciliation
-    const response = await anthropic.messages.create({
-      model: AI_CONFIG.MODEL,
-      max_tokens: 2000,
-      temperature: 0, // Deterministic
-      system: RECONCILIATION_PROMPT,
-      messages: [
-        { role: 'user', content: requestJson },
-      ],
-    });
+    const response = await anthropic.messages.create(
+      {
+        model: AI_CONFIG.MODEL,
+        max_tokens: 2000,
+        temperature: 0, // Deterministic
+        system: RECONCILIATION_PROMPT,
+        messages: [
+          { role: 'user', content: requestJson },
+        ],
+      },
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
 
     // Extract text from Claude response
     const textBlock = response.content.find((block) => block.type === 'text');
@@ -284,26 +280,81 @@ async function resolveConflictsWithAI(
     const parsed = JSON.parse(cleaned);
 
     if (parsed.resolutions && Array.isArray(parsed.resolutions)) {
-      return parsed.resolutions.map((r: {
-        metric: string;
-        year: string;
-        resolved_value: number | null;
-        reasoning?: string;
-        selected_candidate_index?: number;
-      }) => ({
-        metric: r.metric,
-        year: r.year,
-        resolved_value: r.resolved_value,
-        reasoning: r.reasoning || '',
-        selected_candidate_index: r.selected_candidate_index ?? 0,
-        selected_source: conflicts
-          .find((c) => c.metric === r.metric && c.year === r.year)
-          ?.candidates[r.selected_candidate_index ?? 0]?.source_description || '',
-      }));
+      const validatedResolutions: ReconciliationResult[] = [];
+
+      for (const r of parsed.resolutions) {
+        // Validate required fields exist
+        if (typeof r.metric !== 'string' || typeof r.year !== 'string') {
+          console.warn(`   ⚠️ Skipping invalid resolution: missing metric or year`);
+          continue;
+        }
+
+        // Find the original conflict to validate against
+        const originalConflict = conflicts.find(
+          (c) => c.metric === r.metric && c.year === r.year
+        );
+        if (!originalConflict) {
+          console.warn(`   ⚠️ Skipping resolution for unknown conflict: ${r.year}/${r.metric}`);
+          continue;
+        }
+
+        // Validate resolved_value is a finite number
+        if (r.resolved_value !== null) {
+          if (typeof r.resolved_value !== 'number' || !Number.isFinite(r.resolved_value)) {
+            console.warn(
+              `   ⚠️ Invalid resolved_value for ${r.year}/${r.metric}: ${r.resolved_value}. Using fallback.`
+            );
+            validatedResolutions.push(fallbackResolution(originalConflict));
+            continue;
+          }
+
+          // Validate resolved_value is within plausible range of candidates
+          const candidateValues = originalConflict.candidates.map((c) => c.value ?? 0);
+          const minCandidate = Math.min(...candidateValues);
+          const maxCandidate = Math.max(...candidateValues);
+          // Allow 10% outside the range for rounding, but flag anything way off
+          const tolerance = Math.abs(maxCandidate - minCandidate) * 0.1 || 1;
+          if (r.resolved_value < minCandidate - tolerance || r.resolved_value > maxCandidate + tolerance) {
+            console.warn(
+              `   ⚠️ Resolved value ${r.resolved_value} for ${r.year}/${r.metric} is outside candidate range [${minCandidate}, ${maxCandidate}]. Using fallback.`
+            );
+            validatedResolutions.push(fallbackResolution(originalConflict));
+            continue;
+          }
+        }
+
+        // Validate selected_candidate_index is within bounds
+        const candidateIndex = r.selected_candidate_index ?? 0;
+        if (candidateIndex < 0 || candidateIndex >= originalConflict.candidates.length) {
+          console.warn(
+            `   ⚠️ Invalid candidate index ${candidateIndex} for ${r.year}/${r.metric}. Using index 0.`
+          );
+        }
+        const safeIndex = Math.max(0, Math.min(candidateIndex, originalConflict.candidates.length - 1));
+
+        validatedResolutions.push({
+          metric: r.metric,
+          year: r.year,
+          resolved_value: r.resolved_value,
+          reasoning: r.reasoning || '',
+          selected_candidate_index: safeIndex,
+          selected_source: originalConflict.candidates[safeIndex]?.source_description || '',
+        });
+      }
+
+      return validatedResolutions;
     }
 
     return [];
   } catch (err: unknown) {
+    clearTimeout(timeoutId);
+
+    // Handle timeout/abort specifically
+    if (err instanceof Error && err.name === 'AbortError') {
+      console.warn('   ⚠️ AI reconciliation timed out — using fallback');
+      return conflicts.map((c) => fallbackResolution(c));
+    }
+
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error('   ❌ Reconciliation AI call failed:', errorMessage);
     // Fallback: use highest confidence value for each conflict
@@ -312,17 +363,20 @@ async function resolveConflictsWithAI(
 }
 
 /**
- * Fallback resolution when AI fails: pick highest confidence, then highest value
+ * Fallback resolution when AI fails: pick highest confidence, then earliest chunk
+ * NOTE: We use chunk index as tiebreaker (not highest value) to avoid systematically
+ * biasing toward overstated financials and to ensure deterministic results
  */
 function fallbackResolution(conflict: ExtractionCandidate): ReconciliationResult {
   const confidenceOrder = { high: 3, medium: 2, low: 1 };
 
-  // Sort by confidence (descending), then by value (descending)
+  // Sort by confidence (descending), then by chunk index (ascending for determinism)
   const sorted = [...conflict.candidates].sort((a, b) => {
     const confDiff =
       (confidenceOrder[b.confidence] || 0) - (confidenceOrder[a.confidence] || 0);
     if (confDiff !== 0) return confDiff;
-    return (b.value ?? 0) - (a.value ?? 0);
+    // Tiebreaker: prefer earlier chunk (lower index) for determinism
+    return (a.chunk_index ?? 0) - (b.chunk_index ?? 0);
   });
 
   const selected = sorted[0];
@@ -332,7 +386,7 @@ function fallbackResolution(conflict: ExtractionCandidate): ReconciliationResult
     metric: conflict.metric,
     year: conflict.year,
     resolved_value: selected.value,
-    reasoning: `Fallback resolution: selected highest confidence (${selected.confidence}) value`,
+    reasoning: `Fallback resolution: selected highest confidence (${selected.confidence}), chunk ${selected.chunk_index}`,
     selected_candidate_index: selectedIndex,
     selected_source: selected.source_description,
   };
@@ -463,6 +517,105 @@ function logReconciliationSummary(
     console.log(`   Reasoning: ${resolution.reasoning}`);
   }
   console.log(`   ─────────────────────────────────────\n`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public API for Conflict Resolution
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve high-variance conflicts using AI reasoning
+ * This is the public API for escalating conflicts from extraction-merger.ts
+ *
+ * @param conflicts - Array of MetricConflict from merge process
+ * @returns Map of "year:metric" -> resolved value
+ */
+export async function resolveHighVarianceConflicts(
+  conflicts: MetricConflict[]
+): Promise<Map<string, number>> {
+  console.log(`\n🤖 AI Reconciliation: Processing ${conflicts.length} high-variance conflicts...`);
+
+  // Convert to ExtractionCandidate format with full source context
+  const extractionCandidates: ExtractionCandidate[] = conflicts.map((c) => ({
+    metric: c.metric,
+    year: c.year,
+    candidates: c.candidates.map((cand) => {
+      // Use the actual source description if available, otherwise fall back to source type
+      const actualSource = cand.sourceDescription && cand.sourceDescription.length > 0
+        ? cand.sourceDescription
+        : `${cand.sourceType} source (chunk ${cand.chunkIndex})`;
+
+      // Use actual confidence level if available
+      const actualConfidence = cand.confidenceLevel && ['high', 'medium', 'low'].includes(cand.confidenceLevel)
+        ? cand.confidenceLevel as 'high' | 'medium' | 'low'
+        : mapConfidenceToLevel(cand.confidence);
+
+      return {
+        value: cand.value,
+        confidence: actualConfidence,
+        source_description: actualSource,
+        reasoning: buildCandidateReasoning(cand),
+        chunk_index: cand.chunkIndex,
+      };
+    }),
+    has_conflict: true,
+  }));
+
+  // Call AI reconciliation
+  const resolutions = await resolveConflictsWithAI(extractionCandidates);
+
+  // Build result map
+  const resultMap = new Map<string, number>();
+  for (const resolution of resolutions) {
+    if (resolution.resolved_value !== null) {
+      resultMap.set(`${resolution.year}:${resolution.metric}`, resolution.resolved_value);
+      console.log(
+        `   ✅ ${resolution.metric}/${resolution.year}: resolved to ${resolution.resolved_value} - ${resolution.reasoning}`
+      );
+    }
+  }
+
+  return resultMap;
+}
+
+/**
+ * Build reasoning context for a candidate based on available metadata
+ */
+function buildCandidateReasoning(cand: {
+  value: number;
+  chunkIndex: number;
+  sourceType: string;
+  sourceDescription?: string;
+  confidenceLevel?: string;
+}): string {
+  const parts: string[] = [];
+
+  // Add source description context
+  if (cand.sourceDescription && cand.sourceDescription.length > 0) {
+    parts.push(`Extracted from: ${cand.sourceDescription}`);
+  }
+
+  // Add confidence context
+  if (cand.confidenceLevel) {
+    parts.push(`AI confidence: ${cand.confidenceLevel}`);
+  }
+
+  // Add source type classification
+  parts.push(`Classified as: ${cand.sourceType} source`);
+
+  // Add chunk reference
+  parts.push(`Document section: chunk ${cand.chunkIndex}`);
+
+  return parts.join('. ');
+}
+
+/**
+ * Map numeric confidence (from SOURCE_WEIGHTS) to high/medium/low
+ */
+function mapConfidenceToLevel(confidence: number): 'high' | 'medium' | 'low' {
+  if (confidence >= 0.85) return 'high';
+  if (confidence >= 0.65) return 'medium';
+  return 'low';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

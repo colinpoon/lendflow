@@ -12,6 +12,96 @@
 import { MERGE_CONFIG, SCALE_VALIDATION, CURRENCY_METRICS } from './constants';
 import { isTableSource } from './validation';
 
+// Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
+const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Consensus Resolution
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Calculate the median of an array of numbers
+ */
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/**
+ * Cluster candidates by value within a tolerance
+ * Returns groups of candidates whose values are within tolerance of each other
+ *
+ * Uses median as cluster reference to prevent tolerance drift where values
+ * 100→100.9→101.8→102.7 would incorrectly cluster together
+ */
+function clusterByValue(
+  candidates: ValueCandidate[],
+  tolerance: number
+): ValueCandidate[][] {
+  const clusters: ValueCandidate[][] = [];
+
+  for (const candidate of candidates) {
+    let foundCluster = false;
+
+    for (const cluster of clusters) {
+      // Use median of cluster values as reference point (prevents drift)
+      const clusterValues = cluster.map((c) => c.value);
+      const clusterRef = median(clusterValues);
+
+      // Check if candidate is within tolerance of cluster median
+      const variance = Math.abs(candidate.value - clusterRef) / Math.abs(clusterRef || 1);
+
+      if (variance <= tolerance) {
+        cluster.push(candidate);
+        foundCluster = true;
+        break;
+      }
+    }
+
+    if (!foundCluster) {
+      clusters.push([candidate]);
+    }
+  }
+
+  return clusters;
+}
+
+/**
+ * Find consensus value if 3+ candidates agree within tolerance
+ * @param candidates - Array of value candidates
+ * @param tolerance - Maximum variance to consider values as "agreeing" (e.g., 0.01 = 1%)
+ * @returns The consensus value if found, null otherwise
+ */
+function findConsensus(
+  candidates: ValueCandidate[],
+  tolerance: number
+): { value: number; confidence: number } | null {
+  if (candidates.length < MERGE_CONFIG.MIN_CANDIDATES_FOR_CONSENSUS) {
+    return null;
+  }
+
+  // Group candidates by value (within tolerance)
+  const clusters = clusterByValue(candidates, tolerance);
+
+  // Find if any cluster has >= majority threshold of candidates
+  const majorityThreshold = candidates.length * MERGE_CONFIG.CONSENSUS_MAJORITY_THRESHOLD;
+  const majorityCluster = clusters.find((c) => c.length >= majorityThreshold);
+
+  if (majorityCluster) {
+    // Return the highest-confidence value from the majority cluster
+    // IMPORTANT: Use spread to avoid mutating the original array
+    const sorted = [...majorityCluster].sort((a, b) => b.confidence - a.confidence);
+    return {
+      value: sorted[0].value,
+      confidence: sorted[0].confidence,
+    };
+  }
+
+  return null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -19,11 +109,15 @@ import { isTableSource } from './validation';
 /**
  * A candidate value extracted from a chunk
  */
-interface ValueCandidate {
+export interface ValueCandidate {
   value: number;
   chunkIndex: number;
   sourceType: 'table' | 'primary' | 'overlap' | 'inferred';
   confidence: number;
+  /** The actual source description from AI extraction (e.g., "Cash Flow Statement, Operating Activities") */
+  sourceDescription: string;
+  /** The confidence level from AI extraction (high/medium/low) */
+  confidenceLevel: 'high' | 'medium' | 'low' | '';
 }
 
 /**
@@ -34,7 +128,7 @@ export interface MetricConflict {
   metric: string;
   candidates: ValueCandidate[];
   resolvedValue: number;
-  resolution: 'single' | 'highest_confidence' | 'weighted_average' | 'consensus';
+  resolution: 'single' | 'highest_confidence' | 'weighted_average' | 'consensus' | 'near_consensus' | 'source_dominance';
   variancePercent: number;
 }
 
@@ -58,6 +152,8 @@ export interface MergeResult {
   conflicts: MetricConflict[];
   totalMetrics: number;
   conflictsDetected: number;
+  /** Map of "year:metric" -> candidates for post-merge validation */
+  candidatesMap: Map<string, ValueCandidate[]>;
 }
 
 /**
@@ -104,15 +200,17 @@ function collectAllValues(
           valueMap.set(key, []);
         }
 
-        // Determine source type and confidence
-        const sourceType = determineSourceType(obj, year, metric);
-        const confidence = MERGE_CONFIG.SOURCE_WEIGHTS[sourceType];
+        // Determine source type, confidence, and get raw metadata
+        const sourceMetadata = getSourceMetadata(obj, year, metric);
+        const confidence = MERGE_CONFIG.SOURCE_WEIGHTS[sourceMetadata.sourceType];
 
         valueMap.get(key)!.push({
           value,
           chunkIndex,
-          sourceType,
+          sourceType: sourceMetadata.sourceType,
           confidence,
+          sourceDescription: sourceMetadata.sourceDescription,
+          confidenceLevel: sourceMetadata.confidenceLevel,
         });
       }
     }
@@ -122,26 +220,68 @@ function collectAllValues(
 }
 
 /**
- * Determine the source type for a value
- * In future, this can use metadata from the AI response
+ * Source metadata extracted from AI response
  */
-function determineSourceType(
+interface SourceMetadata {
+  sourceType: 'table' | 'primary' | 'overlap' | 'inferred';
+  sourceDescription: string;
+  confidenceLevel: 'high' | 'medium' | 'low' | '';
+}
+
+/**
+ * Extract full source metadata for a value from AI-provided _sources and _confidence
+ * Returns both the classified type AND the original description for reconciliation context
+ */
+function getSourceMetadata(
   extraction: Record<string, unknown>,
   year: string,
   metric: string
-): 'table' | 'primary' | 'overlap' | 'inferred' {
+): SourceMetadata {
   // Check if there's source metadata in the extraction
   const metricsData = extraction.metrics_by_year as Record<string, Record<string, unknown>> | undefined;
-  const sourceDescription =
-    (metricsData?.[year]?._sources as Record<string, string> | undefined)?.[metric] || '';
+  const sources = metricsData?.[year]?._sources as Record<string, string> | undefined;
+  const confidences = metricsData?.[year]?._confidence as Record<string, string> | undefined;
 
+  const sourceDescription = sources?.[metric] || '';
+  const confidenceLevel = (confidences?.[metric] || '') as 'high' | 'medium' | 'low' | '';
+
+  // Determine source type based on description and confidence
+  let sourceType: 'table' | 'primary' | 'overlap' | 'inferred' = 'primary';
+
+  // Table sources (highest authority) - check source description
   if (isTableSource(sourceDescription)) {
-    return 'table';
+    sourceType = 'table';
+  }
+  // Low confidence from AI = inferred
+  else if (confidenceLevel === 'low') {
+    sourceType = 'inferred';
+  }
+  // Check for overlap indicators in source description
+  else if (isOverlapSource(sourceDescription)) {
+    sourceType = 'overlap';
   }
 
-  // Default to primary for now
-  // Future enhancement: detect overlap regions based on chunk boundaries
-  return 'primary';
+  return {
+    sourceType,
+    sourceDescription,
+    confidenceLevel,
+  };
+}
+
+/**
+ * Check if a source description indicates an overlap region
+ * Overlap regions are where chunk boundaries may have split data
+ */
+function isOverlapSource(sourceDescription: string): boolean {
+  const overlapPatterns = [
+    /partial/i,
+    /incomplete/i,
+    /continued/i,
+    /see also/i,
+    /refer to/i,
+    /truncated/i,
+  ];
+  return overlapPatterns.some((p) => p.test(sourceDescription));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -150,20 +290,50 @@ function determineSourceType(
 
 /**
  * Calculate variance between values as a percentage
+ * Handles sign disagreements as high variance (not hidden by Math.abs)
  */
 function calculateVariance(values: number[]): number {
   if (values.length < 2) return 0;
 
-  const min = Math.min(...values.map(Math.abs));
-  const max = Math.max(...values.map(Math.abs));
+  // Check for sign disagreement - this is a fundamental conflict, not a rounding issue
+  const hasPositive = values.some((v) => v > 0);
+  const hasNegative = values.some((v) => v < 0);
+  if (hasPositive && hasNegative) {
+    // Sign disagreement is always a significant conflict
+    // Return 200% to ensure it escalates to AI reconciliation
+    return 200;
+  }
 
-  if (min === 0) return max === 0 ? 0 : 100;
+  // Use raw values (not absolute) to detect actual variance
+  const min = Math.min(...values);
+  const max = Math.max(...values);
 
-  return ((max - min) / min) * 100;
+  // Handle near-zero values to avoid division issues
+  // If the reference value is very small, use absolute comparison
+  const absMin = Math.abs(min);
+  const absMax = Math.abs(max);
+  const reference = Math.max(absMin, absMax);
+
+  if (reference === 0) return 0;
+
+  // For very small values (< $1K in thousands), treat as equivalent
+  // This prevents 0.5 vs 1.0 from showing as 100% variance
+  if (reference < 1) {
+    return Math.abs(max - min) < 1 ? 0 : 100;
+  }
+
+  return (Math.abs(absMax - absMin) / reference) * 100;
 }
 
 /**
  * Resolve a conflict between multiple candidate values
+ *
+ * CASCADE ORDER (optimized for accuracy):
+ * 1. Consensus - if 3+ candidates agree within 1%, trust the consensus
+ * 2. Near-consensus - if all values within 1%, use highest confidence
+ * 3. Source quality dominance - if one source type is clearly superior, use it
+ * 4. Weighted average - only for low variance among similar-quality sources
+ * 5. Highest confidence - final fallback with chunk index tiebreaker
  */
 function resolveConflict(
   candidates: ValueCandidate[]
@@ -180,18 +350,51 @@ function resolveConflict(
     };
   }
 
-  // Check for consensus (all values within 1% of each other)
-  if (variancePercent < 1) {
-    // Values are essentially the same, use highest confidence
-    const best = candidates.reduce((a, b) => (a.confidence > b.confidence ? a : b));
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 1: Check for consensus (3+ candidates agree within tolerance)
+  // ─────────────────────────────────────────────────────────────────────────
+  const consensusResult = findConsensus(candidates, MERGE_CONFIG.CONSENSUS_TOLERANCE);
+  if (consensusResult !== null) {
     return {
-      value: best.value,
+      value: consensusResult.value,
       resolution: 'consensus',
       variancePercent,
     };
   }
 
-  // Low variance (< threshold) - use weighted average
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 2: Check for near-consensus (all values within 1% - even with < 3 candidates)
+  // This is distinct from true consensus (3+ candidates agreeing) - labeled separately
+  // for audit trail accuracy
+  // ─────────────────────────────────────────────────────────────────────────
+  if (variancePercent < 1) {
+    // Values are essentially the same, use highest confidence
+    const best = candidates.reduce((a, b) => (a.confidence > b.confidence ? a : b));
+    return {
+      value: best.value,
+      resolution: 'near_consensus',
+      variancePercent,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 3: Source quality dominance check
+  // If there's a clear winner by source type (table vs inferred), use it directly
+  // This prevents blending authoritative table data with inferred values
+  // ─────────────────────────────────────────────────────────────────────────
+  const sourceQualityResult = checkSourceQualityDominance(candidates);
+  if (sourceQualityResult !== null) {
+    return {
+      value: sourceQualityResult.value,
+      resolution: 'source_dominance',
+      variancePercent,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 4: Low variance among similar-quality sources - use weighted average
+  // Only apply weighted average when sources are of similar authority
+  // ─────────────────────────────────────────────────────────────────────────
   if (variancePercent <= MERGE_CONFIG.CONFLICT_THRESHOLD_PERCENT) {
     const totalWeight = candidates.reduce((sum, c) => sum + c.confidence, 0);
     const weightedSum = candidates.reduce((sum, c) => sum + c.value * c.confidence, 0);
@@ -202,9 +405,11 @@ function resolveConflict(
     };
   }
 
-  // High variance - flag as conflict and use highest confidence source
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 5: High variance fallback - use highest confidence with chunk tiebreaker
+  // ─────────────────────────────────────────────────────────────────────────
   const best = candidates.reduce((a, b) => {
-    // Prefer higher confidence
+    // Prefer higher confidence (which incorporates source type)
     if (a.confidence !== b.confidence) {
       return a.confidence > b.confidence ? a : b;
     }
@@ -217,6 +422,75 @@ function resolveConflict(
     resolution: 'highest_confidence',
     variancePercent,
   };
+}
+
+/**
+ * Check if one source type clearly dominates and should be preferred
+ * Returns the dominant candidate if there's a clear quality gap, null otherwise
+ *
+ * A source is "dominant" if:
+ * - It's from a higher-tier source type (table > primary > overlap > inferred)
+ * - AND there's no equally-authoritative opposing candidate
+ */
+function checkSourceQualityDominance(
+  candidates: ValueCandidate[]
+): ValueCandidate | null {
+  // Group candidates by source type tier
+  const tiers: Record<string, ValueCandidate[]> = {
+    table: [],
+    primary: [],
+    overlap: [],
+    inferred: [],
+  };
+
+  for (const c of candidates) {
+    tiers[c.sourceType]?.push(c);
+  }
+
+  // Check tiers in order of authority
+  const tierOrder: Array<'table' | 'primary' | 'overlap' | 'inferred'> = [
+    'table', 'primary', 'overlap', 'inferred'
+  ];
+
+  for (const tier of tierOrder) {
+    const tierCandidates = tiers[tier];
+    if (tierCandidates.length === 0) continue;
+
+    // Check if ALL candidates in higher tiers agree (or there's only one)
+    const tierValues = tierCandidates.map((c) => c.value);
+    const tierVariance = calculateVariance(tierValues);
+
+    if (tierVariance < MERGE_CONFIG.SOURCE_DOMINANCE_VARIANCE_THRESHOLD) {
+      // This tier has consistent values - check if lower tiers disagree
+      const lowerTierIndex = tierOrder.indexOf(tier);
+      const lowerTiers = tierOrder.slice(lowerTierIndex + 1);
+      const hasLowerTierConflict = lowerTiers.some((t) => {
+        const lower = tiers[t];
+        if (lower.length === 0) return false;
+        // Check if lower tier values differ significantly from this tier
+        const lowerValues = lower.map((c) => c.value);
+        const crossVariance = calculateVariance([...tierValues, ...lowerValues]);
+        return crossVariance > MERGE_CONFIG.SOURCE_DOMINANCE_VARIANCE_THRESHOLD;
+      });
+
+      if (hasLowerTierConflict) {
+        // Higher-quality source disagrees with lower-quality - prefer higher
+        // Return the highest-confidence candidate from this tier
+        const best = tierCandidates.reduce((a, b) =>
+          a.confidence > b.confidence ? a :
+          a.confidence < b.confidence ? b :
+          a.chunkIndex < b.chunkIndex ? a : b
+        );
+        return best;
+      }
+    }
+
+    // Inconsistent top-tier candidates — no single tier wins.
+    // Return null so caller falls through to weighted_average or highest_confidence.
+    break;
+  }
+
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -267,28 +541,44 @@ export function mergeExtractionsWithConflicts(
       };
       conflicts.push(conflict);
 
-      // Log conflict for debugging
-      console.warn(
-        `⚠️ Conflict detected: ${year}/${metric} - ` +
-          `${candidates.length} values with ${variancePercent.toFixed(1)}% variance. ` +
-          `Resolved to ${value} via ${resolution}. ` +
-          `Values: [${candidates.map((c) => `${c.value} (chunk ${c.chunkIndex}, ${c.sourceType})`).join(', ')}]`
-      );
+      // Check for table-vs-table conflicts (most significant data integrity issue)
+      const tableCandidates = candidates.filter((c) => c.sourceType === 'table');
+      if (tableCandidates.length >= 2) {
+        const tableValues = tableCandidates.map((c) => c.value);
+        const tableVariance = calculateVariance(tableValues);
+        if (tableVariance >= MERGE_CONFIG.CONFLICT_THRESHOLD_PERCENT) {
+          const descriptions = tableCandidates.map((c) => c.sourceDescription || `chunk ${c.chunkIndex}`).join(' vs ');
+          console.warn(`⚠️ Table-vs-table conflict: ${year}/${metric} - ${descriptions} — using ${resolution}`);
+        }
+      }
+
+      // Log conflict for debugging (gated behind DEBUG_FINANCIALS)
+      if (DEBUG_FINANCIALS) {
+        console.warn(
+          `⚠️ Conflict detected: ${year}/${metric} - ` +
+            `${candidates.length} values with ${variancePercent.toFixed(1)}% variance. ` +
+            `Resolved to ${value} via ${resolution}. ` +
+            `Values: [${candidates.map((c) => `${c.value} (chunk ${c.chunkIndex}, ${c.sourceType})`).join(', ')}]`
+        );
+      }
     }
   }
 
   // Handle nested objects (use legacy merge for now)
   mergeNestedObjects(extractions, merged);
 
-  console.log(
-    `📊 Merge complete: ${totalMetrics} metrics, ${conflictsDetected} conflicts detected`
-  );
+  if (DEBUG_FINANCIALS) {
+    console.log(
+      `📊 Merge complete: ${totalMetrics} metrics, ${conflictsDetected} conflicts detected`
+    );
+  }
 
   return {
     metrics: merged,
     conflicts,
     totalMetrics,
     conflictsDetected,
+    candidatesMap: valueMap,
   };
 }
 
@@ -355,6 +645,89 @@ function mergeNestedObject(
 export function mergeExtractions(extractions: ExtractionInput[]): Record<string, YearMetrics> {
   const result = mergeExtractionsWithConflicts(extractions);
   return result.metrics;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Arithmetic Validation
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Validate and correct metrics using accounting identities
+ * If EBITDA doesn't match calculated value but a candidate does, use that candidate
+ *
+ * @param merged - Merged metrics by year
+ * @param candidatesMap - Map of "year:metric" -> array of candidates
+ * @returns Corrected metrics with validation notes
+ */
+export function validateArithmeticConsistency(
+  merged: Record<string, YearMetrics>,
+  candidatesMap: Map<string, ValueCandidate[]>
+): { metrics: Record<string, YearMetrics>; corrections: string[] } {
+  const corrections: string[] = [];
+  const corrected = structuredClone(merged);
+
+  for (const [year, metrics] of Object.entries(corrected)) {
+    // EBITDA identity check: EBITDA = Net Income + Interest + Taxes + D&A
+    const netIncome = metrics.net_income as number | null;
+    const interest = metrics.interest as number | null;
+    const taxes = metrics.taxes as number | null;
+    const da = metrics.depreciation_amortization as number | null;
+    const ebitda = metrics.ebitda as number | null;
+
+    // Only validate if we have all components
+    if (netIncome != null && interest != null && taxes != null && da != null && ebitda != null) {
+      const calculatedEbitda = netIncome + interest + taxes + da;
+      const variance = Math.abs(ebitda - calculatedEbitda) / Math.abs(ebitda || 1);
+
+      // If merged EBITDA doesn't match calculated (>5% variance), check candidates
+      if (variance > 0.05) {
+        const ebitdaCandidates = candidatesMap.get(`${year}:ebitda`);
+
+        if (ebitdaCandidates && ebitdaCandidates.length > 1) {
+          // Look for a candidate that matches the calculated value
+          const matchingCandidate = ebitdaCandidates.find((c) => {
+            const candidateVariance = Math.abs(c.value - calculatedEbitda) / Math.abs(calculatedEbitda || 1);
+            return candidateVariance < 0.01; // Within 1%
+          });
+
+          if (matchingCandidate) {
+            const oldValue = corrected[year].ebitda;
+            corrected[year].ebitda = matchingCandidate.value;
+            corrections.push(
+              `${year}/ebitda: Arithmetic correction ${oldValue} → ${matchingCandidate.value} ` +
+              `(matches calculated: ${netIncome} + ${interest} + ${taxes} + ${da} = ${calculatedEbitda})`
+            );
+            if (DEBUG_FINANCIALS) {
+              console.log(`⚠️ Arithmetic correction for ${year}/ebitda: ${oldValue} → ${matchingCandidate.value}`);
+            }
+          } else {
+            // No matching candidate - log warning but don't change
+            corrections.push(
+              `${year}/ebitda: Warning - EBITDA (${ebitda}) doesn't match calculated ` +
+              `(${calculatedEbitda}), but no candidate matches. Variance: ${(variance * 100).toFixed(1)}%`
+            );
+          }
+        }
+      }
+    }
+
+    // Additional identity checks can be added here:
+    // - Total Debt = Senior Debt + Subordinated Debt
+    // - Total D&A = Equipment D&A + ROU D&A + Other D&A
+
+    // Total Debt consistency check
+    const seniorDebt = metrics.senior_debt as number | null;
+    const totalDebt = metrics.total_debt as number | null;
+
+    if (seniorDebt != null && totalDebt != null && seniorDebt > totalDebt) {
+      // Senior debt cannot exceed total debt - likely a data error
+      corrections.push(
+        `${year}: Warning - Senior debt (${seniorDebt}) exceeds total debt (${totalDebt}). Data may be inconsistent.`
+      );
+    }
+  }
+
+  return { metrics: corrected, corrections };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

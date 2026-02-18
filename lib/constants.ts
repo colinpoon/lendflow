@@ -7,18 +7,6 @@
 // AI Processing Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Legacy OpenAI configuration - deprecated in favor of Anthropic
-// export const AI_CONFIG = {
-//   MODEL: 'gpt-4-turbo-2024-04-09',
-//   TEMPERATURE: 0,
-//   MAX_TOKENS: 4000,
-//   CHUNK_SIZE: 8000,
-//   BATCH_SIZE: 2,
-//   BATCH_DELAY_MS: 1500,
-//   MAX_RETRIES: 3,
-//   RATE_LIMIT_BACKOFF_MS: 15000,
-// } as const;
-
 // Anthropic Claude configuration for text extraction
 export const AI_CONFIG = {
   MODEL: 'claude-sonnet-4-20250514',
@@ -69,6 +57,16 @@ export const MERGE_CONFIG = {
   CONFLICT_THRESHOLD_PERCENT: 5,
   /** Minimum number of values required for weighted average */
   MIN_VALUES_FOR_AVERAGE: 2,
+  /** Consensus tolerance - values within this % are considered "agreeing" */
+  CONSENSUS_TOLERANCE: 0.01,
+  /** Minimum candidates required for consensus check */
+  MIN_CANDIDATES_FOR_CONSENSUS: 3,
+  /** Majority threshold for consensus (60% of candidates must agree) */
+  CONSENSUS_MAJORITY_THRESHOLD: 0.6,
+  /** Variance threshold for escalating to AI reconciliation (percentage) */
+  AI_RECONCILIATION_THRESHOLD_PERCENT: 20,
+  /** Variance threshold for source quality dominance check (percentage) */
+  SOURCE_DOMINANCE_VARIANCE_THRESHOLD: 5,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
