@@ -61,7 +61,8 @@ async function compressPDF(file: File): Promise<File> {
       addDefaultPage: false,
     });
 
-    const compressedBlob = new Blob([compressedBytes], { type: 'application/pdf' });
+    // Convert Uint8Array to ArrayBuffer for Blob compatibility
+    const compressedBlob = new Blob([new Uint8Array(compressedBytes)], { type: 'application/pdf' });
     const compressedFile = new File([compressedBlob], file.name, { type: 'application/pdf' });
 
     console.log(`📄 PDF compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);

@@ -1,11 +1,12 @@
 import { Extraction, ExtractionResult } from '@/lib/supabase/types';
-import { calculateQuantitativeRisk } from '@/lib/quantitative-risk';
+import { calculateQuantitativeRisk, type QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
+import type { ComputedMetrics, RiskData, DebtHealthAssessment } from '@/types';
 
 export interface MergedExtraction {
-  metrics_by_year: Record<string, Record<string, unknown>>;
-  riskAssessment?: unknown;
-  debtHealthAssessment?: unknown;
-  quantitativeRiskAssessment?: unknown;
+  metrics_by_year: Record<string, ComputedMetrics>;
+  riskAssessment?: RiskData | null;
+  debtHealthAssessment?: DebtHealthAssessment | null;
+  quantitativeRiskAssessment?: QuantitativeRiskAssessment | null;
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
   chunk_stats?: { total: number; successful: number; failed: number };
@@ -298,10 +299,12 @@ export function mergeExtractions(
     const mostRecentYear = years[years.length - 1];
 
     return {
-      metrics_by_year: data.metrics_by_year || {},
-      riskAssessment: data.riskAssessment,
-      debtHealthAssessment: data.debtHealthAssessment,
-      quantitativeRiskAssessment: data.quantitativeRiskAssessment,
+      // Cast is safe: ExtractionYearMetrics is structurally compatible with ComputedMetrics
+      // as they share the same fields when stored/retrieved from database
+      metrics_by_year: (data.metrics_by_year || {}) as unknown as Record<string, ComputedMetrics>,
+      riskAssessment: data.riskAssessment as RiskData | null | undefined,
+      debtHealthAssessment: data.debtHealthAssessment as DebtHealthAssessment | null | undefined,
+      quantitativeRiskAssessment: data.quantitativeRiskAssessment as QuantitativeRiskAssessment | null | undefined,
       validation_issues: data.validation_issues,
       extraction_warnings: data.extraction_warnings,
       chunk_stats: data.chunk_stats,
@@ -386,7 +389,7 @@ export function mergeExtractions(
 
   // Build merged result from yearDataMap
   for (const [year, entry] of yearDataMap.entries()) {
-    merged.metrics_by_year[year] = entry.metrics;
+    merged.metrics_by_year[year] = entry.metrics as unknown as ComputedMetrics;
     merged.year_sources[year] = {
       document_id: entry.document_id,
       file_name: entry.file_name,
@@ -413,8 +416,8 @@ export function mergeExtractions(
       const sourceData = sourceExtraction.extraction_data as ExtractionResult;
 
       // Use risk assessments from the document with the most recent fiscal year
-      merged.riskAssessment = sourceData.riskAssessment;
-      merged.debtHealthAssessment = sourceData.debtHealthAssessment;
+      merged.riskAssessment = sourceData.riskAssessment as RiskData | null | undefined;
+      merged.debtHealthAssessment = sourceData.debtHealthAssessment as DebtHealthAssessment | null | undefined;
       merged.validation_issues = sourceData.validation_issues;
       merged.extraction_warnings = sourceData.extraction_warnings;
       merged.chunk_stats = sourceData.chunk_stats;
@@ -432,10 +435,10 @@ export function mergeExtractions(
       const data = extraction.extraction_data as ExtractionResult;
 
       if (!merged.riskAssessment && data.riskAssessment) {
-        merged.riskAssessment = data.riskAssessment;
+        merged.riskAssessment = data.riskAssessment as unknown as RiskData;
       }
       if (!merged.debtHealthAssessment && data.debtHealthAssessment) {
-        merged.debtHealthAssessment = data.debtHealthAssessment;
+        merged.debtHealthAssessment = data.debtHealthAssessment as unknown as DebtHealthAssessment;
       }
       // Note: quantitativeRiskAssessment is always recalculated above, no fallback needed
       if (!merged.validation_issues && data.validation_issues) {

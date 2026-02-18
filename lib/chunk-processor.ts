@@ -326,11 +326,21 @@ export function deduplicateChunks(chunks: string[]): UniqueChunk[] {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Scale metadata reported by AI for auditability
+ */
+export interface ExtractionMetadata {
+  detected_scale: 'thousands' | 'millions' | 'billions' | 'raw_dollars' | 'unknown';
+  scale_indicator_found: string | null;
+  scale_confidence: 'high' | 'medium' | 'low';
+}
+
+/**
  * Raw extraction result from AI
  * Contains metrics organized by fiscal year
  */
 export interface AIExtractionResponse {
   metrics_by_year?: Record<string, Partial<ExtractedMetrics>>;
+  extraction_metadata?: ExtractionMetadata;
   [key: string]: unknown; // Allow additional fields from AI response
 }
 

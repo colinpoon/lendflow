@@ -54,7 +54,7 @@ async function debugExtraction() {
       console.log(`   Calculated Adjusted EBITDA:   ${metrics.calculated_adjusted_ebitda ?? 'N/A'}`);
 
       // Adjusted EBITDA Components - THE KEY DEBUG INFO
-      const adj = metrics.adjusted_ebitda_components || {};
+      const adj = (metrics.adjusted_ebitda_components || {}) as Record<string, unknown>;
       console.log('\n📋 ADJUSTED EBITDA COMPONENTS (Raw Extracted Values):');
       console.log('   NON-CASH ADJUSTMENTS (should be added back):');
       console.log(`     stock_based_compensation:   ${adj.stock_based_compensation ?? 'null'}`);
@@ -102,8 +102,8 @@ async function debugExtraction() {
         console.log(`   ─────────────────────────────────────`);
 
         // Calculate what the value WOULD be if we included loss_on_disposal
-        const lossOnDisposal = adj.loss_on_disposal ?? 0;
-        const gainOnDisposal = adj.gain_on_disposal ?? 0;
+        const lossOnDisposal = (adj.loss_on_disposal as number) ?? 0;
+        const gainOnDisposal = (adj.gain_on_disposal as number) ?? 0;
         const potentialAdjustedEbitda = (metrics.adjusted_ebitda ?? 0) + lossOnDisposal - gainOnDisposal;
 
         console.log(`   = Current Adjusted EBITDA:   ${metrics.adjusted_ebitda}`);

@@ -315,7 +315,7 @@ const getMetricValue = (
   if (nested) {
     const nestedObj = metrics[nested as keyof YearMetrics];
     if (!nestedObj || typeof nestedObj !== 'object') return null;
-    const value = (nestedObj as Record<string, unknown>)[key];
+    const value = (nestedObj as unknown as Record<string, unknown>)[key];
     if (value === null || value === undefined) return null;
     return typeof value === 'number' ? value : null;
   }
@@ -429,7 +429,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   const getFccrBreakdownValue = (year: string, key: string): number | null => {
     const breakdown = data.metrics_by_year[year]?.fccr_breakdown;
     if (!breakdown) return null;
-    const value = (breakdown as Record<string, number>)[key];
+    const value = (breakdown as unknown as Record<string, number>)[key];
     return typeof value === 'number' ? value : null;
   };
 

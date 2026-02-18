@@ -203,3 +203,73 @@ export const PILLAR_WEIGHTS: Record<string, number> = {
 export const CACHE_CONFIG = {
   DIR_NAME: 'lendflow-cache',
 } as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scale Validation Configuration
+// Detects and corrects scale mismatches (raw dollars vs thousands vs millions)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const SCALE_VALIDATION = {
+  /** Minimum plausible EBITDA margin before suspecting scale error (0.1% - handles thin-margin sectors like grocery/fuel) */
+  MIN_EBITDA_MARGIN: 0.001,
+  /** Minimum EBITDA margin after correction to accept the correction */
+  MIN_CORRECTED_MARGIN: 0.005,
+  /** Maximum EBITDA margin after correction to accept the correction (90% - allows SaaS/IP-heavy) */
+  MAX_CORRECTED_MARGIN: 0.90,
+  /** Scale factor for correction (raw dollars to thousands) */
+  SCALE_FACTOR: 1000,
+  /** Cross-year mismatch: minimum ratio to suspect scale error */
+  CROSS_YEAR_MIN_RATIO: 200,
+  /** Cross-year mismatch: maximum ratio (above this is likely data error, not scale) */
+  CROSS_YEAR_MAX_RATIO: 2000,
+  /** Outlier multiple: value is outlier if > this multiple of reference */
+  OUTLIER_MULTIPLE: 50,
+  /**
+   * Maximum plausible revenue in thousands before suspecting raw dollars.
+   * $500B = 500,000,000 in thousands. Only the largest global companies exceed this.
+   * Set very high to avoid false positives - rely on ratio checks and AI scale detection instead.
+   */
+  MAX_PLAUSIBLE_REVENUE_K: 500_000_000,
+  /**
+   * Minimum plausible revenue in thousands after correction.
+   * If correcting would make Revenue < this, don't correct.
+   * $10K = 10 in thousands.
+   */
+  MIN_PLAUSIBLE_REVENUE_K: 10,
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Currency Metrics
+// Metrics that should be in thousands (used for scale normalization)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CURRENCY_METRICS = [
+  'revenue',
+  'net_income',
+  'expenses',
+  'interest',
+  'taxes',
+  'depreciation_amortization',
+  'depreciation_equipment',
+  'depreciation_rou',
+  'depreciation_other',
+  'ebitda',
+  'reported_adjusted_ebitda',
+  'shareholders_equity',
+  'capital_expenditures',
+  'proceeds_from_long_term_debt',
+  'cash_taxes_paid',
+  'distributions_paid',
+  'ttm_principal_payments',
+  'ttm_interest_expense',
+  'repayment_of_debt',
+  'payment_of_lease_liability',
+  'cash_interest_paid',
+  'non_cash_interest_expense',
+  'total_debt',
+  'senior_debt',
+  'current_assets',
+  'current_liabilities',
+] as const;
+
+export type CurrencyMetric = (typeof CURRENCY_METRICS)[number];

@@ -105,10 +105,24 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
         "pro_forma_synergies": number|null
       }
     }
+  },
+  "extraction_metadata": {
+    "detected_scale": "thousands"|"millions"|"billions"|"raw_dollars"|"unknown",
+    "scale_indicator_found": string|null,
+    "scale_confidence": "high"|"medium"|"low"
   }
 }
 
 • Be flexible in identifying synonyms and alternate phrasing for metrics (e.g. "turnover" = revenue, "retained earnings" may contribute to shareholders_equity, "total liabilities" may indicate total_debt).
+
+EXTRACTION METADATA (REQUIRED):
+You MUST populate the extraction_metadata object with scale detection information:
+• detected_scale: The scale you determined the document uses (see SCALE NORMALIZATION section)
+• scale_indicator_found: The exact text you found that indicates the scale (e.g., "(in thousands)" or "All amounts in $000s"). Set to null if no explicit indicator found.
+• scale_confidence:
+  - "high": Explicit scale indicator found in header/footnote
+  - "medium": Inferred from number patterns or document type
+  - "low": Guessing based on magnitude alone
 
 REPORTED ADJUSTED EBITDA
 • IMPORTANT: If the document explicitly reports an "Adjusted EBITDA" figure (common in MD&A, press releases, or capital management sections), extract it directly into "reported_adjusted_ebitda". This takes priority over calculated values.
@@ -372,7 +386,37 @@ CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • These adjustments are ESSENTIAL for calculating Adjusted EBITDA accurately.
 
 • Do not add any keys, explanations, or narrative – JSON object only.
-• IMPORTANT: Extract numeric values EXACTLY as they appear in the document. Do NOT multiply or scale values. If the document reports values "in thousands" or "$000s", keep them in thousands.
+
+SCALE NORMALIZATION (REQUIRED):
+ALL output values MUST be in THOUSANDS of the document's currency, regardless of how the document presents them.
+
+STEP 1 - DETECT THE DOCUMENT'S REPORTED SCALE:
+Look for scale indicators in headers, footnotes, or column labels:
+• "(in thousands)" / "$000s" / "(000s)" → Document is in THOUSANDS → output as-is
+• "(in millions)" / "$M" / "(millions)" → Document is in MILLIONS → multiply by 1,000
+• "(in billions)" / "$B" → Document is in BILLIONS → multiply by 1,000,000
+• No indicator + large integers like 1,634,382,000 → Likely RAW DOLLARS → divide by 1,000
+• No indicator + decimals like 1,634.4 in millions context → Likely MILLIONS → multiply by 1,000
+
+STEP 2 - APPLY CONVERSION:
+Convert ALL extracted values to thousands before output:
+• THOUSANDS → Extract as-is (no conversion needed)
+• MILLIONS → Multiply by 1,000 (e.g., $1.6M revenue → output 1,600)
+• BILLIONS → Multiply by 1,000,000 (e.g., $1.6B revenue → output 1,600,000)
+• RAW DOLLARS → Divide by 1,000 (e.g., $1,634,382 revenue → output 1,634)
+
+STEP 3 - VALIDATE BEFORE OUTPUT:
+Verify your normalized values are internally consistent:
+• EBITDA margin (ebitda ÷ revenue) should be 0.1% - 90%
+• Net margin (net_income ÷ revenue) should be 0.1% - 50%
+• Net Income must be smaller than Revenue
+• If any margin falls outside these bounds, RECHECK your scale detection
+
+COMMON SCALE PATTERNS:
+• Header: "Year Ended December 31, 2024 (in millions)" → All values in MILLIONS
+• Table note: "All amounts in $000s except per share data" → Values in THOUSANDS
+• Canadian/IFRS reports often use thousands; US large-cap 10-Ks often use millions
+• If you see Revenue of 1,634,382 and EBITDA of 163 in the same document, they are at different scales
 
 This schema must work for any financial statement worldwide.`;
 

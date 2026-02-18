@@ -1,12 +1,23 @@
 // ExtractionResult type - matches the structure from aiProcessor
+// Note: Using ComputedMetrics for proper typing of year metrics
 export interface ExtractionResult {
-  metrics_by_year: Record<string, Record<string, unknown>>;
-  riskAssessment?: unknown;
-  debtHealthAssessment?: unknown;
-  quantitativeRiskAssessment?: unknown;
+  metrics_by_year: Record<string, ExtractionYearMetrics>;
+  riskAssessment?: Record<string, unknown> | null;
+  debtHealthAssessment?: Record<string, unknown> | null;
+  quantitativeRiskAssessment?: {
+    normalized_score: number;
+    risk_band: string;
+    [key: string]: unknown;
+  } | null;
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
   chunk_stats?: { total: number; successful: number; failed: number };
+}
+
+// Metrics for a single year in an extraction result
+export interface ExtractionYearMetrics {
+  fiscal_year_end_date?: string | null;
+  [key: string]: unknown;
 }
 
 export type Json =

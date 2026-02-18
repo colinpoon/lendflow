@@ -9,7 +9,7 @@
  * - Logs all resolution decisions for debugging
  */
 
-import { MERGE_CONFIG } from './constants';
+import { MERGE_CONFIG, SCALE_VALIDATION, CURRENCY_METRICS } from './constants';
 import { isTableSource } from './validation';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,35 +60,14 @@ export interface MergeResult {
   conflictsDetected: number;
 }
 
-// Currency metrics that should be in thousands (not raw dollars)
-const CURRENCY_METRICS = [
-  'revenue',
-  'net_income',
-  'expenses',
-  'interest',
-  'taxes',
-  'depreciation_amortization',
-  'depreciation_equipment',
-  'depreciation_rou',
-  'depreciation_other',
-  'ebitda',
-  'reported_adjusted_ebitda',
-  'shareholders_equity',
-  'capital_expenditures',
-  'proceeds_from_long_term_debt',
-  'cash_taxes_paid',
-  'distributions_paid',
-  'ttm_principal_payments',
-  'ttm_interest_expense',
-  'repayment_of_debt',
-  'payment_of_lease_liability',
-  'cash_interest_paid',
-  'non_cash_interest_expense',
-  'total_debt',
-  'senior_debt',
-  'current_assets',
-  'current_liabilities',
-];
+/**
+ * Result from scale normalization functions
+ * Includes both corrected metrics and human-readable correction descriptions
+ */
+export interface ScaleNormalizationResult {
+  metrics: Record<string, YearMetrics>;
+  corrections: string[];
+}
 
 // Nested object keys that need special handling
 const NESTED_KEYS = ['debt_components', 'fixed_charges', 'adjusted_ebitda_components'];
@@ -387,16 +366,22 @@ export function mergeExtractions(extractions: ExtractionInput[]): Record<string,
  * Detects when one year's value is ~1000x larger than others (raw dollars vs thousands)
  * and corrects by dividing by 1000
  *
+ * Uses median as reference (more robust when 2 of 3 years are wrong)
+ *
  * @param merged - Merged metrics by year
- * @returns Normalized metrics with consistent scaling
+ * @returns Normalized metrics with corrections log
  */
 export function normalizeScaleMismatch(
   merged: Record<string, YearMetrics>
-): Record<string, YearMetrics> {
+): ScaleNormalizationResult {
+  const corrections: string[] = [];
   const years = Object.keys(merged);
-  if (years.length < 2) return merged; // Need 2+ years to detect mismatch
 
-  const normalized = JSON.parse(JSON.stringify(merged)); // Deep clone
+  if (years.length < 2) {
+    return { metrics: merged, corrections };
+  }
+
+  const normalized = structuredClone(merged);
 
   for (const metric of CURRENCY_METRICS) {
     // Collect non-null values for this metric across years
@@ -408,31 +393,170 @@ export function normalizeScaleMismatch(
       }
     }
 
-    if (values.length < 2) continue; // Need 2+ values to compare
+    if (values.length < 2) continue;
 
-    // Sort by absolute value to find min and max
+    // Sort by absolute value
     const sorted = [...values].sort((a, b) => Math.abs(a.value) - Math.abs(b.value));
     const minAbs = Math.abs(sorted[0].value);
     const maxAbs = Math.abs(sorted[sorted.length - 1].value);
 
-    // If max is 500-2000x larger than min, the max values are likely in raw dollars
+    // Use median as reference (more robust than min when multiple values are wrong)
+    const medianValue = Math.abs(sorted[Math.floor(sorted.length / 2)].value);
+    const referenceValue = sorted.length >= 3 ? medianValue : minAbs;
+
     const ratio = maxAbs / minAbs;
-    if (ratio >= 500 && ratio <= 2000) {
-      // Find all values that are close to the max (within 10x) and divide them by 1000
+    if (
+      ratio >= SCALE_VALIDATION.CROSS_YEAR_MIN_RATIO &&
+      ratio <= SCALE_VALIDATION.CROSS_YEAR_MAX_RATIO
+    ) {
       for (const { year, value } of values) {
         const absValue = Math.abs(value);
-        if (absValue > minAbs * 100) {
-          // This value is an outlier (much larger than the min)
-          const corrected = value / 1000;
-          console.log(
-            `⚠️ Scale mismatch detected: ${metric} in ${year} is ~${(absValue / minAbs).toFixed(0)}x larger than smallest value. ` +
-              `Correcting ${value.toLocaleString()} → ${corrected.toLocaleString()} (÷1000)`
-          );
-          normalized[year][metric] = corrected;
+        if (absValue > referenceValue * SCALE_VALIDATION.OUTLIER_MULTIPLE) {
+          const correctedValue = value / SCALE_VALIDATION.SCALE_FACTOR;
+          const correction = `${metric}/${year}: ${value.toLocaleString()} → ${correctedValue.toLocaleString()} (÷${SCALE_VALIDATION.SCALE_FACTOR}, cross-year scale mismatch)`;
+          corrections.push(correction);
+          console.log(`⚠️ ${correction}`);
+          normalized[year][metric] = correctedValue;
         }
       }
     }
   }
 
-  return normalized;
+  return { metrics: normalized, corrections };
+}
+
+/**
+ * Validate and correct cross-metric scale mismatches within each year
+ * Detects when metrics are extracted at wrong scale by comparing ratios.
+ *
+ * Two modes:
+ * 1. Only Revenue wrong: EBITDA margin impossibly low, but net income/EBITDA ratio is normal
+ * 2. All metrics wrong: The entire year is in raw dollars - correct ALL currency metrics
+ *
+ * Business logic:
+ * - EBITDA margin (EBITDA/Revenue) typically 5%-50%
+ * - If EBITDA margin < 0.1%, something is wrong with scale
+ * - If net income > corrected revenue, ALL metrics are wrong (not just revenue)
+ *
+ * @param metrics - Metrics by year
+ * @returns Corrected metrics with corrections log
+ */
+export function validateCrossMetricScale(
+  metrics: Record<string, YearMetrics>
+): ScaleNormalizationResult {
+  const corrections: string[] = [];
+  const corrected = structuredClone(metrics);
+
+  for (const [year, yearData] of Object.entries(corrected)) {
+    const revenue = yearData.revenue as number | null | undefined;
+    const ebitda = yearData.ebitda as number | null | undefined;
+    const netIncome = yearData.net_income as number | null | undefined;
+
+    if (typeof revenue !== 'number' || revenue <= 0) continue;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CHECK 1: Absolute Magnitude Check
+    // If Revenue > $100M (in thousands), suspect all values are in raw dollars
+    // This catches the case where ALL metrics are consistently at wrong scale
+    // ─────────────────────────────────────────────────────────────────────────
+    if (revenue > SCALE_VALIDATION.MAX_PLAUSIBLE_REVENUE_K) {
+      const correctedRevenue = revenue / SCALE_VALIDATION.SCALE_FACTOR;
+
+      // Only correct if the result is plausible (> $10K in thousands)
+      if (correctedRevenue >= SCALE_VALIDATION.MIN_PLAUSIBLE_REVENUE_K) {
+        // Correct ALL currency metrics - the entire year is in raw dollars
+        let correctedCount = 0;
+        for (const metric of CURRENCY_METRICS) {
+          const val = corrected[year][metric];
+          if (typeof val === 'number' && val !== 0) {
+            corrected[year][metric] = val / SCALE_VALIDATION.SCALE_FACTOR;
+            correctedCount++;
+          }
+        }
+
+        // Also scale nested objects (debt_components, fixed_charges, adjusted_ebitda_components)
+        for (const nestedKey of NESTED_KEYS) {
+          const nestedObj = corrected[year][nestedKey];
+          if (nestedObj && typeof nestedObj === 'object') {
+            for (const [key, val] of Object.entries(nestedObj as Record<string, unknown>)) {
+              if (typeof val === 'number' && val !== 0) {
+                (nestedObj as Record<string, number>)[key] = val / SCALE_VALIDATION.SCALE_FACTOR;
+                correctedCount++;
+              }
+            }
+          }
+        }
+
+        const correction = `${year}: Revenue ${revenue.toLocaleString()} exceeds $100M threshold - all ${correctedCount} currency values divided by ${SCALE_VALIDATION.SCALE_FACTOR} (likely raw dollars)`;
+        corrections.push(correction);
+        console.log(`⚠️ ${correction}`);
+        continue; // Skip other checks for this year - already corrected
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CHECK 2: EBITDA Margin Check
+    // If EBITDA margin is impossibly low, Revenue may be at wrong scale
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Check EBITDA margin if EBITDA is available
+    if (typeof ebitda === 'number' && ebitda > 0) {
+      const ebitdaMargin = ebitda / revenue;
+
+      // If EBITDA margin < threshold, we have a scale mismatch
+      if (ebitdaMargin < SCALE_VALIDATION.MIN_EBITDA_MARGIN) {
+        const correctedRevenue = revenue / SCALE_VALIDATION.SCALE_FACTOR;
+        const correctedMargin = ebitda / correctedRevenue;
+
+        // Only proceed if the corrected margin is reasonable
+        if (
+          correctedMargin >= SCALE_VALIDATION.MIN_CORRECTED_MARGIN &&
+          correctedMargin <= SCALE_VALIDATION.MAX_CORRECTED_MARGIN
+        ) {
+          // Determine: is ONLY revenue wrong, or is the ENTIRE year in raw dollars?
+          // If net income > corrected revenue, then net income is ALSO at wrong scale
+          const allMetricsWrongScale =
+            typeof netIncome === 'number' &&
+            netIncome > 0 &&
+            netIncome / correctedRevenue > 1.0;
+
+          if (allMetricsWrongScale) {
+            // The entire year is in raw dollars - correct ALL currency metrics
+            let correctedCount = 0;
+            for (const metric of CURRENCY_METRICS) {
+              const val = corrected[year][metric];
+              if (typeof val === 'number' && val !== 0) {
+                corrected[year][metric] = val / SCALE_VALIDATION.SCALE_FACTOR;
+                correctedCount++;
+              }
+            }
+            const correction = `${year}: All ${correctedCount} currency metrics divided by ${SCALE_VALIDATION.SCALE_FACTOR} (entire year in raw dollars, EBITDA margin was ${(ebitdaMargin * 100).toFixed(3)}%)`;
+            corrections.push(correction);
+            console.log(`⚠️ ${correction}`);
+          } else {
+            // Only revenue is wrong - other metrics are already in thousands
+            corrected[year].revenue = correctedRevenue;
+            const correction = `${year}/revenue: ${revenue.toLocaleString()} → ${correctedRevenue.toLocaleString()} (÷${SCALE_VALIDATION.SCALE_FACTOR}, EBITDA margin was ${(ebitdaMargin * 100).toFixed(3)}% → ${(correctedMargin * 100).toFixed(1)}%)`;
+            corrections.push(correction);
+            console.log(`⚠️ ${correction}`);
+          }
+        }
+      }
+    }
+
+    // Secondary check: Net Income vs Revenue consistency
+    const currentRevenue = corrected[year].revenue;
+    const currentNetIncome = corrected[year].net_income;
+    if (
+      typeof currentRevenue === 'number' &&
+      typeof currentNetIncome === 'number' &&
+      currentNetIncome > currentRevenue
+    ) {
+      corrections.push(
+        `${year}: Warning - Net Income (${currentNetIncome.toLocaleString()}) > Revenue (${currentRevenue.toLocaleString()}). Data may still be inconsistent.`
+      );
+    }
+  }
+
+  return { metrics: corrected, corrections };
 }

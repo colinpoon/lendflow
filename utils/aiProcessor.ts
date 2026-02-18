@@ -25,8 +25,10 @@ import { calculateTextCost } from '@/lib/benchmarks/cost';
 import {
   mergeExtractionsWithConflicts,
   normalizeScaleMismatch,
+  validateCrossMetricScale,
   type MergeResult,
   type MetricConflict,
+  type ScaleNormalizationResult,
 } from '@/lib/extraction-merger';
 import {
   generateRiskAssessment,
@@ -182,8 +184,10 @@ export const extractFinancialData = async (
       }
     }
 
-    // Filter to successful extractions only
-    const allExtractions = successfulChunks.map((r) => r.result);
+    // Filter to successful extractions only (filter out nulls with type guard)
+    const allExtractions = successfulChunks
+      .map((r) => r.result)
+      .filter((result): result is AIExtractionResponse => result !== null);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 4: Merge & Consolidate (conflict-aware weighted merge)
@@ -195,7 +199,8 @@ export const extractFinancialData = async (
       message: 'Merging extractions with conflict resolution...',
     });
 
-    const mergeResult = mergeExtractionsWithConflicts(allExtractions);
+    // Cast is safe: AIExtractionResponse is structurally compatible with ExtractionInput
+    const mergeResult = mergeExtractionsWithConflicts(allExtractions as Parameters<typeof mergeExtractionsWithConflicts>[0]);
     const rawMerged = mergeResult.metrics;
 
     // Log merge conflicts for transparency
@@ -209,11 +214,35 @@ export const extractFinancialData = async (
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Phase 4b: Normalize Scale Mismatches
-    // Detect and fix when AI returns raw dollars vs thousands inconsistently
+    // Phase 4b: Cross-Metric Scale Validation (run FIRST)
+    // Detects when entire year is in raw dollars by checking EBITDA margin
+    // Corrects ALL currency metrics if needed, or just Revenue if isolated
     // ─────────────────────────────────────────────────────────────────────────
 
-    const merged = normalizeScaleMismatch(rawMerged);
+    const crossMetricResult = validateCrossMetricScale(rawMerged);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4c: Cross-Year Scale Normalization
+    // Detect and fix when AI returns raw dollars vs thousands inconsistently
+    // between years (e.g., 2023 in thousands, 2024 in raw dollars)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const crossYearResult = normalizeScaleMismatch(crossMetricResult.metrics);
+    const merged = crossYearResult.metrics;
+
+    // Surface scale corrections as warnings for transparency
+    const allScaleCorrections = [
+      ...crossMetricResult.corrections,
+      ...crossYearResult.corrections,
+    ];
+    if (allScaleCorrections.length > 0) {
+      extractionWarnings.push(
+        `Scale corrections applied (${allScaleCorrections.length}): ${allScaleCorrections.join('; ')}`
+      );
+      console.log(
+        `⚠️ Scale corrections applied: ${allScaleCorrections.length} corrections`
+      );
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 5: Compute Derived Metrics
@@ -227,7 +256,7 @@ export const extractFinancialData = async (
 
     const computed: Record<string, ComputedMetrics> = {};
     for (const yr of Object.keys(merged)) {
-      computed[yr] = computeMetrics(merged[yr]);
+      computed[yr] = computeMetrics(merged[yr] as unknown as ExtractedMetrics);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -10,9 +10,11 @@ const nextConfig = {
     { isServer }: { isServer: boolean }
   ) => {
     if (!isServer) {
-      config.resolve!.alias!['canvas'] = false as unknown as
-        | false
-        | string;
+      // Disable canvas on client-side to avoid bundling issues
+      const alias = config.resolve?.alias as Record<string, string | false> | undefined;
+      if (alias) {
+        alias['canvas'] = false;
+      }
     }
     return config;
   },
