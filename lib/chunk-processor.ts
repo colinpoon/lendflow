@@ -338,6 +338,25 @@ export interface ChunkResult {
   result: AIExtractionResponse | null;
   /** Validation warnings (non-fatal issues) */
   validationWarnings?: string[];
+  /** Token usage for this chunk (COST-01) */
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+  };
+}
+
+/**
+ * Result of processing all chunks sequentially
+ */
+export interface ChunkProcessingResult {
+  /** Individual chunk results */
+  results: ChunkResult[];
+  /** Aggregated token usage across all chunks (COST-01) */
+  token_usage: {
+    input_tokens: number;
+    output_tokens: number;
+    model: string;
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -380,6 +399,14 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
 
       const cleaned = cleanJsonFence(extractedText);
 
+      // Capture token usage from response (COST-01)
+      const usage = response.usage
+        ? {
+            prompt_tokens: response.usage.prompt_tokens,
+            completion_tokens: response.usage.completion_tokens,
+          }
+        : undefined;
+
       // Parse JSON
       let parsed: unknown;
       try {
@@ -389,7 +416,7 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
           `❌ JSON parse error for chunk ${chunk.index}: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`
         );
         console.error(`   Raw response: ${cleaned.slice(0, 200)}...`);
-        return { index: chunk.index, result: null };
+        return { index: chunk.index, result: null, usage };
       }
 
       // Validate with Zod schema
@@ -400,8 +427,8 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
           `❌ Schema validation failed for chunk ${chunk.index}:`,
           validation.errors?.map((e) => `${e.path}: ${e.message}`).join('; ')
         );
-        // Return null result for invalid responses
-        return { index: chunk.index, result: null };
+        // Return null result for invalid responses, but still capture usage
+        return { index: chunk.index, result: null, usage };
       }
 
       // Extract validation warnings (business logic issues)
@@ -411,6 +438,7 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
         index: chunk.index,
         result: validation.data as AIExtractionResponse,
         validationWarnings: warnings.length > 0 ? warnings : undefined,
+        usage,
       };
     } catch (err: unknown) {
       lastError = err;
@@ -451,13 +479,15 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
  *
  * @param chunks - Unique chunks to process in order
  * @param onProgress - Optional callback for progress updates
- * @returns Array of ChunkResult sorted by chunk index
+ * @returns ChunkProcessingResult with results and aggregated token usage
  */
 export async function processChunksSequentially(
   chunks: UniqueChunk[],
   onProgress?: ProgressCallback
-): Promise<ChunkResult[]> {
+): Promise<ChunkProcessingResult> {
   const results: ChunkResult[] = [];
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   console.log(
     `📊 Processing ${chunks.length} unique chunks SEQUENTIALLY for deterministic extraction`
@@ -479,6 +509,12 @@ export async function processChunksSequentially(
     const result = await processChunk(chunk);
     results.push(result);
 
+    // Accumulate token usage (COST-01)
+    if (result.usage) {
+      totalInputTokens += result.usage.prompt_tokens;
+      totalOutputTokens += result.usage.completion_tokens;
+    }
+
     console.log(`✅ Chunk ${chunk.index} complete`);
 
     // Add delay between chunks to respect rate limits (skip delay after last chunk)
@@ -494,7 +530,16 @@ export async function processChunksSequentially(
   results.sort((a, b) => a.index - b.index);
 
   console.log(`\n🎯 All ${chunks.length} chunks processed in deterministic order`);
-  return results;
+  console.log(`📊 Total token usage: ${totalInputTokens} input, ${totalOutputTokens} output`);
+
+  return {
+    results,
+    token_usage: {
+      input_tokens: totalInputTokens,
+      output_tokens: totalOutputTokens,
+      model: AI_CONFIG.MODEL,
+    },
+  };
 }
 
 /**

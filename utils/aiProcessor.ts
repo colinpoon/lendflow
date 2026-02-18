@@ -18,8 +18,10 @@ import {
   processChunksSequentially,
   type ProgressCallback,
   type ChunkResult,
+  type ChunkProcessingResult,
   type AIExtractionResponse,
 } from '@/lib/chunk-processor';
+import { calculateTextCost } from '@/lib/benchmarks/cost';
 import {
   mergeExtractionsWithConflicts,
   normalizeScaleMismatch,
@@ -145,7 +147,8 @@ export const extractFinancialData = async (
     // Phase 3: AI Extraction (SEQUENTIAL for determinism)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const chunkResults = await processChunksSequentially(uniqueChunks, onProgress);
+    const chunkProcessingResult = await processChunksSequentially(uniqueChunks, onProgress);
+    const chunkResults = chunkProcessingResult.results;
 
     // Calculate chunk stats
     const successfulChunks = chunkResults.filter((r) => r.result !== null);
@@ -159,6 +162,10 @@ export const extractFinancialData = async (
       failed: failedChunkCount,
       withWarnings: chunksWithWarnings.length,
     };
+
+    // Calculate cost from token usage (COST-01)
+    const tokenUsage = chunkProcessingResult.token_usage;
+    const costBreakdown = calculateTextCost(tokenUsage);
 
     // Track extraction warnings
     const extractionWarnings: string[] = [];
@@ -276,6 +283,10 @@ export const extractFinancialData = async (
         ...(extractionWarnings.length > 0 && { extraction_warnings: extractionWarnings }),
         ...(mergeResult.conflicts.length > 0 && { merge_conflicts: mergeResult.conflicts }),
         chunk_stats: chunkStats,
+        token_usage: {
+          ...tokenUsage,
+          cost_usd: costBreakdown.total_cost,
+        },
       };
     }
 
@@ -283,6 +294,10 @@ export const extractFinancialData = async (
       raw_chunks: chunkResults,
       ...(extractionWarnings.length > 0 && { extraction_warnings: extractionWarnings }),
       chunk_stats: chunkStats,
+      token_usage: {
+        ...tokenUsage,
+        cost_usd: costBreakdown.total_cost,
+      },
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
