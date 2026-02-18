@@ -9,6 +9,9 @@ import { randomUUID } from 'crypto';
 // Vercel timeout: 5 minutes for running both extractions
 export const maxDuration = 300;
 
+// Maximum file size: 50MB (reasonable for financial PDFs)
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+
 export async function POST(req: NextRequest) {
   let tempFilePath: string | null = null;
 
@@ -19,6 +22,14 @@ export async function POST(req: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: 'File too large. Maximum size is 50MB.' },
         { status: 400 }
       );
     }
@@ -55,8 +66,12 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Comparison error:', error);
+    // Sanitize error message to avoid exposing internal details
+    const errorMessage = error instanceof Error
+      ? error.message.replace(/\/[^\s]+/g, '[path]') // Remove file paths
+      : 'An unexpected error occurred during comparison';
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: errorMessage },
       { status: 500 }
     );
   } finally {

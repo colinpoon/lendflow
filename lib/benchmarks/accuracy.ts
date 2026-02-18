@@ -70,6 +70,11 @@ export interface AccuracySummary {
  * Mapping from ground truth value keys to ComputedMetrics keys
  * Some metrics have different names in ground truth vs extraction
  */
+/**
+ * Mapping from ground truth value keys to ComputedMetrics keys.
+ * Only metrics present here will be compared for accuracy.
+ * Add new metrics as they become available in ground truth data.
+ */
 const METRIC_MAPPING: Record<string, keyof ComputedMetrics> = {
   revenue: "revenue",
   net_income: "net_income",
@@ -78,6 +83,7 @@ const METRIC_MAPPING: Record<string, keyof ComputedMetrics> = {
   shareholders_equity: "shareholders_equity",
   total_debt: "total_debt",
   senior_debt: "senior_debt",
+  fccr: "fccr",
 };
 
 /**

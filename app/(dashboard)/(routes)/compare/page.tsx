@@ -23,6 +23,10 @@ interface CompareResult {
   vision_error: string | null;
 }
 
+interface CompareErrorResponse {
+  error: string;
+}
+
 const ComparePage = () => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -91,18 +95,21 @@ const ComparePage = () => {
         body: formData,
       });
 
-      const data: CompareResult = await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error((data as { error?: string }).error || 'Comparison failed');
+        const errorData = data as CompareErrorResponse;
+        throw new Error(errorData.error || 'Comparison failed');
       }
 
-      setResults(data);
+      const resultData = data as CompareResult;
+
+      setResults(resultData);
 
       // Set default year to most recent available
       const years = new Set([
-        ...Object.keys(data.text?.metrics_by_year ?? {}),
-        ...Object.keys(data.vision?.metrics_by_year ?? {}),
+        ...Object.keys(resultData.text?.metrics_by_year ?? {}),
+        ...Object.keys(resultData.vision?.metrics_by_year ?? {}),
       ]);
       if (years.size > 0) {
         const sortedYears = [...years].sort().reverse();

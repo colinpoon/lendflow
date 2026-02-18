@@ -293,10 +293,13 @@ export const extractVisionData = async (pdfBuffer: Buffer): Promise<ExtractionRe
   // Step 10: Calculate token usage and cost for COST-01
   // ─────────────────────────────────────────────────────────────────────────
 
+  // Model identifier for cost tracking - should match lib/vision/vision-client.ts MODEL constant
+  const VISION_MODEL_ID = 'claude-sonnet-4-20250514';
+
   const tokenUsage = {
     input_tokens: visionResult.totalUsage.inputTokens,
     output_tokens: visionResult.totalUsage.outputTokens,
-    model: 'claude-sonnet-4-20250514',
+    model: VISION_MODEL_ID,
   };
   const costBreakdown = calculateVisionCost(tokenUsage);
 

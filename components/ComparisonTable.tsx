@@ -36,6 +36,12 @@ export function ComparisonTable({ textMetrics, visionMetrics, selectedYear }: Co
     return String(value);
   };
 
+  /**
+   * Calculate variance between text and vision values as a ratio (0-1).
+   * Uses max-based variance: |text - vision| / max(|text|, |vision|)
+   * This ensures variance is symmetric and bounded 0-1 for display.
+   * Note: 0.10 = 10% variance, used as threshold for highlighting.
+   */
   const getVariance = (textVal: number | null | undefined, visionVal: number | null | undefined): number | null => {
     if (textVal == null || visionVal == null) return null;
     if (textVal === 0 && visionVal === 0) return 0;
