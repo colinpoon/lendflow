@@ -420,18 +420,40 @@ export function validateExtractionResponse(
 }
 
 /**
- * Check if a value looks like it came from a table
- * Used for source type scoring in merge
+ * Check if a value looks like it came from a table or primary financial statement
+ * Used for source type scoring in merge - these sources get highest confidence
  */
 export function isTableSource(sourceDescription: string): boolean {
   const tablePatterns = [
+    // Explicit table references
     /table/i,
     /schedule/i,
     /exhibit/i,
+    /summary/i,
+    /reconciliation/i,
+    // Primary financial statements (highest authority)
     /statement\s+of/i,
     /balance\s+sheet/i,
     /income\s+statement/i,
     /cash\s+flow/i,
+    /statement\s+of\s+financial\s+position/i,
+    /statement\s+of\s+comprehensive\s+income/i,
+    /statement\s+of\s+operations/i,
+    /statement\s+of\s+changes/i,
+    // Notes with structured data
+    /note\s+\d+/i,
+    /footnote/i,
+    // Specific sections known to have authoritative data
+    /debt\s+schedule/i,
+    /maturity\s+schedule/i,
+    /lease\s+schedule/i,
+    /depreciation\s+schedule/i,
+    /amortization\s+schedule/i,
+    /credit\s+facilit/i,
+    /capital\s+structure/i,
+    // Line item indicators (suggests tabular format)
+    /line\s+\d+/i,
+    /row\s+\d+/i,
   ];
   return tablePatterns.some((p) => p.test(sourceDescription));
 }

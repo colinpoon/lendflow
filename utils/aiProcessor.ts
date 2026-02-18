@@ -26,10 +26,13 @@ import {
   mergeExtractionsWithConflicts,
   normalizeScaleMismatch,
   validateCrossMetricScale,
+  validateArithmeticConsistency,
   type MergeResult,
   type MetricConflict,
   type ScaleNormalizationResult,
 } from '@/lib/extraction-merger';
+import { MERGE_CONFIG } from '@/lib/constants';
+import { resolveHighVarianceConflicts } from '@/lib/extraction-reconciler';
 import {
   generateRiskAssessment,
   generateDebtHealthAssessment,
@@ -201,7 +204,7 @@ export const extractFinancialData = async (
 
     // Cast is safe: AIExtractionResponse is structurally compatible with ExtractionInput
     const mergeResult = mergeExtractionsWithConflicts(allExtractions as Parameters<typeof mergeExtractionsWithConflicts>[0]);
-    const rawMerged = mergeResult.metrics;
+    let rawMerged = mergeResult.metrics;
 
     // Log merge conflicts for transparency
     if (mergeResult.conflictsDetected > 0) {
@@ -214,7 +217,68 @@ export const extractFinancialData = async (
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Phase 4b: Cross-Metric Scale Validation (run FIRST)
+    // Phase 4a: AI Reconciliation for High-Variance Conflicts
+    // Escalate conflicts with >20% variance to AI for resolution
+    // NOTE: This runs BEFORE arithmetic validation so AI decisions can be
+    // verified/corrected by the deterministic arithmetic check
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const highVarianceConflicts = mergeResult.conflicts.filter(
+      (c) =>
+        c.variancePercent > MERGE_CONFIG.AI_RECONCILIATION_THRESHOLD_PERCENT &&
+        c.resolution === 'highest_confidence'
+    );
+
+    if (highVarianceConflicts.length > 0) {
+      console.log(
+        `🤖 Escalating ${highVarianceConflicts.length} high-variance conflicts to AI reconciliation...`
+      );
+
+      try {
+        const aiResolutions = await resolveHighVarianceConflicts(highVarianceConflicts);
+
+        // Apply AI resolutions to merged data
+        for (const [key, resolvedValue] of aiResolutions.entries()) {
+          const [year, metric] = key.split(':');
+          if (rawMerged[year]) {
+            const oldValue = rawMerged[year][metric];
+            rawMerged[year][metric] = resolvedValue;
+            console.log(
+              `   Applied AI resolution: ${year}/${metric}: ${oldValue} → ${resolvedValue}`
+            );
+          }
+        }
+
+        if (aiResolutions.size > 0) {
+          extractionWarnings.push(
+            `AI reconciliation resolved ${aiResolutions.size} high-variance conflicts`
+          );
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ AI reconciliation failed: ${errorMessage}`);
+        extractionWarnings.push(`AI reconciliation failed: ${errorMessage}`);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4b: Arithmetic Validation (FINAL GATE)
+    // Verify EBITDA = Net Income + Interest + Taxes + D&A
+    // This runs AFTER AI reconciliation to catch/correct AI errors
+    // If a candidate matches the calculated value, use it instead
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const arithmeticResult = validateArithmeticConsistency(rawMerged, mergeResult.candidatesMap);
+    rawMerged = arithmeticResult.metrics;
+
+    if (arithmeticResult.corrections.length > 0) {
+      extractionWarnings.push(
+        `Arithmetic corrections applied: ${arithmeticResult.corrections.join('; ')}`
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4c: Cross-Metric Scale Validation
     // Detects when entire year is in raw dollars by checking EBITDA margin
     // Corrects ALL currency metrics if needed, or just Revenue if isolated
     // ─────────────────────────────────────────────────────────────────────────
@@ -222,7 +286,7 @@ export const extractFinancialData = async (
     const crossMetricResult = validateCrossMetricScale(rawMerged);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Phase 4c: Cross-Year Scale Normalization
+    // Phase 4d: Cross-Year Scale Normalization
     // Detect and fix when AI returns raw dollars vs thousands inconsistently
     // between years (e.g., 2023 in thousands, 2024 in raw dollars)
     // ─────────────────────────────────────────────────────────────────────────
@@ -345,7 +409,8 @@ export const extractFinancialData = async (
  * @returns Computed metrics including ratios and breakdowns
  */
 function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
-  const result = m as ComputedMetrics;
+  // Shallow copy to avoid mutating the input object
+  const result = { ...m } as ComputedMetrics;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Debt Calculation
@@ -360,22 +425,28 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
   // EBITDA Calculation
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Debug: Show extracted EBITDA components
-  console.log(`\n📊 EBITDA COMPONENTS (Extracted):`);
-  console.log(`   net_income:                ${m.net_income}`);
-  console.log(`   interest:                  ${m.interest}`);
-  console.log(`   taxes:                     ${m.taxes}`);
-  console.log(`   depreciation_amortization: ${m.depreciation_amortization}`);
-  console.log(`   ebitda (if reported):      ${m.ebitda ?? 'N/A (will calculate)'}`);
+  // Debug: Show extracted EBITDA components (gated behind DEBUG_FINANCIALS)
+  if (DEBUG_FINANCIALS) {
+    console.log(`\n📊 EBITDA COMPONENTS (Extracted):`);
+    console.log(`   net_income:                ${m.net_income}`);
+    console.log(`   interest:                  ${m.interest}`);
+    console.log(`   taxes:                     ${m.taxes}`);
+    console.log(`   depreciation_amortization: ${m.depreciation_amortization}`);
+    console.log(`   ebitda (if reported):      ${m.ebitda ?? 'N/A (will calculate)'}`);
+  }
 
   const ebitda = calculateEBITDA(m);
   if (ebitda != null) {
     if (m.ebitda == null) {
       result.ebitda = ebitda;
       result.ebitda_calculated = true;
-      console.log(`   CALCULATED EBITDA:         ${ebitda} = ${m.net_income} + ${m.interest ?? 0} + ${m.taxes ?? 0} + ${m.depreciation_amortization}`);
+      if (DEBUG_FINANCIALS) {
+        console.log(`   CALCULATED EBITDA:         ${ebitda} = ${m.net_income} + ${m.interest ?? 0} + ${m.taxes ?? 0} + ${m.depreciation_amortization}`);
+      }
     } else {
-      console.log(`   USING REPORTED EBITDA:     ${m.ebitda}`);
+      if (DEBUG_FINANCIALS) {
+        console.log(`   USING REPORTED EBITDA:     ${m.ebitda}`);
+      }
     }
 
     // Adjusted EBITDA
@@ -486,13 +557,17 @@ function validateMetrics(
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Debug Logging
+// Gate behind DEBUG_FINANCIALS to prevent sensitive data in production logs
 // ─────────────────────────────────────────────────────────────────────────────
+
+const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
 
 function logAdjustedEBITDA(
   ebitda: number,
   result: ReturnType<typeof calculateAdjustedEBITDA>,
   m: ExtractedMetrics
 ): void {
+  if (!DEBUG_FINANCIALS) return;
   const breakdown = result.adjusted_ebitda_breakdown;
   if (!breakdown) return;
 
@@ -528,6 +603,7 @@ function logFCCR(
   m: ExtractedMetrics,
   result: ReturnType<typeof calculateFCCR>
 ): void {
+  if (!DEBUG_FINANCIALS) return;
   const breakdown = result.fccr_breakdown;
   if (!breakdown) return;
 
@@ -555,6 +631,7 @@ function logDSCR(
   m: ExtractedMetrics,
   result: ReturnType<typeof calculateDSCR>
 ): void {
+  if (!DEBUG_FINANCIALS) return;
   const breakdown = result.dscr_breakdown;
   if (!breakdown) return;
 

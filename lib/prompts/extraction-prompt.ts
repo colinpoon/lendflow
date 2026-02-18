@@ -103,6 +103,12 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
         "foreign_exchange_adjustments": number|null,
         "pro_forma_cost_savings": number|null,
         "pro_forma_synergies": number|null
+      },
+      "_sources": {
+        "<metric_name>": string
+      },
+      "_confidence": {
+        "<metric_name>": "high"|"medium"|"low"
       }
     }
   },
@@ -114,6 +120,36 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
 }
 
 • Be flexible in identifying synonyms and alternate phrasing for metrics (e.g. "turnover" = revenue, "retained earnings" may contribute to shareholders_equity, "total liabilities" may indicate total_debt).
+
+SOURCE TRACKING (REQUIRED FOR CONFLICT RESOLUTION):
+For each metric you extract, record in _sources the exact document section where you found it. This enables accurate conflict resolution when multiple document sections report different values.
+
+• _sources: A mapping of metric names to their source location. Use descriptive strings like:
+  - "Income Statement, Revenue line"
+  - "Balance Sheet, Total Liabilities"
+  - "Cash Flow Statement, Operating Activities"
+  - "Note 8: Credit Facilities"
+  - "Note 12: Debt Schedule, Term Loan section"
+  - "MD&A Discussion, EBITDA reconciliation"
+
+• _confidence: A mapping of metric names to confidence levels:
+  - "high": Explicit labeled value found directly (e.g., "Revenue: $1,234,000" clearly labeled)
+  - "medium": Inferred from context or requires interpretation (e.g., summing line items)
+  - "low": Estimated or calculated from incomplete data
+
+Example _sources and _confidence:
+{
+  "_sources": {
+    "revenue": "Income Statement, line 1",
+    "ebitda": "Cash Flow Statement, EBITDA reconciliation",
+    "total_debt": "Note 8: Credit Facilities, summary table"
+  },
+  "_confidence": {
+    "revenue": "high",
+    "ebitda": "medium",
+    "total_debt": "high"
+  }
+}
 
 EXTRACTION METADATA (REQUIRED):
 You MUST populate the extraction_metadata object with scale detection information:

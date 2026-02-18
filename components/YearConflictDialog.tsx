@@ -12,7 +12,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { YearConflict, ConflictResolution } from '@/lib/extraction-utils';
+import type {
+  YearConflict,
+  ConflictResolution,
+} from '@/lib/extraction-utils';
 
 interface YearConflictDialogProps {
   open: boolean;
@@ -30,7 +33,7 @@ function formatDate(dateStr: string | null): string {
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
   }
 
@@ -40,7 +43,7 @@ function formatDate(dateStr: string | null): string {
     const date = new Date(parseInt(year), parseInt(month) - 1);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long'
+      month: 'long',
     });
   }
 
@@ -54,17 +57,25 @@ export function YearConflictDialog({
   onCancel,
 }: YearConflictDialogProps) {
   // Track user selections for each year
-  const [selections, setSelections] = useState<ConflictResolution>(() => {
-    // Default to recommendations
-    const initial: ConflictResolution = {};
-    for (const conflict of conflicts) {
-      initial[conflict.year] = conflict.recommendation === 'use_new' ? 'overwrite' : 'keep';
-    }
-    return initial;
-  });
+  const [selections, setSelections] = useState<ConflictResolution>(
+    () => {
+      // Default to recommendations
+      const initial: ConflictResolution = {};
+      for (const conflict of conflicts) {
+        initial[conflict.year] =
+          conflict.recommendation === 'use_new'
+            ? 'overwrite'
+            : 'keep';
+      }
+      return initial;
+    },
+  );
 
-  const handleSelectionChange = (year: string, value: 'keep' | 'overwrite') => {
-    setSelections(prev => ({ ...prev, [year]: value }));
+  const handleSelectionChange = (
+    year: string,
+    value: 'keep' | 'overwrite',
+  ) => {
+    setSelections((prev) => ({ ...prev, [year]: value }));
   };
 
   const handleApply = () => {
@@ -72,8 +83,12 @@ export function YearConflictDialog({
   };
 
   // Count how many are set to overwrite vs keep
-  const overwriteCount = Object.values(selections).filter(v => v === 'overwrite').length;
-  const keepCount = Object.values(selections).filter(v => v === 'keep').length;
+  const overwriteCount = Object.values(selections).filter(
+    (v) => v === 'overwrite',
+  ).length;
+  const keepCount = Object.values(selections).filter(
+    (v) => v === 'keep',
+  ).length;
 
   return (
     <AlertDialog open={open}>
@@ -84,14 +99,16 @@ export function YearConflictDialog({
             Fiscal Year Conflict Detected
           </AlertDialogTitle>
           <AlertDialogDescription>
-            The uploaded document contains data for years that already exist in this project.
-            Choose which data to keep for each overlapping year.
+            The uploaded document contains data for years that already
+            exist in this project. Choose which data to keep for each
+            overlapping year.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="space-y-4 my-4 max-h-[400px] overflow-y-auto">
+        <div className="space-y-4 my-4 max-h-100 overflow-y-auto">
           {conflicts.map((conflict) => {
-            const isNewRecommended = conflict.recommendation === 'use_new';
+            const isNewRecommended =
+              conflict.recommendation === 'use_new';
             const selection = selections[conflict.year];
 
             return (
@@ -122,7 +139,9 @@ export function YearConflictDialog({
                   {/* Existing Document Option */}
                   <button
                     type="button"
-                    onClick={() => handleSelectionChange(conflict.year, 'keep')}
+                    onClick={() =>
+                      handleSelectionChange(conflict.year, 'keep')
+                    }
                     className={`p-3 rounded-lg border-2 text-left transition-colors ${
                       selection === 'keep'
                         ? 'border-blue-500 bg-blue-50'
@@ -136,10 +155,17 @@ export function YearConflictDialog({
                           {conflict.existingSource.file_name}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          FY End: {formatDate(conflict.existingSource.fiscal_year_end_date)}
+                          FY End:{' '}
+                          {formatDate(
+                            conflict.existingSource
+                              .fiscal_year_end_date,
+                          )}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Uploaded: {new Date(conflict.existingSource.extracted_at).toLocaleDateString()}
+                          Uploaded:{' '}
+                          {new Date(
+                            conflict.existingSource.extracted_at,
+                          ).toLocaleDateString()}
                         </p>
                         {selection === 'keep' && (
                           <span className="inline-block mt-2 text-xs font-medium text-blue-600">
@@ -153,7 +179,12 @@ export function YearConflictDialog({
                   {/* New Document Option */}
                   <button
                     type="button"
-                    onClick={() => handleSelectionChange(conflict.year, 'overwrite')}
+                    onClick={() =>
+                      handleSelectionChange(
+                        conflict.year,
+                        'overwrite',
+                      )
+                    }
                     className={`p-3 rounded-lg border-2 text-left transition-colors ${
                       selection === 'overwrite'
                         ? 'border-blue-500 bg-blue-50'
@@ -167,10 +198,16 @@ export function YearConflictDialog({
                           {conflict.newSource.file_name}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          FY End: {formatDate(conflict.newSource.fiscal_year_end_date)}
+                          FY End:{' '}
+                          {formatDate(
+                            conflict.newSource.fiscal_year_end_date,
+                          )}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Uploaded: {new Date(conflict.newSource.extracted_at).toLocaleDateString()}
+                          Uploaded:{' '}
+                          {new Date(
+                            conflict.newSource.extracted_at,
+                          ).toLocaleDateString()}
                         </p>
                         {selection === 'overwrite' && (
                           <span className="inline-block mt-2 text-xs font-medium text-blue-600">
@@ -191,11 +228,15 @@ export function YearConflictDialog({
           <AlertTriangle className="h-4 w-4" />
           <span>
             {overwriteCount > 0 && (
-              <span className="text-blue-600 font-medium">{overwriteCount} year(s) will use new data</span>
+              <span className="text-blue-600 font-medium">
+                {overwriteCount} year(s) will use new data
+              </span>
             )}
             {overwriteCount > 0 && keepCount > 0 && ' • '}
             {keepCount > 0 && (
-              <span className="text-amber-600 font-medium">{keepCount} year(s) will keep existing data</span>
+              <span className="text-amber-600 font-medium">
+                {keepCount} year(s) will keep existing data
+              </span>
             )}
           </span>
         </div>

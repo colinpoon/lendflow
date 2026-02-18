@@ -73,15 +73,30 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
     filename: '2023-12-31-Q4-Zedcor-Inc.-Financial-Stmts-vFINAL.pdf',
     fiscal_year: '2023',
     values: {
-      // TODO: Manually verify from source PDF before benchmarking
-      revenue: 24889, // Placeholder - read from income statement
-      net_income: 2652, // Placeholder - read from income statement
-      ebitda: 9136, // Placeholder - calculate or find in notes
-      adjusted_ebitda: 7541, // Placeholder - if reported in notes
-      shareholders_equity: 12115, // Placeholder - read from balance sheet
-      total_debt: 27614, // Placeholder - read from balance sheet
-      senior_debt: 24365, // Placeholder - read from balance sheet/notes
-      // fccr: 0.57, // Placeholder - read from balance sheet/notes
+      revenue: 24889,
+      net_income: 2652,
+      expenses: 0,
+      interest: 0,
+      taxes: 0,
+      depreciation_amortization: 0,
+      ebitda: 9136,
+      adjusted_ebitda: 7541,
+      shareholders_equity: 12115,
+      total_debt: 27614,
+      senior_debt: 24365,
+      current_assets: 0,
+      current_liabilities: 0,
+      capital_expenditures: 0,
+      repayment_of_debt: 0,
+      payment_of_lease_liability: 0,
+      cash_interest_paid: 0,
+      fccr: 0.57,
+      dscr: 0,
+      senior_debt_to_ebitda: 0,
+      total_debt_to_capital: 0,
+      current_ratio: 0,
+      interest_coverage_ratio: 0,
+      debt_to_equity_ratio: 0,
     },
     source_notes:
       'Placeholder values - requires manual verification from PDF',

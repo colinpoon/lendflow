@@ -103,7 +103,8 @@ function correctExtractionErrors(
  * @returns Computed metrics including ratios and breakdowns
  */
 function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
-  const result = m as ComputedMetrics;
+  // Shallow copy to avoid mutating the input object
+  const result = { ...m } as ComputedMetrics;
 
   // ── Debt ──────────────────────────────────────────────────────────────────
   const debtResult = calculateDebtMetrics(m);
