@@ -70,6 +70,13 @@ export interface ExtractionResult {
   };
   /** Raw chunk results when no metrics could be extracted */
   raw_chunks?: ChunkResult[];
+  /** Token usage for cost tracking (COST-01) */
+  token_usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    model: string;
+    cost_usd?: number;
+  };
 }
 
 // Re-export ProgressCallback for API route

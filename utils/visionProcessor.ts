@@ -28,6 +28,7 @@ import {
   calculateDebtToEquityRatio,
   calculateCurrentRatio,
 } from '@/lib/calculations';
+import { calculateVisionCost } from '@/lib/benchmarks/cost';
 import {
   generateRiskAssessment,
   generateDebtHealthAssessment,
@@ -289,7 +290,18 @@ export const extractVisionData = async (pdfBuffer: Buffer): Promise<ExtractionRe
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Step 10: Return ExtractionResult
+  // Step 10: Calculate token usage and cost for COST-01
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const tokenUsage = {
+    input_tokens: visionResult.totalUsage.inputTokens,
+    output_tokens: visionResult.totalUsage.outputTokens,
+    model: 'claude-sonnet-4-20250514',
+  };
+  const costBreakdown = calculateVisionCost(tokenUsage);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Step 11: Return ExtractionResult
   // Shape matches ExtractionResult from utils/aiProcessor.ts
   // Note: chunk_stats and merge_conflicts are not applicable to vision pipeline
   // ─────────────────────────────────────────────────────────────────────────
@@ -301,5 +313,9 @@ export const extractVisionData = async (pdfBuffer: Buffer): Promise<ExtractionRe
     quantitativeRiskAssessment,
     ...(Object.keys(validationIssues).length > 0 && { validation_issues: validationIssues }),
     extraction_warnings: warnings,
+    token_usage: {
+      ...tokenUsage,
+      cost_usd: costBreakdown.total_cost,
+    },
   };
 };
