@@ -7,20 +7,33 @@
 // AI Processing Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Legacy OpenAI configuration - deprecated in favor of Anthropic
+// export const AI_CONFIG = {
+//   MODEL: 'gpt-4-turbo-2024-04-09',
+//   TEMPERATURE: 0,
+//   MAX_TOKENS: 4000,
+//   CHUNK_SIZE: 8000,
+//   BATCH_SIZE: 2,
+//   BATCH_DELAY_MS: 1500,
+//   MAX_RETRIES: 3,
+//   RATE_LIMIT_BACKOFF_MS: 15000,
+// } as const;
+
+// Anthropic Claude configuration for text extraction
 export const AI_CONFIG = {
-  MODEL: 'gpt-4-turbo-2024-04-09',
+  MODEL: 'claude-sonnet-4-20250514',
   TEMPERATURE: 0,
-  MAX_TOKENS: 4000, // Increased for larger chunks with more content
-  CHUNK_SIZE: 8000, // Legacy: kept for backward compatibility
-  BATCH_SIZE: 2,
-  BATCH_DELAY_MS: 1500, // Reduced - fewer chunks means less rate limit concern
+  MAX_TOKENS: 8192, // Claude supports higher output limits for detailed extraction
+  CHUNK_SIZE: 15000, // Larger chunks - Claude has 200k context window
+  BATCH_SIZE: 3, // Claude handles concurrent requests well
+  BATCH_DELAY_MS: 500, // Lower delay - Anthropic rate limits are generous
   MAX_RETRIES: 3,
-  RATE_LIMIT_BACKOFF_MS: 15000,
+  RATE_LIMIT_BACKOFF_MS: 10000, // Anthropic returns retry-after headers
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Semantic Chunking Configuration
-// GPT-4 Turbo has 128k context (~400k chars). Use large chunks to minimize API calls.
+// Claude Sonnet 4 has 200k context window. Use large chunks to minimize API calls.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const CHUNKING_CONFIG = {
@@ -28,8 +41,8 @@ export const CHUNKING_CONFIG = {
   TARGET_SIZE: 25000,
   /** Minimum chunk size to prevent tiny chunks */
   MIN_SIZE: 2000,
-  /** Maximum chunk size - still well under GPT-4 Turbo's limit */
-  MAX_SIZE: 35000,
+  /** Maximum chunk size - well under Claude's 200k context limit */
+  MAX_SIZE: 50000,
   /** Overlap percentage between chunks (0-100) - reduced to minimize redundancy */
   OVERLAP_PERCENT: 5,
   /** Paragraph boundary pattern */
@@ -52,8 +65,8 @@ export const MERGE_CONFIG = {
     overlap: 0.68,    // Values from chunk overlap regions
     inferred: 0.50,   // Calculated or inferred values
   },
-  /** Variance threshold for flagging conflicts (percentage) */
-  CONFLICT_THRESHOLD_PERCENT: 20,
+  /** Variance threshold for flagging conflicts (percentage) - 5% matches audit materiality standards */
+  CONFLICT_THRESHOLD_PERCENT: 5,
   /** Minimum number of values required for weighted average */
   MIN_VALUES_FOR_AVERAGE: 2,
 } as const;

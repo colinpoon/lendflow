@@ -9,7 +9,9 @@
  * 3. Using AI reasoning to resolve conflicts based on source authority
  */
 
-import OpenAI from 'openai';
+// Legacy OpenAI import - commented out for Claude migration
+// import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { AI_CONFIG } from './constants';
 import {
   RECONCILIATION_PROMPT,
@@ -23,7 +25,11 @@ import type {
   ReconciliationResult,
 } from '@/types';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Legacy OpenAI client - commented out for Claude migration
+// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Anthropic Claude client for reconciliation
+const anthropic = new Anthropic();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -247,17 +253,31 @@ async function resolveConflictsWithAI(
   const requestJson = buildReconciliationRequest(requestData);
 
   try {
-    const response = await openai.chat.completions.create({
+    // Legacy OpenAI call - commented out for Claude migration
+    // const response = await openai.chat.completions.create({
+    //   model: AI_CONFIG.MODEL,
+    //   temperature: 0,
+    //   max_tokens: 2000,
+    //   messages: [
+    //     { role: 'system', content: RECONCILIATION_PROMPT },
+    //     { role: 'user', content: requestJson },
+    //   ],
+    // });
+
+    // Claude API call for conflict reconciliation
+    const response = await anthropic.messages.create({
       model: AI_CONFIG.MODEL,
-      temperature: 0, // Deterministic
       max_tokens: 2000,
+      temperature: 0, // Deterministic
+      system: RECONCILIATION_PROMPT,
       messages: [
-        { role: 'system', content: RECONCILIATION_PROMPT },
         { role: 'user', content: requestJson },
       ],
     });
 
-    const responseText = response.choices?.[0]?.message?.content ?? '{}';
+    // Extract text from Claude response
+    const textBlock = response.content.find((block) => block.type === 'text');
+    const responseText = textBlock?.type === 'text' ? textBlock.text : '{}';
     console.log(`   📄 Reconciliation AI response received`);
 
     const cleaned = cleanJsonFence(responseText);

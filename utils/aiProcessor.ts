@@ -97,10 +97,10 @@ export const extractFinancialData = async (
   onProgress?: ProgressCallback
 ): Promise<ExtractionResult> => {
   try {
-    // Validate environment
-    if (!process.env.OPENAI_API_KEY) {
+    // Validate environment - now using Anthropic Claude for text extraction
+    if (!process.env.ANTHROPIC_API_KEY) {
       throw new Error(
-        'OpenAI API key is missing. Please configure it in the environment variables.'
+        'ANTHROPIC_API_KEY is missing. Please configure it in the environment variables.'
       );
     }
 

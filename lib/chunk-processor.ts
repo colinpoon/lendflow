@@ -1,6 +1,6 @@
 /**
  * Text chunking and AI processing utilities
- * Handles document chunking, deduplication, and OpenAI API calls
+ * Handles document chunking, deduplication, and Claude API calls
  *
  * DETERMINISTIC PROCESSING:
  * Chunks are processed sequentially to ensure consistent ordering.
@@ -8,14 +8,20 @@
  * the same output order regardless of API response timing.
  */
 
-import OpenAI from 'openai';
+// Legacy OpenAI import - commented out for Claude migration test
+// import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
 import { AI_CONFIG, CHUNKING_CONFIG } from './constants';
 import { FINANCIAL_EXTRACTION_PROMPT } from './prompts/extraction-prompt';
 import { validateExtractionResponse } from './validation';
 import type { ExtractedMetrics } from '@/types';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Legacy OpenAI client - commented out for Claude migration test
+// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Anthropic Claude client for text extraction
+const anthropic = new Anthropic();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Text Chunking
@@ -372,7 +378,7 @@ export type ProgressCallback = (progress: {
 }) => void;
 
 /**
- * Process a single chunk with the AI model
+ * Process a single chunk with Claude
  * Includes schema validation of AI responses
  * Only retries on rate limit errors (429)
  */
@@ -381,29 +387,44 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
 
   for (let attempt = 1; attempt <= AI_CONFIG.MAX_RETRIES; attempt++) {
     try {
-      const response = await openai.chat.completions.create({
+      // Legacy OpenAI call - commented out for Claude migration test
+      // const response = await openai.chat.completions.create({
+      //   model: AI_CONFIG.MODEL,
+      //   temperature: AI_CONFIG.TEMPERATURE,
+      //   max_tokens: AI_CONFIG.MAX_TOKENS,
+      //   messages: [
+      //     { role: 'system', content: FINANCIAL_EXTRACTION_PROMPT },
+      //     { role: 'user', content: chunk.content },
+      //   ],
+      // });
+
+      // Claude API call for text extraction
+      const response = await anthropic.messages.create({
         model: AI_CONFIG.MODEL,
-        temperature: AI_CONFIG.TEMPERATURE,
         max_tokens: AI_CONFIG.MAX_TOKENS,
+        temperature: AI_CONFIG.TEMPERATURE, // 0 for deterministic output
+        system: FINANCIAL_EXTRACTION_PROMPT,
         messages: [
-          { role: 'system', content: FINANCIAL_EXTRACTION_PROMPT },
           { role: 'user', content: chunk.content },
         ],
       });
 
-      const extractedText = response.choices?.[0]?.message?.content ?? '{}';
-      console.log(`🤖 Chunk ${chunk.index} response received`);
+      // Extract text from Claude response
+      const textBlock = response.content.find((block) => block.type === 'text');
+      const extractedText = textBlock?.type === 'text' ? textBlock.text : '{}';
+
+      console.log(`🤖 Chunk ${chunk.index} response received (Claude)`);
       console.log(
         `📄 Raw AI response for chunk ${chunk.index}:\n${extractedText}\n${'─'.repeat(80)}`
       );
 
       const cleaned = cleanJsonFence(extractedText);
 
-      // Capture token usage from response (COST-01)
+      // Capture token usage from Claude response (COST-01)
       const usage = response.usage
         ? {
-            prompt_tokens: response.usage.prompt_tokens,
-            completion_tokens: response.usage.completion_tokens,
+            prompt_tokens: response.usage.input_tokens,
+            completion_tokens: response.usage.output_tokens,
           }
         : undefined;
 
@@ -449,6 +470,7 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
       const isRateLimit =
         errorStatus === 429 ||
         errorMessage.includes('429') ||
+        errorMessage.includes('rate_limit') ||
         errorMessage.includes('Rate limit');
 
       if (isRateLimit && attempt < AI_CONFIG.MAX_RETRIES) {

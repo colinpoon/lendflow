@@ -3,7 +3,9 @@
  * Generates AI-powered risk assessments and debt health evaluations
  */
 
-import OpenAI from 'openai';
+// Legacy OpenAI import - commented out for Claude migration
+// import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
@@ -19,7 +21,11 @@ import {
 } from './risk-scoring';
 import type { RiskData, DebtHealthAssessment, ComputedMetrics } from '@/types';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Legacy OpenAI client - commented out for Claude migration
+// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Anthropic Claude client for risk assessment
+const anthropic = new Anthropic();
 
 // Cache directory setup
 const CACHE_DIR = path.join(os.tmpdir(), CACHE_CONFIG.DIR_NAME);
@@ -62,7 +68,7 @@ export async function generateRiskAssessment(
   }
 
   // Build ratios for assessment
-  const ratiosByYear: Record<string, any> = {};
+  const ratiosByYear: Record<string, ComputedMetrics & { interest_coverage_ratio: number | null; debt_to_equity_ratio: number | null }> = {};
   for (const [yr, m] of Object.entries(metricsByYear)) {
     const icr = m.interest && m.interest !== 0 ? (m.ebitda ?? 0) / m.interest : null;
     const d2e =
@@ -79,17 +85,31 @@ export async function generateRiskAssessment(
   console.log('🔍 Generating AI risk assessment...');
 
   try {
-    const response = await openai.chat.completions.create({
+    // Legacy OpenAI call - commented out for Claude migration
+    // const response = await openai.chat.completions.create({
+    //   model: AI_CONFIG.MODEL,
+    //   temperature: AI_CONFIG.TEMPERATURE,
+    //   max_tokens: AI_CONFIG.MAX_TOKENS,
+    //   messages: [
+    //     { role: 'system', content: RISK_ASSESSMENT_PROMPT },
+    //     { role: 'user', content: JSON.stringify(ratiosByYear) },
+    //   ],
+    // });
+
+    // Claude API call for risk assessment
+    const response = await anthropic.messages.create({
       model: AI_CONFIG.MODEL,
-      temperature: AI_CONFIG.TEMPERATURE,
       max_tokens: AI_CONFIG.MAX_TOKENS,
+      temperature: AI_CONFIG.TEMPERATURE,
+      system: RISK_ASSESSMENT_PROMPT,
       messages: [
-        { role: 'system', content: RISK_ASSESSMENT_PROMPT },
         { role: 'user', content: JSON.stringify(ratiosByYear) },
       ],
     });
 
-    const rawRisk = response.choices[0]?.message?.content ?? '{}';
+    // Extract text from Claude response
+    const textBlock = response.content.find((block) => block.type === 'text');
+    const rawRisk = textBlock?.type === 'text' ? textBlock.text : '{}';
     const riskSnapshot = JSON.parse(cleanJsonFence(rawRisk));
 
     // Cache the result
@@ -145,12 +165,24 @@ export async function generateDebtHealthAssessment(
   );
 
   try {
-    const response = await openai.chat.completions.create({
+    // Legacy OpenAI call - commented out for Claude migration
+    // const response = await openai.chat.completions.create({
+    //   model: AI_CONFIG.MODEL,
+    //   temperature: AI_CONFIG.TEMPERATURE,
+    //   max_tokens: 1500,
+    //   messages: [
+    //     { role: 'system', content: DEBT_HEALTH_PROMPT },
+    //     { role: 'user', content: JSON.stringify({...}) },
+    //   ],
+    // });
+
+    // Claude API call for debt health assessment
+    const response = await anthropic.messages.create({
       model: AI_CONFIG.MODEL,
-      temperature: AI_CONFIG.TEMPERATURE,
       max_tokens: 1500,
+      temperature: AI_CONFIG.TEMPERATURE,
+      system: DEBT_HEALTH_PROMPT,
       messages: [
-        { role: 'system', content: DEBT_HEALTH_PROMPT },
         {
           role: 'user',
           content: JSON.stringify({
@@ -168,7 +200,9 @@ export async function generateDebtHealthAssessment(
       ],
     });
 
-    const rawDebtHealth = response.choices[0]?.message?.content ?? '{}';
+    // Extract text from Claude response
+    const textBlock = response.content.find((block) => block.type === 'text');
+    const rawDebtHealth = textBlock?.type === 'text' ? textBlock.text : '{}';
     const assessment = JSON.parse(cleanJsonFence(rawDebtHealth));
 
     console.log('✅ AI debt health assessment generated');
