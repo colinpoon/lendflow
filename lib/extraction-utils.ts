@@ -2,10 +2,10 @@ import { Extraction, ExtractionResult } from '@/lib/supabase/types';
 import { calculateQuantitativeRisk } from '@/lib/quantitative-risk';
 
 export interface MergedExtraction {
-  metrics_by_year: Record<string, any>;
-  riskAssessment?: any;
-  debtHealthAssessment?: any;
-  quantitativeRiskAssessment?: any;
+  metrics_by_year: Record<string, Record<string, unknown>>;
+  riskAssessment?: unknown;
+  debtHealthAssessment?: unknown;
+  quantitativeRiskAssessment?: unknown;
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
   chunk_stats?: { total: number; successful: number; failed: number };
@@ -150,7 +150,7 @@ export function detectYearConflicts(
     file_name: string;
     fiscal_year_end_date: string | null;
     extracted_at: string;
-    metrics: any;
+    metrics: Record<string, unknown>;
   }>();
 
   for (const extraction of existingExtractions) {
@@ -328,7 +328,7 @@ export function mergeExtractions(
 
   // Track year data with metadata for comparison
   interface YearEntry {
-    metrics: any;
+    metrics: Record<string, unknown>;
     document_id: string;
     file_name: string;
     extracted_at: string;

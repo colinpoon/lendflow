@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 
 interface VisionFileUploadProps {
-  onDataExtracted: (data: any) => void;
+  onDataExtracted: (data: Record<string, unknown>) => void;
   onUploadStart?: () => void;
   projectId?: string;
 }
@@ -162,8 +162,8 @@ const VisionFileUpload: React.FC<VisionFileUploadProps> = ({
           }
         }
       }
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name !== 'AbortError') {
         setStage('error');
         setErrorMessage(error.message);
       }

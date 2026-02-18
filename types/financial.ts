@@ -40,7 +40,7 @@ export interface FixedCharges {
   subordinated_debt_interest: number | null;
   lease_interest: number | null;
   total_interest_expense: number | null;
-  senior_debt_interest_rate: number | null;
+  senior_debt_interest_rate: string | null; // e.g., "prime + 2%", "8%", "BA + 3.5%"
 
   // Lease Payments
   minimum_lease_payments: number | null;

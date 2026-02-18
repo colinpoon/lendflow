@@ -53,22 +53,48 @@ export function AccuracyReport({ summary }: AccuracyReportProps) {
               <th className="text-left p-2">Metric</th>
               <th className="text-right p-2">Ground Truth</th>
               <th className="text-right p-2">Text</th>
+              <th className="text-right p-2">Text Δ</th>
               <th className="text-right p-2">Vision</th>
+              <th className="text-right p-2">Vision Δ</th>
             </tr>
           </thead>
           <tbody>
-            {summary.results.map((r) => (
-              <tr key={r.metric} className="border-b">
-                <td className="p-2">{r.metric}</td>
-                <td className="p-2 text-right tabular-nums">{r.truth.toLocaleString()}</td>
-                <td className={cn('p-2 text-right tabular-nums', r.text_accurate ? 'text-green-600' : 'text-red-600')}>
-                  {r.text_extracted?.toLocaleString() ?? '-'}
-                </td>
-                <td className={cn('p-2 text-right tabular-nums', r.vision_accurate ? 'text-green-600' : 'text-red-600')}>
-                  {r.vision_extracted?.toLocaleString() ?? '-'}
-                </td>
-              </tr>
-            ))}
+            {summary.results.map((r) => {
+              const textDelta = r.text_extracted != null ? r.text_extracted - r.truth : null;
+              const visionDelta = r.vision_extracted != null ? r.vision_extracted - r.truth : null;
+
+              const formatDelta = (delta: number | null) => {
+                if (delta == null) return '-';
+                if (delta === 0) return '0';
+                const sign = delta > 0 ? '+' : '';
+                return `${sign}${delta.toLocaleString()}`;
+              };
+
+              return (
+                <tr key={r.metric} className="border-b">
+                  <td className="p-2">{r.metric}</td>
+                  <td className="p-2 text-right tabular-nums">{r.truth.toLocaleString()}</td>
+                  <td className={cn('p-2 text-right tabular-nums', r.text_accurate ? 'text-green-600' : 'text-red-600')}>
+                    {r.text_extracted?.toLocaleString() ?? '-'}
+                  </td>
+                  <td className={cn(
+                    'p-2 text-right tabular-nums text-xs',
+                    textDelta === 0 ? 'text-green-600' : textDelta != null ? 'text-orange-600' : 'text-muted-foreground'
+                  )}>
+                    {formatDelta(textDelta)}
+                  </td>
+                  <td className={cn('p-2 text-right tabular-nums', r.vision_accurate ? 'text-green-600' : 'text-red-600')}>
+                    {r.vision_extracted?.toLocaleString() ?? '-'}
+                  </td>
+                  <td className={cn(
+                    'p-2 text-right tabular-nums text-xs',
+                    visionDelta === 0 ? 'text-green-600' : visionDelta != null ? 'text-orange-600' : 'text-muted-foreground'
+                  )}>
+                    {formatDelta(visionDelta)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </CardContent>

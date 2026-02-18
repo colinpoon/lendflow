@@ -1,6 +1,6 @@
 /**
  * Vision extraction module
- * PDF-to-image conversion and Claude Vision API integration
+ * PDF-to-image conversion and Claude Vision API integration.
  *
  * This module provides the foundation for vision-based financial data extraction.
  * Documents are converted to high-quality images before analysis to preserve
@@ -22,6 +22,9 @@ export {
   analyzeFinancialImage,
   testVisionConnection,
   validateApiKey,
+  type PageExtractionResult,
+  type YearExtraction,
+  // Deprecated — retained for any callers that still import ExtractionResult
   type ExtractionResult,
 } from './claude-client';
 
@@ -38,4 +41,5 @@ export {
   extractFromPdfPage,
   type ExtractionOptions,
   type PdfExtractionResult,
+  type MergeConflict,
 } from './vision-extractor';

@@ -327,7 +327,7 @@ export function SectionHeader({
 // Table Header Label
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface TableHeaderProps extends React.ThHTMLAttributes<HTMLTableCellElement> {}
+type TableHeaderProps = React.ThHTMLAttributes<HTMLTableCellElement>;
 
 /**
  * Styled table header cell with consistent typography

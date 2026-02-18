@@ -2,17 +2,20 @@
  * Vision-based Financial Data Extraction Processor
  * Vision analog of utils/aiProcessor.ts
  *
- * This module bridges Phase 1's extractFromPdf() output (raw ExtractedMetrics keyed by year)
- * and the ExtractionResult shape that the API route expects (computed ratios + risk assessments).
- *
  * Pipeline:
- * 1. Validate Anthropic API key
- * 2. Run vision extraction (PDF → images → Claude Vision → ExtractedMetrics by year)
- * 3. Normalize fiscal year keys to 4-digit strings
- * 4. Compute derived metrics per year (EBITDA, FCCR, DSCR, ratios)
- * 5. Validate metrics
- * 6. Generate risk assessments
- * 7. Return ExtractionResult-compatible object
+ * 1.  Validate Anthropic API key
+ * 2.  Run vision extraction (PDF → images → Claude Vision → ExtractedMetrics by year)
+ *     The extraction layer now handles:
+ *       a. Multi-year pages (one API call captures all fiscal year columns)
+ *       b. Conflict-aware weighted merge across pages
+ *       c. Scale normalization (~1000× outlier correction)
+ * 3.  Guard against empty results
+ * 4.  Compute derived metrics per year (EBITDA, FCCR, DSCR, ratios)
+ * 5.  Validate metrics
+ * 6.  Generate risk assessments
+ * 7.  Build extraction warnings (surfacing merge conflicts and scale notes)
+ * 8.  Calculate token usage / cost
+ * 9.  Return ExtractionResult-compatible object
  */
 
 import { validateApiKey, extractFromPdf } from '@/lib/vision';
@@ -39,24 +42,53 @@ import {
 } from '@/lib/quantitative-risk';
 import type { ComputedMetrics, ExtractedMetrics, RiskData, DebtHealthAssessment } from '@/types';
 import type { ExtractionResult } from './aiProcessor';
+import type { MergeConflict } from '@/lib/vision/vision-extractor';
 
 // Re-export type alias for callers who want the explicit vision type name
 export type { ExtractionResult as VisionExtractionResult };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Fiscal Year Normalization
+// Post-Extraction Corrections
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Normalize a raw fiscal year key to a 4-digit year string.
- * Handles formats like "FY2023", "2023Q4", "December 31, 2023", "2023".
+ * Correct common vision extraction errors before metric computation.
+ * Modifies the metrics in-place and returns a list of corrections made.
  *
- * @param raw - Raw fiscal year key from Claude
- * @returns 4-digit year string, or original key if no year found
+ * Key principle: We CALCULATE EBITDA and Adjusted EBITDA from components,
+ * so we always clear any extracted values and let the calculation layer handle them.
  */
-function normalizeFiscalYear(raw: string): string {
-  const match = raw.match(/\b(20\d{2}|19\d{2})\b/);
-  return match ? match[1] : raw;
+function correctExtractionErrors(
+  metricsByYear: Record<string, ExtractedMetrics>
+): string[] {
+  const corrections: string[] = [];
+
+  for (const [year, metrics] of Object.entries(metricsByYear)) {
+    // Fix 1: Always clear reported_adjusted_ebitda - we calculate it from components
+    // This ensures consistency and avoids conflation errors
+    if (metrics.reported_adjusted_ebitda != null) {
+      corrections.push(
+        `${year}: Cleared reported_adjusted_ebitda (${metrics.reported_adjusted_ebitda}) — will be calculated from components`
+      );
+      metrics.reported_adjusted_ebitda = null;
+    }
+
+    // Fix 2: If senior_debt > total_debt, they were likely swapped or conflated
+    if (
+      metrics.senior_debt != null &&
+      metrics.total_debt != null &&
+      metrics.senior_debt > metrics.total_debt
+    ) {
+      corrections.push(
+        `${year}: Swapped senior_debt and total_debt — senior (${metrics.senior_debt}) exceeded total (${metrics.total_debt})`
+      );
+      const temp = metrics.senior_debt;
+      metrics.senior_debt = metrics.total_debt;
+      metrics.total_debt = temp;
+    }
+  }
+
+  return corrections;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,19 +105,13 @@ function normalizeFiscalYear(raw: string): string {
 function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
   const result = m as ComputedMetrics;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Debt Calculation
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── Debt ──────────────────────────────────────────────────────────────────
   const debtResult = calculateDebtMetrics(m);
   result.senior_debt = debtResult.senior_debt;
   result.total_debt = debtResult.total_debt;
   result.debt_breakdown = debtResult.debt_breakdown;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // EBITDA Calculation
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── EBITDA ────────────────────────────────────────────────────────────────
   const ebitda = calculateEBITDA(m);
   if (ebitda != null) {
     if (m.ebitda == null) {
@@ -93,7 +119,6 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
       result.ebitda_calculated = true;
     }
 
-    // Adjusted EBITDA
     const ebitdaResult = calculateAdjustedEBITDA(ebitda, m);
     result.adjusted_ebitda = ebitdaResult.adjusted_ebitda;
     result.calculated_adjusted_ebitda = ebitdaResult.calculated_adjusted_ebitda;
@@ -104,10 +129,7 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
     result.adjusted_ebitda_breakdown = null;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // FCCR Calculation
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── FCCR ──────────────────────────────────────────────────────────────────
   const fccrResult = calculateFCCR(result.adjusted_ebitda ?? result.ebitda, m);
   result.fccr = fccrResult.fccr;
   result.fccr_numerator = fccrResult.fccr_numerator;
@@ -115,10 +137,7 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
   result.cash_flow_for_debt_servicing = fccrResult.cash_flow_for_debt_servicing;
   result.fccr_breakdown = fccrResult.fccr_breakdown;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Ratio Calculations
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── Ratios ────────────────────────────────────────────────────────────────
   result.total_debt_to_capital = calculateTotalDebtToCapital(
     result.total_debt,
     result.shareholders_equity
@@ -144,10 +163,7 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
     result.current_liabilities
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // DSCR Calculation (Banker's Covenant Method)
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── DSCR (Banker's Covenant Method) ───────────────────────────────────────
   const dscrResult = calculateDSCR(result.adjusted_ebitda ?? result.ebitda, result);
   result.dscr = dscrResult.dscr;
   result.funded_debt = dscrResult.funded_debt;
@@ -163,6 +179,7 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
 
 /**
  * Validate computed metrics for common data quality issues.
+ * Returns a map of year → list of problem descriptions.
  */
 function validateVisionMetrics(
   metrics: Record<string, ComputedMetrics>
@@ -176,11 +193,23 @@ function validateVisionMetrics(
       problems.push('Expenses exceed revenue');
     }
     if (data.debt_to_equity_ratio != null && !isFinite(data.debt_to_equity_ratio)) {
-      problems.push('Debt-to-equity ratio is not a finite number');
+      problems.push('Debt-to-equity ratio is not finite');
     }
     if (data.interest_coverage_ratio != null && !isFinite(data.interest_coverage_ratio)) {
-      problems.push('Interest coverage ratio is not a finite number');
+      problems.push('Interest coverage ratio is not finite');
     }
+    if (
+      data.total_debt != null &&
+      data.senior_debt != null &&
+      data.senior_debt > data.total_debt
+    ) {
+      problems.push(
+        `Senior debt (${data.senior_debt}) exceeds total debt (${data.total_debt}) — likely a conflation error`
+      );
+    }
+    // Note: We no longer check for EBITDA = Adjusted EBITDA conflation here
+    // because correctExtractionErrors() always clears reported_adjusted_ebitda
+    // (we calculate it from components instead of extracting it)
 
     if (problems.length > 0) {
       issues[year] = problems;
@@ -191,38 +220,73 @@ function validateVisionMetrics(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Warning Builders
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Build human-readable extraction warnings from merge conflicts and scale notes.
+ */
+function buildExtractionWarnings(
+  pagesProcessed: number,
+  scaleNotes: Array<{ pageNumber: number; note: string }>,
+  mergeConflicts: MergeConflict[],
+  unnormalizableCount: number
+): string[] {
+  const warnings: string[] = [];
+
+  warnings.push(`Vision extraction processed ${pagesProcessed} pages`);
+
+  if (scaleNotes.length > 0) {
+    const uniqueNotes = [...new Set(scaleNotes.map((s) => s.note))];
+    warnings.push(`Scale inference: ${uniqueNotes.join(' | ')}`);
+  }
+
+  if (unnormalizableCount > 0) {
+    warnings.push(
+      `${unnormalizableCount} fiscal year key${unnormalizableCount === 1 ? '' : 's'} could not be normalized to a 4-digit year`
+    );
+  }
+
+  // Surface high-variance conflicts as warnings (low-variance ones are routine)
+  const highVarianceConflicts = mergeConflicts.filter((c) => c.variancePercent > 50);
+  if (highVarianceConflicts.length > 0) {
+    warnings.push(
+      `${highVarianceConflicts.length} high-variance merge conflict${highVarianceConflicts.length === 1 ? '' : 's'} detected — ` +
+        highVarianceConflicts
+          .map((c) => `${c.year}/${c.metric} (${c.variancePercent.toFixed(0)}% variance, resolved via ${c.resolution})`)
+          .join(', ')
+    );
+  }
+
+  return warnings;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Export
 // ─────────────────────────────────────────────────────────────────────────────
+
+const VISION_MODEL_ID = 'claude-sonnet-4-20250514';
 
 /**
  * Extract financial data from a PDF buffer using Claude Vision.
  * Vision analog of extractFinancialData() from utils/aiProcessor.ts.
  *
- * Accepts a Buffer (not a file path) — the API route handles temp file to Buffer conversion.
- * Uses the Claude Vision pipeline from Phase 1 (lib/vision) to process each page sequentially.
+ * Accepts a Buffer — the API route handles temp-file → Buffer conversion.
  *
  * @param pdfBuffer - PDF file contents as a Node.js Buffer
  * @returns Extracted metrics, computed ratios, and risk assessments
- * @throws Error if API key is missing, no pages are processed, or PDF contains no financial data
+ * @throws Error if API key is missing, no pages are processed, or no financial data is found
  */
 export const extractVisionData = async (pdfBuffer: Buffer): Promise<ExtractionResult> => {
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 1: Validate Anthropic API key
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── Step 1: Validate API key ───────────────────────────────────────────────
   validateApiKey();
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 2: Run vision extraction
-  // extractFromPdf handles page-by-page processing and year-based merging internally
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── Step 2: Run vision extraction ─────────────────────────────────────────
+  // The extraction layer now handles multi-year pages, conflict-aware merging,
+  // and scale normalization internally. No additional merge step needed here.
   const visionResult = await extractFromPdf(pdfBuffer);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 3: Guard empty result
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── Step 3: Guard against empty results ───────────────────────────────────
   if (
     visionResult.pagesProcessed === 0 ||
     Object.keys(visionResult.metricsByYear).length === 0
@@ -232,70 +296,60 @@ export const extractVisionData = async (pdfBuffer: Buffer): Promise<ExtractionRe
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 4: Normalize fiscal year keys to 4-digit strings
-  // Last-wins merge when two raw keys map to the same normalized year
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const warnings: string[] = [];
+  // ── Step 4: Count unnormalizable year keys (for warnings) ─────────────────
+  // The extraction layer already normalizes years internally. We count how many
+  // raw keys from page results could not be mapped to a 4-digit year.
   let unnormalizableCount = 0;
-
-  const normalizedMetricsByYear: Record<string, ExtractedMetrics> = {};
-  for (const [rawKey, metrics] of Object.entries(visionResult.metricsByYear)) {
-    const normalizedKey = normalizeFiscalYear(rawKey);
-    if (normalizedKey === rawKey && !/^\d{4}$/.test(rawKey)) {
+  for (const key of Object.keys(visionResult.metricsByYear)) {
+    if (!/^\d{4}$/.test(key)) {
       unnormalizableCount++;
     }
-    // Last-wins: later entries overwrite earlier ones for same normalized key
-    normalizedMetricsByYear[normalizedKey] = metrics;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 5 & 6: Compute derived metrics per year and build computed map
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Step 4b: Apply post-extraction corrections ────────────────────────────
+  // Fix common vision errors like Adjusted EBITDA = EBITDA conflation
+  const extractionCorrections = correctExtractionErrors(visionResult.metricsByYear);
+  if (extractionCorrections.length > 0) {
+    console.log(`🔧 Applied ${extractionCorrections.length} extraction correction(s):`);
+    extractionCorrections.forEach((c) => console.log(`   - ${c}`));
+  }
 
+  // ── Step 5: Compute derived metrics per year ───────────────────────────────
   const computed: Record<string, ComputedMetrics> = {};
-  for (const [year, metrics] of Object.entries(normalizedMetricsByYear)) {
+  for (const [year, metrics] of Object.entries(visionResult.metricsByYear)) {
     computed[year] = computeVisionMetrics(metrics);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 7: Validate metrics
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── Step 6: Validate metrics ───────────────────────────────────────────────
   const validationIssues = validateVisionMetrics(computed);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 8: Generate risk assessments
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── Step 7: Generate risk assessments ─────────────────────────────────────
   const riskAssessment = await generateRiskAssessment(computed);
   const debtHealthAssessment = await generateDebtHealthAssessment(computed);
   const quantitativeRiskAssessment = calculateQuantitativeRisk(computed);
 
   console.log(
-    `Vision extraction complete: ${visionResult.pagesProcessed} pages, ${Object.keys(computed).length} fiscal years`
+    `Vision extraction complete: ${visionResult.pagesProcessed} pages, ` +
+      `${Object.keys(computed).length} fiscal years, ` +
+      `${visionResult.mergeConflicts.length} merge conflicts`
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 9: Build extraction warnings
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Step 8: Build warnings ────────────────────────────────────────────────
+  const extractionWarnings = buildExtractionWarnings(
+    visionResult.pagesProcessed,
+    visionResult.scaleNotes,
+    visionResult.mergeConflicts,
+    unnormalizableCount
+  );
 
-  warnings.push(`Vision extraction processed ${visionResult.pagesProcessed} pages`);
-
-  if (unnormalizableCount > 0) {
-    warnings.push(
-      `${unnormalizableCount} fiscal year key${unnormalizableCount === 1 ? '' : 's'} could not be normalized to a 4-digit year`
+  // Add extraction corrections to warnings
+  if (extractionCorrections.length > 0) {
+    extractionWarnings.push(
+      `Applied ${extractionCorrections.length} auto-correction(s): ${extractionCorrections.join('; ')}`
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 10: Calculate token usage and cost for COST-01
-  // ─────────────────────────────────────────────────────────────────────────
-
-  // Model identifier for cost tracking - should match lib/vision/vision-client.ts MODEL constant
-  const VISION_MODEL_ID = 'claude-sonnet-4-20250514';
-
+  // ── Step 9: Calculate token usage and cost ────────────────────────────────
   const tokenUsage = {
     input_tokens: visionResult.totalUsage.inputTokens,
     output_tokens: visionResult.totalUsage.outputTokens,
@@ -303,19 +357,14 @@ export const extractVisionData = async (pdfBuffer: Buffer): Promise<ExtractionRe
   };
   const costBreakdown = calculateVisionCost(tokenUsage);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step 11: Return ExtractionResult
-  // Shape matches ExtractionResult from utils/aiProcessor.ts
-  // Note: chunk_stats and merge_conflicts are not applicable to vision pipeline
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── Step 10: Return ExtractionResult ──────────────────────────────────────
   return {
     metrics_by_year: computed,
     riskAssessment,
     debtHealthAssessment,
     quantitativeRiskAssessment,
     ...(Object.keys(validationIssues).length > 0 && { validation_issues: validationIssues }),
-    extraction_warnings: warnings,
+    extraction_warnings: extractionWarnings,
     token_usage: {
       ...tokenUsage,
       cost_usd: costBreakdown.total_cost,

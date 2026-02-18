@@ -8,7 +8,7 @@ import { YearConflictDialog } from '@/components/YearConflictDialog';
 import type { YearConflict, ConflictResolution } from '@/lib/extraction-utils';
 
 interface FileUploadProps {
-  onDataExtracted: (data: any) => void;
+  onDataExtracted: (data: Record<string, unknown>) => void;
   onUploadStart?: () => void;
   projectId?: string;
 }
@@ -238,8 +238,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
           }
         }
       }
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name !== 'AbortError') {
         setStage('error');
         alert(error.message);
       }
@@ -285,9 +285,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
       setPendingDocumentId(null);
       setStage('complete');
       onDataExtracted(result.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setStage('error');
-      alert(error.message || 'Failed to resolve conflicts');
+      alert(error instanceof Error ? error.message : 'Failed to resolve conflicts');
     }
   };
 

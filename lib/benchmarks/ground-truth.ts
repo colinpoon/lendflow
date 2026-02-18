@@ -21,15 +21,39 @@ export interface GroundTruthEntry {
   fiscal_year: string;
   /** Verified financial values */
   values: {
-    // Core metrics for accuracy benchmarking
+    // Income Statement
     revenue?: number;
     net_income?: number;
+    expenses?: number;
+    interest?: number;
+    taxes?: number;
+    depreciation_amortization?: number;
+
+    // EBITDA
     ebitda?: number;
     adjusted_ebitda?: number;
+
+    // Balance Sheet
     shareholders_equity?: number;
     total_debt?: number;
     senior_debt?: number;
-    // fccr?: number;
+    current_assets?: number;
+    current_liabilities?: number;
+
+    // Cash Flow
+    capital_expenditures?: number;
+    repayment_of_debt?: number;
+    payment_of_lease_liability?: number;
+    cash_interest_paid?: number;
+
+    // Key Ratios
+    fccr?: number;
+    dscr?: number;
+    senior_debt_to_ebitda?: number;
+    total_debt_to_capital?: number;
+    current_ratio?: number;
+    interest_coverage_ratio?: number;
+    debt_to_equity_ratio?: number;
   };
   /** Source documentation (e.g., "From consolidated income statement p.3") */
   source_notes?: string;
@@ -138,7 +162,7 @@ export function getGroundTruth(
       // Input contains document name (e.g., "zedcor")
       normalizedInput.includes(documentName) ||
       // Document name in input
-      documentName && normalizedInput.indexOf(documentName) !== -1
+      (documentName && normalizedInput.indexOf(documentName) !== -1)
     );
   });
 }

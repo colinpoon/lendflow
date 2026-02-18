@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 
 interface ExtractedDataProps {
   data: {

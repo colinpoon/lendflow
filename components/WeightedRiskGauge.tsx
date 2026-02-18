@@ -10,14 +10,12 @@ import {
 import {
   AlertTriangle,
   CheckCircle,
-  Lightbulb,
-  FileText,
   TrendingUp,
   TrendingDown,
   BarChart3,
   ClipboardList,
 } from 'lucide-react';
-import { RiskData, PillarScore } from '@/components/RiskAssessment';
+import { RiskData } from '@/components/RiskAssessment';
 
 interface DebtHealthAssessment {
   weighted_score: number;
@@ -65,24 +63,6 @@ interface RiskConfig {
   scoreTextClass: string;
   scoreBgClass: string;
 }
-
-// Pillar keys for lending analysis
-const PILLAR_KEYS = [
-  'debt_service_capacity',
-  'leverage',
-  'profitability',
-  'cash_flow',
-  'financial_trajectory',
-] as const;
-
-// Pillar display names aligned with lending focus
-const PILLAR_LABELS: Record<string, string> = {
-  debt_service_capacity: 'Debt Service Capacity',
-  leverage: 'Leverage & Capital Structure',
-  profitability: 'Profitability',
-  cash_flow: 'Cash Flow Adequacy',
-  financial_trajectory: 'Financial Trajectory',
-};
 
 // Convert FCCR to risk score (0-10, higher = worse)
 const getFCCRRiskScore = (value: number | null): number => {
@@ -186,29 +166,6 @@ const getLendingDecisionStyle = (
     return { bg: 'bg-red-100', text: 'text-red-800' };
   }
   return { bg: 'bg-gray-100', text: 'text-gray-800' };
-};
-
-// Get impact color for pillar observations
-const getImpactStyle = (impact: string): string => {
-  const lower = impact.toLowerCase();
-  if (lower.includes('positive') || lower.includes('strong')) {
-    return 'bg-green-100 text-green-800';
-  }
-  if (
-    lower.includes('negative') ||
-    lower.includes('weak') ||
-    lower.includes('concern')
-  ) {
-    return 'bg-red-100 text-red-800';
-  }
-  if (
-    lower.includes('manageable') ||
-    lower.includes('moderate') ||
-    lower.includes('neutral')
-  ) {
-    return 'bg-yellow-100 text-yellow-800';
-  }
-  return 'bg-gray-100 text-gray-800';
 };
 
 const GAUGE_SIZE = 200;
@@ -367,12 +324,6 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
     ...chartData.map((d) => d.debtEbitda ?? 0),
     5,
   );
-  const maxDebtCapital = 100;
-
-  const barHeight = 24;
-  const barGap = 8;
-  const labelWidth = 80;
-  const chartWidth = 300;
 
   return (
     <div className="space-y-6">
@@ -509,6 +460,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
 const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   data,
   debtHealthAssessment,
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   riskData,
   customFccrAdjustment = 0,
 }) => {

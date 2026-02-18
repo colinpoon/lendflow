@@ -1,9 +1,9 @@
 // ExtractionResult type - matches the structure from aiProcessor
 export interface ExtractionResult {
-  metrics_by_year: Record<string, any>;
-  riskAssessment?: any;
-  debtHealthAssessment?: any;
-  quantitativeRiskAssessment?: any;
+  metrics_by_year: Record<string, Record<string, unknown>>;
+  riskAssessment?: unknown;
+  debtHealthAssessment?: unknown;
+  quantitativeRiskAssessment?: unknown;
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
   chunk_stats?: { total: number; successful: number; failed: number };

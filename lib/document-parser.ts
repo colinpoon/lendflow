@@ -54,13 +54,13 @@ async function parsePDF(buffer: Buffer): Promise<string> {
 
     const pdfParser = new PDFParser();
     const pdf2Text: string = await new Promise((resolve, reject) => {
-      pdfParser.on('pdfParser_dataError', (errData: any) =>
+      pdfParser.on('pdfParser_dataError', (errData: { parserError: Error }) =>
         reject(errData.parserError)
       );
-      pdfParser.on('pdfParser_dataReady', (pdfData: any) => {
+      pdfParser.on('pdfParser_dataReady', (pdfData: { formImage?: { Pages?: Array<{ Texts: Array<{ R?: Array<{ T?: string }> }> }> } }) => {
         const allText =
-          pdfData?.formImage?.Pages?.flatMap((page: any) =>
-            page.Texts.map((t: any) => decodeURIComponent(t.R?.[0]?.T || ''))
+          pdfData?.formImage?.Pages?.flatMap((page) =>
+            page.Texts.map((t) => decodeURIComponent(t.R?.[0]?.T || ''))
           ).join(' ') || '';
         resolve(allText.trim());
       });

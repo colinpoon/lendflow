@@ -76,14 +76,39 @@ export interface AccuracySummary {
  * Add new metrics as they become available in ground truth data.
  */
 const METRIC_MAPPING: Record<string, keyof ComputedMetrics> = {
+  // Income Statement
   revenue: "revenue",
   net_income: "net_income",
+  expenses: "expenses",
+  interest: "interest",
+  taxes: "taxes",
+  depreciation_amortization: "depreciation_amortization",
+
+  // EBITDA
   ebitda: "ebitda",
   adjusted_ebitda: "adjusted_ebitda",
+
+  // Balance Sheet
   shareholders_equity: "shareholders_equity",
   total_debt: "total_debt",
   senior_debt: "senior_debt",
+  current_assets: "current_assets",
+  current_liabilities: "current_liabilities",
+
+  // Cash Flow
+  capital_expenditures: "capital_expenditures",
+  repayment_of_debt: "repayment_of_debt",
+  payment_of_lease_liability: "payment_of_lease_liability",
+  cash_interest_paid: "cash_interest_paid",
+
+  // Key Ratios
   fccr: "fccr",
+  dscr: "dscr",
+  senior_debt_to_ebitda: "senior_debt_to_ebitda",
+  total_debt_to_capital: "total_debt_to_capital",
+  current_ratio: "current_ratio",
+  interest_coverage_ratio: "interest_coverage_ratio",
+  debt_to_equity_ratio: "debt_to_equity_ratio",
 };
 
 /**
