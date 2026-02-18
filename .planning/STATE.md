@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-Phase: 2 of 3 — Vision Extraction Pipeline (COMPLETE)
-Plan: 2 of 2 complete
-Status: Phase complete
-Progress: ██████████ 80%
+Phase: 3 of 3 — Validation & Benchmarking (NOT STARTED)
+Plan: 0 of ? complete
+Status: Ready for planning
+Progress: ██████░░░░ 60%
 
-Last activity: 2026-02-17 — Completed 02-02-PLAN.md (vision API route, human-verified)
+Last activity: 2026-02-17 — Phase 2 complete, accuracy gaps identified
 
 ## Accumulated Context
 
@@ -31,12 +31,17 @@ Last activity: 2026-02-17 — Completed 02-02-PLAN.md (vision API route, human-v
 | Scale factor 4.17 for 300 DPI | 2026-02-17 | High quality for financial tables |
 | Sequential page processing | 2026-02-17 | Avoid Claude API rate limits |
 | Year-based metric merging | 2026-02-17 | Prefer newer page values for same year |
-| Buffer-only input for visionProcessor | 2026-02-17 | API route owns temp file lifecycle, cleaner separation |
-| VisionExtractionResult alias | 2026-02-17 | Type alias for callers wanting explicit name without new interface |
-| Last-wins year collision merge | 2026-02-17 | Consistent with Phase 1 page merge behavior |
-| PDF-only guard before SSE stream | 2026-02-17 | Non-PDF validation returns JSON 400, not SSE error |
-| No temp file in vision route | 2026-02-17 | Buffer pipeline: Storage download → arrayBuffer() → Buffer.from() |
-| computing event after extractVisionData | 2026-02-17 | Reflects actual ratio computation completion, not anticipatory |
+| Buffer-only visionProcessor input | 2026-02-17 | Route owns temp file lifecycle |
+| Proceed to Phase 3 despite gaps | 2026-02-17 | Use benchmarking to quantify and fix |
+
+### Known Issues (from Phase 2 testing)
+
+| Issue | Observation | Priority |
+|-------|-------------|----------|
+| Shareholders' equity mismatch | Vision: $114M vs Text: $12M on test.pdf | High |
+| Debt underreporting | Vision missed debt components | High |
+| Single-year extraction | Vision found 1 year, Text found 2 | Medium |
+| Missing breakdowns | Vision lacks debt/EBITDA component detail | Medium |
 
 ### Recent Fixes (Pre-Milestone)
 
@@ -45,7 +50,8 @@ Last activity: 2026-02-17 — Completed 02-02-PLAN.md (vision API route, human-v
 
 ### Blockers/Concerns
 
-- None — Phase 2 complete. Vision pipeline verified end-to-end with real financial data.
+- Vision extraction accuracy gaps need quantification in Phase 3
+- May need to enhance extraction tool schema to capture debt breakdowns
 
 ## Phase 01 Summary
 
@@ -54,42 +60,24 @@ All infrastructure for vision-based extraction is complete:
 - **01-02:** Claude Vision client (Anthropic SDK, tool-calling)
 - **01-03:** Vision extractor pipeline (end-to-end integration)
 
+## Phase 02 Summary
+
+Vision extraction pipeline is complete but with accuracy gaps:
+- **02-01:** Vision processor (utils/visionProcessor.ts)
+- **02-02:** Vision API route (app/api/extractData/vision/route.ts)
+
 Key files delivered:
-- `lib/vision/pdf-converter.ts`
-- `lib/vision/claude-client.ts`
-- `lib/vision/extraction-tool.ts`
-- `lib/vision/vision-extractor.ts`
-- `lib/vision/index.ts`
-- `scripts/test-vision-extraction.mjs`
+- `utils/visionProcessor.ts` — extractVisionData() with all ratios
+- `app/api/extractData/vision/route.ts` — SSE endpoint
+- `components/VisionFileUpload.tsx` — PDF-only upload component
+- `app/(dashboard)/(routes)/vision/page.tsx` — Vision upload page
 
-## Phase 02 Summary — COMPLETE
-
-### 02-01: Create utils/visionProcessor.ts — COMPLETE
-
-Vision extraction processor bridging Phase 1 output to ExtractionResult shape with full ratio and risk assessment computation.
-
-Key file delivered:
-- `utils/visionProcessor.ts` — exports `extractVisionData(pdfBuffer: Buffer): Promise<ExtractionResult>`
-
-### 02-02: Create vision API route — COMPLETE (human-verified)
-
-SSE endpoint that uploads PDFs to Supabase Storage, runs vision extraction, saves to DB.
-
-Key file delivered:
-- `app/api/extractData/vision/route.ts` — POST SSE endpoint, commit ad10942
-
-Human-verified with `FY2023_Q4_Financial_Statements.pdf`:
-- Revenue $1,679,667K, EBITDA $90,055K, Net Income $61,301K
-- FCCR 2.85x, DSCR 5.41x, Current Ratio 1.21x, Interest Coverage 39.12x
-- All metrics displayed correctly in UI
+Tested with real PDFs:
+- FY2023_Q4_Financial_Statements.pdf — extracted successfully
+- test.pdf — showed accuracy gaps vs text extraction
 
 ## Session Continuity
 
-Last session: 2026-02-17T18:43:00Z
-Stopped at: Completed 02-02-PLAN.md — Phase 2 complete
-Resume file: None (ready for Phase 3 planning)
-
-## Phase 02 Plans
-
-- 02-01-PLAN.md — Create utils/visionProcessor.ts (Wave 1, autonomous) — **COMPLETE**
-- 02-02-PLAN.md — Create vision API route (Wave 2, human-verified) — **COMPLETE**
+Last session: 2026-02-17
+Stopped at: Phase 2 complete, ready for Phase 3 planning
+Resume command: /gsd:plan-phase 3

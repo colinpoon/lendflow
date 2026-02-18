@@ -9,15 +9,15 @@ Requirements for proving Claude Vision extracts financial data more accurately t
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: PDF-to-image conversion pipeline (300 DPI minimum quality)
-- [ ] **INFRA-02**: Claude 3.7 Sonnet Vision API integration via Anthropic SDK
-- [ ] **INFRA-03**: Structured output via tool calling (same JSON schema as current extraction)
+- [x] **INFRA-01**: PDF-to-image conversion pipeline (300 DPI minimum quality)
+- [x] **INFRA-02**: Claude 3.7 Sonnet Vision API integration via Anthropic SDK
+- [x] **INFRA-03**: Structured output via tool calling (same JSON schema as current extraction)
 
 ### Extraction
 
-- [ ] **EXTR-01**: Process PDF pages as images through Claude Vision
-- [ ] **EXTR-02**: Extract same financial metrics schema as current text extraction
-- [ ] **EXTR-03**: Handle multi-page documents (process page-by-page, merge results)
+- [x] **EXTR-01**: Process PDF pages as images through Claude Vision
+- [x] **EXTR-02**: Extract same financial metrics schema as current text extraction
+- [x] **EXTR-03**: Handle multi-page documents (process page-by-page, merge results)
 
 ### Validation
 
@@ -59,12 +59,12 @@ Deferred until PoC validates vision approach.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
-| EXTR-01 | Phase 2 | Pending |
-| EXTR-02 | Phase 2 | Pending |
-| EXTR-03 | Phase 2 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
+| INFRA-03 | Phase 1 | Complete |
+| EXTR-01 | Phase 2 | Complete |
+| EXTR-02 | Phase 2 | Complete |
+| EXTR-03 | Phase 2 | Complete |
 | VAL-01 | Phase 3 | Pending |
 | VAL-02 | Phase 3 | Pending |
 | VAL-03 | Phase 3 | Pending |

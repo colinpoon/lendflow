@@ -48,34 +48,42 @@ Plans:
 
 ---
 
-## Phase 2: Vision Extraction Pipeline
+## Phase 2: Vision Extraction Pipeline ✓
+
+**Status:** Complete (2026-02-17)
 
 **Goal:** Build a complete extraction pipeline that processes PDFs through Claude Vision and returns the same metrics structure as the current text-based system.
 
 **Requirements:**
-- EXTR-01: Process PDF pages as images through Claude Vision
-- EXTR-02: Extract same financial metrics schema as current text extraction
-- EXTR-03: Handle multi-page documents (process page-by-page, merge results)
+- ✓ EXTR-01: Process PDF pages as images through Claude Vision
+- ✓ EXTR-02: Extract same financial metrics schema as current text extraction
+- ✓ EXTR-03: Handle multi-page documents (process page-by-page, merge results)
 
 **Success Criteria:**
-1. Can upload a PDF and get extracted metrics via vision pipeline
-2. Output schema matches current `ExtractedMetrics` type exactly
-3. Multi-page PDFs are processed page-by-page and results are merged
-4. Pipeline handles errors gracefully (API failures, malformed responses)
+1. ✓ Can upload a PDF and get extracted metrics via vision pipeline
+2. ✓ Output schema matches current `ExtractedMetrics` type exactly
+3. ✓ Multi-page PDFs are processed page-by-page and results are merged
+4. ✓ Pipeline handles errors gracefully (API failures, malformed responses)
 
 **Dependencies:** Phase 1 (infrastructure must be working)
 
-**Plans:** 2 plans
+**Plans:** 2 plans (all complete)
 
 Plans:
-- [ ] 02-01-PLAN.md — Vision processor: extractVisionData() with computed ratios and risk assessments
-- [ ] 02-02-PLAN.md — Vision API route: SSE endpoint at /api/extractData/vision
+- [x] 02-01-PLAN.md — Vision processor: extractVisionData() with computed ratios and risk assessments
+- [x] 02-02-PLAN.md — Vision API route: SSE endpoint at /api/extractData/vision
 
 **Key Decisions:**
 - Page-by-page Buffer processing (avoid loading all pages into memory simultaneously)
 - Fiscal year key normalization before computeMetrics (strips FY prefix, date suffixes)
 - Separate API endpoint (do not modify existing /api/extractData route)
 - lib/calculations.ts functions called directly (computeMetrics is private in aiProcessor)
+
+**Known Issues (to address in Phase 3):**
+- Vision extraction shows accuracy gaps vs text extraction on some documents
+- Shareholders' equity extraction inconsistent
+- Debt component breakdown less detailed than text extraction
+- Single-year extraction where text found multiple years
 
 ---
 
