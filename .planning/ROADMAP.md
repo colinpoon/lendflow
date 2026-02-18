@@ -108,12 +108,21 @@ Plans:
 
 **Dependencies:** Phase 2 (need working extraction to validate)
 
-**Plans:** (created by /gsd:plan-phase)
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Ground truth data and accuracy calculation utilities (VAL-02, VAL-03 foundation)
+- [ ] 03-02-PLAN.md — Token usage threading through both pipelines (COST-01)
+- [ ] 03-03-PLAN.md — Comparison API endpoint and UI (VAL-01, COST-02)
+
+**Wave Structure:**
+- Wave 1 (parallel): 03-01 + 03-02
+- Wave 2: 03-03 (depends on Wave 1)
 
 **Key Decisions:**
-- Ground truth source (manual verification vs external benchmark)
-- Which metrics to include in accuracy calculation
-- Go/no-go criteria for full migration
+- Ground truth source: Manual verification from source PDFs (placeholder values until human review)
+- Accuracy threshold: 10% variance = accurate
+- Cost target: Vision < 2x text extraction cost
 
 ---
 
@@ -146,4 +155,4 @@ Phase 1 (Infrastructure) → Phase 2 (Extraction) → Phase 3 (Validation)
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-17*
+*Last updated: 2026-02-17 — Phase 3 plans created*
