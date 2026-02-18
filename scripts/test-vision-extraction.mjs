@@ -22,7 +22,8 @@ import { config } from 'dotenv';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables from .env.local
+// Load environment variables (check both .env and .env.local)
+config({ path: join(__dirname, '../.env') });
 config({ path: join(__dirname, '../.env.local') });
 
 // Constants
