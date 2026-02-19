@@ -565,7 +565,7 @@ export function mergeExtractionsWithConflicts(
     }
   }
 
-  // Handle nested objects (use legacy merge for now)
+  // Handle nested objects with conflict-aware per-field resolution
   mergeNestedObjects(extractions, merged);
 
   if (DEBUG_FINANCIALS) {
@@ -591,56 +591,179 @@ export function mergeExtractionsWithConflicts(
 type NestedMetrics = Record<string, number | string | null>;
 
 /**
+ * A candidate value for a nested sub-field, collected across chunks.
+ * Simpler than ValueCandidate — nested fields don't have their own _sources entries.
+ */
+interface NestedValueCandidate {
+  value: number | string;
+  chunkIndex: number;
+  confidence: number;
+}
+
+/**
+ * Collect all values for each nested sub-field across all chunks.
+ * Key format: "year:nestedKey:subField" (e.g. "2023:adjusted_ebitda_components:stock_based_compensation")
+ *
+ * Since nested fields don't have their own _sources entries we fall back to
+ * the chunk-level source quality via getSourceMetadata on a representative flat
+ * metric, defaulting to 'primary' confidence when no metadata is available.
+ */
+function collectNestedValues(
+  extractions: ExtractionInput[]
+): Map<string, NestedValueCandidate[]> {
+  const valueMap = new Map<string, NestedValueCandidate[]>();
+
+  for (let chunkIndex = 0; chunkIndex < extractions.length; chunkIndex++) {
+    const obj = extractions[chunkIndex];
+    if (!obj || typeof obj !== 'object' || !obj.metrics_by_year) continue;
+
+    for (const [year, metrics] of Object.entries(obj.metrics_by_year)) {
+      if (!metrics || typeof metrics !== 'object') continue;
+
+      // Derive a chunk-level confidence score from the first available flat metric
+      // in this year. Nested fields inherit from their parent chunk quality.
+      const representativeMetric = Object.keys(metrics).find((k) => !NESTED_KEYS.includes(k));
+      const chunkConfidence = representativeMetric
+        ? MERGE_CONFIG.SOURCE_WEIGHTS[getSourceMetadata(obj as Record<string, unknown>, year, representativeMetric).sourceType]
+        : MERGE_CONFIG.SOURCE_WEIGHTS['primary'];
+
+      for (const nestedKey of NESTED_KEYS) {
+        const nestedValue = metrics[nestedKey];
+        if (nestedValue == null || typeof nestedValue !== 'object') continue;
+
+        for (const [subField, subValue] of Object.entries(nestedValue as NestedMetrics)) {
+          if (subValue == null) continue;
+
+          const key = `${year}:${nestedKey}:${subField}`;
+          if (!valueMap.has(key)) {
+            valueMap.set(key, []);
+          }
+
+          valueMap.get(key)!.push({
+            value: subValue,
+            chunkIndex,
+            confidence: chunkConfidence,
+          });
+        }
+      }
+    }
+  }
+
+  return valueMap;
+}
+
+/**
+ * Resolve conflicts for a single nested sub-field across its candidates.
+ *
+ * Strategy (simplified — nested fields have fewer candidates than flat metrics):
+ * 1. Single candidate   → use it directly
+ * 2. All agree          → use highest-confidence candidate
+ * 3. String values      → prefer lowest chunk index (strings can't be averaged)
+ * 4. Numeric conflict   → pick highest confidence, then lowest chunk index as tiebreaker
+ *
+ * @returns The resolved value and whether a true conflict was detected
+ */
+function resolveNestedConflict(candidates: NestedValueCandidate[]): {
+  value: number | string;
+  hasConflict: boolean;
+} {
+  if (candidates.length === 1) {
+    return { value: candidates[0].value, hasConflict: false };
+  }
+
+  // Check consensus — all candidates share the same value
+  const firstValue = candidates[0].value;
+  const allAgree = candidates.every((c) => c.value === firstValue);
+  if (allAgree) {
+    const best = candidates.reduce((a, b) =>
+      a.confidence >= b.confidence ? a : b
+    );
+    return { value: best.value, hasConflict: false };
+  }
+
+  // String values: pick lowest chunk index (no meaningful average possible)
+  if (typeof firstValue === 'string' || candidates.some((c) => typeof c.value === 'string')) {
+    const best = candidates.reduce((a, b) =>
+      a.chunkIndex <= b.chunkIndex ? a : b
+    );
+    return { value: best.value, hasConflict: true };
+  }
+
+  // Numeric conflict: highest confidence wins, lowest chunk index as tiebreaker
+  const best = candidates.reduce((a, b) => {
+    if (a.confidence !== b.confidence) {
+      return a.confidence > b.confidence ? a : b;
+    }
+    return a.chunkIndex < b.chunkIndex ? a : b;
+  });
+
+  return { value: best.value, hasConflict: true };
+}
+
+/**
  * Merge nested objects (debt_components, fixed_charges, adjusted_ebitda_components)
- * Uses the legacy first-non-null strategy for nested objects
+ * using conflict-aware per-field resolution instead of first-non-null.
+ *
+ * Each sub-field is resolved independently so that a high-quality value from
+ * chunk 2 can win over a stale value from chunk 1 rather than always deferring
+ * to whichever chunk arrived first.
  */
 function mergeNestedObjects(
   extractions: ExtractionInput[],
   merged: Record<string, YearMetrics>
 ): void {
-  for (const obj of extractions) {
-    if (!obj || typeof obj !== 'object' || !obj.metrics_by_year) continue;
+  const nestedValueMap = collectNestedValues(extractions);
 
-    for (const [year, metrics] of Object.entries(obj.metrics_by_year)) {
-      if (!merged[year]) {
-        merged[year] = {};
-      }
+  for (const [key, candidates] of nestedValueMap.entries()) {
+    // Key format: "year:nestedKey:subField"
+    const colonIndex = key.indexOf(':');
+    const secondColonIndex = key.indexOf(':', colonIndex + 1);
+    const year = key.slice(0, colonIndex);
+    const nestedKey = key.slice(colonIndex + 1, secondColonIndex);
+    const subField = key.slice(secondColonIndex + 1);
 
-      for (const nestedKey of NESTED_KEYS) {
-        const nestedValue = metrics[nestedKey];
-        if (nestedValue != null && typeof nestedValue === 'object') {
-          merged[year][nestedKey] = mergeNestedObject(
-            merged[year][nestedKey] as NestedMetrics | null | undefined,
-            nestedValue as NestedMetrics
+    // Ensure parent objects exist in the merged output
+    if (!merged[year]) {
+      merged[year] = {};
+    }
+    if (merged[year][nestedKey] == null) {
+      merged[year][nestedKey] = {} as NestedMetrics;
+    }
+
+    const { value, hasConflict } = resolveNestedConflict(candidates);
+    (merged[year][nestedKey] as NestedMetrics)[subField] = value;
+
+    if (hasConflict) {
+      const candidateSummary = candidates
+        .map((c) => `${JSON.stringify(c.value)} (chunk ${c.chunkIndex}, conf ${c.confidence.toFixed(2)})`)
+        .join(', ');
+
+      // Unconditional warning for high-variance numeric conflicts on debt components.
+      // Silent resolution of a $M+ debt figure can corrupt DSCR and Senior Debt/EBITDA.
+      // String conflicts (e.g. senior_debt_interest_rate) are excluded — they have no
+      // meaningful variance percentage and do not affect ratio calculations.
+      const numericCandidates = candidates.filter((c) => typeof c.value === 'number');
+      if (numericCandidates.length >= 2 && nestedKey === 'debt_components') {
+        const numericValues = numericCandidates.map((c) => c.value as number);
+        const conflictVariance = calculateVariance(numericValues);
+        if (conflictVariance > MERGE_CONFIG.CONFLICT_THRESHOLD_PERCENT) {
+          console.warn(
+            `Nested debt conflict: ${year}/${nestedKey}/${subField} — ` +
+              `${conflictVariance.toFixed(1)}% variance across ${numericCandidates.length} chunks. ` +
+              `Values: [${candidateSummary}] → resolved to ${JSON.stringify(value)}`
           );
         }
       }
+
+      // Full detail gated behind DEBUG_FINANCIALS for all nested keys
+      if (DEBUG_FINANCIALS) {
+        console.warn(
+          `Nested conflict: ${year}/${nestedKey}/${subField} — ` +
+            `${candidates.length} values: [${candidateSummary}] → resolved to ${JSON.stringify(value)}`
+        );
+      }
     }
   }
-}
-
-/**
- * Merge two nested objects, keeping non-null values
- * @param existing - Existing object (may be null/undefined)
- * @param incoming - Incoming object to merge
- * @returns Merged object
- */
-function mergeNestedObject(
-  existing: NestedMetrics | null | undefined,
-  incoming: NestedMetrics
-): NestedMetrics {
-  if (!existing) {
-    return { ...incoming };
-  }
-
-  const merged = { ...existing };
-  for (const [key, value] of Object.entries(incoming)) {
-    if (merged[key] == null && value != null) {
-      merged[key] = value;
-    }
-  }
-
-  return merged;
 }
 
 /**
