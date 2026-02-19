@@ -267,7 +267,7 @@ export interface ComputedMetrics extends ExtractedMetrics {
 
   // Banker's covenant ratios (NEW)
   dscr: number | null; // Debt Service Coverage Ratio (Adjusted EBITDA / Total Debt Service)
-  funded_debt: number | null; // Bank debt only (excludes subordinated notes)
+  funded_debt: number | null; // Senior bank debt + finance lease liabilities (excludes sub debt, convertible debt, bonds, notes payable)
   funded_debt_to_ebitda: number | null; // Funded Debt / Adjusted EBITDA
 
   // Breakdowns for display

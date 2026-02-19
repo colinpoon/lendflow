@@ -242,7 +242,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           <p className="text-2xl font-bold text-gray-800">
             {formatCurrency(metrics.funded_debt)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Bank Debt Only</p>
+          <p className="text-xs text-gray-500 mt-1">Bank Debt + Finance Leases</p>
         </div>
 
         {/* Funded Debt / EBITDA Card */}
@@ -628,7 +628,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                   <h5 className="font-semibold text-amber-800 mb-3">Funded Debt / EBITDA (Leverage Covenant)</h5>
                   <div className="space-y-2">
                     <div className="flex justify-between text-gray-600">
-                      <span>Funded Debt (Bank Debt Only)</span>
+                      <span>Funded Debt (Bank Debt + Finance Leases)</span>
                       <span>{formatCurrency(dscrBreakdown.funded_debt)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
