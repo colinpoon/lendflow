@@ -30,7 +30,7 @@ interface FixedCharges {
   subordinated_debt_interest: number | null;
   lease_interest: number | null;
   total_interest_expense: number | null;
-  senior_debt_interest_rate: number | null;
+  senior_debt_interest_rate: string | null;
   minimum_lease_payments: number | null;
   finance_lease_payments: number | null;
   operating_lease_payments: number | null;
@@ -153,7 +153,7 @@ interface FinancialTableProps {
 interface RowConfig {
   key: string;
   label: string;
-  format?: 'currency' | 'ratio' | 'percent' | 'margin' | 'rate';
+  format?: 'currency' | 'ratio' | 'percent' | 'margin' | 'rate' | 'string';
   highlight?: boolean;
   indent?: boolean;
   nested?: string; // path to nested object (e.g., 'debt_components', 'fixed_charges')
@@ -258,7 +258,7 @@ const sections: SectionConfig[] = [
       { key: 'subordinated_debt_interest', label: 'Subordinated Debt Interest', nested: 'fixed_charges', indent: true },
       { key: 'lease_interest', label: 'Lease Interest', nested: 'fixed_charges', indent: true },
       { key: 'total_interest_expense', label: 'Total Interest Expense', nested: 'fixed_charges', indent: true },
-      { key: 'senior_debt_interest_rate', label: 'Senior Debt Interest Rate', nested: 'fixed_charges', format: 'rate', indent: true },
+      { key: 'senior_debt_interest_rate', label: 'Senior Debt Interest Rate', nested: 'fixed_charges', format: 'string', indent: true },
       { key: 'minimum_lease_payments', label: 'Minimum Lease Payments', nested: 'fixed_charges', indent: true },
       { key: 'finance_lease_payments', label: 'Finance Lease Payments', nested: 'fixed_charges', indent: true },
       { key: 'operating_lease_payments', label: 'Operating Lease Payments', nested: 'fixed_charges', indent: true },
@@ -439,7 +439,17 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   // Check if section has any data
   const sectionHasData = (section: SectionConfig): boolean => {
     return section.rows.some(row =>
-      years.some(y => getMetricValue(data.metrics_by_year[y], row.key, row.nested) !== null)
+      years.some(y => {
+        if (row.format === 'string') {
+          const metrics = data.metrics_by_year[y];
+          const nestedObj = row.nested ? metrics[row.nested as keyof typeof metrics] : null;
+          const rawVal = nestedObj && typeof nestedObj === 'object'
+            ? (nestedObj as unknown as Record<string, unknown>)[row.key]
+            : metrics[row.key as keyof typeof metrics];
+          return typeof rawVal === 'string';
+        }
+        return getMetricValue(data.metrics_by_year[y], row.key, row.nested) !== null;
+      })
     );
   };
 
@@ -509,6 +519,19 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                         {row.label}
                       </td>
                       {years.map((y) => {
+                        // String fields (e.g., interest rate) bypass numeric getMetricValue
+                        if (row.format === 'string') {
+                          const metrics = data.metrics_by_year[y];
+                          const nestedObj = row.nested ? metrics[row.nested as keyof typeof metrics] : null;
+                          const rawVal = nestedObj && typeof nestedObj === 'object'
+                            ? (nestedObj as unknown as Record<string, unknown>)[row.key]
+                            : metrics[row.key as keyof typeof metrics];
+                          return (
+                            <td key={y} className={`py-2 px-4 text-right ${row.indent ? '' : ''}`}>
+                              {typeof rawVal === 'string' ? rawVal : '—'}
+                            </td>
+                          );
+                        }
                         const val = getMetricValue(data.metrics_by_year[y], row.key, row.nested);
                         const colorClass = row.format === 'ratio' || row.format === 'percent'
                           ? getRatioColor(row.key, val)

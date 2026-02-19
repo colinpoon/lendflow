@@ -40,7 +40,7 @@ export interface FixedCharges {
   subordinated_debt_interest: number | null;
   lease_interest: number | null;
   total_interest_expense: number | null;
-  senior_debt_interest_rate: number | null; // Extracted as decimal (e.g., 0.08 for 8%)
+  senior_debt_interest_rate: string | null; // e.g., "prime + 2%", "8%", "BA + 3.5%"
 
   // Lease Payments
   minimum_lease_payments: number | null;
@@ -211,6 +211,7 @@ export interface ExtractedMetrics {
   depreciation_equipment: number | null;
   depreciation_rou: number | null;
   depreciation_other: number | null;
+  amortization_intangibles: number | null;
 
   // EBITDA
   ebitda: number | null;

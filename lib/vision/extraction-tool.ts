@@ -312,6 +312,10 @@ const yearMetricsSchema = {
       type: ['number', 'null'],
       description: 'Other depreciation (buildings, leasehold improvements). Normalized to thousands USD.',
     },
+    amortization_intangibles: {
+      type: ['number', 'null'],
+      description: 'Amortization of intangible assets (patents, customer relationships, trademarks, software, non-compete agreements). Separate from PP&E depreciation. Normalized to thousands USD.',
+    },
 
     // ── EBITDA ────────────────────────────────────────────────────────────────
     // NOTE: We calculate EBITDA and Adjusted EBITDA from components.
@@ -522,12 +526,13 @@ DEPRECIATION & AMORTIZATION (CRITICAL):
 - MUST equal SUM of ALL D&A lines across ALL sections
 - Check: Direct expenses section, Operating expenses section, Other expenses section
 - Also check Cash Flow Statement operating activities for total D&A
-- depreciation_amortization SHOULD equal: depreciation_equipment + depreciation_rou + depreciation_other
+- depreciation_amortization SHOULD equal: depreciation_equipment + depreciation_rou + depreciation_other + amortization_intangibles
 
 DEPRECIATION BREAKDOWN:
 - depreciation_equipment: "Depreciation of equipment", "Equipment depreciation", "Depreciation of security towers"
 - depreciation_rou: "Depreciation of right-of-use assets", "ROU depreciation"
 - depreciation_other: "Depreciation of other property", "Building depreciation", "Leasehold improvements"
+- amortization_intangibles: "Amortization of intangible assets", "Amortization of customer relationships", "Software amortization"
 
 ═══════════════════════════════════════════════════════════════════════════════
 EBITDA COMPONENTS (WE CALCULATE EBITDA - YOU EXTRACT COMPONENTS)
@@ -547,7 +552,7 @@ YOUR JOB: Extract these components ACCURATELY:
 2. interest - Total interest expense / finance costs (MUST be positive)
 3. taxes - Income tax expense
 4. depreciation_amortization - Total D&A (sum ALL depreciation from ALL sections)
-5. depreciation_equipment, depreciation_rou, depreciation_other - Individual D&A breakdown
+5. depreciation_equipment, depreciation_rou, depreciation_other, amortization_intangibles - Individual D&A breakdown
 6. adjusted_ebitda_components - All adjustment items (stock comp, restructuring, gains/losses, etc.)
 
 ═══════════════════════════════════════════════════════════════════════════════

@@ -59,6 +59,7 @@ export function calculateEBITDA(metrics: ExtractedMetrics): number | null {
     metrics.depreciation_equipment,
     metrics.depreciation_rou,
     metrics.depreciation_other,
+    metrics.amortization_intangibles,
   ].filter((v): v is number => v != null);
 
   const depAmort =

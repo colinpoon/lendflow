@@ -251,6 +251,7 @@ export const CURRENCY_METRICS = [
   'depreciation_equipment',
   'depreciation_rou',
   'depreciation_other',
+  'amortization_intangibles',
   'ebitda',
   'reported_adjusted_ebitda',
   'shareholders_equity',

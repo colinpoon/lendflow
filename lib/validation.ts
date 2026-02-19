@@ -77,7 +77,7 @@ const fixedChargesSchema = z.object({
   subordinated_debt_interest: numericValue.optional(),
   lease_interest: numericValue.optional(),
   total_interest_expense: numericValue.optional(),
-  senior_debt_interest_rate: numericValue.optional(),
+  senior_debt_interest_rate: z.string().nullable().optional(),
   minimum_lease_payments: numericValue.optional(),
   finance_lease_payments: numericValue.optional(),
   operating_lease_payments: numericValue.optional(),
@@ -131,6 +131,7 @@ const yearMetricsSchema = z.object({
   depreciation_equipment: numericValue.optional(),
   depreciation_rou: numericValue.optional(),
   depreciation_other: numericValue.optional(),
+  amortization_intangibles: numericValue.optional(),
 
   // EBITDA
   ebitda: numericValue.optional(),
@@ -311,19 +312,7 @@ export function validateBusinessLogic(
         }
       }
 
-      // Interest rate should be between 0% and 50%
-      const interestRate = (metrics.fixed_charges as Record<string, unknown>).senior_debt_interest_rate;
-      if (
-        typeof interestRate === 'number' &&
-        (interestRate < 0 || interestRate > 50)
-      ) {
-        errors.push({
-          path: `metrics_by_year.${year}.fixed_charges.senior_debt_interest_rate`,
-          message: `Interest rate (${interestRate}%) is outside expected range (0% to 50%).`,
-          code: 'business_logic',
-          value: interestRate,
-        });
-      }
+      // Interest rate is now a string (e.g., "prime + 2%", "8%") — no numeric range check needed
     }
 
     // Validate adjusted_ebitda_components - check for unreasonably large adjustments

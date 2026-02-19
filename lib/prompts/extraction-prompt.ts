@@ -28,7 +28,8 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "depreciation_equipment": number|null,
       "depreciation_rou": number|null,
       "depreciation_other": number|null,
-      "ebitda": number|null,
+      "amortization_intangibles": number|null,
+      "ebitda": null,
       "reported_adjusted_ebitda": number|null,
       "shareholders_equity": number|null,
       "capital_expenditures": number|null,
@@ -67,7 +68,7 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
         "subordinated_debt_interest": number|null,
         "lease_interest": number|null,
         "total_interest_expense": number|null,
-        "senior_debt_interest_rate": number|null,
+        "senior_debt_interest_rate": string|null,
         "minimum_lease_payments": number|null,
         "finance_lease_payments": number|null,
         "operating_lease_payments": number|null,
@@ -239,7 +240,7 @@ RULES
 • Detect every fiscal year present (e.g. 2025, 2024, 2023) and use it as the JSON key.
 • Emit numeric values as plain JSON numbers – **no quotes, commas, or currency symbols**.
 • If a value is unavailable for a metric, output null (do NOT omit the key).
-• For EBITDA calculation: ebitda = net_income + interest + taxes + depreciation_amortization
+• EBITDA is calculated by the system from components: EBITDA = net_income + interest + taxes + depreciation_amortization. Always output "ebitda": null — do NOT extract or calculate EBITDA yourself. Extract the components accurately instead.
 
 INCOME STATEMENT FIELDS - CRITICAL:
 • "revenue": Total revenue or net sales from the top of the Income Statement. Look for:
@@ -250,11 +251,12 @@ INCOME STATEMENT FIELDS - CRITICAL:
   - Extract as POSITIVE number
   - Do NOT confuse with "Other income", "Interest income", or "Total comprehensive income"
 
-• "interest": Extract TOTAL finance costs/interest expense from Income Statement. Look for:
+• "interest": TOTAL finance costs/interest expense from the Income Statement (accrual basis). Look for:
   - "Finance costs" (IFRS) or "Interest expense" (US GAAP)
   - This is the TOTAL interest for the period, including interest on debt, leases, and notes
   - For Zedcor-style statements: look under "Other (income) expenses" section for "Finance costs"
   - Extract as POSITIVE number (e.g., Finance costs of 1,621 → extract 1,621)
+  - PURPOSE: Primary interest field used in the EBITDA formula (net_income + interest + taxes + D&A). This is the accrual-basis P&L figure. For cash-basis interest, see cash_interest_paid.
 • "taxes": TOTAL income tax expense from the Income Statement (current + deferred combined). Look for:
   - "Income tax expense" / "Provision for income taxes" / "Tax expense" / "Income taxes"
   - "Income tax recovery" / "Income tax benefit" — these are NEGATIVE (a recovery reduces EBITDA addback)
@@ -318,6 +320,25 @@ SUBORDINATED/JUNIOR DEBT (lower priority - listed last in reports):
 • bonds_debentures: Corporate bonds, debentures (unless explicitly senior secured)
 • other_borrowings: Any other debt not categorized above
 
+DEBT FIELD MUTUAL EXCLUSIVITY (AVOID DOUBLE-COUNTING):
+Bank debt fields have TWO levels — aggregate and granular. Use ONE set, not both:
+
+• AGGREGATE fields: bank_debt_current + bank_debt_long_term
+  Use these when the balance sheet shows combined bank debt split by current/non-current
+  (e.g., "Current portion of credit facility: $2M / Long-term debt: $8M")
+
+• GRANULAR fields: term_loans, revolving_credit_facilities, overdraft_facilities, lines_of_credit
+  Use these ONLY when the balance sheet itemizes each facility separately with NO combined total
+  (e.g., "Term Loan A: $5M, Revolver: $3M, Overdraft: $2M")
+
+• If BOTH aggregate totals AND granular breakdowns are shown, use the aggregate fields (bank_debt_current/long_term) and leave the granular fields null
+
+• Same rule applies to lease liabilities:
+  - AGGREGATE: lease_liabilities_current + lease_liabilities_long_term (prefer these)
+  - GRANULAR: finance_lease_liabilities + operating_lease_liabilities (use only if no current/non-current split)
+
+• If debt type is ambiguous and you cannot determine the correct field, place it in other_borrowings and document the ambiguity in _sources. Do NOT return null for all debt fields when confused.
+
 CRITICAL DEBT CALCULATION RULES:
 • LEVERAGE DOCUMENT ORDER: When unsure of seniority, use position in the document. Debt items appearing earlier in the liabilities section or debt schedules are typically more senior.
 • Look for debt breakdowns in the notes to financial statements (e.g., "Note 8: Credit Facilities", "Note 9: Lease Liabilities", "Note 10: Note Payable")
@@ -378,8 +399,9 @@ INTEREST COMPONENTS - EXTRACT WITH PRECISION:
   - Finance costs breakdown showing "Interest on lease liabilities"
   - Separate from interest on bank debt
 
-• total_interest_expense: CRITICAL - Extract the TOTAL interest/finance costs from income statement.
-  This serves as validation and fallback for senior debt interest calculation.
+• total_interest_expense: TOTAL interest/finance costs from income statement.
+  PURPOSE: Validation crosscheck — should equal senior_debt_interest + subordinated_debt_interest + lease_interest.
+  NOTE: This is the same value as the top-level "interest" field. Extract it here as well so we can validate component-level interest extraction against the total. If it differs from "interest", recheck both values.
 
 • senior_debt_interest_rate: If disclosed, extract the interest rate (e.g., "prime + 2%", "8%", "BA + 3.5%").
 
@@ -415,7 +437,13 @@ Extract depreciation by category from INCOME STATEMENT and/or CASH FLOW STATEMEN
 • depreciation_equipment: "Depreciation of equipment", "Depreciation of security towers", "Equipment depreciation"
 • depreciation_rou: "Depreciation of right-of-use assets", "ROU depreciation", "Lease asset depreciation"
 • depreciation_other: "Depreciation of other property and equipment", "Building depreciation", "Leasehold improvements depreciation"
-• depreciation_amortization: MUST equal the SUM of ALL depreciation and amortization lines across ALL sections of the income statement AND cash flow statement. CRITICAL: Depreciation may appear in MULTIPLE sections (e.g., "Direct expenses" AND "Operating expenses" AND "Other expenses"). You MUST sum them ALL. Also check the cash flow statement operating activities section for total depreciation figures which may be more reliable than summing income statement lines. Cross-check: depreciation_amortization should equal depreciation_equipment + depreciation_rou + depreciation_other. If it doesn't, recalculate.
+• amortization_intangibles: Amortization of intangible assets, SEPARATE from tangible asset depreciation. Look for:
+  - "Amortization of intangible assets" / "Amortization of customer relationships" / "Amortization of non-compete agreements"
+  - "Amortization of patents" / "Amortization of trademarks" / "Software amortization"
+  - Common in companies that have grown through acquisitions (purchase price allocation creates intangible assets)
+  - Do NOT include goodwill impairment here — use goodwill_impairment in adjusted_ebitda_components
+  - Extract as POSITIVE number. If the company has no intangible assets, extract null.
+• depreciation_amortization: MUST equal the SUM of ALL depreciation and amortization lines across ALL sections of the income statement AND cash flow statement. CRITICAL: Depreciation may appear in MULTIPLE sections (e.g., "Direct expenses" AND "Operating expenses" AND "Other expenses"). You MUST sum them ALL. Also check the cash flow statement operating activities section for total depreciation figures which may be more reliable than summing income statement lines. Cross-check: depreciation_amortization should equal depreciation_equipment + depreciation_rou + depreciation_other + amortization_intangibles. If it doesn't, recalculate.
 
 CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
 
@@ -470,10 +498,10 @@ DEBT SERVICE ITEMS (CRITICAL FOR BANKER'S DSCR COVENANT):
   - Or look for combined "Debt repayments" figure
   - Extract as POSITIVE number
 
-• ttm_interest_expense: TOTAL interest expense for the period from INCOME STATEMENT. Look for:
-  - "Interest expense" or "Finance costs"
-  - "Interest on long-term debt" + "Interest on lease liabilities"
-  - Extract as POSITIVE number
+• ttm_interest_expense: Trailing twelve months total interest expense. For ANNUAL reports this equals the top-level "interest" field — extract the same value.
+  PURPOSE: Used as a fallback in FCCR calculation when cash_interest_paid is unavailable.
+  For QUARTERLY or INTERIM reports: annualize the interest figure (e.g., Q3 interest × 4/3).
+  Extract as POSITIVE number.
 
 CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • You MUST extract adjusted_ebitda_components from the income statement and notes.
@@ -591,8 +619,8 @@ Return EXACT JSON matching this schema — no markdown, no fences, no extra keys
 }
 
 SCORING WEIGHTS:
-- FCCR (Fixed Charge Coverage Ratio): 45% weight
-- Senior Debt / Adjusted EBITDA: 40% weight
+- FCCR (Fixed Charge Coverage Ratio): 50% weight
+- Senior Debt / Adjusted EBITDA: 35% weight
 - Total Debt / Total Capital: 15% weight
 
 SCORING THRESHOLDS (each metric scored 0-10, higher = worse):
