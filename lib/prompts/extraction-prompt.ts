@@ -282,7 +282,7 @@ INCOME STATEMENT FIELDS - CRITICAL:
   - Extract as POSITIVE number
   - Do NOT confuse with "Other income", "Interest income", or "Total comprehensive income"
 
-• "interest": Total finance costs from the income statement. This INCLUDES:
+• "interest": GROSS interest/finance costs from the income statement. This INCLUDES:
   - Bank interest and charges
   - Interest on credit facilities, term loans, revolving credit
   - Interest and accretion of discount on notes payable / subordinated debt
@@ -290,7 +290,13 @@ INCOME STATEMENT FIELDS - CRITICAL:
   - Accretion expense on asset retirement obligations
   Look for "Finance costs" (IFRS) or "Interest expense" (US GAAP).
   For Zedcor-style statements: look under "Other (income) expenses" section for "Finance costs".
+  CRITICAL — NET FINANCE INCOME COMPANIES: When the net finance line on the income statement
+  is NEGATIVE (i.e., interest income exceeds interest expense), do NOT extract the net figure.
+  Instead, find the GROSS interest cost on borrowings and leases from the finance cost note
+  breakdown (e.g., "Interest on ROU asset leases and long-term debt: $5,375" from Note 18).
+  Interest INCOME should be excluded — we need only the COST of servicing debt/leases.
   Extract as POSITIVE number (e.g., Finance costs of 1,621 → extract 1,621).
+  Extract the gross borrowing cost into BOTH the "interest" field AND "fixed_charges.total_interest_expense" for cross-validation.
   PURPOSE: Primary interest field used in the EBITDA formula (net_income + interest + taxes + D&A). This is the accrual-basis P&L figure. For cash-basis interest, see cash_interest_paid.
   Do NOT separately extract these sub-components into adjusted_ebitda_components — they are already in this total.
 • "taxes": TOTAL income tax expense from the Income Statement (current + deferred combined). Look for:

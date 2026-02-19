@@ -41,25 +41,38 @@ export function calculateEBITDA(metrics: ExtractedMetrics): number | null {
 
   const netIncome = metrics.net_income;
 
-  // CRITICAL: Interest expense should ALWAYS be positive.
-  // If extracted as negative, the AI picked up a wrong value (e.g., cash flow adjustment).
-  // Fall back to other interest fields which are more reliable.
+  // CRITICAL: Interest expense should ALWAYS be positive for EBITDA.
+  // Negative values occur when net finance income exceeds costs (e.g., Taiga earns
+  // more interest on $192M cash than it pays on leases). Reject negatives at every
+  // level and prefer the first positive source found.
   const rawInterest = metrics.interest;
-  let interest: number | null;
+  let interest: number | null = null;
+
+  // Primary source: P&L interest (should be gross finance costs, always positive)
   if (rawInterest != null && rawInterest > 0) {
     interest = rawInterest;
-  } else {
-    const fallbackInterest =
-      metrics.fixed_charges?.total_interest_expense ??
-      metrics.ttm_interest_expense ??
-      metrics.cash_interest_paid ??
-      null;
-    if (rawInterest != null && rawInterest <= 0 && fallbackInterest != null) {
-      console.log(
-        `⚠️ INTEREST CORRECTION: Rejected negative interest (${rawInterest}), using fallback: ${fallbackInterest}`
-      );
+  }
+
+  // Fallback chain: try each source, skip any that are null/negative
+  if (interest == null) {
+    const fallbackCandidates = [
+      { value: metrics.fixed_charges?.total_interest_expense, label: 'fixed_charges.total_interest_expense' },
+      { value: metrics.ttm_interest_expense, label: 'ttm_interest_expense' },
+      { value: metrics.cash_interest_paid, label: 'cash_interest_paid' },
+    ];
+
+    for (const candidate of fallbackCandidates) {
+      if (candidate.value != null && candidate.value > 0) {
+        if (rawInterest != null && rawInterest <= 0) {
+          console.warn(
+            `⚠️ INTEREST CORRECTION: Rejected negative interest (${rawInterest}), ` +
+            `using fallback ${candidate.label}: ${candidate.value}`
+          );
+        }
+        interest = candidate.value;
+        break;
+      }
     }
-    interest = fallbackInterest;
   }
   const taxes = metrics.taxes;
   // Prefer summing component depreciation fields when available (more reliable than AI's total)

@@ -65,7 +65,7 @@ export async function generateRiskAssessment(
   // Build ratios for assessment
   const ratiosByYear: Record<string, ComputedMetrics & { interest_coverage_ratio: number | null; debt_to_equity_ratio: number | null }> = {};
   for (const [yr, m] of Object.entries(metricsByYear)) {
-    const icr = m.interest && m.interest !== 0 ? (m.ebitda ?? 0) / m.interest : null;
+    const icr = m.interest != null && m.interest > 0 ? (m.ebitda ?? 0) / m.interest : null;
     const d2e =
       m.total_debt && m.shareholders_equity && m.shareholders_equity !== 0
         ? m.total_debt / m.shareholders_equity

@@ -842,16 +842,46 @@ export function validateArithmeticConsistency(
       }
     }
 
-    // Additional identity checks can be added here:
-    // - Total Debt = Senior Debt + Subordinated Debt
-    // - Total D&A = Equipment D&A + ROU D&A + Other D&A
-
-    // Total Debt consistency check
-    const seniorDebt = metrics.senior_debt as number | null;
+    // Debt component identity check: sum(debt_components) should ≈ total_debt
+    // Note: debt-calculator.ts prefers component sum over extracted total_debt.
+    // This check validates the fallback case and surfaces extraction inconsistencies.
+    const debtComponents = metrics.debt_components as Record<string, number | string | null> | null;
     const totalDebt = metrics.total_debt as number | null;
 
+    if (debtComponents && totalDebt != null && totalDebt > 0) {
+      const numericValues = Object.entries(debtComponents)
+        .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && entry[1] !== 0);
+
+      const negativeComponents = numericValues.filter(([, v]) => v < 0);
+      if (negativeComponents.length > 0) {
+        corrections.push(
+          `${year}: Warning - negative debt component values detected: ${negativeComponents.map(([k, v]) => `${k}=${v}`).join(', ')}. Likely extraction error.`
+        );
+      }
+
+      const componentSum = numericValues
+        .filter(([, v]) => v > 0)
+        .reduce((sum, [, v]) => sum + v, 0);
+      if (componentSum > 0) {
+        // 2% tolerance allows for rounding across multiple line items while flagging material discrepancies
+        const debtVariance = Math.abs(totalDebt - componentSum) / Math.abs(totalDebt);
+        if (debtVariance > 0.02) {
+          corrections.push(
+            `${year}: Warning - extracted total_debt (${totalDebt}) diverges from ` +
+            `debt_component sum (${componentSum.toFixed(0)}) by ${(debtVariance * 100).toFixed(1)}%. ` +
+            `Review recommended — extracted total_debt may include non-financial liabilities.`
+          );
+        }
+      }
+    }
+
+    // Total D&A identity check can be added here:
+    // - Total D&A = Equipment D&A + ROU D&A + Other D&A
+
+    // Senior debt cannot exceed total debt
+    const seniorDebt = metrics.senior_debt as number | null;
+
     if (seniorDebt != null && totalDebt != null && seniorDebt > totalDebt) {
-      // Senior debt cannot exceed total debt - likely a data error
       corrections.push(
         `${year}: Warning - Senior debt (${seniorDebt}) exceeds total debt (${totalDebt}). Data may be inconsistent.`
       );
@@ -1118,7 +1148,7 @@ export function validateCrossMetricScale(
 
     const proxyEbitda =
       typeof netIncome === 'number' && typeof daRaw === 'number'
-        ? netIncome + (typeof interestRaw === 'number' ? interestRaw : 0) +
+        ? netIncome + (typeof interestRaw === 'number' && interestRaw > 0 ? interestRaw : 0) +
           (typeof taxesRaw === 'number' ? taxesRaw : 0) + daRaw
         : null;
 
