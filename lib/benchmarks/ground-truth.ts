@@ -2,12 +2,126 @@
  * Ground Truth Data for Benchmark Testing
  *
  * These values are manually verified from source PDF documents.
- * They serve as the baseline for accuracy comparison between
- * text extraction and vision extraction pipelines.
+ * They serve as the baseline for accuracy comparison of text extraction.
  *
  * IMPORTANT: Values marked with TODO must be manually verified
  * from the source PDFs before benchmarking is meaningful.
  */
+
+/**
+ * localStorage key prefix for persisted ground truth overrides
+ */
+export const GROUND_TRUTH_STORAGE_KEY = 'lendflow_gt_v1';
+
+/**
+ * All possible ground truth fields, including dot-notation sub-fields
+ * for nested objects (debt_components, fixed_charges, adjusted_ebitda_components).
+ */
+export type GroundTruthValues = {
+  // Income Statement
+  revenue?: number;
+  net_income?: number;
+  expenses?: number;
+  profit_margins?: number;
+  interest?: number;
+  taxes?: number;
+  depreciation_amortization?: number;
+  depreciation_equipment?: number;
+  depreciation_rou?: number;
+  depreciation_other?: number;
+  amortization_intangibles?: number;
+  ebitda?: number;
+  reported_adjusted_ebitda?: number;
+
+  // Balance Sheet
+  shareholders_equity?: number;
+  total_debt?: number;
+  senior_debt?: number;
+  current_assets?: number;
+  current_liabilities?: number;
+
+  // Cash Flow
+  capital_expenditures?: number;
+  proceeds_from_long_term_debt?: number;
+  cash_taxes_paid?: number;
+  distributions_paid?: number;
+  ttm_principal_payments?: number;
+  ttm_interest_expense?: number;
+  repayment_of_debt?: number;
+  payment_of_lease_liability?: number;
+  cash_interest_paid?: number;
+  non_cash_interest_expense?: number;
+
+  // Debt Components (dot-notation keys)
+  'debt_components.bank_debt_current'?: number;
+  'debt_components.bank_debt_long_term'?: number;
+  'debt_components.term_loans'?: number;
+  'debt_components.revolving_credit_facilities'?: number;
+  'debt_components.overdraft_facilities'?: number;
+  'debt_components.lines_of_credit'?: number;
+  'debt_components.lease_liabilities_current'?: number;
+  'debt_components.lease_liabilities_long_term'?: number;
+  'debt_components.finance_lease_liabilities'?: number;
+  'debt_components.operating_lease_liabilities'?: number;
+  'debt_components.notes_payable'?: number;
+  'debt_components.subordinated_debt'?: number;
+  'debt_components.convertible_debt'?: number;
+  'debt_components.bonds_debentures'?: number;
+  'debt_components.other_borrowings'?: number;
+
+  // Fixed Charges (dot-notation keys)
+  'fixed_charges.senior_debt_interest'?: number;
+  'fixed_charges.subordinated_debt_interest'?: number;
+  'fixed_charges.lease_interest'?: number;
+  'fixed_charges.total_interest_expense'?: number;
+  'fixed_charges.minimum_lease_payments'?: number;
+  'fixed_charges.finance_lease_payments'?: number;
+  'fixed_charges.operating_lease_payments'?: number;
+  'fixed_charges.principal_payments'?: number;
+  'fixed_charges.preferred_dividends'?: number;
+  'fixed_charges.other_fixed_charges'?: number;
+
+  // Adjusted EBITDA Components (dot-notation keys)
+  'adjusted_ebitda_components.stock_based_compensation'?: number;
+  'adjusted_ebitda_components.impairment_charges'?: number;
+  'adjusted_ebitda_components.goodwill_impairment'?: number;
+  'adjusted_ebitda_components.unrealized_gains_losses'?: number;
+  'adjusted_ebitda_components.deferred_compensation'?: number;
+  'adjusted_ebitda_components.loss_on_disposal'?: number;
+  'adjusted_ebitda_components.other_non_cash'?: number;
+  'adjusted_ebitda_components.restructuring_costs'?: number;
+  'adjusted_ebitda_components.severance_costs'?: number;
+  'adjusted_ebitda_components.transaction_costs'?: number;
+  'adjusted_ebitda_components.legal_settlements'?: number;
+  'adjusted_ebitda_components.professional_fees_one_time'?: number;
+  'adjusted_ebitda_components.casualty_losses'?: number;
+  'adjusted_ebitda_components.other_one_time_expenses'?: number;
+  'adjusted_ebitda_components.gain_on_disposal'?: number;
+  'adjusted_ebitda_components.gain_on_asset_sale'?: number;
+  'adjusted_ebitda_components.other_income_non_operating'?: number;
+  'adjusted_ebitda_components.insurance_proceeds'?: number;
+  'adjusted_ebitda_components.other_one_time_gains'?: number;
+  'adjusted_ebitda_components.owner_compensation_adjustment'?: number;
+  'adjusted_ebitda_components.related_party_adjustments'?: number;
+  'adjusted_ebitda_components.management_fees_adjustment'?: number;
+  'adjusted_ebitda_components.accounting_policy_adjustments'?: number;
+  'adjusted_ebitda_components.foreign_exchange_adjustments'?: number;
+  'adjusted_ebitda_components.pro_forma_cost_savings'?: number;
+  'adjusted_ebitda_components.pro_forma_synergies'?: number;
+
+  // Computed Ratios
+  adjusted_ebitda?: number;
+  calculated_adjusted_ebitda?: number;
+  fccr?: number;
+  dscr?: number;
+  funded_debt?: number;
+  funded_debt_to_ebitda?: number;
+  senior_debt_to_ebitda?: number;
+  total_debt_to_capital?: number;
+  interest_coverage_ratio?: number;
+  debt_to_equity_ratio?: number;
+  current_ratio?: number;
+};
 
 /**
  * Ground truth entry for a single fiscal year of a document
@@ -20,41 +134,7 @@ export interface GroundTruthEntry {
   /** Fiscal year as string (e.g., "2024") */
   fiscal_year: string;
   /** Verified financial values */
-  values: {
-    // Income Statement
-    revenue?: number;
-    net_income?: number;
-    expenses?: number;
-    interest?: number;
-    taxes?: number;
-    depreciation_amortization?: number;
-
-    // EBITDA
-    ebitda?: number;
-    adjusted_ebitda?: number;
-
-    // Balance Sheet
-    shareholders_equity?: number;
-    total_debt?: number;
-    senior_debt?: number;
-    current_assets?: number;
-    current_liabilities?: number;
-
-    // Cash Flow
-    capital_expenditures?: number;
-    repayment_of_debt?: number;
-    payment_of_lease_liability?: number;
-    cash_interest_paid?: number;
-
-    // Key Ratios
-    fccr?: number;
-    dscr?: number;
-    senior_debt_to_ebitda?: number;
-    total_debt_to_capital?: number;
-    current_ratio?: number;
-    interest_coverage_ratio?: number;
-    debt_to_equity_ratio?: number;
-  };
+  values: GroundTruthValues;
   /** Source documentation (e.g., "From consolidated income statement p.3") */
   source_notes?: string;
 }
@@ -62,10 +142,9 @@ export interface GroundTruthEntry {
 /**
  * Ground truth values for benchmark documents.
  *
- * IMPORTANT: All placeholder values (0) MUST be replaced with
- * manually verified values from the source PDFs before running
- * accuracy benchmarks. AI-extracted values should NOT be used
- * as ground truth.
+ * IMPORTANT: Only include values that have been manually verified.
+ * Unverified fields should be left as undefined (not 0).
+ * AI-extracted values should NOT be used as ground truth.
  */
 export const GROUND_TRUTH: GroundTruthEntry[] = [
   {
@@ -75,31 +154,15 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
     values: {
       revenue: 24889,
       net_income: 2652,
-      expenses: 0,
-      interest: 0,
-      taxes: 0,
-      depreciation_amortization: 0,
       ebitda: 9136,
       adjusted_ebitda: 7541,
       shareholders_equity: 12115,
       total_debt: 27614,
       senior_debt: 24365,
-      current_assets: 0,
-      current_liabilities: 0,
-      capital_expenditures: 0,
-      repayment_of_debt: 0,
-      payment_of_lease_liability: 0,
-      cash_interest_paid: 0,
       fccr: 0.57,
-      dscr: 0,
-      senior_debt_to_ebitda: 0,
-      total_debt_to_capital: 0,
-      current_ratio: 0,
-      interest_coverage_ratio: 0,
-      debt_to_equity_ratio: 0,
     },
     source_notes:
-      'Placeholder values - requires manual verification from PDF',
+      'Partially verified from source PDF. Remaining fields require manual verification.',
   },
   {
     document: 'Zedcor-FY2024',
@@ -108,17 +171,9 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
     fiscal_year: '2024',
     values: {
       // TODO: Manually verify from source PDF before benchmarking
-      revenue: 0, // Placeholder - read from income statement
-      net_income: 0, // Placeholder - read from income statement
-      ebitda: 0, // Placeholder - calculate or find in notes
-      adjusted_ebitda: 0, // Placeholder - if reported in notes
-      shareholders_equity: 0, // Placeholder - read from balance sheet
-      total_debt: 0, // Placeholder - read from balance sheet
-      senior_debt: 0, // Placeholder - read from balance sheet/notes
-      // fccr:
     },
     source_notes:
-      'Placeholder values - requires manual verification from PDF',
+      'No values verified yet - requires manual verification from PDF',
   },
   {
     document: 'Taiga-FY2024',
@@ -127,17 +182,9 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
     fiscal_year: '2024',
     values: {
       // TODO: Manually verify from source PDF before benchmarking
-      revenue: 0, // Placeholder - read from income statement
-      net_income: 0, // Placeholder - read from income statement
-      ebitda: 0, // Placeholder - calculate or find in notes
-      adjusted_ebitda: 0, // Placeholder - if reported in notes
-      shareholders_equity: 0, // Placeholder - read from balance sheet
-      total_debt: 0, // Placeholder - read from balance sheet
-      senior_debt: 0, // Placeholder - read from balance sheet/notes
-      // fccr:
     },
     source_notes:
-      'Placeholder values - requires manual verification from PDF',
+      'No values verified yet - requires manual verification from PDF',
   },
 ];
 
@@ -145,7 +192,6 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
  * Get ground truth by filename (partial match) and fiscal year.
  *
  * Matching strategy: Case-insensitive partial match on filename or document name.
- * Example: "2023-12-31-Q4-Zedcor-Inc.-Financial-Stmts-vFINAL.pdf" matches Zedcor-FY2023
  *
  * @param filename - Full or partial filename to match
  * @param fiscalYear - Fiscal year to match (e.g., "2024")
@@ -158,25 +204,18 @@ export function getGroundTruth(
   const normalizedInput = filename.toLowerCase();
 
   return GROUND_TRUTH.find((entry) => {
-    // First check fiscal year
     if (entry.fiscal_year !== fiscalYear) {
       return false;
     }
 
     const entryFilename = entry.filename.toLowerCase();
-    const documentName = entry.document.toLowerCase().split('-')[0]; // "zedcor" from "Zedcor-FY2023"
+    const documentName = entry.document.toLowerCase().split('-')[0];
 
-    // Check various matching strategies
     return (
-      // Exact filename match
       normalizedInput === entryFilename ||
-      // Input contains ground truth filename
       normalizedInput.includes(entryFilename) ||
-      // Ground truth filename contains input
       entryFilename.includes(normalizedInput) ||
-      // Input contains document name (e.g., "zedcor")
       normalizedInput.includes(documentName) ||
-      // Document name in input
       (documentName && normalizedInput.indexOf(documentName) !== -1)
     );
   });
@@ -184,9 +223,6 @@ export function getGroundTruth(
 
 /**
  * Get all ground truth entries for a specific document (all years)
- *
- * @param documentPrefix - Document name prefix (e.g., "Zedcor", "Taiga")
- * @returns Array of matching GroundTruthEntry objects
  */
 export function getGroundTruthByDocument(
   documentPrefix: string,
@@ -198,24 +234,19 @@ export function getGroundTruthByDocument(
 }
 
 /**
- * Check if ground truth values have been populated (not all zeros)
- *
- * @param entry - GroundTruthEntry to check
- * @returns true if at least one value is non-zero
+ * Check if ground truth values have been populated (not all empty)
  */
 export function isGroundTruthPopulated(
   entry: GroundTruthEntry,
 ): boolean {
   const values = entry.values;
   return Object.values(values).some(
-    (v) => v !== undefined && v !== null && v !== 0,
+    (v) => v !== undefined && v !== null,
   );
 }
 
 /**
  * Check if all ground truth entries are populated
- *
- * @returns true if all entries have at least one non-zero value
  */
 export function areAllGroundTruthsPopulated(): boolean {
   return GROUND_TRUTH.every(isGroundTruthPopulated);

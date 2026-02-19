@@ -1,30 +1,19 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { GitCompare, Upload, Loader2 } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Bug, Upload, Loader2 } from 'lucide-react';
 import { H1 } from '@/components/ui/typography';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ComparisonTable } from '@/components/ComparisonTable';
-import { AccuracyReport } from '@/components/AccuracyReport';
-import { CostReport } from '@/components/CostReport';
-import { calculateAccuracy, type AccuracySummary } from '@/lib/benchmarks/accuracy';
-import { getGroundTruth } from '@/lib/benchmarks/ground-truth';
+import { GroundTruthDebugger } from '@/components/GroundTruthDebugger';
 import type { ExtractionResult } from '@/utils/aiProcessor';
 
 interface CompareResult {
   filename: string;
-  text: ExtractionResult | null;
-  text_error: string | null;
-  vision: ExtractionResult | null;
-  vision_error: string | null;
-}
-
-interface CompareErrorResponse {
-  error: string;
+  extracted: ExtractionResult | null;
+  extracted_error: string | null;
 }
 
 const ComparePage = () => {
@@ -33,50 +22,22 @@ const ComparePage = () => {
   const [results, setResults] = useState<CompareResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>('');
-  const [accuracySummary, setAccuracySummary] = useState<AccuracySummary | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('comparison');
 
-  // Get available years from results
-  const availableYears = results
-    ? [...new Set([
-        ...Object.keys(results.text?.metrics_by_year ?? {}),
-        ...Object.keys(results.vision?.metrics_by_year ?? {}),
-      ])].sort().reverse()
+  const availableYears = results?.extracted
+    ? Object.keys(results.extracted.metrics_by_year ?? {}).sort().reverse()
     : [];
-
-  // Update accuracy summary when year changes
-  useEffect(() => {
-    if (!results || !selectedYear) {
-      setAccuracySummary(null);
-      return;
-    }
-
-    // getGroundTruth uses partial case-insensitive matching
-    const groundTruth = getGroundTruth(results.filename, selectedYear);
-    if (groundTruth) {
-      const accuracy = calculateAccuracy(
-        groundTruth,
-        results.text?.metrics_by_year?.[selectedYear] ?? null,
-        results.vision?.metrics_by_year?.[selectedYear] ?? null
-      );
-      setAccuracySummary(accuracy);
-    } else {
-      setAccuracySummary(null);
-    }
-  }, [results, selectedYear]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       if (!selectedFile.name.toLowerCase().endsWith('.pdf')) {
-        setError('Only PDF files are supported for comparison');
+        setError('Only PDF files are supported');
         return;
       }
       setFile(selectedFile);
       setError(null);
       setResults(null);
       setSelectedYear('');
-      setAccuracySummary(null);
     }
   };
 
@@ -98,26 +59,17 @@ const ComparePage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorData = data as CompareErrorResponse;
-        throw new Error(errorData.error || 'Comparison failed');
+        throw new Error(data.error || 'Extraction failed');
       }
 
       const resultData = data as CompareResult;
-
       setResults(resultData);
 
-      // Set default year to most recent available
-      const years = new Set([
-        ...Object.keys(resultData.text?.metrics_by_year ?? {}),
-        ...Object.keys(resultData.vision?.metrics_by_year ?? {}),
-      ]);
-      if (years.size > 0) {
-        const sortedYears = [...years].sort().reverse();
-        setSelectedYear(sortedYears[0]);
+      // Set default year to most recent
+      const years = Object.keys(resultData.extracted?.metrics_by_year ?? {}).sort().reverse();
+      if (years.length > 0) {
+        setSelectedYear(years[0]);
       }
-
-      // Navigate to comparison tab after results
-      setActiveTab('comparison');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -125,27 +77,22 @@ const ComparePage = () => {
     }
   }, [file]);
 
-  const hasResults = results && (results.text || results.vision);
+  const currentMetrics =
+    results?.extracted && selectedYear
+      ? results.extracted.metrics_by_year?.[selectedYear] ?? null
+      : null;
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
       <H1 className="text-center text-primary mb-8">
-        <GitCompare className="inline-block mr-2 h-8 w-8" />
-        Text vs Vision Comparison
+        <Bug className="inline-block mr-2 h-8 w-8" />
+        Extraction Debugger
       </H1>
-
-      <Alert variant="default" className="mb-6">
-        <AlertTitle>Pipeline Comparison</AlertTitle>
-        <AlertDescription>
-          Upload a PDF to compare text extraction (GPT-4 Turbo) vs vision extraction (Claude Sonnet 4).
-          See side-by-side results, accuracy against ground truth, and cost comparison.
-        </AlertDescription>
-      </Alert>
 
       {/* Upload Section */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Upload PDF for Comparison</CardTitle>
+          <CardTitle>Upload PDF for Extraction</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
@@ -175,7 +122,7 @@ const ComparePage = () => {
               ) : (
                 <>
                   <Upload className="mr-2 h-4 w-4" />
-                  Compare
+                  Extract
                 </>
               )}
             </Button>
@@ -191,7 +138,7 @@ const ComparePage = () => {
             <Alert variant="default">
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
               <AlertDescription>
-                Running both text and vision extractions... This may take 2-3 minutes.
+                Running text extraction... This may take 1-2 minutes.
               </AlertDescription>
             </Alert>
           )}
@@ -205,24 +152,14 @@ const ComparePage = () => {
 
           {results && (
             <div className="flex flex-wrap gap-2 text-sm">
-              {results.text && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  Text: {Object.keys(results.text.metrics_by_year ?? {}).length} year(s)
+              {results.extracted && (
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded dark:bg-blue-900/30 dark:text-blue-400">
+                  Extracted: {Object.keys(results.extracted.metrics_by_year ?? {}).length} year(s)
                 </span>
               )}
-              {results.text_error && (
-                <span className="bg-red-100 text-red-800 px-2 py-1 rounded">
-                  Text error: {results.text_error}
-                </span>
-              )}
-              {results.vision && (
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-                  Vision: {Object.keys(results.vision.metrics_by_year ?? {}).length} year(s)
-                </span>
-              )}
-              {results.vision_error && (
-                <span className="bg-red-100 text-red-800 px-2 py-1 rounded">
-                  Vision error: {results.vision_error}
+              {results.extracted_error && (
+                <span className="bg-red-100 text-red-800 px-2 py-1 rounded dark:bg-red-900/30 dark:text-red-400">
+                  Error: {results.extracted_error}
                 </span>
               )}
             </div>
@@ -230,67 +167,32 @@ const ComparePage = () => {
         </CardContent>
       </Card>
 
-      {/* Results Section */}
-      {hasResults && (
+      {/* Year Selector + Debugger */}
+      {results?.extracted && availableYears.length > 0 && (
         <div className="space-y-4">
-          {/* Year Selector */}
-          {availableYears.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Fiscal Year:</span>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableYears.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Fiscal Year:</span>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedYear && (
+            <GroundTruthDebugger
+              filename={results.filename}
+              metrics={currentMetrics}
+              selectedYear={selectedYear}
+            />
           )}
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="comparison">Side-by-Side</TabsTrigger>
-              <TabsTrigger value="accuracy">Accuracy</TabsTrigger>
-              <TabsTrigger value="cost">Cost</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="comparison">
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>
-                    Metric Comparison {selectedYear && `(${selectedYear})`}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {selectedYear ? (
-                    <ComparisonTable
-                      textMetrics={results.text?.metrics_by_year ?? null}
-                      visionMetrics={results.vision?.metrics_by_year ?? null}
-                      selectedYear={selectedYear}
-                    />
-                  ) : (
-                    <p className="text-muted-foreground">Select a fiscal year to view comparison.</p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="accuracy">
-              <AccuracyReport summary={accuracySummary} />
-            </TabsContent>
-
-            <TabsContent value="cost">
-              <CostReport
-                textUsage={results.text?.token_usage ?? null}
-                visionUsage={results.vision?.token_usage ?? null}
-              />
-            </TabsContent>
-          </Tabs>
         </div>
       )}
     </div>

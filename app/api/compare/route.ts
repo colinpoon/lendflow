@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractFinancialData } from '@/utils/aiProcessor';
-import { extractVisionData } from '@/utils/visionProcessor';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 
-// Vercel timeout: 5 minutes for running both extractions
-export const maxDuration = 300;
+export const maxDuration = 150;
 
-// Maximum file size: 50MB (reasonable for financial PDFs)
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
@@ -26,7 +23,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate file size
     if (file.size > MAX_FILE_SIZE_BYTES) {
       return NextResponse.json(
         { error: 'File too large. Maximum size is 50MB.' },
@@ -34,15 +30,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Only support PDF for vision comparison
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       return NextResponse.json(
-        { error: 'Only PDF files are supported for comparison' },
+        { error: 'Only PDF files are supported' },
         { status: 400 }
       );
     }
 
-    // Write to temp file (text extraction needs file path)
     const tempDir = join(tmpdir(), 'lendflow-compare');
     await mkdir(tempDir, { recursive: true });
     tempFilePath = join(tempDir, `${randomUUID()}.pdf`);
@@ -51,31 +45,31 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
     await writeFile(tempFilePath, buffer);
 
-    // Run both extractions concurrently
-    const [textResult, visionResult] = await Promise.allSettled([
-      extractFinancialData(tempFilePath),
-      extractVisionData(buffer),
-    ]);
-
-    return NextResponse.json({
-      filename: file.name,
-      text: textResult.status === 'fulfilled' ? textResult.value : null,
-      text_error: textResult.status === 'rejected' ? textResult.reason?.message : null,
-      vision: visionResult.status === 'fulfilled' ? visionResult.value : null,
-      vision_error: visionResult.status === 'rejected' ? visionResult.reason?.message : null,
-    });
+    try {
+      const extracted = await extractFinancialData(tempFilePath);
+      return NextResponse.json({
+        filename: file.name,
+        extracted,
+        extracted_error: null,
+      });
+    } catch (extractionError) {
+      return NextResponse.json({
+        filename: file.name,
+        extracted: null,
+        extracted_error:
+          extractionError instanceof Error
+            ? extractionError.message
+            : 'Extraction failed',
+      });
+    }
   } catch (error) {
-    console.error('Comparison error:', error);
-    // Sanitize error message to avoid exposing internal details
-    const errorMessage = error instanceof Error
-      ? error.message.replace(/\/[^\s]+/g, '[path]') // Remove file paths
-      : 'An unexpected error occurred during comparison';
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    console.error('Compare API error:', error);
+    const errorMessage =
+      error instanceof Error
+        ? error.message.replace(/\/[^\s]+/g, '[path]')
+        : 'An unexpected error occurred';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   } finally {
-    // Clean up temp file
     if (tempFilePath) {
       try {
         await unlink(tempFilePath);
