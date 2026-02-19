@@ -132,8 +132,8 @@ export interface MetricConflict {
   variancePercent: number;
 }
 
-/** Metric value - can be number, null, or nested object */
-type MetricValue = number | null | Record<string, number | null>;
+/** Metric value - can be number, null, or nested object (nested objects may contain strings, e.g. senior_debt_interest_rate) */
+type MetricValue = number | null | Record<string, number | string | null>;
 
 /** Year metrics - a record of metric names to values */
 type YearMetrics = Record<string, MetricValue>;
@@ -582,8 +582,12 @@ export function mergeExtractionsWithConflicts(
   };
 }
 
-/** Nested metric object type */
-type NestedMetrics = Record<string, number | null>;
+/**
+ * Nested metric object type.
+ * Includes string to accommodate fields such as senior_debt_interest_rate
+ * (e.g. "prime + 2%", "8%") which are intentionally returned as strings by the AI.
+ */
+type NestedMetrics = Record<string, number | string | null>;
 
 /**
  * Merge nested objects (debt_components, fixed_charges, adjusted_ebitda_components)
@@ -674,6 +678,9 @@ export function validateArithmeticConsistency(
     const da = metrics.depreciation_amortization as number | null;
     const ebitda = metrics.ebitda as number | null;
 
+    // NOTE: With the current extraction prompt, ebitda is always null from AI.
+    // EBITDA is calculated deterministically in computeMetrics() from net_income + interest + taxes + D&A.
+    // This block would activate if a future prompt change re-enables AI EBITDA extraction.
     // Only validate if we have all components
     if (netIncome != null && interest != null && taxes != null && da != null && ebitda != null) {
       const calculatedEbitda = netIncome + interest + taxes + da;
@@ -811,6 +818,11 @@ export function normalizeScaleMismatch(
  * - If EBITDA margin < 0.1%, something is wrong with scale
  * - If net income > corrected revenue, ALL metrics are wrong (not just revenue)
  *
+ * TODO: extraction_metadata.detected_scale (reported by the AI per chunk) is currently
+ * not consumed here. Incorporating it could improve accuracy by letting the AI's own
+ * scale assessment (e.g. "thousands", "millions") act as a first-pass filter before
+ * the heuristic magnitude checks below run.
+ *
  * @param metrics - Metrics by year
  * @returns Corrected metrics with corrections log
  */
@@ -822,7 +834,6 @@ export function validateCrossMetricScale(
 
   for (const [year, yearData] of Object.entries(corrected)) {
     const revenue = yearData.revenue as number | null | undefined;
-    const ebitda = yearData.ebitda as number | null | undefined;
     const netIncome = yearData.net_income as number | null | undefined;
 
     if (typeof revenue !== 'number' || revenue <= 0) continue;
@@ -853,7 +864,7 @@ export function validateCrossMetricScale(
           if (nestedObj && typeof nestedObj === 'object') {
             for (const [key, val] of Object.entries(nestedObj as Record<string, unknown>)) {
               if (typeof val === 'number' && val !== 0) {
-                (nestedObj as Record<string, number>)[key] = val / SCALE_VALIDATION.SCALE_FACTOR;
+                (nestedObj as Record<string, unknown>)[key] = val / SCALE_VALIDATION.SCALE_FACTOR;
                 correctedCount++;
               }
             }
@@ -869,17 +880,34 @@ export function validateCrossMetricScale(
 
     // ─────────────────────────────────────────────────────────────────────────
     // CHECK 2: EBITDA Margin Check
-    // If EBITDA margin is impossibly low, Revenue may be at wrong scale
+    // If EBITDA margin is impossibly low, Revenue may be at wrong scale.
+    //
+    // NOTE: yearData.ebitda is always null with the current extraction prompt —
+    // EBITDA is computed deterministically in computeMetrics() from components.
+    // We therefore build a proxy EBITDA from those same components so that this
+    // scale check remains active regardless of whether the AI extracts ebitda.
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Check EBITDA margin if EBITDA is available
-    if (typeof ebitda === 'number' && ebitda > 0) {
-      const ebitdaMargin = ebitda / revenue;
+    // Build proxy EBITDA from components — matches calculateEBITDA null-handling:
+    // net_income and D&A are required; interest and taxes default to 0 when missing.
+    const interestRaw = yearData.interest as number | null | undefined;
+    const taxesRaw = yearData.taxes as number | null | undefined;
+    const daRaw = yearData.depreciation_amortization as number | null | undefined;
+
+    const proxyEbitda =
+      typeof netIncome === 'number' && typeof daRaw === 'number'
+        ? netIncome + (typeof interestRaw === 'number' ? interestRaw : 0) +
+          (typeof taxesRaw === 'number' ? taxesRaw : 0) + daRaw
+        : null;
+
+    // Check EBITDA margin if a proxy is available
+    if (typeof proxyEbitda === 'number' && proxyEbitda > 0) {
+      const ebitdaMargin = proxyEbitda / revenue;
 
       // If EBITDA margin < threshold, we have a scale mismatch
       if (ebitdaMargin < SCALE_VALIDATION.MIN_EBITDA_MARGIN) {
         const correctedRevenue = revenue / SCALE_VALIDATION.SCALE_FACTOR;
-        const correctedMargin = ebitda / correctedRevenue;
+        const correctedMargin = proxyEbitda / correctedRevenue;
 
         // Only proceed if the corrected margin is reasonable
         if (

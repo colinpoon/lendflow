@@ -255,7 +255,10 @@ export function validateBusinessLogic(
       });
     }
 
-    // Profit margin should be between -1 and 1 (decimal format: 0.15 = 15%)
+    // Profit margin should be between -1 and 1 (decimal format: 0.15 = 15%).
+    // The extraction prompt explicitly instructs "output as decimal (0.15 for 15%)".
+    // We do NOT auto-coerce percentage values because values like -1.5 (legitimate -150%
+    // margin for distressed companies) are indistinguishable from percentage-format input.
     if (
       metrics.profit_margins != null &&
       (metrics.profit_margins < -1 || metrics.profit_margins > 1)

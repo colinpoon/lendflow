@@ -2,7 +2,7 @@
  * Cost Calculation Utilities
  *
  * Provides pricing constants and cost calculation functions for both
- * vision (Claude) and text (OpenAI) extraction pipelines.
+ * vision and text extraction pipelines (both use Claude).
  *
  * Used by:
  * - COST-01: Token usage logging
@@ -11,21 +11,20 @@
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pricing Constants (as of 2026-02)
+// https://www.anthropic.com/pricing
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Claude Sonnet 4 (claude-sonnet-4-20250514) - Vision Pipeline
- * https://www.anthropic.com/pricing
  */
 export const VISION_COST_PER_M_INPUT = 3.0; // USD per million input tokens
 export const VISION_COST_PER_M_OUTPUT = 15.0; // USD per million output tokens
 
 /**
- * GPT-4 Turbo (gpt-4-turbo-2024-04-09) - Text Pipeline
- * https://openai.com/pricing
+ * Claude Sonnet 4 (claude-sonnet-4-20250514) - Text Pipeline
  */
-export const TEXT_COST_PER_M_INPUT = 10.0; // USD per million input tokens
-export const TEXT_COST_PER_M_OUTPUT = 30.0; // USD per million output tokens
+export const TEXT_COST_PER_M_INPUT = 3.0; // USD per million input tokens
+export const TEXT_COST_PER_M_OUTPUT = 15.0; // USD per million output tokens
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -81,7 +80,7 @@ export function calculateVisionCost(usage: TokenUsage): CostBreakdown {
 }
 
 /**
- * Calculate cost for text pipeline (GPT-4 Turbo)
+ * Calculate cost for text pipeline (Claude Sonnet 4)
  *
  * @param usage - Token usage from text extraction
  * @returns Detailed cost breakdown in USD
