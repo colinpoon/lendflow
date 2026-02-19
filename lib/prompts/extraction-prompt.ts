@@ -280,7 +280,8 @@ INCOME STATEMENT FIELDS - CRITICAL:
   - For statements with subtotals only: sum "Direct expenses" + "General and administrative expenses" (or equivalent cost groupings) to get a total
   - This represents all costs incurred to generate revenue, EXCLUDING finance costs (interest) and income tax
   - Extract as POSITIVE number — expenses should never be negative
-  - If no clean total is available and component lines cannot be reliably summed, extract null rather than guess
+  - If no single total line exists, sum available expense components (e.g., Direct expenses + G&A) and set _confidence.expenses to "low"
+  - Only extract null if the document contains no income statement, no cost-of-sales section, and no expense line items. Do NOT derive expenses from balance sheet liabilities or cash flow movements alone
 
 • "profit_margins": Net profit margin as a decimal (e.g., 0.15 for 15%). Calculate as net_income ÷ revenue.
   - Only populate if both net_income and revenue are successfully extracted
@@ -345,8 +346,9 @@ SHAREHOLDERS' EQUITY (CRITICAL FOR LEVERAGE RATIOS):
 Extract from Balance Sheet equity section. Used in Total Debt/Total Capital and Debt-to-Equity calculations.
 
 • shareholders_equity: Total equity attributable to owners from the Balance Sheet. Look for:
-  - "Total shareholders' equity" / "Total equity" / "Total stockholders' equity"
-  - "Owners' equity" / "Net assets" / "Total shareholders' funds" / "Partners' capital"
+  - "Owner's equity" / "Capital account" / "Member's equity" / "Partners' capital" (sole props, partnerships, LLCs)
+  - "Total shareholders' equity" / "Total equity" / "Total stockholders' equity" (corporations)
+  - "Owners' equity" / "Net assets" / "Total shareholders' funds"
   - "Equity attributable to equity holders of the parent" (IFRS consolidated statements)
   - Use the TOTAL equity figure (common stock + retained earnings + AOCI + other equity components)
   - For consolidated statements with non-controlling interests: use equity attributable to the PARENT, not total equity including NCI — unless only a combined total is available
