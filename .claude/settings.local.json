@@ -18,7 +18,13 @@
       "Skill(gsd:new-milestone)",
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: define milestone v1.0 requirements\n\n11 requirements across 4 categories:\n- Infrastructure \\(3\\): PDF-to-image, Claude Vision API, tool calling\n- Extraction \\(3\\): Vision processing, metrics schema, multi-page\n- Validation \\(3\\): Side-by-side UI, benchmarks, accuracy metrics\n- Cost Tracking \\(2\\): Token logging, cost comparison\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs\\(01-03\\): complete Vision Extractor Pipeline plan\n\nTasks completed: 3/3\n- Create vision extractor pipeline\n- Create test script for end-to-end verification\n- Verify extraction results quality \\(checkpoint approved\\)\n\nPhase 01 Infrastructure Setup is now COMPLETE.\n\nSUMMARY: .planning/phases/01-infrastructure-setup/01-03-SUMMARY.md\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs\\(01-03\\): complete Vision Extractor Pipeline plan\n\nTasks completed: 3/3\n- Create vision extractor pipeline\n- Create test script for end-to-end verification\n- Verify extraction results quality \\(checkpoint approved\\)\n\nPhase 01 Infrastructure Setup is now COMPLETE.\n\nSUMMARY: .planning/phases/01-infrastructure-setup/01-03-SUMMARY.md\nEOF\n\\)\")",
+      "Bash(python3:*)",
+      "Bash(pdftotext:*)",
+      "Bash(git -C /Users/colinpoon/Dev/lendflow log --oneline data-extraction ^main)",
+      "Bash(brew install:*)",
+      "Bash(pdftoppm:*)",
+      "Bash(brew list:*)"
     ]
   }
 }
