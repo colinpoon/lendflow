@@ -188,10 +188,11 @@ const sections: SectionConfig[] = [
     title: 'Depreciation Breakdown',
     collapsible: true,
     rows: [
-      { key: 'depreciation_equipment', label: 'Equipment Depreciation', indent: true },
-      { key: 'depreciation_rou', label: 'ROU Asset Depreciation', indent: true },
+      { key: 'depreciation_equipment', label: 'Depreciation of Property & Equipment', indent: true },
+      { key: 'depreciation_rou', label: 'ROU Asset Depreciation (IFRS 16)', indent: true },
       { key: 'depreciation_other', label: 'Other Depreciation', indent: true },
       { key: 'amortization_intangibles', label: 'Amortization of Intangibles', indent: true },
+      { key: 'depreciation_amortization', label: '= Total D&A', highlight: true },
     ],
   },
   {
