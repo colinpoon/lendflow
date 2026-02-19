@@ -254,14 +254,14 @@ export function validateBusinessLogic(
       });
     }
 
-    // Profit margin should be between -100% and 100%
+    // Profit margin should be between -1 and 1 (decimal format: 0.15 = 15%)
     if (
       metrics.profit_margins != null &&
-      (metrics.profit_margins < -100 || metrics.profit_margins > 100)
+      (metrics.profit_margins < -1 || metrics.profit_margins > 1)
     ) {
       errors.push({
         path: `metrics_by_year.${year}.profit_margins`,
-        message: `Profit margin (${metrics.profit_margins}%) is outside expected range (-100% to 100%).`,
+        message: `Profit margin (${(metrics.profit_margins * 100).toFixed(1)}%) is outside expected range (-100% to 100%).`,
         code: 'business_logic',
         value: metrics.profit_margins,
       });

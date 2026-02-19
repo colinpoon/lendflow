@@ -242,12 +242,51 @@ RULES
 • For EBITDA calculation: ebitda = net_income + interest + taxes + depreciation_amortization
 
 INCOME STATEMENT FIELDS - CRITICAL:
+• "revenue": Total revenue or net sales from the top of the Income Statement. Look for:
+  - "Revenue" / "Net revenue" / "Total revenue" / "Net sales" / "Total net sales"
+  - "Sales" / "Service revenue" / "Operating revenue" / "Turnover" / "Total income"
+  - Prefer NET revenue (after returns, allowances, and discounts) over gross revenue when both are shown
+  - This is the top-line figure on the Income Statement — it should be the largest positive number
+  - Extract as POSITIVE number
+  - Do NOT confuse with "Other income", "Interest income", or "Total comprehensive income"
+
 • "interest": Extract TOTAL finance costs/interest expense from Income Statement. Look for:
   - "Finance costs" (IFRS) or "Interest expense" (US GAAP)
   - This is the TOTAL interest for the period, including interest on debt, leases, and notes
   - For Zedcor-style statements: look under "Other (income) expenses" section for "Finance costs"
   - Extract as POSITIVE number (e.g., Finance costs of 1,621 → extract 1,621)
-• "taxes": Current tax expense from Income Statement (may be zero or a recovery)
+• "taxes": TOTAL income tax expense from the Income Statement (current + deferred combined). Look for:
+  - "Income tax expense" / "Provision for income taxes" / "Tax expense" / "Income taxes"
+  - "Income tax recovery" / "Income tax benefit" — these are NEGATIVE (a recovery reduces EBITDA addback)
+  - IMPORTANT: Extract the TOTAL tax line (current + deferred combined), NOT just current tax. Net income is reduced by the full tax charge, so the EBITDA formula must add back the full amount: ebitda = net_income + interest + taxes + D&A
+  - If the statement shows current and deferred tax separately with no combined total, SUM them
+  - Extract as a signed number: tax expense is positive, tax recovery/benefit is negative
+  - May be zero for loss-making companies or those with tax credits
+
+• "net_income": The bottom-line profit or loss for the period from the Income Statement. Look for:
+  - "Net income" / "Net loss" / "Net earnings" / "Net earnings (loss)"
+  - "Profit for the year" / "Profit (loss) for the year" / "Loss for the year" (IFRS)
+  - "Net income (loss)" / "Net profit" / "Net loss for the period"
+  - "Profit attributable to equity holders" — use the TOTAL net income line, not the non-controlling interests split
+  - Do NOT use "Comprehensive income" or "Total comprehensive income" — prefer the pre-OCI bottom line
+  - Do NOT confuse with "Operating income", "Gross profit", or "Income before taxes" — those are different line items
+  - Extract as a signed number: profit is positive, loss is negative (e.g., a net loss of $1,200 → extract -1200)
+  - This is required for EBITDA calculation: ebitda = net_income + interest + taxes + depreciation_amortization
+
+• "expenses": Total operating expenses for the period from the Income Statement. Look for:
+  - "Total expenses" / "Total operating expenses" / "Total costs and expenses"
+  - "Cost of revenues" + "Operating expenses" summed together if no single total line exists
+  - "Total costs" / "Operating costs" / "Total cost of sales and operating expenses"
+  - For statements with subtotals only: sum "Direct expenses" + "General and administrative expenses" (or equivalent cost groupings) to get a total
+  - This represents all costs incurred to generate revenue, EXCLUDING finance costs (interest) and income tax
+  - Extract as POSITIVE number — expenses should never be negative
+  - If no clean total is available and component lines cannot be reliably summed, extract null rather than guess
+
+• "profit_margins": Net profit margin as a decimal (e.g., 0.15 for 15%). Calculate as net_income ÷ revenue.
+  - Only populate if both net_income and revenue are successfully extracted
+  - A net loss produces a negative margin (e.g., net_income -500 / revenue 10,000 = -0.05)
+  - If either net_income or revenue is null, output null
+  - This is a RATIO, not a currency amount — do NOT apply scale normalization to this field
 
 DEBT EXTRACTION - CRITICAL FOR ACCURACY:
 Extract all debt components from the Balance Sheet liabilities section:
@@ -302,6 +341,19 @@ Extract from Balance Sheet for Current Ratio calculation:
   - Sum of: accounts payable, accrued liabilities, current portion of debt, current portion of lease liabilities, other current liabilities
   - Extract as POSITIVE number
 
+SHAREHOLDERS' EQUITY (CRITICAL FOR LEVERAGE RATIOS):
+Extract from Balance Sheet equity section. Used in Total Debt/Total Capital and Debt-to-Equity calculations.
+
+• shareholders_equity: Total equity attributable to owners from the Balance Sheet. Look for:
+  - "Total shareholders' equity" / "Total equity" / "Total stockholders' equity"
+  - "Owners' equity" / "Net assets" / "Total shareholders' funds" / "Partners' capital"
+  - "Equity attributable to equity holders of the parent" (IFRS consolidated statements)
+  - Use the TOTAL equity figure (common stock + retained earnings + AOCI + other equity components)
+  - For consolidated statements with non-controlling interests: use equity attributable to the PARENT, not total equity including NCI — unless only a combined total is available
+  - Can be NEGATIVE for companies with accumulated losses exceeding contributed capital (equity deficiency) — extract as negative number
+  - Do NOT confuse with "Total liabilities and equity" — that includes liabilities
+  - Do NOT use retained earnings alone — shareholders_equity is the full equity section total
+
 FIXED CHARGES EXTRACTION (CRITICAL FOR FCCR CALCULATION):
 Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES. This is essential for accurate FCCR.
 
@@ -344,8 +396,14 @@ LEASE PAYMENTS (CRITICAL for fixed charge coverage - ANNUAL payments only):
 
 OTHER FIXED CHARGES:
 • principal_payments: From cash flow statement "Repayment of debt" or "Principal repayments".
-• preferred_dividends: Cash dividends paid on preferred shares.
-• other_fixed_charges: Any other recurring fixed obligations.
+• preferred_dividends: Cash dividends paid on PREFERRED shares only — not common dividends. Look for:
+  - "Preferred share dividends" / "Preferred stock dividends" / "Dividends on preferred shares"
+  - "Series A preferred dividends" or similar series-specific labels
+  - Cash Flow Statement under "Financing activities" or in Notes to financial statements
+  - Do NOT include common share dividends (those are captured in distributions_paid)
+  - Extract as POSITIVE number
+  - If no preferred shares exist, output null
+• other_fixed_charges: Any other recurring fixed obligations (e.g., mandatory pension contributions, insurance premiums, equipment rental obligations not classified as leases).
 
 IMPORTANT: For FCCR calculation, we need CASH interest costs. Always try to extract total_interest_expense as it provides the most reliable basis for fixed charge calculations.
 
