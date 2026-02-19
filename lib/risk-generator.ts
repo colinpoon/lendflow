@@ -3,8 +3,6 @@
  * Generates AI-powered risk assessments and debt health evaluations
  */
 
-// Legacy OpenAI import - commented out for Claude migration
-// import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
@@ -20,9 +18,6 @@ import {
   getRiskBand,
 } from './risk-scoring';
 import type { RiskData, DebtHealthAssessment, ComputedMetrics } from '@/types';
-
-// Legacy OpenAI client - commented out for Claude migration
-// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Anthropic Claude client for risk assessment
 const anthropic = new Anthropic();
@@ -85,18 +80,6 @@ export async function generateRiskAssessment(
   console.log('🔍 Generating AI risk assessment...');
 
   try {
-    // Legacy OpenAI call - commented out for Claude migration
-    // const response = await openai.chat.completions.create({
-    //   model: AI_CONFIG.MODEL,
-    //   temperature: AI_CONFIG.TEMPERATURE,
-    //   max_tokens: AI_CONFIG.MAX_TOKENS,
-    //   messages: [
-    //     { role: 'system', content: RISK_ASSESSMENT_PROMPT },
-    //     { role: 'user', content: JSON.stringify(ratiosByYear) },
-    //   ],
-    // });
-
-    // Claude API call for risk assessment
     const response = await anthropic.messages.create({
       model: AI_CONFIG.MODEL,
       max_tokens: AI_CONFIG.MAX_TOKENS,
@@ -165,18 +148,6 @@ export async function generateDebtHealthAssessment(
   );
 
   try {
-    // Legacy OpenAI call - commented out for Claude migration
-    // const response = await openai.chat.completions.create({
-    //   model: AI_CONFIG.MODEL,
-    //   temperature: AI_CONFIG.TEMPERATURE,
-    //   max_tokens: 1500,
-    //   messages: [
-    //     { role: 'system', content: DEBT_HEALTH_PROMPT },
-    //     { role: 'user', content: JSON.stringify({...}) },
-    //   ],
-    // });
-
-    // Claude API call for debt health assessment
     const response = await anthropic.messages.create({
       model: AI_CONFIG.MODEL,
       max_tokens: 1500,
