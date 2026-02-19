@@ -181,7 +181,13 @@ Non-Cash Adjustments (ADD BACK to EBITDA):
 • loss_on_disposal: Sum disposal LOSSES from income statement ONLY when they are genuinely non-recurring and material. Look for "Loss on sale of equipment", "Loss on disposal of right-of-use assets". ONLY include lines where the number is POSITIVE (not in parentheses) — positive means a real loss. Extract as a positive number. Example: "Loss (gain) on sale of equipment 27" + "Loss (gain) on disposal of right-of-use assets 81" = 108. IMPORTANT: If the number is in PARENTHESES like (139), that is a GAIN — do NOT put it here, put it in gain_on_disposal instead. Each line item goes into ONLY ONE field. Never put the same amount in both loss_on_disposal and gain_on_disposal.
   EQUIPMENT-INTENSIVE BUSINESSES: For companies whose core operations involve regularly cycling equipment (e.g., equipment rental, construction, mining, security-tower companies), routine disposal losses are a RECURRING OPERATING COST and should NOT be placed in loss_on_disposal. Only use this field for genuinely non-recurring, material disposal events (e.g., a plant closure, a one-time fleet liquidation). If disposal losses appear every year at similar magnitudes, they are operational — leave loss_on_disposal null.
   NOTE: The calculator does NOT add loss_on_disposal back to EBITDA by design — conservative underwriting treats routine disposal losses as operational. However, populating this field still matters for accurate reporting; it simply will not increase Adjusted EBITDA.
-• other_non_cash: "non-cash expense", "noncash", "straight-line rent", "non-cash interest expense"
+• other_non_cash: Non-cash charges not covered above. Examples: "non-cash rent expense", "straight-line rent adjustment", "asset retirement obligation accretion".
+  IMPORTANT: Do NOT include any of the following in other_non_cash — they are already captured elsewhere:
+  - Accretion of discount on debt/notes payable (already in the top-level "interest" field as part of finance costs)
+  - Depreciation or amortization (already in depreciation_amortization)
+  - Stock-based compensation (has its own dedicated field above)
+  - Impairment charges (has its own dedicated field above)
+  Placing these items in other_non_cash will DOUBLE-COUNT them in Adjusted EBITDA.
 
 One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
 • restructuring_costs: "restructuring", "reorganization costs"
@@ -259,12 +265,17 @@ INCOME STATEMENT FIELDS - CRITICAL:
   - Extract as POSITIVE number
   - Do NOT confuse with "Other income", "Interest income", or "Total comprehensive income"
 
-• "interest": TOTAL finance costs/interest expense from the Income Statement (accrual basis). Look for:
-  - "Finance costs" (IFRS) or "Interest expense" (US GAAP)
-  - This is the TOTAL interest for the period, including interest on debt, leases, and notes
-  - For Zedcor-style statements: look under "Other (income) expenses" section for "Finance costs"
-  - Extract as POSITIVE number (e.g., Finance costs of 1,621 → extract 1,621)
-  - PURPOSE: Primary interest field used in the EBITDA formula (net_income + interest + taxes + D&A). This is the accrual-basis P&L figure. For cash-basis interest, see cash_interest_paid.
+• "interest": Total finance costs from the income statement. This INCLUDES:
+  - Bank interest and charges
+  - Interest on credit facilities, term loans, revolving credit
+  - Interest and accretion of discount on notes payable / subordinated debt
+  - Interest on finance leases
+  - Accretion expense on asset retirement obligations
+  Look for "Finance costs" (IFRS) or "Interest expense" (US GAAP).
+  For Zedcor-style statements: look under "Other (income) expenses" section for "Finance costs".
+  Extract as POSITIVE number (e.g., Finance costs of 1,621 → extract 1,621).
+  PURPOSE: Primary interest field used in the EBITDA formula (net_income + interest + taxes + D&A). This is the accrual-basis P&L figure. For cash-basis interest, see cash_interest_paid.
+  Do NOT separately extract these sub-components into adjusted_ebitda_components — they are already in this total.
 • "taxes": TOTAL income tax expense from the Income Statement (current + deferred combined). Look for:
   - "Income tax expense" / "Provision for income taxes" / "Tax expense" / "Income taxes"
   - "Income tax recovery" / "Income tax benefit" — these are NEGATIVE (a recovery reduces EBITDA addback)
@@ -519,6 +530,7 @@ CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • Look for "Loss (gain) on sale/disposal" line items - positive numbers are LOSSES (loss_on_disposal), numbers in parentheses are GAINS (gain_on_disposal). Each line goes into ONE field only, never both. For equipment-intensive businesses (regular asset cycling), loss_on_disposal should be null unless the event is clearly non-recurring.
 • These adjustments are ESSENTIAL for calculating Adjusted EBITDA accurately.
 • MISCLASSIFICATION CHECK: Before finalising, verify that no income item (parenthesized amount under an "expenses" label, or explicit income line) was accidentally placed in other_one_time_expenses. If it was, move it to other_income_non_operating.
+• DOUBLE-COUNTING CHECK: Before finalizing, verify that no item included in the top-level "interest" field (finance costs) has ALSO been placed in adjusted_ebitda_components.other_non_cash. Common offenders: accretion of discount, non-cash interest expense, amortization of financing fees. If found in both places, REMOVE it from other_non_cash.
 
 • Do not add any keys, explanations, or narrative – JSON object only.
 
