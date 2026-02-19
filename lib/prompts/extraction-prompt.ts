@@ -526,9 +526,15 @@ DEBT SERVICE ITEMS (CRITICAL FOR BANKER'S DSCR COVENANT):
   - This is SEPARATE from bank debt repayment
   - Extract as POSITIVE number
 
-• cash_interest_paid: From CASH FLOW STATEMENT supplementary information. Look for:
-  - "Cash interest paid" or "Interest paid"
-  - This is the ACTUAL CASH paid for interest during the period
+• cash_interest_paid: TOTAL cash interest paid from CASH FLOW STATEMENT supplementary information.
+  CRITICAL: Sum ALL interest paid lines — do NOT extract only one component. Look for:
+  - "Interest paid" (single combined line) — use this directly
+  - OR sum separate lines: "Interest paid on bank indebtedness" + "Interest paid on lease liabilities"
+  - OR "Cash interest paid" + "Interest on lease obligations"
+  - The result must reflect TOTAL interest paid on ALL obligations (bank debt + leases + other)
+  - VALIDATION: Compare against income statement "Finance costs" or "Interest expense" — cash_interest_paid
+    should be in the same ballpark. If cash_interest_paid is less than half of the P&L interest figure,
+    you likely missed a component (e.g., extracted lease interest only, missing bank interest).
   - Extract as POSITIVE number
 
 • non_cash_interest_expense: Non-cash finance costs from CASH FLOW STATEMENT. Look for:

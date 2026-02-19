@@ -6,7 +6,7 @@
  *
  * Priority chains:
  *   Principal: debt_components.bank_debt_current > repayment_of_debt > ttm_principal_payments
- *   Interest:  cash_interest_paid > ttm_interest_expense > interest (accrual)
+ *   Interest:  cash_interest_paid (cross-checked vs accrual) > total_interest_expense > ttm_interest_expense > interest (accrual)
  *   Leases:    fixed_charges.finance_lease_payments > debt_components.lease_liabilities_current > payment_of_lease_liability
  */
 
@@ -17,6 +17,7 @@ export type DebtServiceSource =
   | 'repayment_of_debt'
   | 'ttm_principal_payments'
   | 'cash_interest_paid'
+  | 'total_interest_expense'
   | 'ttm_interest_expense'
   | 'interest_accrual'
   | 'finance_lease_payments'
@@ -71,18 +72,53 @@ export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtServi
   }
 
   // ── Interest ───────────────────────────────────────────────────────────
-  // Prefer cash basis interest over accrual.
+  // Prefer cash basis interest, but cross-check against accrual totals.
+  //
+  // Problem this solves: Some financial statements disclose interest paid
+  // as separate lines (e.g., "Interest on bank indebtedness" and "Interest
+  // on lease liabilities"). The AI may extract only one component into
+  // cash_interest_paid, producing an implausibly low figure. When the P&L
+  // total_interest_expense or interest figure is materially larger, prefer
+  // the larger value since the cash figure is likely incomplete.
   let interest = 0;
   let interestSource: DebtServiceSource = 'none';
 
-  if (metrics.cash_interest_paid != null && metrics.cash_interest_paid > 0) {
-    interest = metrics.cash_interest_paid;
+  // Gather all available interest figures
+  const cashInterest = metrics.cash_interest_paid ?? 0;
+  const fcTotalInterest = fc.total_interest_expense ?? 0;
+  const ttmInterest = metrics.ttm_interest_expense ?? 0;
+  const plInterest = metrics.interest ?? 0;
+
+  // Pick the best available figure using priority + cross-check
+  if (cashInterest > 0) {
+    interest = cashInterest;
     interestSource = 'cash_interest_paid';
-  } else if (metrics.ttm_interest_expense != null && metrics.ttm_interest_expense > 0) {
-    interest = metrics.ttm_interest_expense;
+
+    // Cross-check: if an accrual total is materially larger (>1.5x), the
+    // cash figure likely captured only one component (e.g., lease interest
+    // but not bank interest). Prefer the larger accrual figure.
+    //
+    // NOTE: plInterest (P&L finance costs) may include non-cash components
+    // (accretion, amortization of financing fees) that slightly inflate the
+    // denominator. It is retained as a last-resort fallback only. The preferred
+    // signals are fcTotalInterest and ttmInterest which are closer to cash basis.
+    const accrualBest = Math.max(fcTotalInterest, ttmInterest, plInterest);
+    if (accrualBest > cashInterest * 1.5) {
+      interest = accrualBest;
+      interestSource = accrualBest === fcTotalInterest
+        ? 'total_interest_expense'
+        : accrualBest === ttmInterest
+          ? 'ttm_interest_expense'
+          : 'interest_accrual';
+    }
+  } else if (fcTotalInterest > 0) {
+    interest = fcTotalInterest;
+    interestSource = 'total_interest_expense';
+  } else if (ttmInterest > 0) {
+    interest = ttmInterest;
     interestSource = 'ttm_interest_expense';
-  } else if (metrics.interest != null && metrics.interest > 0) {
-    interest = metrics.interest;
+  } else if (plInterest > 0) {
+    interest = plInterest;
     interestSource = 'interest_accrual';
   }
 

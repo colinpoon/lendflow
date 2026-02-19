@@ -514,6 +514,14 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
     result.calculated_adjusted_ebitda = ebitdaResult.calculated_adjusted_ebitda;
     result.adjusted_ebitda_breakdown = ebitdaResult.adjusted_ebitda_breakdown;
 
+    // Write back deduped component values so UI displays post-dedup figures
+    if (result.adjusted_ebitda_components) {
+      result.adjusted_ebitda_components = {
+        ...result.adjusted_ebitda_components,
+        other_non_cash: ebitdaResult.deduped_components.other_non_cash,
+      };
+    }
+
     // Debug logging
     logAdjustedEBITDA(ebitda, ebitdaResult, m);
   } else {
