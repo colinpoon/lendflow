@@ -30,7 +30,7 @@ interface FixedCharges {
   subordinated_debt_interest: number | null;
   lease_interest: number | null;
   total_interest_expense: number | null;
-  senior_debt_interest_rate: number | null;
+  senior_debt_interest_rate: string | null;
   minimum_lease_payments: number | null;
   finance_lease_payments: number | null;
   operating_lease_payments: number | null;
@@ -69,8 +69,11 @@ interface AdjustedEBITDAComponents {
 }
 
 interface FCCRBreakdown {
+  adjusted_ebitda: number;
   unfunded_capex: number;
   capex_deduction: number;
+  cash_taxes_paid: number;
+  distributions_paid: number;
   ttm_principal_payments: number;
   ttm_interest_expense: number;
   lease_payments: number;
@@ -100,6 +103,7 @@ interface YearMetrics {
   depreciation_equipment: number | null;
   depreciation_rou: number | null;
   depreciation_other: number | null;
+  amortization_intangibles: number | null;
   // EBITDA
   ebitda: number | null;
   ebitda_calculated?: boolean;
@@ -127,6 +131,8 @@ interface YearMetrics {
   debt_components: DebtComponents | null;
   fixed_charges: FixedCharges | null;
   adjusted_ebitda_components: AdjustedEBITDAComponents | null;
+  // CFADS
+  cash_flow_for_debt_servicing: number | null;
   // Breakdowns
   fccr_breakdown: FCCRBreakdown | null;
   dscr_breakdown: DSCRBreakdown | null;
@@ -153,7 +159,7 @@ interface FinancialTableProps {
 interface RowConfig {
   key: string;
   label: string;
-  format?: 'currency' | 'ratio' | 'percent' | 'margin' | 'rate';
+  format?: 'currency' | 'ratio' | 'percent' | 'margin' | 'rate' | 'string';
   highlight?: boolean;
   indent?: boolean;
   nested?: string; // path to nested object (e.g., 'debt_components', 'fixed_charges')
@@ -185,6 +191,7 @@ const sections: SectionConfig[] = [
       { key: 'depreciation_equipment', label: 'Equipment Depreciation', indent: true },
       { key: 'depreciation_rou', label: 'ROU Asset Depreciation', indent: true },
       { key: 'depreciation_other', label: 'Other Depreciation', indent: true },
+      { key: 'amortization_intangibles', label: 'Amortization of Intangibles', indent: true },
     ],
   },
   {
@@ -192,6 +199,7 @@ const sections: SectionConfig[] = [
     rows: [
       { key: 'ebitda', label: 'EBITDA', highlight: true },
       { key: 'adjusted_ebitda', label: 'Adjusted EBITDA', highlight: true },
+      { key: 'cash_flow_for_debt_servicing', label: 'CFADS', highlight: true },
     ],
   },
   {
@@ -258,7 +266,7 @@ const sections: SectionConfig[] = [
       { key: 'subordinated_debt_interest', label: 'Subordinated Debt Interest', nested: 'fixed_charges', indent: true },
       { key: 'lease_interest', label: 'Lease Interest', nested: 'fixed_charges', indent: true },
       { key: 'total_interest_expense', label: 'Total Interest Expense', nested: 'fixed_charges', indent: true },
-      { key: 'senior_debt_interest_rate', label: 'Senior Debt Interest Rate', nested: 'fixed_charges', format: 'rate', indent: true },
+      { key: 'senior_debt_interest_rate', label: 'Senior Debt Interest Rate', nested: 'fixed_charges', format: 'string', indent: true },
       { key: 'minimum_lease_payments', label: 'Minimum Lease Payments', nested: 'fixed_charges', indent: true },
       { key: 'finance_lease_payments', label: 'Finance Lease Payments', nested: 'fixed_charges', indent: true },
       { key: 'operating_lease_payments', label: 'Operating Lease Payments', nested: 'fixed_charges', indent: true },
@@ -315,7 +323,7 @@ const getMetricValue = (
   if (nested) {
     const nestedObj = metrics[nested as keyof YearMetrics];
     if (!nestedObj || typeof nestedObj !== 'object') return null;
-    const value = (nestedObj as Record<string, unknown>)[key];
+    const value = (nestedObj as unknown as Record<string, unknown>)[key];
     if (value === null || value === undefined) return null;
     return typeof value === 'number' ? value : null;
   }
@@ -398,7 +406,8 @@ const getRatioColor = (key: string, value: number | null): string => {
 const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(
     new Set(['Depreciation Breakdown', 'Debt Components - Senior', 'Debt Components - Leases',
-             'Debt Components - Subordinated', 'Fixed Charges', 'Adjusted EBITDA Components'])
+             'Debt Components - Subordinated', 'Fixed Charges', 'Adjusted EBITDA Components',
+             'CFADS Components'])
   );
 
   if (
@@ -429,7 +438,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   const getFccrBreakdownValue = (year: string, key: string): number | null => {
     const breakdown = data.metrics_by_year[year]?.fccr_breakdown;
     if (!breakdown) return null;
-    const value = (breakdown as Record<string, number>)[key];
+    const value = (breakdown as unknown as Record<string, number>)[key];
     return typeof value === 'number' ? value : null;
   };
 
@@ -439,7 +448,17 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   // Check if section has any data
   const sectionHasData = (section: SectionConfig): boolean => {
     return section.rows.some(row =>
-      years.some(y => getMetricValue(data.metrics_by_year[y], row.key, row.nested) !== null)
+      years.some(y => {
+        if (row.format === 'string') {
+          const metrics = data.metrics_by_year[y];
+          const nestedObj = row.nested ? metrics[row.nested as keyof typeof metrics] : null;
+          const rawVal = nestedObj && typeof nestedObj === 'object'
+            ? (nestedObj as unknown as Record<string, unknown>)[row.key]
+            : metrics[row.key as keyof typeof metrics];
+          return typeof rawVal === 'string';
+        }
+        return getMetricValue(data.metrics_by_year[y], row.key, row.nested) !== null;
+      })
     );
   };
 
@@ -509,6 +528,19 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                         {row.label}
                       </td>
                       {years.map((y) => {
+                        // String fields (e.g., interest rate) bypass numeric getMetricValue
+                        if (row.format === 'string') {
+                          const metrics = data.metrics_by_year[y];
+                          const nestedObj = row.nested ? metrics[row.nested as keyof typeof metrics] : null;
+                          const rawVal = nestedObj && typeof nestedObj === 'object'
+                            ? (nestedObj as unknown as Record<string, unknown>)[row.key]
+                            : metrics[row.key as keyof typeof metrics];
+                          return (
+                            <td key={y} className={`py-2 px-4 text-right ${row.indent ? '' : ''}`}>
+                              {typeof rawVal === 'string' ? rawVal : '—'}
+                            </td>
+                          );
+                        }
                         const val = getMetricValue(data.metrics_by_year[y], row.key, row.nested);
                         const colorClass = row.format === 'ratio' || row.format === 'percent'
                           ? getRatioColor(row.key, val)
@@ -530,6 +562,77 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               </React.Fragment>
             );
           })}
+
+          {/* CFADS Components Section */}
+          {hasFccrBreakdown && (
+            <>
+              <tr
+                className="bg-gray-50 cursor-pointer hover:bg-gray-100"
+                onClick={() => toggleSection('CFADS Components')}
+              >
+                <td
+                  colSpan={years.length + 1}
+                  className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-wide border-t border-gray-200"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400">
+                      {collapsedSections.has('CFADS Components') ? '▶' : '▼'}
+                    </span>
+                    CFADS Components
+                  </div>
+                </td>
+              </tr>
+              {!collapsedSections.has('CFADS Components') && (
+                <>
+                  {/* Adjusted EBITDA — starting point */}
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-4 pl-8 text-gray-600">Adjusted EBITDA</td>
+                    {years.map((y) => (
+                      <td key={y} className="py-2 px-4 text-right text-gray-600">
+                        {formatValue(getFccrBreakdownValue(y, 'adjusted_ebitda'), 'currency')}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* Less: Unfunded CapEx */}
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-4 pl-8 text-gray-600">Less: Unfunded CapEx</td>
+                    {years.map((y) => (
+                      <td key={y} className="py-2 px-4 text-right text-gray-600">
+                        {formatValue(getFccrBreakdownValue(y, 'unfunded_capex'), 'currency')}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* Less: Cash Taxes Paid */}
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-4 pl-8 text-gray-600">Less: Cash Taxes Paid</td>
+                    {years.map((y) => (
+                      <td key={y} className="py-2 px-4 text-right text-gray-600">
+                        {formatValue(getFccrBreakdownValue(y, 'cash_taxes_paid'), 'currency')}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* Less: Distributions Paid */}
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-4 pl-8 text-gray-600">Less: Distributions Paid</td>
+                    {years.map((y) => (
+                      <td key={y} className="py-2 px-4 text-right text-gray-600">
+                        {formatValue(getFccrBreakdownValue(y, 'distributions_paid'), 'currency')}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* = CFADS (result) */}
+                  <tr className="border-b border-gray-100 hover:bg-gray-50 bg-blue-50/50">
+                    <td className="py-2 px-4 pl-8 font-medium">= CFADS</td>
+                    {years.map((y) => (
+                      <td key={y} className="py-2 px-4 text-right font-medium">
+                        {formatValue(getFccrBreakdownValue(y, 'numerator'), 'currency')}
+                      </td>
+                    ))}
+                  </tr>
+                </>
+              )}
+            </>
+          )}
 
           {/* FCCR Components Section */}
           {hasFccrBreakdown && (

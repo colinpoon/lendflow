@@ -8,7 +8,7 @@ import { YearConflictDialog } from '@/components/YearConflictDialog';
 import type { YearConflict, ConflictResolution } from '@/lib/extraction-utils';
 
 interface FileUploadProps {
-  onDataExtracted: (data: any) => void;
+  onDataExtracted: (data: Record<string, unknown>) => void;
   onUploadStart?: () => void;
   projectId?: string;
 }
@@ -61,7 +61,8 @@ async function compressPDF(file: File): Promise<File> {
       addDefaultPage: false,
     });
 
-    const compressedBlob = new Blob([compressedBytes], { type: 'application/pdf' });
+    // Convert Uint8Array to ArrayBuffer for Blob compatibility
+    const compressedBlob = new Blob([new Uint8Array(compressedBytes)], { type: 'application/pdf' });
     const compressedFile = new File([compressedBlob], file.name, { type: 'application/pdf' });
 
     console.log(`📄 PDF compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
@@ -238,8 +239,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
           }
         }
       }
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name !== 'AbortError') {
         setStage('error');
         alert(error.message);
       }
@@ -285,9 +286,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
       setPendingDocumentId(null);
       setStage('complete');
       onDataExtracted(result.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setStage('error');
-      alert(error.message || 'Failed to resolve conflicts');
+      alert(error instanceof Error ? error.message : 'Failed to resolve conflicts');
     }
   };
 

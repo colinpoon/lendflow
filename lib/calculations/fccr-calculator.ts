@@ -19,7 +19,6 @@
 import type {
   ExtractedMetrics,
   FCCRBreakdown,
-  CapexTreatmentMode,
   CapexTreatmentConfig,
 } from '@/types';
 

@@ -51,6 +51,8 @@ interface FCCRBreakdown {
 interface DebtBreakdown {
   bank_debt: number;
   lease_liabilities: number;
+  /** Portion of lease_liabilities included in Senior Debt (0 when treatment is 'exclude') */
+  lease_liabilities_in_senior_debt: number;
   notes_payable: number;
   subordinated_debt: number;
   other_non_senior_debt: number;
@@ -1104,17 +1106,16 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 </div>
                               )}
                               {metrics.debt_breakdown
-                                .lease_liabilities > 0 && (
+                                .lease_liabilities_in_senior_debt > 0 && (
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">
-                                    + Lease Liabilities (Current +
-                                    Long-term)
+                                    + Lease Liabilities (IFRS 16)
                                   </span>
                                   <span className="font-medium">
                                     +{' '}
                                     {formatCurrency(
                                       metrics.debt_breakdown
-                                        .lease_liabilities,
+                                        .lease_liabilities_in_senior_debt,
                                     )}
                                   </span>
                                 </div>

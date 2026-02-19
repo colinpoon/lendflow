@@ -28,7 +28,8 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "depreciation_equipment": number|null,
       "depreciation_rou": number|null,
       "depreciation_other": number|null,
-      "ebitda": number|null,
+      "amortization_intangibles": number|null,
+      "ebitda": null,
       "reported_adjusted_ebitda": number|null,
       "shareholders_equity": number|null,
       "capital_expenditures": number|null,
@@ -67,7 +68,7 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
         "subordinated_debt_interest": number|null,
         "lease_interest": number|null,
         "total_interest_expense": number|null,
-        "senior_debt_interest_rate": number|null,
+        "senior_debt_interest_rate": string|null,
         "minimum_lease_payments": number|null,
         "finance_lease_payments": number|null,
         "operating_lease_payments": number|null,
@@ -103,12 +104,63 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
         "foreign_exchange_adjustments": number|null,
         "pro_forma_cost_savings": number|null,
         "pro_forma_synergies": number|null
+      },
+      "_sources": {
+        "<metric_name>": string
+      },
+      "_confidence": {
+        "<metric_name>": "high"|"medium"|"low"
       }
     }
+  },
+  "primary_fiscal_year": "The fiscal year that this document is primarily reporting on (e.g., '2024'). Identify from the document title or cover page (e.g., 'FY2024 Annual Report'). If the title is not present in this chunk, set to null. Comparative/prior-year columns are NOT the primary year.",
+  "extraction_metadata": {
+    "detected_scale": "thousands"|"millions"|"billions"|"raw_dollars"|"unknown",
+    "scale_indicator_found": string|null,
+    "scale_confidence": "high"|"medium"|"low"
   }
 }
 
 • Be flexible in identifying synonyms and alternate phrasing for metrics (e.g. "turnover" = revenue, "retained earnings" may contribute to shareholders_equity, "total liabilities" may indicate total_debt).
+
+SOURCE TRACKING (REQUIRED FOR CONFLICT RESOLUTION):
+For each metric you extract, record in _sources the exact document section where you found it. This enables accurate conflict resolution when multiple document sections report different values.
+
+• _sources: A mapping of metric names to their source location. Use descriptive strings like:
+  - "Income Statement, Revenue line"
+  - "Balance Sheet, Total Liabilities"
+  - "Cash Flow Statement, Operating Activities"
+  - "Note 8: Credit Facilities"
+  - "Note 12: Debt Schedule, Term Loan section"
+  - "MD&A Discussion, EBITDA reconciliation"
+
+• _confidence: A mapping of metric names to confidence levels:
+  - "high": Explicit labeled value found directly (e.g., "Revenue: $1,234,000" clearly labeled)
+  - "medium": Inferred from context or requires interpretation (e.g., summing line items)
+  - "low": Estimated or calculated from incomplete data
+
+Example _sources and _confidence:
+{
+  "_sources": {
+    "revenue": "Income Statement, line 1",
+    "ebitda": "Cash Flow Statement, EBITDA reconciliation",
+    "total_debt": "Note 8: Credit Facilities, summary table"
+  },
+  "_confidence": {
+    "revenue": "high",
+    "ebitda": "medium",
+    "total_debt": "high"
+  }
+}
+
+EXTRACTION METADATA (REQUIRED):
+You MUST populate the extraction_metadata object with scale detection information:
+• detected_scale: The scale you determined the document uses (see SCALE NORMALIZATION section)
+• scale_indicator_found: The exact text you found that indicates the scale (e.g., "(in thousands)" or "All amounts in $000s"). Set to null if no explicit indicator found.
+• scale_confidence:
+  - "high": Explicit scale indicator found in header/footnote
+  - "medium": Inferred from number patterns or document type
+  - "low": Guessing based on magnitude alone
 
 REPORTED ADJUSTED EBITDA
 • IMPORTANT: If the document explicitly reports an "Adjusted EBITDA" figure (common in MD&A, press releases, or capital management sections), extract it directly into "reported_adjusted_ebitda". This takes priority over calculated values.
@@ -126,7 +178,9 @@ Non-Cash Adjustments (ADD BACK to EBITDA):
 • NOTE: bad_debt_provision is a CORE OPERATING EXPENSE - do NOT add it back to EBITDA. It reflects the normal cost of extending credit.
 • unrealized_gains_losses: "unrealized loss", "unrealized gain", "mark-to-market"
 • deferred_compensation: "deferred compensation"
-• loss_on_disposal: Sum ALL disposal LOSSES from income statement: "Loss on sale of equipment", "Loss on disposal of right-of-use assets". ONLY include lines where the number is POSITIVE (not in parentheses) — positive means a real loss. Extract as a positive number. Example: "Loss (gain) on sale of equipment 27" + "Loss (gain) on disposal of right-of-use assets 81" = 108. IMPORTANT: If the number is in PARENTHESES like (139), that is a GAIN — do NOT put it here, put it in gain_on_disposal instead. Each line item goes into ONLY ONE field. Never put the same amount in both loss_on_disposal and gain_on_disposal.
+• loss_on_disposal: Sum disposal LOSSES from income statement ONLY when they are genuinely non-recurring and material. Look for "Loss on sale of equipment", "Loss on disposal of right-of-use assets". ONLY include lines where the number is POSITIVE (not in parentheses) — positive means a real loss. Extract as a positive number. Example: "Loss (gain) on sale of equipment 27" + "Loss (gain) on disposal of right-of-use assets 81" = 108. IMPORTANT: If the number is in PARENTHESES like (139), that is a GAIN — do NOT put it here, put it in gain_on_disposal instead. Each line item goes into ONLY ONE field. Never put the same amount in both loss_on_disposal and gain_on_disposal.
+  EQUIPMENT-INTENSIVE BUSINESSES: For companies whose core operations involve regularly cycling equipment (e.g., equipment rental, construction, mining, security-tower companies), routine disposal losses are a RECURRING OPERATING COST and should NOT be placed in loss_on_disposal. Only use this field for genuinely non-recurring, material disposal events (e.g., a plant closure, a one-time fleet liquidation). If disposal losses appear every year at similar magnitudes, they are operational — leave loss_on_disposal null.
+  NOTE: The calculator does NOT add loss_on_disposal back to EBITDA by design — conservative underwriting treats routine disposal losses as operational. However, populating this field still matters for accurate reporting; it simply will not increase Adjusted EBITDA.
 • other_non_cash: "non-cash expense", "noncash", "straight-line rent", "non-cash interest expense"
 
 One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
@@ -136,12 +190,17 @@ One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
 • legal_settlements: "legal settlement", "litigation expense"
 • professional_fees_one_time: one-time "professional fees", "consulting fees"
 • casualty_losses: "casualty loss", "disaster-related costs"
-• other_one_time_expenses: "one-time expense", "non-recurring expense"
+• other_one_time_expenses: "one-time expense", "non-recurring expense".
+  IMPORTANT: Do NOT use this field for income statement lines whose label contains "(income)" or where the amount is in parentheses — those are income items that belong in other_income_non_operating, NOT here. A line labelled "Other (income) expenses" with a parenthesized amount like (2,159) is NET INCOME of 2,159 — it goes into other_income_non_operating and gets SUBTRACTED from EBITDA.
 
 SUBTRACT from EBITDA (these inflate net income):
 • gain_on_disposal: Sum ALL disposal GAINS. When "Loss (gain) on sale" shows a number in PARENTHESES like (139), that's a GAIN of 139 — extract as positive 139. Sum all such gains. IMPORTANT: If the number is NOT in parentheses (e.g., 27), that is a LOSS — do NOT put it here, put it in loss_on_disposal instead. Each disposal line item must go into ONLY ONE of these two fields, never both. Extract values independently for each fiscal year — do not carry values from one year to another.
 • gain_on_asset_sale: "gain on sale", "asset sale gain"
-• other_income_non_operating: Look for "Other income" or "Other (income)" on income statement. Values in parentheses like (2,159) mean income of 2,159. Extract as positive number.
+• other_income_non_operating: Non-recurring income items that inflate reported net income and must be removed from Adjusted EBITDA.
+  WHAT TO LOOK FOR: "Other income", "Other (income)", "Other (income) expenses" on the income statement — whenever the NET result is INCOME.
+  PARENTHESES CONVENTION: A label like "Other (income) expenses" with an amount in PARENTHESES like (2,159) means the net result is INCOME of 2,159. Extract as positive 2,159.
+  CRITICAL: If the income statement shows "Other (income) expenses" with a parenthesized amount, the income is REDUCING the company's reported expenses (net income is higher because of it). This non-recurring income INFLATES net income and must be SUBTRACTED when computing Adjusted EBITDA. Always put it in other_income_non_operating — NEVER in other_one_time_expenses.
+  Extract as a POSITIVE number. The calculator will subtract it from EBITDA automatically.
 • insurance_proceeds: "insurance proceeds"
 • other_one_time_gains: "settlement income", "extraordinary gain"
 
@@ -189,15 +248,56 @@ RULES
 • Detect every fiscal year present (e.g. 2025, 2024, 2023) and use it as the JSON key.
 • Emit numeric values as plain JSON numbers – **no quotes, commas, or currency symbols**.
 • If a value is unavailable for a metric, output null (do NOT omit the key).
-• For EBITDA calculation: ebitda = net_income + interest + taxes + depreciation_amortization
+• EBITDA is calculated by the system from components: EBITDA = net_income + interest + taxes + depreciation_amortization. Always output "ebitda": null — do NOT extract or calculate EBITDA yourself. Extract the components accurately instead.
 
 INCOME STATEMENT FIELDS - CRITICAL:
-• "interest": Extract TOTAL finance costs/interest expense from Income Statement. Look for:
+• "revenue": Total revenue or net sales from the top of the Income Statement. Look for:
+  - "Revenue" / "Net revenue" / "Total revenue" / "Net sales" / "Total net sales"
+  - "Sales" / "Service revenue" / "Operating revenue" / "Turnover" / "Total income"
+  - Prefer NET revenue (after returns, allowances, and discounts) over gross revenue when both are shown
+  - This is the top-line figure on the Income Statement — it should be the largest positive number
+  - Extract as POSITIVE number
+  - Do NOT confuse with "Other income", "Interest income", or "Total comprehensive income"
+
+• "interest": TOTAL finance costs/interest expense from the Income Statement (accrual basis). Look for:
   - "Finance costs" (IFRS) or "Interest expense" (US GAAP)
   - This is the TOTAL interest for the period, including interest on debt, leases, and notes
   - For Zedcor-style statements: look under "Other (income) expenses" section for "Finance costs"
   - Extract as POSITIVE number (e.g., Finance costs of 1,621 → extract 1,621)
-• "taxes": Current tax expense from Income Statement (may be zero or a recovery)
+  - PURPOSE: Primary interest field used in the EBITDA formula (net_income + interest + taxes + D&A). This is the accrual-basis P&L figure. For cash-basis interest, see cash_interest_paid.
+• "taxes": TOTAL income tax expense from the Income Statement (current + deferred combined). Look for:
+  - "Income tax expense" / "Provision for income taxes" / "Tax expense" / "Income taxes"
+  - "Income tax recovery" / "Income tax benefit" — these are NEGATIVE (a recovery reduces EBITDA addback)
+  - IMPORTANT: Extract the TOTAL tax line (current + deferred combined), NOT just current tax. Net income is reduced by the full tax charge, so the EBITDA formula must add back the full amount: ebitda = net_income + interest + taxes + D&A
+  - If the statement shows current and deferred tax separately with no combined total, SUM them
+  - Extract as a signed number: tax expense is positive, tax recovery/benefit is negative
+  - May be zero for loss-making companies or those with tax credits
+
+• "net_income": The bottom-line profit or loss for the period from the Income Statement. Look for:
+  - "Net income" / "Net loss" / "Net earnings" / "Net earnings (loss)"
+  - "Profit for the year" / "Profit (loss) for the year" / "Loss for the year" (IFRS)
+  - "Net income (loss)" / "Net profit" / "Net loss for the period"
+  - "Profit attributable to equity holders" — use the TOTAL net income line, not the non-controlling interests split
+  - Do NOT use "Comprehensive income" or "Total comprehensive income" — prefer the pre-OCI bottom line
+  - Do NOT confuse with "Operating income", "Gross profit", or "Income before taxes" — those are different line items
+  - Extract as a signed number: profit is positive, loss is negative (e.g., a net loss of $1,200 → extract -1200)
+  - This is required for EBITDA calculation: ebitda = net_income + interest + taxes + depreciation_amortization
+
+• "expenses": Total operating expenses for the period from the Income Statement. Look for:
+  - "Total expenses" / "Total operating expenses" / "Total costs and expenses"
+  - "Cost of revenues" + "Operating expenses" summed together if no single total line exists
+  - "Total costs" / "Operating costs" / "Total cost of sales and operating expenses"
+  - For statements with subtotals only: sum "Direct expenses" + "General and administrative expenses" (or equivalent cost groupings) to get a total
+  - This represents all costs incurred to generate revenue, EXCLUDING finance costs (interest) and income tax
+  - Extract as POSITIVE number — expenses should never be negative
+  - If no single total line exists, sum available expense components (e.g., Direct expenses + G&A) and set _confidence.expenses to "low"
+  - Only extract null if the document contains no income statement, no cost-of-sales section, and no expense line items. Do NOT derive expenses from balance sheet liabilities or cash flow movements alone
+
+• "profit_margins": Net profit margin as a decimal (e.g., 0.15 for 15%). Calculate as net_income ÷ revenue.
+  - Only populate if both net_income and revenue are successfully extracted
+  - A net loss produces a negative margin (e.g., net_income -500 / revenue 10,000 = -0.05)
+  - If either net_income or revenue is null, output null
+  - This is a RATIO, not a currency amount — do NOT apply scale normalization to this field
 
 DEBT EXTRACTION - CRITICAL FOR ACCURACY:
 Extract all debt components from the Balance Sheet liabilities section:
@@ -228,15 +328,36 @@ SUBORDINATED/JUNIOR DEBT (lower priority - listed last in reports):
 • bonds_debentures: Corporate bonds, debentures (unless explicitly senior secured)
 • other_borrowings: Any other debt not categorized above
 
+DEBT FIELD MUTUAL EXCLUSIVITY (AVOID DOUBLE-COUNTING):
+Bank debt fields have TWO levels — aggregate and granular. Use ONE set, not both:
+
+• AGGREGATE fields: bank_debt_current + bank_debt_long_term
+  Use these when the balance sheet shows combined bank debt split by current/non-current
+  (e.g., "Current portion of credit facility: $2M / Long-term debt: $8M")
+
+• GRANULAR fields: term_loans, revolving_credit_facilities, overdraft_facilities, lines_of_credit
+  Use these ONLY when the balance sheet itemizes each facility separately with NO combined total
+  (e.g., "Term Loan A: $5M, Revolver: $3M, Overdraft: $2M")
+
+• If BOTH aggregate totals AND granular breakdowns are shown, use the aggregate fields (bank_debt_current/long_term) and leave the granular fields null
+
+• Same rule applies to lease liabilities:
+  - AGGREGATE: lease_liabilities_current + lease_liabilities_long_term (prefer these)
+  - GRANULAR: finance_lease_liabilities + operating_lease_liabilities (use only if no current/non-current split)
+
+• If debt type is ambiguous and you cannot determine the correct field, place it in other_borrowings and document the ambiguity in _sources. Do NOT return null for all debt fields when confused.
+
 CRITICAL DEBT CALCULATION RULES:
 • LEVERAGE DOCUMENT ORDER: When unsure of seniority, use position in the document. Debt items appearing earlier in the liabilities section or debt schedules are typically more senior.
 • Look for debt breakdowns in the notes to financial statements (e.g., "Note 8: Credit Facilities", "Note 9: Lease Liabilities", "Note 10: Note Payable")
-• "senior_debt" = bank_debt (current + long-term) + ALL lease_liabilities (current + long-term). Senior debt is secured debt that has priority in bankruptcy.
-• Notes payable, especially vendor take-back notes or those described as "subordinated", are NOT senior debt.
-• "total_debt" = senior_debt + notes_payable + subordinated_debt + any other non-senior debt
-• If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities.
-• Lease liabilities are often shown separately from bank debt on the balance sheet.
-• When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority.
+• "senior_debt" = funded bank debt ONLY: bank_debt_current + bank_debt_long_term (credit facilities, term loans, revolvers, lines of credit).
+  Extract senior_debt as bank debt only from the document. The system will add IFRS 16 lease liabilities to Senior Debt during calculation based on the configured treatment mode.
+  Do NOT manually add lease liabilities to senior_debt — always keep them separate in debt_components.
+• Notes payable, vendor take-back notes, or debt described as "subordinated" are NOT senior debt.
+• "total_debt" = bank_debt + lease_liabilities + notes_payable + subordinated_debt + all other interest-bearing obligations.
+• If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities. Lease liabilities appear as a separate line on the balance sheet.
+• Lease liabilities must always be recorded in debt_components (lease_liabilities_current + lease_liabilities_long_term) but must NOT be added to senior_debt.
+• When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority among bank facilities.
 
 CURRENT ASSETS & LIABILITIES (CRITICAL FOR LIQUIDITY RATIO):
 Extract from Balance Sheet for Current Ratio calculation:
@@ -250,6 +371,20 @@ Extract from Balance Sheet for Current Ratio calculation:
   - "Total current liabilities" or "Current liabilities - total"
   - Sum of: accounts payable, accrued liabilities, current portion of debt, current portion of lease liabilities, other current liabilities
   - Extract as POSITIVE number
+
+SHAREHOLDERS' EQUITY (CRITICAL FOR LEVERAGE RATIOS):
+Extract from Balance Sheet equity section. Used in Total Debt/Total Capital and Debt-to-Equity calculations.
+
+• shareholders_equity: Total equity attributable to owners from the Balance Sheet. Look for:
+  - "Owner's equity" / "Capital account" / "Member's equity" / "Partners' capital" (sole props, partnerships, LLCs)
+  - "Total shareholders' equity" / "Total equity" / "Total stockholders' equity" (corporations)
+  - "Owners' equity" / "Net assets" / "Total shareholders' funds"
+  - "Equity attributable to equity holders of the parent" (IFRS consolidated statements)
+  - Use the TOTAL equity figure (common stock + retained earnings + AOCI + other equity components)
+  - For consolidated statements with non-controlling interests: use equity attributable to the PARENT, not total equity including NCI — unless only a combined total is available
+  - Can be NEGATIVE for companies with accumulated losses exceeding contributed capital (equity deficiency) — extract as negative number
+  - Do NOT confuse with "Total liabilities and equity" — that includes liabilities
+  - Do NOT use retained earnings alone — shareholders_equity is the full equity section total
 
 FIXED CHARGES EXTRACTION (CRITICAL FOR FCCR CALCULATION):
 Extract from INCOME STATEMENT, CASH FLOW STATEMENT, and NOTES. This is essential for accurate FCCR.
@@ -273,8 +408,9 @@ INTEREST COMPONENTS - EXTRACT WITH PRECISION:
   - Finance costs breakdown showing "Interest on lease liabilities"
   - Separate from interest on bank debt
 
-• total_interest_expense: CRITICAL - Extract the TOTAL interest/finance costs from income statement.
-  This serves as validation and fallback for senior debt interest calculation.
+• total_interest_expense: TOTAL interest/finance costs from income statement.
+  PURPOSE: Validation crosscheck — should equal senior_debt_interest + subordinated_debt_interest + lease_interest.
+  NOTE: This is the same value as the top-level "interest" field. Extract it here as well so we can validate component-level interest extraction against the total. If it differs from "interest", recheck both values.
 
 • senior_debt_interest_rate: If disclosed, extract the interest rate (e.g., "prime + 2%", "8%", "BA + 3.5%").
 
@@ -293,8 +429,14 @@ LEASE PAYMENTS (CRITICAL for fixed charge coverage - ANNUAL payments only):
 
 OTHER FIXED CHARGES:
 • principal_payments: From cash flow statement "Repayment of debt" or "Principal repayments".
-• preferred_dividends: Cash dividends paid on preferred shares.
-• other_fixed_charges: Any other recurring fixed obligations.
+• preferred_dividends: Cash dividends paid on PREFERRED shares only — not common dividends. Look for:
+  - "Preferred share dividends" / "Preferred stock dividends" / "Dividends on preferred shares"
+  - "Series A preferred dividends" or similar series-specific labels
+  - Cash Flow Statement under "Financing activities" or in Notes to financial statements
+  - Do NOT include common share dividends (those are captured in distributions_paid)
+  - Extract as POSITIVE number
+  - If no preferred shares exist, output null
+• other_fixed_charges: Any other recurring fixed obligations (e.g., mandatory pension contributions, insurance premiums, equipment rental obligations not classified as leases).
 
 IMPORTANT: For FCCR calculation, we need CASH interest costs. Always try to extract total_interest_expense as it provides the most reliable basis for fixed charge calculations.
 
@@ -304,7 +446,13 @@ Extract depreciation by category from INCOME STATEMENT and/or CASH FLOW STATEMEN
 • depreciation_equipment: "Depreciation of equipment", "Depreciation of security towers", "Equipment depreciation"
 • depreciation_rou: "Depreciation of right-of-use assets", "ROU depreciation", "Lease asset depreciation"
 • depreciation_other: "Depreciation of other property and equipment", "Building depreciation", "Leasehold improvements depreciation"
-• depreciation_amortization: MUST equal the SUM of ALL depreciation and amortization lines across ALL sections of the income statement AND cash flow statement. CRITICAL: Depreciation may appear in MULTIPLE sections (e.g., "Direct expenses" AND "Operating expenses" AND "Other expenses"). You MUST sum them ALL. Also check the cash flow statement operating activities section for total depreciation figures which may be more reliable than summing income statement lines. Cross-check: depreciation_amortization should equal depreciation_equipment + depreciation_rou + depreciation_other. If it doesn't, recalculate.
+• amortization_intangibles: Amortization of intangible assets, SEPARATE from tangible asset depreciation. Look for:
+  - "Amortization of intangible assets" / "Amortization of customer relationships" / "Amortization of non-compete agreements"
+  - "Amortization of patents" / "Amortization of trademarks" / "Software amortization"
+  - Common in companies that have grown through acquisitions (purchase price allocation creates intangible assets)
+  - Do NOT include goodwill impairment here — use goodwill_impairment in adjusted_ebitda_components
+  - Extract as POSITIVE number. If the company has no intangible assets, extract null.
+• depreciation_amortization: MUST equal the SUM of ALL depreciation and amortization lines across ALL sections of the income statement AND cash flow statement. CRITICAL: Depreciation may appear in MULTIPLE sections (e.g., "Direct expenses" AND "Operating expenses" AND "Other expenses"). You MUST sum them ALL. Also check the cash flow statement operating activities section for total depreciation figures which may be more reliable than summing income statement lines. Cross-check: depreciation_amortization should equal depreciation_equipment + depreciation_rou + depreciation_other + amortization_intangibles. If it doesn't, recalculate.
 
 CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
 
@@ -359,20 +507,51 @@ DEBT SERVICE ITEMS (CRITICAL FOR BANKER'S DSCR COVENANT):
   - Or look for combined "Debt repayments" figure
   - Extract as POSITIVE number
 
-• ttm_interest_expense: TOTAL interest expense for the period from INCOME STATEMENT. Look for:
-  - "Interest expense" or "Finance costs"
-  - "Interest on long-term debt" + "Interest on lease liabilities"
-  - Extract as POSITIVE number
+• ttm_interest_expense: Trailing twelve months total interest expense. For ANNUAL reports this equals the top-level "interest" field — extract the same value.
+  PURPOSE: Used as a fallback in FCCR calculation when cash_interest_paid is unavailable.
+  For QUARTERLY or INTERIM reports: annualize the interest figure (e.g., Q3 interest × 4/3).
+  Extract as POSITIVE number.
 
 CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • You MUST extract adjusted_ebitda_components from the income statement and notes.
 • Look for "Share-based payments expense" line item - extract as stock_based_compensation
-• Look for "Other income" or "Other (income) expense" line items - extract the income amount as other_income_non_operating
-• Look for "Loss (gain) on sale/disposal" line items - positive numbers are LOSSES (loss_on_disposal), numbers in parentheses are GAINS (gain_on_disposal). Each line goes into ONE field only, never both
+• Look for "Other income", "Other (income)", or "Other (income) expenses" line items — when the net result is INCOME (amount in parentheses on an "expenses" label, or a positive amount on an "income" label), extract the income amount as other_income_non_operating (POSITIVE number). NEVER put these income amounts into other_one_time_expenses. These items INFLATE net income and must be SUBTRACTED when computing Adjusted EBITDA.
+• Look for "Loss (gain) on sale/disposal" line items - positive numbers are LOSSES (loss_on_disposal), numbers in parentheses are GAINS (gain_on_disposal). Each line goes into ONE field only, never both. For equipment-intensive businesses (regular asset cycling), loss_on_disposal should be null unless the event is clearly non-recurring.
 • These adjustments are ESSENTIAL for calculating Adjusted EBITDA accurately.
+• MISCLASSIFICATION CHECK: Before finalising, verify that no income item (parenthesized amount under an "expenses" label, or explicit income line) was accidentally placed in other_one_time_expenses. If it was, move it to other_income_non_operating.
 
 • Do not add any keys, explanations, or narrative – JSON object only.
-• IMPORTANT: Extract numeric values EXACTLY as they appear in the document. Do NOT multiply or scale values. If the document reports values "in thousands" or "$000s", keep them in thousands.
+
+SCALE NORMALIZATION (REQUIRED):
+ALL output values MUST be in THOUSANDS of the document's currency, regardless of how the document presents them.
+
+STEP 1 - DETECT THE DOCUMENT'S REPORTED SCALE:
+Look for scale indicators in headers, footnotes, or column labels:
+• "(in thousands)" / "$000s" / "(000s)" → Document is in THOUSANDS → output as-is
+• "(in millions)" / "$M" / "(millions)" → Document is in MILLIONS → multiply by 1,000
+• "(in billions)" / "$B" → Document is in BILLIONS → multiply by 1,000,000
+• No indicator + large integers like 1,634,382,000 → Likely RAW DOLLARS → divide by 1,000
+• No indicator + decimals like 1,634.4 in millions context → Likely MILLIONS → multiply by 1,000
+
+STEP 2 - APPLY CONVERSION:
+Convert ALL extracted values to thousands before output:
+• THOUSANDS → Extract as-is (no conversion needed)
+• MILLIONS → Multiply by 1,000 (e.g., $1.6M revenue → output 1,600)
+• BILLIONS → Multiply by 1,000,000 (e.g., $1.6B revenue → output 1,600,000)
+• RAW DOLLARS → Divide by 1,000 (e.g., $1,634,382 revenue → output 1,634)
+
+STEP 3 - VALIDATE BEFORE OUTPUT:
+Verify your normalized values are internally consistent:
+• EBITDA margin (ebitda ÷ revenue) should be 0.1% - 90%
+• Net margin (net_income ÷ revenue) should be 0.1% - 50%
+• Net Income must be smaller than Revenue
+• If any margin falls outside these bounds, RECHECK your scale detection
+
+COMMON SCALE PATTERNS:
+• Header: "Year Ended December 31, 2024 (in millions)" → All values in MILLIONS
+• Table note: "All amounts in $000s except per share data" → Values in THOUSANDS
+• Canadian/IFRS reports often use thousands; US large-cap 10-Ks often use millions
+• If you see Revenue of 1,634,382 and EBITDA of 163 in the same document, they are at different scales
 
 This schema must work for any financial statement worldwide.`;
 
@@ -450,8 +629,8 @@ Return EXACT JSON matching this schema — no markdown, no fences, no extra keys
 }
 
 SCORING WEIGHTS:
-- FCCR (Fixed Charge Coverage Ratio): 45% weight
-- Senior Debt / Adjusted EBITDA: 40% weight
+- FCCR (Fixed Charge Coverage Ratio): 50% weight
+- Senior Debt / Adjusted EBITDA: 35% weight
 - Total Debt / Total Capital: 15% weight
 
 SCORING THRESHOLDS (each metric scored 0-10, higher = worse):

@@ -28,7 +28,7 @@ import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import ExtractionWarnings from '@/components/ExtractionWarnings';
 import { RiskData } from '@/components/RiskAssessment';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
-import type { YearMetrics } from '@/types';
+import type { ComputedMetrics } from '@/types';
 import { Project } from '@/lib/supabase/types';
 import { MergedExtraction } from '@/lib/extraction-utils';
 import { Button } from '@/components/ui/button';
@@ -91,7 +91,7 @@ export default function ProjectDetail({
   extractionCount,
 }: ProjectDetailProps) {
   const [financialData, setFinancialData] = useState<{
-    metrics_by_year: Record<string, YearMetrics>;
+    metrics_by_year: Record<string, ComputedMetrics>;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [riskData, setRiskData] = useState<RiskData | null>(null);
@@ -459,7 +459,8 @@ export default function ProjectDetail({
                   <CardTitle>Financial Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <FinancialTable data={financialData} />
+                  {/* Cast through unknown to bridge ComputedMetrics → FinancialTable's local YearMetrics */}
+                  <FinancialTable data={financialData as unknown as Parameters<typeof FinancialTable>[0]['data']} />
                 </CardContent>
               </Card>
             </div>

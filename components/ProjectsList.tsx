@@ -91,10 +91,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
     setEditingName(project.name);
   };
 
-  const handleSaveEdit = async (e: React.MouseEvent, projectId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const persistEdit = async (projectId: string) => {
     if (!editingName.trim()) {
       setEditingId(null);
       return;
@@ -127,6 +124,12 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
     }
   };
 
+  const handleSaveEdit = (e: React.MouseEvent, projectId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    persistEdit(projectId);
+  };
+
   const handleCancelEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -137,7 +140,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
   const handleEditKeyDown = (e: React.KeyboardEvent, projectId: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleSaveEdit(e as unknown as React.MouseEvent, projectId);
+      persistEdit(projectId);
     } else if (e.key === 'Escape') {
       setEditingId(null);
       setEditingName('');
@@ -201,7 +204,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="gap-2" disabled title="Coming soon">
           <Filter className="h-4 w-4" />
           Filter
         </Button>
@@ -209,86 +212,88 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
 
       {/* Project Grid */}
       {filteredProjects.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-5">
           {filteredProjects.map((project) => (
-            <Link key={project.id} href={`/dashboard/${project.id}`}>
-              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <FolderOpen className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        {editingId === project.id ? (
-                          <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
-                            <Input
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              onKeyDown={(e) => handleEditKeyDown(e, project.id)}
-                              className="h-7 text-sm"
-                              disabled={isSaving}
-                              autoFocus
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50 shrink-0"
-                              onClick={(e) => handleSaveEdit(e, project.id)}
-                              disabled={isSaving}
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 text-gray-500 hover:text-gray-700 shrink-0"
-                              onClick={handleCancelEdit}
-                              disabled={isSaving}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <CardTitle className="text-base group-hover:text-primary transition-colors truncate">
-                              {project.name}
-                            </CardTitle>
-                            <CardDescription className="text-xs truncate">
-                              {project.company_name || project.description || 'No description'}
-                            </CardDescription>
-                          </>
-                        )}
-                      </div>
+            <Link key={project.id} href={`/dashboard/${project.id}`} aria-label={`Open project ${project.name}`}>
+              <Card className="relative h-full cursor-pointer group border border-border/60 hover:border-primary/30 hover:shadow-md transition-all duration-150 gap-0">
+                {/* Action buttons as absolute overlay — do not compete with title layout */}
+                {editingId !== project.id && (
+                  <div className="absolute top-3 right-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => handleStartEdit(e, project)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => handleDeleteProject(e, project.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+
+                <CardHeader className="pb-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <FolderOpen className="h-4 w-4 text-primary" />
                     </div>
-                    {editingId !== project.id && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-gray-500 hover:text-gray-700"
-                          onClick={(e) => handleStartEdit(e, project)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={(e) => handleDeleteProject(e, project.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex-1 min-w-0">
+                      {editingId === project.id ? (
+                        <div className="flex items-center gap-1 pr-1" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                          <Input
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => handleEditKeyDown(e, project.id)}
+                            className="h-7 text-sm"
+                            disabled={isSaving}
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50 shrink-0"
+                            onClick={(e) => handleSaveEdit(e, project.id)}
+                            disabled={isSaving}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-gray-500 hover:text-gray-700 shrink-0"
+                            onClick={handleCancelEdit}
+                            disabled={isSaving}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          {/* pr-10 reserves space so text never overlaps the action buttons on hover */}
+                          <CardTitle className="text-sm font-semibold leading-snug group-hover:text-primary transition-colors line-clamp-2 break-words pr-10">
+                            {project.name}
+                          </CardTitle>
+                          <CardDescription className="text-xs line-clamp-1 mt-0.5">
+                            {project.company_name || project.description || 'No description'}
+                          </CardDescription>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+
+                <CardContent className="pt-0 mt-auto">
+                  <div className="border-t border-border/40 pt-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(
+                        className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusBadge(
                           project.status
                         )}`}
                       >
@@ -296,15 +301,16 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
                       </span>
                       {project.risk_score !== null && (
                         <span
-                          className={`text-xs px-2 py-1 rounded-full ${getRiskColor(
+                          className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1.5 ${getRiskColor(
                             project.risk_score
                           )}`}
                         >
-                          Risk: {project.risk_score.toFixed(1)}
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                          {project.risk_score.toFixed(1)}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                       <Clock className="h-3 w-3" />
                       {formatDate(project.updated_at)}
                     </div>

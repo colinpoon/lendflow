@@ -1,11 +1,12 @@
 import { Extraction, ExtractionResult } from '@/lib/supabase/types';
-import { calculateQuantitativeRisk } from '@/lib/quantitative-risk';
+import { calculateQuantitativeRisk, type QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
+import type { ComputedMetrics, RiskData, DebtHealthAssessment } from '@/types';
 
 export interface MergedExtraction {
-  metrics_by_year: Record<string, any>;
-  riskAssessment?: any;
-  debtHealthAssessment?: any;
-  quantitativeRiskAssessment?: any;
+  metrics_by_year: Record<string, ComputedMetrics>;
+  riskAssessment?: RiskData | null;
+  debtHealthAssessment?: DebtHealthAssessment | null;
+  quantitativeRiskAssessment?: QuantitativeRiskAssessment | null;
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
   chunk_stats?: { total: number; successful: number; failed: number };
@@ -43,6 +44,16 @@ export interface YearConflict {
   };
   recommendation: 'keep_existing' | 'use_new';
   reason: string;
+  /**
+   * True when this conflicting year is the PRIMARY fiscal year reported
+   * by the NEW document (i.e., the year that document is primarily about).
+   */
+  isPrimaryYearInNew: boolean;
+  /**
+   * True when this conflicting year is the PRIMARY fiscal year reported
+   * by the EXISTING document (i.e., the year that document is primarily about).
+   */
+  isPrimaryYearInExisting: boolean;
 }
 
 export interface ConflictDetectionResult {
@@ -144,13 +155,18 @@ export function detectYearConflicts(
   const newYears = Object.keys(newData.metrics_by_year);
   const newFileName = newExtraction.documents?.file_name || 'New Document';
 
-  // Build a map of existing year data (most recent per year based on fiscal year end date)
+  // Build a map of existing year data (most recent per year based on fiscal year end date).
+  // We also carry the primary_fiscal_year of the owning extraction so that when two
+  // per-year fiscal_year_end_dates are equal (i.e. same year appears in both docs as
+  // either primary or comparative), we can apply the primary-year tiebreaker.
   const existingYearData = new Map<string, {
     document_id: string;
     file_name: string;
     fiscal_year_end_date: string | null;
     extracted_at: string;
-    metrics: any;
+    metrics: Record<string, unknown>;
+    /** The primary fiscal year of the extraction that contributed this entry. */
+    primary_fiscal_year: string | null;
   }>();
 
   for (const extraction of existingExtractions) {
@@ -166,6 +182,7 @@ export function detectYearConflicts(
           fiscal_year_end_date: metrics.fiscal_year_end_date || null,
           extracted_at: extraction.created_at,
           metrics,
+          primary_fiscal_year: data.primary_fiscal_year ?? null,
         };
 
         if (!existing) {
@@ -183,6 +200,8 @@ export function detectYearConflicts(
     }
   }
 
+  const newPrimaryFiscalYear = newData.primary_fiscal_year ?? null;
+
   // Check for conflicts
   for (const year of newYears) {
     const existing = existingYearData.get(year);
@@ -191,40 +210,86 @@ export function detectYearConflicts(
     const newMetrics = newData.metrics_by_year[year];
     const newFiscalYearEnd = newMetrics.fiscal_year_end_date || null;
 
-    const newIsMoreRecent = isMoreRecent(
-      { fiscal_year_end_date: newFiscalYearEnd, extracted_at: newExtraction.created_at },
-      { fiscal_year_end_date: existing.fiscal_year_end_date, extracted_at: existing.extracted_at }
-    );
+    // Determine whether this conflicting year is the primary year for each document.
+    // A document is maximally authoritative for the year it was primarily created to report on.
+    const isPrimaryYearInNew = newPrimaryFiscalYear === year;
+    const isPrimaryYearInExisting = existing.primary_fiscal_year === year;
+
+    const fyDateComparison = compareFiscalYearEndDates(newFiscalYearEnd, existing.fiscal_year_end_date);
 
     // Determine recommendation and reason
     let recommendation: 'keep_existing' | 'use_new';
     let reason: string;
 
     if (newFiscalYearEnd && existing.fiscal_year_end_date) {
-      // Both have fiscal year end dates - compare them
-      if (newIsMoreRecent) {
+      if (fyDateComparison > 0) {
+        // New document has a strictly later fiscal year end — it is more recent
         recommendation = 'use_new';
         reason = `New document has a later fiscal year end (${newFiscalYearEnd}) than existing (${existing.fiscal_year_end_date})`;
-      } else {
+      } else if (fyDateComparison < 0) {
+        // Existing document has a strictly later fiscal year end — it is more recent
         recommendation = 'keep_existing';
         reason = `Existing document has a later fiscal year end (${existing.fiscal_year_end_date}) than new (${newFiscalYearEnd})`;
+      } else {
+        // Dates are equal — same fiscal year appears in both documents.
+        // The document for which this is the PRIMARY reporting year is always more
+        // authoritative than the document where it appears as a comparative figure.
+        if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
+          recommendation = 'use_new';
+          reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
+        } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
+          recommendation = 'keep_existing';
+          reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
+        } else {
+          // Both or neither are primary — cannot determine authority automatically
+          recommendation = 'keep_existing';
+          reason = `Both documents cover year ${year} with equal authority; manual review suggested`;
+        }
       }
     } else if (newFiscalYearEnd && !existing.fiscal_year_end_date) {
-      // Can't reliably compare - default to keeping existing (safer)
-      recommendation = 'keep_existing';
-      reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
-    } else if (!newFiscalYearEnd && existing.fiscal_year_end_date) {
-      // Can't reliably compare - default to keeping existing (safer)
-      recommendation = 'keep_existing';
-      reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
-    } else {
-      // Neither has fiscal year end date - fall back to upload timestamp
-      if (newIsMoreRecent) {
+      // Can't reliably compare dates — apply primary-year tiebreaker first
+      if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
         recommendation = 'use_new';
-        reason = 'New document was uploaded more recently';
+        reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
+      } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
+        recommendation = 'keep_existing';
+        reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
       } else {
         recommendation = 'keep_existing';
-        reason = 'Existing document was uploaded more recently';
+        reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
+      }
+    } else if (!newFiscalYearEnd && existing.fiscal_year_end_date) {
+      // Can't reliably compare dates — apply primary-year tiebreaker first
+      if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
+        recommendation = 'use_new';
+        reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
+      } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
+        recommendation = 'keep_existing';
+        reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
+      } else {
+        recommendation = 'keep_existing';
+        reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
+      }
+    } else {
+      // Neither has fiscal year end date — apply primary-year tiebreaker before
+      // falling back to upload timestamp, which is the weakest possible signal.
+      if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
+        recommendation = 'use_new';
+        reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
+      } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
+        recommendation = 'keep_existing';
+        reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
+      } else {
+        // Last resort: upload timestamp
+        const newIsMoreRecentByTimestamp =
+          new Date(newExtraction.created_at) > new Date(existing.extracted_at);
+        if (newIsMoreRecentByTimestamp) {
+          recommendation = 'use_new';
+          reason = 'New document was uploaded more recently';
+        } else {
+          recommendation = 'keep_existing';
+          reason = 'Existing document was uploaded more recently';
+        }
       }
     }
 
@@ -244,6 +309,8 @@ export function detectYearConflicts(
       },
       recommendation,
       reason,
+      isPrimaryYearInNew,
+      isPrimaryYearInExisting,
     });
   }
 
@@ -251,6 +318,105 @@ export function detectYearConflicts(
     hasConflicts: conflicts.length > 0,
     conflicts,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Field-Level Union Merge
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The set of keys whose values are nested objects that should themselves be
+ * merged one level deep (winner field beats loser field, loser fills null gaps).
+ */
+const NESTED_METRIC_KEYS = new Set([
+  'debt_components',
+  'fixed_charges',
+  'adjusted_ebitda_components',
+]);
+
+/**
+ * Perform a field-level union merge of two year-metrics objects.
+ *
+ * The winner's values take unconditional priority. For every key where the
+ * winner's value is null or undefined, the loser's value is copied in (gap-fill).
+ * For the well-known nested objects (debt_components, fixed_charges,
+ * adjusted_ebitda_components) the same one-level-deep gap-fill is applied
+ * within the nested object itself.
+ *
+ * Warnings are emitted (via console.warn) for every gap that is filled so
+ * there is an audit trail. The caller is responsible for propagating the
+ * returned warning strings into extraction_warnings.
+ *
+ * @param winner  - Metrics object from the authoritative (winning) document.
+ * @param loser   - Metrics object from the secondary (losing) document.
+ * @param context - Human-readable label used in warning messages (e.g. year + file names).
+ * @returns An object with the merged metrics and an array of warning strings.
+ */
+export function unionMergeMetrics(
+  winner: Record<string, unknown>,
+  loser: Record<string, unknown>,
+  context: string
+): { merged: Record<string, unknown>; warnings: string[] } {
+  const merged: Record<string, unknown> = { ...winner };
+  const warnings: string[] = [];
+
+  for (const key of Object.keys(loser)) {
+    const winnerValue = winner[key];
+    const loserValue = loser[key];
+
+    if (NESTED_METRIC_KEYS.has(key)) {
+      // One level deeper: both sides must be plain objects (or null/undefined).
+      const winnerNested =
+        winnerValue !== null && typeof winnerValue === 'object' && !Array.isArray(winnerValue)
+          ? (winnerValue as Record<string, unknown>)
+          : null;
+      const loserNested =
+        loserValue !== null && typeof loserValue === 'object' && !Array.isArray(loserValue)
+          ? (loserValue as Record<string, unknown>)
+          : null;
+
+      if ((winnerValue === null || winnerValue === undefined) && loserNested !== null) {
+        // Winner has null/undefined for this nested key — use the loser's entire object.
+        merged[key] = { ...loserNested };
+        const warning = `[union-merge ${context}] Gap-filled "${key}" (entire object) from secondary document`;
+        console.warn(warning);
+        warnings.push(warning);
+      } else if (winnerNested !== null && loserNested !== null) {
+        // Both sides have the nested object — field-level fill within it.
+        const mergedNested: Record<string, unknown> = { ...winnerNested };
+        for (const nestedKey of Object.keys(loserNested)) {
+          const winnerNestedValue = winnerNested[nestedKey];
+          const loserNestedValue = loserNested[nestedKey];
+          if (
+            (winnerNestedValue === null || winnerNestedValue === undefined) &&
+            loserNestedValue !== null && loserNestedValue !== undefined
+          ) {
+            mergedNested[nestedKey] = loserNestedValue;
+            const warning =
+              `[union-merge ${context}] Gap-filled "${key}.${nestedKey}" from secondary document`;
+            console.warn(warning);
+            warnings.push(warning);
+          }
+        }
+        merged[key] = mergedNested;
+      }
+      // If loserNested is null, the winner's value (null or a real object) stays in merged unchanged.
+    } else {
+      // Scalar field: fill only when the winner has null/undefined.
+      if (
+        (winnerValue === null || winnerValue === undefined) &&
+        loserValue !== null && loserValue !== undefined
+      ) {
+        merged[key] = loserValue;
+        const warning =
+          `[union-merge ${context}] Gap-filled "${key}" from secondary document`;
+        console.warn(warning);
+        warnings.push(warning);
+      }
+    }
+  }
+
+  return { merged, warnings };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,10 +464,12 @@ export function mergeExtractions(
     const mostRecentYear = years[years.length - 1];
 
     return {
-      metrics_by_year: data.metrics_by_year || {},
-      riskAssessment: data.riskAssessment,
-      debtHealthAssessment: data.debtHealthAssessment,
-      quantitativeRiskAssessment: data.quantitativeRiskAssessment,
+      // Cast is safe: ExtractionYearMetrics is structurally compatible with ComputedMetrics
+      // as they share the same fields when stored/retrieved from database
+      metrics_by_year: (data.metrics_by_year || {}) as unknown as Record<string, ComputedMetrics>,
+      riskAssessment: data.riskAssessment as RiskData | null | undefined,
+      debtHealthAssessment: data.debtHealthAssessment as DebtHealthAssessment | null | undefined,
+      quantitativeRiskAssessment: data.quantitativeRiskAssessment as QuantitativeRiskAssessment | null | undefined,
       validation_issues: data.validation_issues,
       extraction_warnings: data.extraction_warnings,
       chunk_stats: data.chunk_stats,
@@ -328,65 +496,130 @@ export function mergeExtractions(
 
   // Track year data with metadata for comparison
   interface YearEntry {
-    metrics: any;
+    metrics: Record<string, unknown>;
     document_id: string;
     file_name: string;
     extracted_at: string;
     fiscal_year_end_date: string | undefined;
   }
 
-  const yearDataMap = new Map<string, YearEntry>();
+  // extractions is sorted DESC by created_at, so index 0 is the newest document.
+  // The "new" document is the one the user just uploaded — extractions[0].
+  // The "existing" documents are everything else (indices 1+).
+  // Build per-year entry maps for the newest document and for all older documents
+  // separately. This lets resolution logic pick cleanly between the two without
+  // depending on iteration order.
+  const newestYearEntries = new Map<string, YearEntry>();
+  const olderYearEntries = new Map<string, YearEntry>();
 
-  // Process all extractions and keep the most recent data for each year
-  for (const extraction of extractions) {
+  for (let i = 0; i < extractions.length; i++) {
+    const extraction = extractions[i];
     const data = extraction.extraction_data as ExtractionResult;
     const fileName = extraction.documents?.file_name || 'Unknown';
 
-    if (data.metrics_by_year) {
-      for (const [year, metrics] of Object.entries(data.metrics_by_year)) {
-        const newEntry: YearEntry = {
-          metrics,
-          document_id: extraction.document_id,
-          file_name: fileName,
-          extracted_at: extraction.created_at,
-          fiscal_year_end_date: metrics.fiscal_year_end_date || undefined,
-        };
+    if (!data.metrics_by_year) continue;
 
-        const existing = yearDataMap.get(year);
+    for (const [year, metrics] of Object.entries(data.metrics_by_year)) {
+      const entry: YearEntry = {
+        metrics,
+        document_id: extraction.document_id,
+        file_name: fileName,
+        extracted_at: extraction.created_at,
+        fiscal_year_end_date: metrics.fiscal_year_end_date || undefined,
+      };
 
+      if (i === 0) {
+        // Newest document — always takes this slot (only one newest document).
+        newestYearEntries.set(year, entry);
+      } else {
+        // Older documents — keep the most recent among them per year.
+        const existing = olderYearEntries.get(year);
         if (!existing) {
-          yearDataMap.set(year, newEntry);
+          olderYearEntries.set(year, entry);
         } else {
-          // Check if user provided a resolution for this year
-          if (resolutions && resolutions[year]) {
-            // User explicitly chose to keep or overwrite
-            if (resolutions[year] === 'overwrite') {
-              // Only overwrite if this is from the new document (last in array)
-              // The new document is the first in the array (sorted DESC by created_at)
-              if (extraction === extractions[0]) {
-                yearDataMap.set(year, newEntry);
-              }
-            }
-            // If 'keep', do nothing (keep existing)
-          } else {
-            // No user resolution - use fiscal year end date comparison
-            const newIsMoreRecent = isMoreRecent(
-              { fiscal_year_end_date: newEntry.fiscal_year_end_date || null, extracted_at: newEntry.extracted_at },
-              { fiscal_year_end_date: existing.fiscal_year_end_date || null, extracted_at: existing.extracted_at }
-            );
-
-            if (newIsMoreRecent) {
-              yearDataMap.set(year, newEntry);
-            }
+          const candidateIsMoreRecent = isMoreRecent(
+            { fiscal_year_end_date: entry.fiscal_year_end_date || null, extracted_at: entry.extracted_at },
+            { fiscal_year_end_date: existing.fiscal_year_end_date || null, extracted_at: existing.extracted_at }
+          );
+          if (candidateIsMoreRecent) {
+            olderYearEntries.set(year, entry);
           }
         }
       }
     }
   }
 
+  // Collect every year that appears across all extractions.
+  const allYearKeys = new Set([...newestYearEntries.keys(), ...olderYearEntries.keys()]);
+
+  const yearDataMap = new Map<string, YearEntry>();
+
+  // Accumulate all gap-fill warnings produced during union merges so we can
+  // surface them in extraction_warnings for analyst review.
+  const unionMergeWarnings: string[] = [];
+
+  for (const year of allYearKeys) {
+    const fromNewest = newestYearEntries.get(year);
+    const fromOlder = olderYearEntries.get(year);
+
+    if (!fromNewest) {
+      // Year only in older documents — use it unconditionally (no merge needed).
+      yearDataMap.set(year, fromOlder!);
+      continue;
+    }
+
+    if (!fromOlder) {
+      // Year only in the newest document — use it unconditionally (no merge needed).
+      yearDataMap.set(year, fromNewest);
+      continue;
+    }
+
+    // Year exists in both the newest and at least one older document — this is
+    // the conflict case. Apply user resolution if provided; otherwise fall back
+    // to fiscal-year-end-date / timestamp recency comparison.
+    //
+    // After determining the winner, perform a field-level union merge so that
+    // null gaps in the winner's metrics are filled from the loser where available.
+    // This prevents values extracted only by the losing document from being silently
+    // discarded. Single-document years bypass this logic entirely.
+    if (resolutions && resolutions[year]) {
+      // 'overwrite' means the user wants the newest document's data for this year.
+      // 'keep'      means the user wants the older document's data for this year.
+      const userChoseOverwrite = resolutions[year] === 'overwrite';
+      const winner = userChoseOverwrite ? fromNewest : fromOlder;
+      const loser = userChoseOverwrite ? fromOlder : fromNewest;
+
+      const context = `year=${year} winner="${winner.file_name}" loser="${loser.file_name}"`;
+      const { merged: mergedMetrics, warnings } = unionMergeMetrics(
+        winner.metrics,
+        loser.metrics,
+        context
+      );
+      unionMergeWarnings.push(...warnings);
+      yearDataMap.set(year, { ...winner, metrics: mergedMetrics });
+    } else {
+      // No explicit resolution — pick the more recent entry.
+      const newestIsMoreRecent = isMoreRecent(
+        { fiscal_year_end_date: fromNewest.fiscal_year_end_date || null, extracted_at: fromNewest.extracted_at },
+        { fiscal_year_end_date: fromOlder.fiscal_year_end_date || null, extracted_at: fromOlder.extracted_at }
+      );
+      const winner = newestIsMoreRecent ? fromNewest : fromOlder;
+      const loser = newestIsMoreRecent ? fromOlder : fromNewest;
+
+      const context = `year=${year} winner="${winner.file_name}" loser="${loser.file_name}"`;
+      const { merged: mergedMetrics, warnings } = unionMergeMetrics(
+        winner.metrics,
+        loser.metrics,
+        context
+      );
+      unionMergeWarnings.push(...warnings);
+      yearDataMap.set(year, { ...winner, metrics: mergedMetrics });
+    }
+  }
+
   // Build merged result from yearDataMap
   for (const [year, entry] of yearDataMap.entries()) {
-    merged.metrics_by_year[year] = entry.metrics;
+    merged.metrics_by_year[year] = entry.metrics as unknown as ComputedMetrics;
     merged.year_sources[year] = {
       document_id: entry.document_id,
       file_name: entry.file_name,
@@ -413,10 +646,12 @@ export function mergeExtractions(
       const sourceData = sourceExtraction.extraction_data as ExtractionResult;
 
       // Use risk assessments from the document with the most recent fiscal year
-      merged.riskAssessment = sourceData.riskAssessment;
-      merged.debtHealthAssessment = sourceData.debtHealthAssessment;
+      merged.riskAssessment = sourceData.riskAssessment as RiskData | null | undefined;
+      merged.debtHealthAssessment = sourceData.debtHealthAssessment as DebtHealthAssessment | null | undefined;
       merged.validation_issues = sourceData.validation_issues;
-      merged.extraction_warnings = sourceData.extraction_warnings;
+      merged.extraction_warnings = sourceData.extraction_warnings
+        ? [...sourceData.extraction_warnings]
+        : undefined;
       merged.chunk_stats = sourceData.chunk_stats;
     }
   }
@@ -432,22 +667,33 @@ export function mergeExtractions(
       const data = extraction.extraction_data as ExtractionResult;
 
       if (!merged.riskAssessment && data.riskAssessment) {
-        merged.riskAssessment = data.riskAssessment;
+        merged.riskAssessment = data.riskAssessment as unknown as RiskData;
       }
       if (!merged.debtHealthAssessment && data.debtHealthAssessment) {
-        merged.debtHealthAssessment = data.debtHealthAssessment;
+        merged.debtHealthAssessment = data.debtHealthAssessment as unknown as DebtHealthAssessment;
       }
       // Note: quantitativeRiskAssessment is always recalculated above, no fallback needed
       if (!merged.validation_issues && data.validation_issues) {
         merged.validation_issues = data.validation_issues;
       }
       if (!merged.extraction_warnings && data.extraction_warnings) {
-        merged.extraction_warnings = data.extraction_warnings;
+        merged.extraction_warnings = [...data.extraction_warnings];
       }
       if (!merged.chunk_stats && data.chunk_stats) {
         merged.chunk_stats = data.chunk_stats;
       }
     }
+  }
+
+  // Append any gap-fill warnings produced by unionMergeMetrics so analysts can
+  // see which values were sourced from a secondary document. These are appended
+  // after the primary extraction_warnings (if any) so the source document's
+  // own warnings are not displaced.
+  if (unionMergeWarnings.length > 0) {
+    merged.extraction_warnings = [
+      ...(merged.extraction_warnings ?? []),
+      ...unionMergeWarnings,
+    ];
   }
 
   return merged;

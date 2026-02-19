@@ -94,9 +94,6 @@ export async function POST(req: NextRequest) {
       .eq('id', targetExtraction.document_id);
 
     // Update project status if we have risk assessment
-    const latestYear = merged.most_recent_year;
-    const latestMetrics = latestYear ? merged.metrics_by_year[latestYear] : null;
-
     if (merged.quantitativeRiskAssessment) {
       await supabase
         .from('projects')

@@ -1,7 +1,7 @@
 
 ## Project Overview
 
-Lendflow is a Next.js 15 application for bank loan risk analysis. It uses AI (OpenAI GPT-4 Turbo) to extract financial metrics from uploaded documents (PDF, Excel, Word) and performs credit risk assessment.
+Lendflow is a Next.js 15 application for bank loan risk analysis. It uses AI (Anthropic Claude Sonnet 4) to extract financial metrics from uploaded documents (PDF, Excel, Word) and performs credit risk assessment.
 
 the purpose of this app is to leverage Ai and any other api's that you suggest in order to to compete with traditional financial institutions. 
 
@@ -15,6 +15,7 @@ Ai will review a financial document and return lending recommendations as well a
 
 ```bash
 npm run dev          # Start dev server with Turbopack (http://localhost:3000)
+rm -rf .next && DEBUG_FINANCE=true npm run dev
 npm run build        # Production build (includes TypeScript & ESLint checks)
 npm run lint         # Run ESLint
 npm run start        # Start production server
@@ -23,6 +24,6 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Environment Variables
 
-Requires `OPENAI_API_KEY` in `.env` file.
+Requires `ANTHROPIC_API_KEY` in `.env` file.
 
 ## Architecture

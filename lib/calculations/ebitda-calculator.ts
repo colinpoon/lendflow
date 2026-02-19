@@ -32,14 +32,34 @@ export function calculateEBITDA(metrics: ExtractedMetrics): number | null {
   if (metrics.ebitda != null) return metrics.ebitda;
 
   const netIncome = metrics.net_income;
-  const interest =
-    metrics.interest ?? metrics.fixed_charges?.total_interest_expense ?? null;
+
+  // CRITICAL: Interest expense should ALWAYS be positive.
+  // If extracted as negative, the AI picked up a wrong value (e.g., cash flow adjustment).
+  // Fall back to other interest fields which are more reliable.
+  const rawInterest = metrics.interest;
+  let interest: number | null;
+  if (rawInterest != null && rawInterest > 0) {
+    interest = rawInterest;
+  } else {
+    const fallbackInterest =
+      metrics.fixed_charges?.total_interest_expense ??
+      metrics.ttm_interest_expense ??
+      metrics.cash_interest_paid ??
+      null;
+    if (rawInterest != null && rawInterest <= 0 && fallbackInterest != null) {
+      console.log(
+        `⚠️ INTEREST CORRECTION: Rejected negative interest (${rawInterest}), using fallback: ${fallbackInterest}`
+      );
+    }
+    interest = fallbackInterest;
+  }
   const taxes = metrics.taxes;
   // Prefer summing component depreciation fields when available (more reliable than AI's total)
   const componentDepAmort = [
     metrics.depreciation_equipment,
     metrics.depreciation_rou,
     metrics.depreciation_other,
+    metrics.amortization_intangibles,
   ].filter((v): v is number => v != null);
 
   const depAmort =

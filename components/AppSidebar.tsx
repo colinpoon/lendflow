@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Upload,
   LogOut,
+  Eye,
 } from 'lucide-react';
 
 import {
@@ -38,6 +39,11 @@ const navItems = [
     title: 'New Project',
     href: '/dashboard/new',
     icon: Upload,
+  },
+  {
+    title: 'Vision Upload',
+    href: '/vision',
+    icon: Eye,
   },
 ];
 

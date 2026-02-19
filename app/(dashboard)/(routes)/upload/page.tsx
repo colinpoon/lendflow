@@ -17,6 +17,10 @@ import RiskAssessment, {
 import FCCRBreakdown from '@/components/FCCRBreakdown';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
+import type { ExtractionResult } from '@/utils/aiProcessor';
+import type { ComputedMetrics } from '@/types';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { H1 } from '@/components/ui/typography';
 import {
   Card,
   CardContent,
@@ -51,13 +55,16 @@ interface CustomAdjustment {
   description: string;
 }
 
-const Home = () => {
-  const [extractedData, setExtractedData] = useState<any>(null);
+/** Financial data structure for display components */
+interface FinancialDataState {
+  metrics_by_year: Record<string, ComputedMetrics>;
+}
 
-  // year‑agnostic map returned from aiProcessor:
-  const [financialData, setFinancialData] = useState<{
-    metrics_by_year: Record<string, any>;
-  } | null>(null);
+const Home = () => {
+  const [extractedData, setExtractedData] = useState<ExtractionResult | null>(null);
+
+  // Year-agnostic map returned from aiProcessor
+  const [financialData, setFinancialData] = useState<FinancialDataState | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [riskData, setRiskData] = useState<RiskData | null>(null);
   const [debtHealthAssessment, setDebtHealthAssessment] =
@@ -74,11 +81,17 @@ const Home = () => {
     [customAdjustments]
   );
 
-  const handleDataUpdate = (data: any) => {
-    console.log('🐞 page.tsx received payload:', data);
-    console.log('🐞 financialMetrics keys:', data.financialMetrics ? Object.keys(data.financialMetrics) : 'no financialMetrics');
-    console.log('🐞 quantitativeRiskAssessment in financialMetrics:', data.financialMetrics?.quantitativeRiskAssessment);
-
+  /**
+   * Handle extracted data from FileUpload component
+   * Normalizes various response formats and updates state
+   */
+  const handleDataUpdate = (data: ExtractionResult & {
+    financialMetrics?: FinancialDataState & {
+      riskAssessment?: RiskData;
+      debtHealthAssessment?: DebtHealthAssessment;
+      quantitativeRiskAssessment?: QuantitativeRiskAssessment;
+    };
+  }) => {
     setExtractedData(data);
 
     // Accept either data.financialMetrics or a root-level metrics_by_year
@@ -92,7 +105,6 @@ const Home = () => {
     const nestedRisk =
       data.riskAssessment ??
       data.financialMetrics?.riskAssessment ??
-      data.metrics_by_year?.riskAssessment ??
       null;
     if (nestedRisk) {
       setRiskData(nestedRisk);
@@ -112,20 +124,11 @@ const Home = () => {
       data.quantitativeRiskAssessment ??
       data.financialMetrics?.quantitativeRiskAssessment ??
       null;
-    console.log('🎯 Quantitative Risk Assessment lookup:');
-    console.log('   data.quantitativeRiskAssessment:', data.quantitativeRiskAssessment);
-    console.log('   data.financialMetrics?.quantitativeRiskAssessment:', data.financialMetrics?.quantitativeRiskAssessment);
-    console.log('   Final nestedQuantRisk:', nestedQuantRisk);
     if (nestedQuantRisk) {
-      console.log('✅ Setting quantitativeRiskAssessment state');
       setQuantitativeRiskAssessment(nestedQuantRisk);
-    } else {
-      console.warn('⚠️ No quantitative risk assessment found in response');
-      console.warn('   Available keys in data:', Object.keys(data));
-      console.warn('   Available keys in data.financialMetrics:', data.financialMetrics ? Object.keys(data.financialMetrics) : 'N/A');
     }
 
-    // decide default tab - go to analysis after successful extraction
+    // Navigate to analysis tab after successful extraction
     if (data.metrics_by_year || data.financialMetrics) {
       setActiveTab('analysis');
     } else {
@@ -135,9 +138,9 @@ const Home = () => {
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
-      <h1 className="text-3xl font-extrabold text-center text-primary mb-8">
+      <H1 className="text-center text-primary mb-8">
         Bank Loan Risk Analysis
-      </h1>
+      </H1>
       {!extractedData && (
         <Alert variant="default" className="mt-6">
           <AlertTitle>Get Started</AlertTitle>
@@ -154,14 +157,14 @@ const Home = () => {
       >
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="upload">
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> File Upload
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Upload Documents
           </TabsTrigger>
           <TabsTrigger value="analysis" disabled={!financialData}>
             <BarChart4 className="mr-2 h-4 w-4" /> Financial Analysis
           </TabsTrigger>
           <TabsTrigger value="credit" disabled={!financialData}>
             <Shield className="mr-2 h-4 w-4" />
-            Credit‑Risk Snapshot
+            Risk Assessment
           </TabsTrigger>
         </TabsList>
 
@@ -171,7 +174,9 @@ const Home = () => {
               <CardTitle>Upload Financial Document</CardTitle>
             </CardHeader>
             <CardContent>
-              <FileUpload onDataExtracted={handleDataUpdate} />
+              <ErrorBoundary errorTitle="Upload Error">
+                <FileUpload onDataExtracted={handleDataUpdate} />
+              </ErrorBoundary>
             </CardContent>
           </Card>
         </TabsContent>
@@ -183,7 +188,9 @@ const Home = () => {
                 <CardTitle>Financial Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <FinancialTable data={financialData} />
+                <ErrorBoundary errorTitle="Error displaying financial data">
+                  <FinancialTable data={financialData} />
+                </ErrorBoundary>
               </CardContent>
             </Card>
           )}
@@ -201,19 +208,23 @@ const Home = () => {
                   <CardContent>
                     <div className="space-y-8">
                       {/* Quantitative Risk Scorecard */}
-                      <QuantitativeRiskCard data={quantitativeRiskAssessment} />
+                      <ErrorBoundary errorTitle="Error loading risk scorecard">
+                        <QuantitativeRiskCard data={quantitativeRiskAssessment} />
+                      </ErrorBoundary>
 
                       {/* Divider */}
                       {quantitativeRiskAssessment && (
-                        <hr className="border-gray-200" />
+                        <hr className="border-border" />
                       )}
 
                       {/* Existing Weighted Risk Gauge */}
-                      <WeightedRiskGauge
-                        data={financialData}
-                        debtHealthAssessment={debtHealthAssessment}
-                        customFccrAdjustment={totalCustomAdjustments}
-                      />
+                      <ErrorBoundary errorTitle="Error loading risk gauge">
+                        <WeightedRiskGauge
+                          data={financialData}
+                          debtHealthAssessment={debtHealthAssessment}
+                          customFccrAdjustment={totalCustomAdjustments}
+                        />
+                      </ErrorBoundary>
                     </div>
                   </CardContent>
                 </Card>
@@ -226,7 +237,9 @@ const Home = () => {
                     <CardTitle>Credit-Risk Assessment</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <RiskAssessment data={riskData} />
+                    <ErrorBoundary errorTitle="Error loading credit risk assessment">
+                      <RiskAssessment data={riskData} />
+                    </ErrorBoundary>
                   </CardContent>
                 </Card>
               )}
@@ -238,7 +251,9 @@ const Home = () => {
                     <CardTitle>Debt Health Indicators</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <DebtHealthMeters data={financialData} />
+                    <ErrorBoundary errorTitle="Error loading debt health indicators">
+                      <DebtHealthMeters data={financialData} />
+                    </ErrorBoundary>
                   </CardContent>
                 </Card>
               )}
@@ -250,17 +265,19 @@ const Home = () => {
                     <CardTitle>Ratio Breakdowns</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <FCCRBreakdown
-                      data={financialData}
-                      customAdjustments={customAdjustments}
-                      onCustomAdjustmentsChange={setCustomAdjustments}
-                    />
+                    <ErrorBoundary errorTitle="Error loading ratio breakdowns">
+                      <FCCRBreakdown
+                        data={financialData}
+                        customAdjustments={customAdjustments}
+                        onCustomAdjustmentsChange={setCustomAdjustments}
+                      />
+                    </ErrorBoundary>
                   </CardContent>
                 </Card>
               )}
             </div>
           ) : (
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               No risk assessment available.
             </p>
           )}

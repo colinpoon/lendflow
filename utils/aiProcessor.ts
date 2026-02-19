@@ -13,12 +13,26 @@
 
 import { parseDocument } from '@/lib/document-parser';
 import {
-  chunkText,
+  chunkTextSemantic,
   deduplicateChunks,
   processChunksSequentially,
   type ProgressCallback,
+  type ChunkResult,
+  type ChunkProcessingResult,
+  type AIExtractionResponse,
 } from '@/lib/chunk-processor';
-import { mergeExtractions, normalizeScaleMismatch } from '@/lib/extraction-merger';
+import { calculateTextCost } from '@/lib/benchmarks/cost';
+import {
+  mergeExtractionsWithConflicts,
+  normalizeScaleMismatch,
+  validateCrossMetricScale,
+  validateArithmeticConsistency,
+  type MergeResult,
+  type MetricConflict,
+  type ScaleNormalizationResult,
+} from '@/lib/extraction-merger';
+import { MERGE_CONFIG } from '@/lib/constants';
+import { resolveHighVarianceConflicts } from '@/lib/extraction-reconciler';
 import {
   generateRiskAssessment,
   generateDebtHealthAssessment,
@@ -48,17 +62,35 @@ import type { ComputedMetrics, ExtractedMetrics, RiskData, DebtHealthAssessment 
 
 export interface ExtractionResult {
   metrics_by_year?: Record<string, ComputedMetrics>;
+  /**
+   * The most recent fiscal year that this document is primarily reporting on.
+   * Derived from the AI's top-level primary_fiscal_year field — not per-year.
+   * Used by detectYearConflicts to distinguish the document's main year from
+   * comparative/prior-year columns that appear as secondary data.
+   */
+  primary_fiscal_year?: string | null;
   riskAssessment?: RiskData | null;
   debtHealthAssessment?: DebtHealthAssessment | null;
   quantitativeRiskAssessment?: QuantitativeRiskAssessment | null;
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
+  /** Conflicts detected during merge (>20% variance between chunks) */
+  merge_conflicts?: MetricConflict[];
   chunk_stats?: {
     total: number;
     successful: number;
     failed: number;
+    withWarnings: number;
   };
-  raw_chunks?: any[];
+  /** Raw chunk results when no metrics could be extracted */
+  raw_chunks?: ChunkResult[];
+  /** Token usage for cost tracking (COST-01) */
+  token_usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    model: string;
+    cost_usd?: number;
+  };
 }
 
 // Re-export ProgressCallback for API route
@@ -77,10 +109,10 @@ export const extractFinancialData = async (
   onProgress?: ProgressCallback
 ): Promise<ExtractionResult> => {
   try {
-    // Validate environment
-    if (!process.env.OPENAI_API_KEY) {
+    // Validate environment - now using Anthropic Claude for text extraction
+    if (!process.env.ANTHROPIC_API_KEY) {
       throw new Error(
-        'OpenAI API key is missing. Please configure it in the environment variables.'
+        'ANTHROPIC_API_KEY is missing. Please configure it in the environment variables.'
       );
     }
 
@@ -103,11 +135,12 @@ export const extractFinancialData = async (
     onProgress?.({
       stage: 'chunking',
       progress: 15,
-      message: 'Chunking document...',
+      message: 'Chunking document with semantic boundaries...',
     });
 
-    const textChunks = chunkText(fileContent, AI_CONFIG.CHUNK_SIZE);
-    console.log(`✅ Prepared ${textChunks.length} text chunk(s) for analysis.`);
+    // Use semantic chunking that respects table/paragraph boundaries
+    const textChunks = chunkTextSemantic(fileContent);
+    console.log(`✅ Prepared ${textChunks.length} semantic chunk(s) for analysis.`);
 
     const uniqueChunks = deduplicateChunks(textChunks);
     console.log(
@@ -126,16 +159,25 @@ export const extractFinancialData = async (
     // Phase 3: AI Extraction (SEQUENTIAL for determinism)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const chunkResults = await processChunksSequentially(uniqueChunks, onProgress);
+    const chunkProcessingResult = await processChunksSequentially(uniqueChunks, onProgress);
+    const chunkResults = chunkProcessingResult.results;
 
     // Calculate chunk stats
     const successfulChunks = chunkResults.filter((r) => r.result !== null);
     const failedChunkCount = chunkResults.length - successfulChunks.length;
+    const chunksWithWarnings = chunkResults.filter(
+      (r) => r.validationWarnings && r.validationWarnings.length > 0
+    );
     const chunkStats = {
       total: chunkResults.length,
       successful: successfulChunks.length,
       failed: failedChunkCount,
+      withWarnings: chunksWithWarnings.length,
     };
+
+    // Calculate cost from token usage (COST-01)
+    const tokenUsage = chunkProcessingResult.token_usage;
+    const costBreakdown = calculateTextCost(tokenUsage);
 
     // Track extraction warnings
     const extractionWarnings: string[] = [];
@@ -145,27 +187,144 @@ export const extractFinancialData = async (
       );
     }
 
-    // Filter to successful extractions only
-    const allExtractions = successfulChunks.map((r) => r.result);
+    // Add validation warnings from chunks
+    for (const chunk of chunksWithWarnings) {
+      for (const warning of chunk.validationWarnings || []) {
+        extractionWarnings.push(`Chunk ${chunk.index}: ${warning}`);
+      }
+    }
+
+    // Filter to successful extractions only (filter out nulls with type guard)
+    const allExtractions = successfulChunks
+      .map((r) => r.result)
+      .filter((result): result is AIExtractionResponse => result !== null);
+
+    // Derive primary_fiscal_year from chunk responses.
+    // Multiple chunks may each report one — take the first non-null value found.
+    // The AI is instructed to emit the document's primary reporting year (not
+    // comparative columns), so any chunk that identifies it is authoritative.
+    const primary_fiscal_year: string | null =
+      allExtractions.find((e) => e.primary_fiscal_year != null)?.primary_fiscal_year ?? null;
+
+    if (primary_fiscal_year) {
+      console.log(`📅 Primary fiscal year identified: ${primary_fiscal_year}`);
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Phase 4: Merge & Consolidate (deterministic first-wins)
+    // Phase 4: Merge & Consolidate (conflict-aware weighted merge)
     // ─────────────────────────────────────────────────────────────────────────
 
     onProgress?.({
       stage: 'merging',
       progress: 70,
-      message: 'Merging extractions...',
+      message: 'Merging extractions with conflict resolution...',
     });
 
-    const rawMerged = mergeExtractions(allExtractions);
+    // Cast is safe: AIExtractionResponse is structurally compatible with ExtractionInput
+    const mergeResult = mergeExtractionsWithConflicts(allExtractions as Parameters<typeof mergeExtractionsWithConflicts>[0]);
+    let rawMerged = mergeResult.metrics;
+
+    // Log merge conflicts for transparency
+    if (mergeResult.conflictsDetected > 0) {
+      console.log(
+        `⚠️ Detected ${mergeResult.conflictsDetected} metric conflicts during merge`
+      );
+      extractionWarnings.push(
+        `${mergeResult.conflictsDetected} metric conflicts detected and resolved (see merge_conflicts for details)`
+      );
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Phase 4b: Normalize Scale Mismatches
+    // Phase 4a: AI Reconciliation for High-Variance Conflicts
+    // Escalate conflicts with >20% variance to AI for resolution
+    // NOTE: This runs BEFORE arithmetic validation so AI decisions can be
+    // verified/corrected by the deterministic arithmetic check
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const highVarianceConflicts = mergeResult.conflicts.filter(
+      (c) =>
+        c.variancePercent > MERGE_CONFIG.AI_RECONCILIATION_THRESHOLD_PERCENT &&
+        c.resolution === 'highest_confidence'
+    );
+
+    if (highVarianceConflicts.length > 0) {
+      console.log(
+        `🤖 Escalating ${highVarianceConflicts.length} high-variance conflicts to AI reconciliation...`
+      );
+
+      try {
+        const aiResolutions = await resolveHighVarianceConflicts(highVarianceConflicts);
+
+        // Apply AI resolutions to merged data
+        for (const [key, resolvedValue] of aiResolutions.entries()) {
+          const [year, metric] = key.split(':');
+          if (rawMerged[year]) {
+            const oldValue = rawMerged[year][metric];
+            rawMerged[year][metric] = resolvedValue;
+            console.log(
+              `   Applied AI resolution: ${year}/${metric}: ${oldValue} → ${resolvedValue}`
+            );
+          }
+        }
+
+        if (aiResolutions.size > 0) {
+          extractionWarnings.push(
+            `AI reconciliation resolved ${aiResolutions.size} high-variance conflicts`
+          );
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ AI reconciliation failed: ${errorMessage}`);
+        extractionWarnings.push(`AI reconciliation failed: ${errorMessage}`);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4b: Arithmetic Validation (FINAL GATE)
+    // Verify EBITDA = Net Income + Interest + Taxes + D&A
+    // This runs AFTER AI reconciliation to catch/correct AI errors
+    // If a candidate matches the calculated value, use it instead
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const arithmeticResult = validateArithmeticConsistency(rawMerged, mergeResult.candidatesMap);
+    rawMerged = arithmeticResult.metrics;
+
+    if (arithmeticResult.corrections.length > 0) {
+      extractionWarnings.push(
+        `Arithmetic corrections applied: ${arithmeticResult.corrections.join('; ')}`
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4c: Cross-Metric Scale Validation
+    // Detects when entire year is in raw dollars by checking EBITDA margin
+    // Corrects ALL currency metrics if needed, or just Revenue if isolated
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const crossMetricResult = validateCrossMetricScale(rawMerged);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4d: Cross-Year Scale Normalization
     // Detect and fix when AI returns raw dollars vs thousands inconsistently
+    // between years (e.g., 2023 in thousands, 2024 in raw dollars)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const merged = normalizeScaleMismatch(rawMerged);
+    const crossYearResult = normalizeScaleMismatch(crossMetricResult.metrics);
+    const merged = crossYearResult.metrics;
+
+    // Surface scale corrections as warnings for transparency
+    const allScaleCorrections = [
+      ...crossMetricResult.corrections,
+      ...crossYearResult.corrections,
+    ];
+    if (allScaleCorrections.length > 0) {
+      extractionWarnings.push(
+        `Scale corrections applied (${allScaleCorrections.length}): ${allScaleCorrections.join('; ')}`
+      );
+      console.log(
+        `⚠️ Scale corrections applied: ${allScaleCorrections.length} corrections`
+      );
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 5: Compute Derived Metrics
@@ -179,7 +338,7 @@ export const extractFinancialData = async (
 
     const computed: Record<string, ComputedMetrics> = {};
     for (const yr of Object.keys(merged)) {
-      computed[yr] = computeMetrics(merged[yr]);
+      computed[yr] = computeMetrics(merged[yr] as unknown as ExtractedMetrics);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -226,6 +385,9 @@ export const extractFinancialData = async (
       console.log('✅ Extraction complete. Returning combined result.');
       return {
         ...(Object.keys(computed).length > 0 && { metrics_by_year: computed }),
+        // Document-level field: the year this document primarily reports on.
+        // null means the AI could not identify it (e.g., document title missing).
+        primary_fiscal_year,
         ...(riskSnapshot && { riskAssessment: riskSnapshot }),
         ...(debtHealthAssessment && { debtHealthAssessment }),
         ...(quantitativeRiskAssessment && { quantitativeRiskAssessment }),
@@ -233,7 +395,12 @@ export const extractFinancialData = async (
           validation_issues: validationIssues,
         }),
         ...(extractionWarnings.length > 0 && { extraction_warnings: extractionWarnings }),
+        ...(mergeResult.conflicts.length > 0 && { merge_conflicts: mergeResult.conflicts }),
         chunk_stats: chunkStats,
+        token_usage: {
+          ...tokenUsage,
+          cost_usd: costBreakdown.total_cost,
+        },
       };
     }
 
@@ -241,10 +408,15 @@ export const extractFinancialData = async (
       raw_chunks: chunkResults,
       ...(extractionWarnings.length > 0 && { extraction_warnings: extractionWarnings }),
       chunk_stats: chunkStats,
+      token_usage: {
+        ...tokenUsage,
+        cost_usd: costBreakdown.total_cost,
+      },
     };
-  } catch (error: any) {
-    console.error('❗ AI processing failed:', error?.message || error);
-    throw new Error('AI processing failed: ' + (error?.message || 'Unknown error'));
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❗ AI processing failed:', errorMessage);
+    throw new Error('AI processing failed: ' + errorMessage);
   }
 };
 
@@ -258,7 +430,8 @@ export const extractFinancialData = async (
  * @returns Computed metrics including ratios and breakdowns
  */
 function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
-  const result = m as ComputedMetrics;
+  // Shallow copy to avoid mutating the input object
+  const result = { ...m } as ComputedMetrics;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Debt Calculation
@@ -273,22 +446,28 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
   // EBITDA Calculation
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Debug: Show extracted EBITDA components
-  console.log(`\n📊 EBITDA COMPONENTS (Extracted):`);
-  console.log(`   net_income:                ${m.net_income}`);
-  console.log(`   interest:                  ${m.interest}`);
-  console.log(`   taxes:                     ${m.taxes}`);
-  console.log(`   depreciation_amortization: ${m.depreciation_amortization}`);
-  console.log(`   ebitda (if reported):      ${m.ebitda ?? 'N/A (will calculate)'}`);
+  // Debug: Show extracted EBITDA components (gated behind DEBUG_FINANCIALS)
+  if (DEBUG_FINANCIALS) {
+    console.log(`\n📊 EBITDA COMPONENTS (Extracted):`);
+    console.log(`   net_income:                ${m.net_income}`);
+    console.log(`   interest:                  ${m.interest}`);
+    console.log(`   taxes:                     ${m.taxes}`);
+    console.log(`   depreciation_amortization: ${m.depreciation_amortization}`);
+    console.log(`   ebitda (if reported):      ${m.ebitda ?? 'N/A (will calculate)'}`);
+  }
 
   const ebitda = calculateEBITDA(m);
   if (ebitda != null) {
     if (m.ebitda == null) {
       result.ebitda = ebitda;
       result.ebitda_calculated = true;
-      console.log(`   CALCULATED EBITDA:         ${ebitda} = ${m.net_income} + ${m.interest ?? 0} + ${m.taxes ?? 0} + ${m.depreciation_amortization}`);
+      if (DEBUG_FINANCIALS) {
+        console.log(`   CALCULATED EBITDA:         ${ebitda} = ${m.net_income} + ${m.interest ?? 0} + ${m.taxes ?? 0} + ${m.depreciation_amortization}`);
+      }
     } else {
-      console.log(`   USING REPORTED EBITDA:     ${m.ebitda}`);
+      if (DEBUG_FINANCIALS) {
+        console.log(`   USING REPORTED EBITDA:     ${m.ebitda}`);
+      }
     }
 
     // Adjusted EBITDA
@@ -399,13 +578,17 @@ function validateMetrics(
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Debug Logging
+// Gate behind DEBUG_FINANCIALS to prevent sensitive data in production logs
 // ─────────────────────────────────────────────────────────────────────────────
+
+const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
 
 function logAdjustedEBITDA(
   ebitda: number,
   result: ReturnType<typeof calculateAdjustedEBITDA>,
   m: ExtractedMetrics
 ): void {
+  if (!DEBUG_FINANCIALS) return;
   const breakdown = result.adjusted_ebitda_breakdown;
   if (!breakdown) return;
 
@@ -441,6 +624,7 @@ function logFCCR(
   m: ExtractedMetrics,
   result: ReturnType<typeof calculateFCCR>
 ): void {
+  if (!DEBUG_FINANCIALS) return;
   const breakdown = result.fccr_breakdown;
   if (!breakdown) return;
 
@@ -468,6 +652,7 @@ function logDSCR(
   m: ExtractedMetrics,
   result: ReturnType<typeof calculateDSCR>
 ): void {
+  if (!DEBUG_FINANCIALS) return;
   const breakdown = result.dscr_breakdown;
   if (!breakdown) return;
 
@@ -481,6 +666,6 @@ function logDSCR(
   console.log(`     Total Debt Service:        ${breakdown.total_debt_service}`);
   console.log(`   DSCR = ${adjustedEbitda} / ${breakdown.total_debt_service} = ${result.dscr}x`);
   console.log(`   FUNDED DEBT METRICS:`);
-  console.log(`     Funded Debt (Bank Only):   ${breakdown.funded_debt}`);
+  console.log(`     Funded Debt (Bank + Leases): ${breakdown.funded_debt}`);
   console.log(`     Funded Debt / EBITDA:      ${breakdown.funded_debt_to_ebitda}x\n`);
 }

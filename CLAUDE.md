@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Lendflow is a Next.js 15 application for bank loan risk analysis. It uses AI (OpenAI GPT-4 Turbo) to extract financial metrics from uploaded documents (PDF, Excel, Word) and performs credit risk assessment.
+Lendflow is a Next.js 15 application for bank loan risk analysis. It uses AI (Anthropic Claude Sonnet 4) to extract financial metrics from uploaded documents (PDF, Excel, Word) and performs credit risk assessment.
 
 the purpose of this app is to leverage Ai and any other api's that you suggest in order to to compete with traditional financial institutions. 
 
@@ -25,19 +25,19 @@ npm run start        # Start production server
 
 ## Environment Variables
 
-Requires `OPENAI_API_KEY` in `.env` file.
+Requires `ANTHROPIC_API_KEY` in `.env` file.
 
 ## Architecture
 
 
 ### Data Flow
 ```
-Document Upload → /api/extractData → aiProcessor.ts → OpenAI GPT-4 → Frontend Display
+Document Upload → /api/extractData → aiProcessor.ts → Claude Sonnet 4 → Frontend Display
 ```
 
 ### Key Files
 
-- `utils/aiProcessor.ts` - Core AI extraction logic. Chunks documents, sends to OpenAI with structured prompts, merges results, and computes financial ratios (DSCR, Senior Debt/EBITDA, Total Debt/Total Capital).
+- `utils/aiProcessor.ts` - Core AI extraction logic. Chunks documents, sends to Claude with structured prompts, merges results, and computes financial ratios (DSCR, Senior Debt/EBITDA, Total Debt/Total Capital).
 
 - `app/api/extractData/route.ts` - API endpoint handling file uploads via formidable. Disables body parsing (`bodyParser: false`) to handle multipart form data.
 

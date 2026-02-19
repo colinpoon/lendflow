@@ -40,7 +40,7 @@ export interface FixedCharges {
   subordinated_debt_interest: number | null;
   lease_interest: number | null;
   total_interest_expense: number | null;
-  senior_debt_interest_rate: number | null;
+  senior_debt_interest_rate: string | null; // e.g., "prime + 2%", "8%", "BA + 3.5%"
 
   // Lease Payments
   minimum_lease_payments: number | null;
@@ -102,6 +102,8 @@ export interface AdjustedEBITDAComponents {
 export interface DebtBreakdown {
   bank_debt: number;
   lease_liabilities: number;
+  /** Portion of lease_liabilities included in Senior Debt (0 when treatment is 'exclude') */
+  lease_liabilities_in_senior_debt: number;
   notes_payable: number;
   subordinated_debt: number;
   other_non_senior_debt: number;
@@ -132,6 +134,21 @@ export type CapexTreatmentMode = 'unfunded' | 'all' | 'none' | 'custom';
 export interface CapexTreatmentConfig {
   mode: CapexTreatmentMode;
   customPercentage?: number; // 0-100, only used when mode is 'custom'
+}
+
+/**
+ * Lease debt treatment modes for Senior Debt calculation
+ * - 'include': Include IFRS 16 lease liabilities in Senior Debt (post-2019 IFRS borrowers) - DEFAULT
+ * - 'exclude': Exclude lease liabilities from Senior Debt (pre-IFRS 16 / US GAAP covenant convention)
+ *
+ * Under IFRS 16 (effective Jan 2019), all leases are recognised on-balance-sheet.
+ * For IFRS borrowers, lease liabilities are a genuine funded obligation and should
+ * be included in Senior Debt for leverage ratio purposes.
+ */
+export type LeaseDebtTreatment = 'include' | 'exclude';
+
+export interface LeaseDebtTreatmentConfig {
+  mode: LeaseDebtTreatment;
 }
 
 export interface FCCRBreakdown {
@@ -211,6 +228,7 @@ export interface ExtractedMetrics {
   depreciation_equipment: number | null;
   depreciation_rou: number | null;
   depreciation_other: number | null;
+  amortization_intangibles: number | null;
 
   // EBITDA
   ebitda: number | null;
@@ -266,7 +284,7 @@ export interface ComputedMetrics extends ExtractedMetrics {
 
   // Banker's covenant ratios (NEW)
   dscr: number | null; // Debt Service Coverage Ratio (Adjusted EBITDA / Total Debt Service)
-  funded_debt: number | null; // Bank debt only (excludes subordinated notes)
+  funded_debt: number | null; // Senior bank debt + finance lease liabilities (excludes sub debt, convertible debt, bonds, notes payable)
   funded_debt_to_ebitda: number | null; // Funded Debt / Adjusted EBITDA
 
   // Breakdowns for display
