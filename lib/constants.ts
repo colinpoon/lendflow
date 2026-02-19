@@ -111,8 +111,8 @@ export const DEBT_CAPITAL_THRESHOLDS = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const RISK_WEIGHTS = {
-  FCCR: 0.45,
-  DEBT_EBITDA: 0.40,
+  FCCR: 0.50,
+  DEBT_EBITDA: 0.35,
   DEBT_CAPITAL: 0.15,
 } as const;
 

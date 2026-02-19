@@ -100,6 +100,7 @@ interface YearMetrics {
   depreciation_equipment: number | null;
   depreciation_rou: number | null;
   depreciation_other: number | null;
+  amortization_intangibles: number | null;
   // EBITDA
   ebitda: number | null;
   ebitda_calculated?: boolean;
@@ -185,6 +186,7 @@ const sections: SectionConfig[] = [
       { key: 'depreciation_equipment', label: 'Equipment Depreciation', indent: true },
       { key: 'depreciation_rou', label: 'ROU Asset Depreciation', indent: true },
       { key: 'depreciation_other', label: 'Other Depreciation', indent: true },
+      { key: 'amortization_intangibles', label: 'Amortization of Intangibles', indent: true },
     ],
   },
   {

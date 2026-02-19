@@ -565,15 +565,15 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           <MetricBadge
             label={
               customFccrAdjustment !== 0
-                ? 'FCCR (45%) *'
-                : 'FCCR (45%)'
+                ? 'FCCR (50%) *'
+                : 'FCCR (50%)'
             }
             value={adjustedFccr}
             score={fccrScore}
             format={(v) => `${v.toFixed(2)}x`}
           />
           <MetricBadge
-            label="Senior Debt / EBITDA (40%)"
+            label="Senior Debt / EBITDA (35%)"
             value={metrics.senior_debt_to_ebitda}
             score={debtEbitdaScore}
             format={(v) => `${v.toFixed(2)}x`}
