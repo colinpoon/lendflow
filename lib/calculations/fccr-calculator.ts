@@ -13,7 +13,7 @@
  * Denominator = Principal Payments + Interest Expense + Lease Payments
  * FCCR = Numerator / Denominator
  *
- * Reference Value (Zedcor FY2024): FCCR 0.44x
+ * Reference Value (Zedcor FY2024): FCCR >= 1.15x (per covenant compliance)
  */
 
 import type {
@@ -21,6 +21,7 @@ import type {
   FCCRBreakdown,
   CapexTreatmentConfig,
 } from '@/types';
+import { resolveDebtService } from './debt-service-resolver';
 
 export interface FCCRCalculationResult {
   fccr: number | null;
@@ -121,24 +122,18 @@ export function calculateFCCR(
   const distributionsPaid = metrics.distributions_paid ?? 0;
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Denominator Components (TTM Debt Service)
+  // Denominator Components (Debt Service via shared resolver)
+  //
+  // The resolver uses priority chains that prefer balance-sheet scheduled
+  // amounts over gross cash-flow figures, and resolves finance leases
+  // independently to prevent double-counting.
   // ─────────────────────────────────────────────────────────────────────────
 
-  // TTM Principal Payments - from cash flow statement financing activities
-  // Fallback chain: ttm_principal_payments → repayment_of_debt
-  const ttmPrincipalPayments =
-    metrics.ttm_principal_payments ?? metrics.repayment_of_debt ?? 0;
-
-  // TTM Interest Expense - prefer cash basis, fallback to accrual
-  // Fallback chain: ttm_interest_expense → cash_interest_paid → interest
-  const ttmInterestExpense =
-    metrics.ttm_interest_expense ?? metrics.cash_interest_paid ?? metrics.interest ?? 0;
-
-  // Lease payments (included in fixed charges for FCCR)
-  const leasePayments = metrics.payment_of_lease_liability ?? 0;
-
-  // Total Debt Service = Principal + Interest + Lease Payments
-  const totalDebtService = ttmPrincipalPayments + ttmInterestExpense + leasePayments;
+  const debtService = resolveDebtService(metrics);
+  const ttmPrincipalPayments = debtService.principal;
+  const ttmInterestExpense = debtService.interest;
+  const leasePayments = debtService.leases;
+  const totalDebtService = debtService.total;
 
   // Cannot calculate without debt service
   if (totalDebtService === 0) {
@@ -195,12 +190,13 @@ export function calculateFCCR(
         proceeds_from_lt_debt_extracted: metrics.proceeds_from_long_term_debt,
         cash_taxes_paid_extracted: metrics.cash_taxes_paid,
         distributions_paid_extracted: metrics.distributions_paid,
-        ttm_principal_payments_extracted: metrics.ttm_principal_payments,
-        repayment_of_debt_fallback: metrics.repayment_of_debt,
-        ttm_interest_expense_extracted: metrics.ttm_interest_expense,
-        cash_interest_paid_fallback: metrics.cash_interest_paid,
-        interest_accrual_fallback: metrics.interest,
-        lease_payments_extracted: metrics.payment_of_lease_liability,
+        // Denominator source tracking from resolver
+        principal_source: debtService.sources.principal_source,
+        principal_value: debtService.sources.principal_value,
+        interest_source: debtService.sources.interest_source,
+        interest_value: debtService.sources.interest_value,
+        lease_source: debtService.sources.lease_source,
+        lease_value: debtService.sources.lease_value,
       },
     },
   };

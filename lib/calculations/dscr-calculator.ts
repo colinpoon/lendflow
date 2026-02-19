@@ -9,6 +9,7 @@
  */
 
 import type { ExtractedMetrics, DSCRBreakdown, DebtComponents } from '@/types';
+import { resolveDebtService } from './debt-service-resolver';
 
 export interface DSCRCalculationResult {
   dscr: number | null;
@@ -104,19 +105,17 @@ export function calculateDSCR(
   const fundedDebt = totalBankDebt + financeLeaseDebt;
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Calculate Total Debt Service (Cash Basis)
+  // Calculate Total Debt Service (via shared resolver)
+  //
+  // Uses the same priority chains as FCCR to ensure consistent denominator
+  // resolution across both ratios. See debt-service-resolver.ts for details.
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Principal payments (from cash flow statement)
-  const repaymentOfDebt = metrics.repayment_of_debt ?? metrics.ttm_principal_payments ?? 0;
-  const leasePayments = metrics.payment_of_lease_liability ?? 0;
-
-  // Interest payments (prefer cash interest paid, fallback to income statement)
-  const cashInterestPaid = metrics.cash_interest_paid ?? metrics.ttm_interest_expense ?? metrics.interest ?? 0;
-
-  // Total debt service for DSCR calculation
-  // Bankers typically include: bank debt principal + bank interest + lease payments
-  const totalDebtService = repaymentOfDebt + cashInterestPaid + leasePayments;
+  const debtService = resolveDebtService(metrics);
+  const repaymentOfDebt = debtService.principal;
+  const cashInterestPaid = debtService.interest;
+  const leasePayments = debtService.leases;
+  const totalDebtService = debtService.total;
 
   // Cannot calculate without debt service
   if (totalDebtService === 0) {

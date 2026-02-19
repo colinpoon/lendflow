@@ -38,12 +38,12 @@ interface FCCRBreakdownData {
     proceeds_from_lt_debt_extracted: number | null;
     cash_taxes_paid_extracted: number | null;
     distributions_paid_extracted: number | null;
-    ttm_principal_payments_extracted: number | null;
-    repayment_of_debt_fallback: number | null;
-    ttm_interest_expense_extracted: number | null;
-    cash_interest_paid_fallback: number | null;
-    interest_accrual_fallback: number | null;
-    lease_payments_extracted: number | null;
+    principal_source: string;
+    principal_value: number | null;
+    interest_source: string;
+    interest_value: number | null;
+    lease_source: string;
+    lease_value: number | null;
   };
 }
 
@@ -495,28 +495,22 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                   <div className="space-y-2">
                     <div className="flex justify-between text-gray-600">
                       <span className="flex items-center flex-wrap">
-                        TTM Principal Payments
+                        Principal Payments
                         {fccrBreakdown.sources && (
-                          <SourceInfo
-                            extracted={fccrBreakdown.sources.ttm_principal_payments_extracted}
-                            fallback={fccrBreakdown.sources.repayment_of_debt_fallback}
-                            fallbackLabel="repayment_of_debt"
-                          />
+                          <span className="text-xs text-gray-400 ml-1">
+                            (via {fccrBreakdown.sources.principal_source})
+                          </span>
                         )}
                       </span>
                       <span>{formatCurrency(fccrBreakdown.ttm_principal_payments)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span className="flex items-center flex-wrap">
-                        TTM Interest Expense
+                        Interest Expense
                         {fccrBreakdown.sources && (
-                          <SourceInfo
-                            extracted={fccrBreakdown.sources.ttm_interest_expense_extracted}
-                            fallback={fccrBreakdown.sources.cash_interest_paid_fallback}
-                            fallbackLabel="cash_paid"
-                            fallback2={fccrBreakdown.sources.interest_accrual_fallback}
-                            fallback2Label="accrual"
-                          />
+                          <span className="text-xs text-gray-400 ml-1">
+                            (via {fccrBreakdown.sources.interest_source})
+                          </span>
                         )}
                       </span>
                       <span>{formatCurrency(fccrBreakdown.ttm_interest_expense)}</span>
@@ -526,7 +520,9 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                         <span className="flex items-center flex-wrap">
                           Lease Payments
                           {fccrBreakdown.sources && (
-                            <SourceInfo extracted={fccrBreakdown.sources.lease_payments_extracted} />
+                            <span className="text-xs text-gray-400 ml-1">
+                              (via {fccrBreakdown.sources.lease_source})
+                            </span>
                           )}
                         </span>
                         <span>{formatCurrency(fccrBreakdown.lease_payments)}</span>

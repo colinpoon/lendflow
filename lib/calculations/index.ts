@@ -4,6 +4,7 @@
  */
 
 export * from './debt-calculator';
+export * from './debt-service-resolver';
 export * from './ebitda-calculator';
 export * from './fccr-calculator';
 export * from './dscr-calculator';

@@ -172,16 +172,18 @@ export interface FCCRBreakdown {
   denominator: number;
   // Source values for transparency (what was extracted vs fallback)
   sources?: {
+    // Numerator sources
     capital_expenditures_extracted: number | null;
     proceeds_from_lt_debt_extracted: number | null;
     cash_taxes_paid_extracted: number | null;
     distributions_paid_extracted: number | null;
-    ttm_principal_payments_extracted: number | null;
-    repayment_of_debt_fallback: number | null;
-    ttm_interest_expense_extracted: number | null;
-    cash_interest_paid_fallback: number | null;
-    interest_accrual_fallback: number | null;
-    lease_payments_extracted: number | null;
+    // Denominator sources (from debt service resolver)
+    principal_source: string;
+    principal_value: number | null;
+    interest_source: string;
+    interest_value: number | null;
+    lease_source: string;
+    lease_value: number | null;
   };
 }
 

@@ -176,17 +176,20 @@ Non-Cash Adjustments (ADD BACK to EBITDA):
 • impairment_charges: "impairment", "asset write-down"
 • goodwill_impairment: "goodwill impairment"
 • NOTE: bad_debt_provision is a CORE OPERATING EXPENSE - do NOT add it back to EBITDA. It reflects the normal cost of extending credit.
-• unrealized_gains_losses: "unrealized loss", "unrealized gain", "mark-to-market"
+• unrealized_gains_losses: "unrealized loss", "unrealized gain", "mark-to-market".
+  IMPORTANT: If the unrealized component is part of the same income-statement FX line already
+  captured in foreign_exchange_adjustments, set unrealized_gains_losses to null — do NOT extract
+  it separately. Only populate this field when the unrealized item appears on a DISTINCT line from
+  the foreign_exchange_adjustments source line.
 • deferred_compensation: "deferred compensation"
 • loss_on_disposal: Sum disposal LOSSES from income statement ONLY when they are genuinely non-recurring and material. Look for "Loss on sale of equipment", "Loss on disposal of right-of-use assets". ONLY include lines where the number is POSITIVE (not in parentheses) — positive means a real loss. Extract as a positive number. Example: "Loss (gain) on sale of equipment 27" + "Loss (gain) on disposal of right-of-use assets 81" = 108. IMPORTANT: If the number is in PARENTHESES like (139), that is a GAIN — do NOT put it here, put it in gain_on_disposal instead. Each line item goes into ONLY ONE field. Never put the same amount in both loss_on_disposal and gain_on_disposal.
   EQUIPMENT-INTENSIVE BUSINESSES: For companies whose core operations involve regularly cycling equipment (e.g., equipment rental, construction, mining, security-tower companies), routine disposal losses are a RECURRING OPERATING COST and should NOT be placed in loss_on_disposal. Only use this field for genuinely non-recurring, material disposal events (e.g., a plant closure, a one-time fleet liquidation). If disposal losses appear every year at similar magnitudes, they are operational — leave loss_on_disposal null.
   NOTE: The calculator does NOT add loss_on_disposal back to EBITDA by design — conservative underwriting treats routine disposal losses as operational. However, populating this field still matters for accurate reporting; it simply will not increase Adjusted EBITDA.
-• other_non_cash: Non-cash charges not covered above. Examples: "non-cash rent expense", "straight-line rent adjustment", "asset retirement obligation accretion".
-  IMPORTANT: Do NOT include any of the following in other_non_cash — they are already captured elsewhere:
-  - Accretion of discount on debt/notes payable (already in the top-level "interest" field as part of finance costs)
+• other_non_cash: Non-cash charges not covered above. Examples: "non-cash rent expense", "straight-line rent adjustment", "asset retirement obligation accretion", "non-cash interest expense", "amortization of deferred financing costs", "amortization of debt discount".
+  IMPORTANT: Do NOT include items already captured in other dedicated fields:
   - Depreciation or amortization (already in depreciation_amortization)
-  - Stock-based compensation (has its own dedicated field above)
-  - Impairment charges (has its own dedicated field above)
+  - Stock-based compensation (already in stock_based_compensation above)
+  - Impairment charges (already in impairment_charges above)
   Placing these items in other_non_cash will DOUBLE-COUNT them in Adjusted EBITDA.
 
 One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
@@ -211,11 +214,25 @@ SUBTRACT from EBITDA (these inflate net income):
 • other_one_time_gains: "settlement income", "extraordinary gain"
 
 FOREIGN EXCHANGE (CRITICAL FOR ACCURACY):
-• foreign_exchange_adjustments: Look for "Foreign exchange (gain) loss" or "FX gain/loss" on income statement.
-  - If shown as POSITIVE number (e.g., 70), it's a LOSS - extract as POSITIVE (add back)
-  - If shown in PARENTHESES like (2), it's a GAIN - extract as NEGATIVE (subtract)
-  Example: "Foreign exchange (gain) loss (2)" means $2 gain, extract as -2
-  Example: "Foreign exchange (gain) loss 70" means $70 loss, extract as 70
+• unrealized_gains_losses: The ONLY FX adjustment that belongs in adjusted_ebitda_components is
+  the NON-CASH unrealized portion of FX movements. This appears in the CASH FLOW STATEMENT under
+  "Items not affecting cash" as "Unrealized foreign exchange (gain) loss" or similar. It is a
+  reconciling item that converts accrual net income to cash — it is a legitimate non-cash add-back.
+  - If shown as POSITIVE number (e.g., 146), it's an unrealized LOSS - extract as POSITIVE (adds to EBITDA)
+  - If shown in PARENTHESES like (444), it's an unrealized GAIN - extract as NEGATIVE (subtracts from EBITDA)
+  Example: "Unrealized foreign exchange (gain) loss (444)" → extract -444
+
+• foreign_exchange_adjustments: LEAVE NULL in almost all cases. This field is reserved for the
+  rare situation where an FX amount is NOT already flowing through net income — for example, a
+  cumulative translation adjustment reclassified from OCI upon disposal of a foreign operation.
+  CRITICAL — DO NOT USE for the income statement "Exchange (gain)/loss" line:
+  That P&L line (e.g., "Exchange (gain)/loss (2,673)") is already included in net income and
+  therefore already in base EBITDA. Placing it in foreign_exchange_adjustments would subtract
+  the FX gain a second time, producing a materially understated Adjusted EBITDA.
+  CRITICAL — DO NOT USE for the cash flow "Foreign exchange effect on cash and cash equivalents"
+  line. That is a balance sheet reconciling item for cash translation, not an EBITDA adjustment.
+  Rule of thumb: if the FX amount already appears anywhere on the income statement, set
+  foreign_exchange_adjustments to null.
 
 PARENTHESES CONVENTION IN FINANCIAL STATEMENTS:
 - Numbers in parentheses = opposite of the label
@@ -230,7 +247,7 @@ Owner/Management Adjustments (add back):
 
 Other Adjustments:
 • accounting_policy_adjustments: "change in accounting policy", "change in estimate"
-• foreign_exchange_adjustments: "foreign exchange", "fx gain", "fx loss", "currency translation"
+• foreign_exchange_adjustments: See FOREIGN EXCHANGE section above — leave null unless an FX amount is verifiably NOT already in net income (extremely rare). Do NOT use the income statement Exchange (gain)/loss line here.
 • pro_forma_cost_savings: "pro forma", "run-rate", "cost savings", "headcount reduction", "facility closure"
 • pro_forma_synergies: "synergies", "operational efficiencies"
 
@@ -366,6 +383,8 @@ CRITICAL DEBT CALCULATION RULES:
   Do NOT manually add lease liabilities to senior_debt — always keep them separate in debt_components.
 • Notes payable, vendor take-back notes, or debt described as "subordinated" are NOT senior debt.
 • "total_debt" = bank_debt + lease_liabilities + notes_payable + subordinated_debt + all other interest-bearing obligations.
+  CRITICAL: total_debt must ONLY include interest-bearing financial liabilities.
+  Do NOT include: accounts payable, accrued liabilities, trade payables, deferred revenue, income taxes payable, provisions (unless they represent called debt obligations), puttable interests, or any other non-financial operating obligation. These are operating liabilities, NOT debt.
 • If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities. Lease liabilities appear as a separate line on the balance sheet.
 • Lease liabilities must always be recorded in debt_components (lease_liabilities_current + lease_liabilities_long_term) but must NOT be added to senior_debt.
 • When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority among bank facilities.
@@ -373,14 +392,18 @@ CRITICAL DEBT CALCULATION RULES:
 CURRENT ASSETS & LIABILITIES (CRITICAL FOR LIQUIDITY RATIO):
 Extract from Balance Sheet for Current Ratio calculation:
 
-• current_assets: Total current assets from the Balance Sheet. Look for:
-  - "Total current assets" or "Current assets - total"
-  - Sum of: cash, accounts receivable, inventory, prepaid expenses, other current assets
+• current_assets: Total current assets from the Balance Sheet.
+  IMPORTANT: You MUST use the "Total current assets" row — NEVER use an individual line item (e.g. cash, receivables, inventory, prepaid).
+  - Look for: "Total current assets", "Current assets - total", "Total current assets" (often bolded or underlined)
+  - This is the SUBTOTAL row that sums all current asset line items
+  - If no explicit total row exists, sum: cash, accounts receivable, inventory, prepaid expenses, other current assets
   - Extract as POSITIVE number
 
-• current_liabilities: Total current liabilities from the Balance Sheet. Look for:
-  - "Total current liabilities" or "Current liabilities - total"
-  - Sum of: accounts payable, accrued liabilities, current portion of debt, current portion of lease liabilities, other current liabilities
+• current_liabilities: Total current liabilities from the Balance Sheet.
+  IMPORTANT: You MUST use the "Total current liabilities" row — NEVER use an individual line item (e.g. accounts payable, accrued liabilities).
+  - Look for: "Total current liabilities", "Current liabilities - total", "Total current liabilities" (often bolded or underlined)
+  - This is the SUBTOTAL row that sums all current liability line items
+  - If no explicit total row exists, sum: accounts payable, accrued liabilities, current portion of debt, current portion of lease liabilities, other current liabilities
   - Extract as POSITIVE number
 
 SHAREHOLDERS' EQUITY (CRITICAL FOR LEVERAGE RATIOS):
@@ -513,9 +536,10 @@ DEBT SERVICE ITEMS (CRITICAL FOR BANKER'S DSCR COVENANT):
   - "Amortization of debt discount" or "Non-cash financing costs"
   - Extract as POSITIVE number
 
-• ttm_principal_payments: TOTAL of all principal repayments:
-  - Sum of repayment_of_debt + payment_of_lease_liability
-  - Or look for combined "Debt repayments" figure
+• ttm_principal_payments: Bank debt principal repayments only (NOT including lease payments):
+  - Look for "Repayment of long-term debt", "Bank loan repayments", "Principal repayments"
+  - Do NOT add lease payments here — leases are captured separately in payment_of_lease_liability
+  - Or look for combined "Debt repayments" figure (excluding leases)
   - Extract as POSITIVE number
 
 • ttm_interest_expense: Trailing twelve months total interest expense. For ANNUAL reports this equals the top-level "interest" field — extract the same value.
@@ -531,6 +555,11 @@ CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • These adjustments are ESSENTIAL for calculating Adjusted EBITDA accurately.
 • MISCLASSIFICATION CHECK: Before finalising, verify that no income item (parenthesized amount under an "expenses" label, or explicit income line) was accidentally placed in other_one_time_expenses. If it was, move it to other_income_non_operating.
 • DOUBLE-COUNTING CHECK: Before finalizing, verify that no item included in the top-level "interest" field (finance costs) has ALSO been placed in adjusted_ebitda_components.other_non_cash. Common offenders: accretion of discount, non-cash interest expense, amortization of financing fees. If found in both places, REMOVE it from other_non_cash.
+• GAIN FIELD MUTUAL EXCLUSIVITY CHECK: Each gain or income item must appear in EXACTLY ONE gain field. Before finalizing, scan gain_on_asset_sale, other_income_non_operating, other_one_time_gains, and insurance_proceeds. If the same dollar amount appears in two fields (or one is a sub-line of an aggregate in another), keep it in the most specific field and set the others to null. Examples:
+  - A "Gain on disposal of equipment" line → gain_on_asset_sale only, not also in other_one_time_gains
+  - An "Other income" aggregate that includes an FX gain already in foreign_exchange_adjustments → set other_income_non_operating to the non-FX portion only, or null if entirely FX
+  - "Settlement income" → other_one_time_gains only, not also in other_income_non_operating
+• FX / UNREALIZED MUTUAL EXCLUSIVITY CHECK: Verify that foreign_exchange_adjustments and unrealized_gains_losses do not both capture the same income-statement FX line. If they do, set unrealized_gains_losses to null and keep foreign_exchange_adjustments.
 
 • Do not add any keys, explanations, or narrative – JSON object only.
 

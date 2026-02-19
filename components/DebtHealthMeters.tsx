@@ -39,12 +39,12 @@ interface FCCRBreakdown {
     proceeds_from_lt_debt_extracted: number | null;
     cash_taxes_paid_extracted: number | null;
     distributions_paid_extracted: number | null;
-    ttm_principal_payments_extracted: number | null;
-    repayment_of_debt_fallback: number | null;
-    ttm_interest_expense_extracted: number | null;
-    cash_interest_paid_fallback: number | null;
-    interest_accrual_fallback: number | null;
-    lease_payments_extracted: number | null;
+    principal_source: string;
+    principal_value: number | null;
+    interest_source: string;
+    interest_value: number | null;
+    lease_source: string;
+    lease_value: number | null;
   };
 }
 
@@ -798,13 +798,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               Principal Payments
                               {metrics.fccr_breakdown.sources && (
                                 <span className="text-xs text-gray-400 ml-1">
-                                  (ttm:{' '}
-                                  {metrics.fccr_breakdown.sources.ttm_principal_payments_extracted?.toLocaleString() ??
-                                    'null'}
-                                  , fallback:{' '}
-                                  {metrics.fccr_breakdown.sources.repayment_of_debt_fallback?.toLocaleString() ??
-                                    'null'}
-                                  )
+                                  (via {metrics.fccr_breakdown.sources.principal_source})
                                 </span>
                               )}
                             </span>
@@ -820,16 +814,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               + Interest Expense
                               {metrics.fccr_breakdown.sources && (
                                 <span className="text-xs text-gray-400 ml-1">
-                                  (ttm:{' '}
-                                  {metrics.fccr_breakdown.sources.ttm_interest_expense_extracted?.toLocaleString() ??
-                                    'null'}
-                                  , cash:{' '}
-                                  {metrics.fccr_breakdown.sources.cash_interest_paid_fallback?.toLocaleString() ??
-                                    'null'}
-                                  , accrual:{' '}
-                                  {metrics.fccr_breakdown.sources.interest_accrual_fallback?.toLocaleString() ??
-                                    'null'}
-                                  )
+                                  (via {metrics.fccr_breakdown.sources.interest_source})
                                 </span>
                               )}
                             </span>
@@ -847,12 +832,9 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               <span className="text-gray-600 flex items-center flex-wrap">
                                 + Lease Payments
                                 {metrics.fccr_breakdown.sources && (
-                                  <SourceInfo
-                                    value={
-                                      metrics.fccr_breakdown.sources
-                                        .lease_payments_extracted
-                                    }
-                                  />
+                                  <span className="text-xs text-gray-400 ml-1">
+                                    (via {metrics.fccr_breakdown.sources.lease_source})
+                                  </span>
                                 )}
                               </span>
                               <span className="font-medium">
