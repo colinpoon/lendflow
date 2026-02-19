@@ -57,11 +57,12 @@ export function calculateDSCR(
   //   - Finance lease liabilities (contractual debt-like obligations to lessors)
   //
   // Excludes (non-bank investor obligations):
-  //   - Operating lease liabilities (excluded per IFRS 16 / ASC 842 covenant convention)
+  //   - Operating lease liabilities (treatment depends on senior debt config)
   //   - Subordinated debt, convertible debt, bonds/debentures, notes payable
   //
-  // NOTE: senior_debt in debt-calculator.ts = totalBankDebt only (no lease components),
-  // so adding finance leases here does NOT double-count.
+  // NOTE: senior_debt in debt-calculator.ts = totalBankDebt + leases (when mode='include').
+  // Funded Debt here also includes leases, but is computed independently from debt_components
+  // to ensure DSCR uses the same lease total regardless of the senior debt config.
   // ─────────────────────────────────────────────────────────────────────────
 
   const dc = (metrics.debt_components || {}) as DebtComponents;

@@ -178,7 +178,9 @@ Non-Cash Adjustments (ADD BACK to EBITDA):
 • NOTE: bad_debt_provision is a CORE OPERATING EXPENSE - do NOT add it back to EBITDA. It reflects the normal cost of extending credit.
 • unrealized_gains_losses: "unrealized loss", "unrealized gain", "mark-to-market"
 • deferred_compensation: "deferred compensation"
-• loss_on_disposal: Sum ALL disposal LOSSES from income statement: "Loss on sale of equipment", "Loss on disposal of right-of-use assets". ONLY include lines where the number is POSITIVE (not in parentheses) — positive means a real loss. Extract as a positive number. Example: "Loss (gain) on sale of equipment 27" + "Loss (gain) on disposal of right-of-use assets 81" = 108. IMPORTANT: If the number is in PARENTHESES like (139), that is a GAIN — do NOT put it here, put it in gain_on_disposal instead. Each line item goes into ONLY ONE field. Never put the same amount in both loss_on_disposal and gain_on_disposal.
+• loss_on_disposal: Sum disposal LOSSES from income statement ONLY when they are genuinely non-recurring and material. Look for "Loss on sale of equipment", "Loss on disposal of right-of-use assets". ONLY include lines where the number is POSITIVE (not in parentheses) — positive means a real loss. Extract as a positive number. Example: "Loss (gain) on sale of equipment 27" + "Loss (gain) on disposal of right-of-use assets 81" = 108. IMPORTANT: If the number is in PARENTHESES like (139), that is a GAIN — do NOT put it here, put it in gain_on_disposal instead. Each line item goes into ONLY ONE field. Never put the same amount in both loss_on_disposal and gain_on_disposal.
+  EQUIPMENT-INTENSIVE BUSINESSES: For companies whose core operations involve regularly cycling equipment (e.g., equipment rental, construction, mining, security-tower companies), routine disposal losses are a RECURRING OPERATING COST and should NOT be placed in loss_on_disposal. Only use this field for genuinely non-recurring, material disposal events (e.g., a plant closure, a one-time fleet liquidation). If disposal losses appear every year at similar magnitudes, they are operational — leave loss_on_disposal null.
+  NOTE: The calculator does NOT add loss_on_disposal back to EBITDA by design — conservative underwriting treats routine disposal losses as operational. However, populating this field still matters for accurate reporting; it simply will not increase Adjusted EBITDA.
 • other_non_cash: "non-cash expense", "noncash", "straight-line rent", "non-cash interest expense"
 
 One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
@@ -188,12 +190,17 @@ One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
 • legal_settlements: "legal settlement", "litigation expense"
 • professional_fees_one_time: one-time "professional fees", "consulting fees"
 • casualty_losses: "casualty loss", "disaster-related costs"
-• other_one_time_expenses: "one-time expense", "non-recurring expense"
+• other_one_time_expenses: "one-time expense", "non-recurring expense".
+  IMPORTANT: Do NOT use this field for income statement lines whose label contains "(income)" or where the amount is in parentheses — those are income items that belong in other_income_non_operating, NOT here. A line labelled "Other (income) expenses" with a parenthesized amount like (2,159) is NET INCOME of 2,159 — it goes into other_income_non_operating and gets SUBTRACTED from EBITDA.
 
 SUBTRACT from EBITDA (these inflate net income):
 • gain_on_disposal: Sum ALL disposal GAINS. When "Loss (gain) on sale" shows a number in PARENTHESES like (139), that's a GAIN of 139 — extract as positive 139. Sum all such gains. IMPORTANT: If the number is NOT in parentheses (e.g., 27), that is a LOSS — do NOT put it here, put it in loss_on_disposal instead. Each disposal line item must go into ONLY ONE of these two fields, never both. Extract values independently for each fiscal year — do not carry values from one year to another.
 • gain_on_asset_sale: "gain on sale", "asset sale gain"
-• other_income_non_operating: Look for "Other income" or "Other (income)" on income statement. Values in parentheses like (2,159) mean income of 2,159. Extract as positive number.
+• other_income_non_operating: Non-recurring income items that inflate reported net income and must be removed from Adjusted EBITDA.
+  WHAT TO LOOK FOR: "Other income", "Other (income)", "Other (income) expenses" on the income statement — whenever the NET result is INCOME.
+  PARENTHESES CONVENTION: A label like "Other (income) expenses" with an amount in PARENTHESES like (2,159) means the net result is INCOME of 2,159. Extract as positive 2,159.
+  CRITICAL: If the income statement shows "Other (income) expenses" with a parenthesized amount, the income is REDUCING the company's reported expenses (net income is higher because of it). This non-recurring income INFLATES net income and must be SUBTRACTED when computing Adjusted EBITDA. Always put it in other_income_non_operating — NEVER in other_one_time_expenses.
+  Extract as a POSITIVE number. The calculator will subtract it from EBITDA automatically.
 • insurance_proceeds: "insurance proceeds"
 • other_one_time_gains: "settlement income", "extraordinary gain"
 
@@ -344,9 +351,10 @@ CRITICAL DEBT CALCULATION RULES:
 • LEVERAGE DOCUMENT ORDER: When unsure of seniority, use position in the document. Debt items appearing earlier in the liabilities section or debt schedules are typically more senior.
 • Look for debt breakdowns in the notes to financial statements (e.g., "Note 8: Credit Facilities", "Note 9: Lease Liabilities", "Note 10: Note Payable")
 • "senior_debt" = funded bank debt ONLY: bank_debt_current + bank_debt_long_term (credit facilities, term loans, revolvers, lines of credit).
-  CRITICAL: Do NOT include lease liabilities (IFRS 16 / ASC 842) in senior_debt. Lease liabilities are a separate balance sheet gross-up and are excluded from the Senior Debt/EBITDA covenant ratio per standard banking convention.
+  Extract senior_debt as bank debt only from the document. The system will add IFRS 16 lease liabilities to Senior Debt during calculation based on the configured treatment mode.
+  Do NOT manually add lease liabilities to senior_debt — always keep them separate in debt_components.
 • Notes payable, vendor take-back notes, or debt described as "subordinated" are NOT senior debt.
-• "total_debt" = bank_debt + lease_liabilities + notes_payable + subordinated_debt + all other interest-bearing obligations. Total debt includes lease liabilities; senior_debt does not.
+• "total_debt" = bank_debt + lease_liabilities + notes_payable + subordinated_debt + all other interest-bearing obligations.
 • If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities. Lease liabilities appear as a separate line on the balance sheet.
 • Lease liabilities must always be recorded in debt_components (lease_liabilities_current + lease_liabilities_long_term) but must NOT be added to senior_debt.
 • When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority among bank facilities.
@@ -507,9 +515,10 @@ DEBT SERVICE ITEMS (CRITICAL FOR BANKER'S DSCR COVENANT):
 CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • You MUST extract adjusted_ebitda_components from the income statement and notes.
 • Look for "Share-based payments expense" line item - extract as stock_based_compensation
-• Look for "Other income" or "Other (income) expense" line items - extract the income amount as other_income_non_operating
-• Look for "Loss (gain) on sale/disposal" line items - positive numbers are LOSSES (loss_on_disposal), numbers in parentheses are GAINS (gain_on_disposal). Each line goes into ONE field only, never both
+• Look for "Other income", "Other (income)", or "Other (income) expenses" line items — when the net result is INCOME (amount in parentheses on an "expenses" label, or a positive amount on an "income" label), extract the income amount as other_income_non_operating (POSITIVE number). NEVER put these income amounts into other_one_time_expenses. These items INFLATE net income and must be SUBTRACTED when computing Adjusted EBITDA.
+• Look for "Loss (gain) on sale/disposal" line items - positive numbers are LOSSES (loss_on_disposal), numbers in parentheses are GAINS (gain_on_disposal). Each line goes into ONE field only, never both. For equipment-intensive businesses (regular asset cycling), loss_on_disposal should be null unless the event is clearly non-recurring.
 • These adjustments are ESSENTIAL for calculating Adjusted EBITDA accurately.
+• MISCLASSIFICATION CHECK: Before finalising, verify that no income item (parenthesized amount under an "expenses" label, or explicit income line) was accidentally placed in other_one_time_expenses. If it was, move it to other_income_non_operating.
 
 • Do not add any keys, explanations, or narrative – JSON object only.
 
