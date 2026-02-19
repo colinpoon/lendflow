@@ -80,7 +80,7 @@ const AdjustmentCategory: React.FC<AdjustmentCategoryProps> = ({
   return (
     <div className="mb-4">
       <div className="flex justify-between items-center mb-2">
-        <h5 className="text-sm font-semibold text-gray-700">{title}</h5>
+        <span className="text-sm font-medium text-gray-700">{title}</span>
         <span
           className={`text-sm font-bold ${isSubtraction ? 'text-red-600' : 'text-green-600'}`}
         >
@@ -173,7 +173,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-blue-50 rounded-lg p-4 text-center">
           <p className="text-sm text-blue-600 font-medium">Reported EBITDA</p>
-          <p className="text-2xl font-bold text-blue-800">
+          <p className="text-2xl font-bold text-blue-800 tabular-nums font-mono">
             {formatCurrency(metrics.ebitda)}
           </p>
         </div>
@@ -181,7 +181,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
           <p className={`text-sm font-medium ${usesReportedValue ? 'text-purple-600' : 'text-green-600'}`}>
             Adjusted EBITDA {usesReportedValue && '(Reported)'}
           </p>
-          <p className={`text-2xl font-bold ${usesReportedValue ? 'text-purple-800' : 'text-green-800'}`}>
+          <p className={`text-2xl font-bold tabular-nums font-mono ${usesReportedValue ? 'text-purple-800' : 'text-green-800'}`}>
             {formatCurrency(adjustedEBITDA)}
           </p>
         </div>
@@ -374,7 +374,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               {breakdown.capital_expenditures_not_in_calc !== 0 && (
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <h5 className="text-sm font-semibold text-gray-700">Capital Expenditures (Maintenance CapEx)</h5>
+                    <span className="text-sm font-medium text-gray-700">Capital Expenditures (Maintenance CapEx)</span>
                     <span className="text-sm font-bold text-red-600">
                       {formatSignedCurrency(breakdown.capital_expenditures_not_in_calc, true)}
                     </span>
@@ -388,7 +388,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               {/* Total */}
               <div className="flex justify-between items-center mt-4 pt-4 border-t-2 border-gray-300">
                 <span className="font-bold text-gray-800">Adjusted EBITDA</span>
-                <span className="font-bold text-xl text-green-700">
+                <span className="font-bold text-xl text-green-700 tabular-nums font-mono">
                   {formatCurrency(adjustedEBITDA)}
                 </span>
               </div>
@@ -414,11 +414,11 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
             <AccordionContent>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                  <thead>
+                  <thead className="bg-gray-50">
                     <tr className="border-b">
-                      <th className="text-left py-2 pr-4">Metric</th>
+                      <th className="text-left py-2 pr-4 text-xs font-bold uppercase tracking-wider text-gray-500">Metric</th>
                       {years.map((yr) => (
-                        <th key={yr} className="text-right py-2 px-2">
+                        <th key={yr} className="text-right py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-500 tabular-nums font-mono">
                           {yr}
                         </th>
                       ))}
@@ -426,17 +426,17 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                   </thead>
                   <tbody>
                     <tr className="border-b">
-                      <td className="py-2 pr-4">Reported EBITDA</td>
+                      <td className="py-2 pr-4 text-sm font-medium text-gray-700">Reported EBITDA</td>
                       {years.map((yr) => (
-                        <td key={yr} className="text-right py-2 px-2">
+                        <td key={yr} className="text-right py-2 px-2 tabular-nums font-mono">
                           {formatCurrency(data.metrics_by_year[yr].ebitda)}
                         </td>
                       ))}
                     </tr>
                     <tr className="border-b bg-green-50">
-                      <td className="py-2 pr-4 font-medium">Adjusted EBITDA</td>
+                      <td className="py-2 pr-4 text-sm font-medium text-gray-700">Adjusted EBITDA</td>
                       {years.map((yr) => (
-                        <td key={yr} className="text-right py-2 px-2 font-medium">
+                        <td key={yr} className="text-right py-2 px-2 font-medium tabular-nums font-mono">
                           {formatCurrency(data.metrics_by_year[yr].adjusted_ebitda)}
                         </td>
                       ))}

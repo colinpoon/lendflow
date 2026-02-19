@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
-  FileSpreadsheet,
   BarChart4,
   Shield,
   ChevronRight,
@@ -24,9 +23,8 @@ import FinancialTable from '@/components/FinancialTable';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
 import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import AdjustedEBITDA from '@/components/AdjustedEBITDA';
-import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
+import RiskAssessment, { RiskData } from '@/components/RiskAssessment';
 import ExtractionWarnings from '@/components/ExtractionWarnings';
-import { RiskData } from '@/components/RiskAssessment';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 import type { ComputedMetrics } from '@/types';
 import { Project } from '@/lib/supabase/types';
@@ -114,6 +112,7 @@ export default function ProjectDetail({
 
   // Document deletion
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const [fccrAdjustment, setFccrAdjustment] = useState(0);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -242,10 +241,8 @@ export default function ProjectDetail({
     }
   }, [mergedData]);
 
-  const handleDataUpdate = (data: unknown) => {
-    console.log('Project received payload:', data);
-
-    // After new upload, refresh the page to get merged data
+  const handleDataUpdate = (_data: unknown) => {
+    // Reload to pick up newly merged data from Supabase
     window.location.reload();
   };
 
@@ -325,7 +322,7 @@ export default function ProjectDetail({
               <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
               <Button
                 size="icon"
-                variant="outline"
+                variant="ghost"
                 onClick={() => setIsEditingName(true)}
                 className="h-7 w-7"
                 title="Edit project name"
@@ -362,9 +359,16 @@ export default function ProjectDetail({
                       key={doc.document_id}
                       className="text-xs bg-white px-2 py-1 rounded border border-blue-200 flex items-center gap-1.5 group"
                     >
-                      <FileText className="h-3 w-3" />
-                      <span className="font-medium">{doc.file_name}</span>
-                      <span className="text-blue-600">({doc.years.join(', ')})</span>
+                      <FileText className="h-3 w-3 shrink-0" />
+                      <span
+                        className="font-medium max-w-[200px] truncate"
+                        title={doc.file_name}
+                      >
+                        {doc.file_name}
+                      </span>
+                      <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs font-mono shrink-0">
+                        {doc.years.join(', ')}
+                      </span>
                       <button
                         onClick={() => handleDeleteDocument(doc.document_id, doc.file_name)}
                         disabled={deletingDocId === doc.document_id}
@@ -408,13 +412,13 @@ export default function ProjectDetail({
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="upload">
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Upload
+            <Upload className="mr-2 h-4 w-4" /> Documents
           </TabsTrigger>
           <TabsTrigger value="analysis" disabled={!hasData}>
-            <BarChart4 className="mr-2 h-4 w-4" /> Analysis
+            <BarChart4 className="mr-2 h-4 w-4" /> Financial Data
           </TabsTrigger>
           <TabsTrigger value="credit" disabled={!hasData}>
-            <Shield className="mr-2 h-4 w-4" /> Risk
+            <Shield className="mr-2 h-4 w-4" /> Risk &amp; Credit
           </TabsTrigger>
         </TabsList>
 
@@ -469,7 +473,7 @@ export default function ProjectDetail({
 
         <TabsContent value="credit">
           {(riskData || financialData) ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Risk assessment source info */}
               {mostRecentYear && extractionCount > 1 && (
                 <div className="text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-md">
@@ -480,30 +484,43 @@ export default function ProjectDetail({
                 </div>
               )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quantitative Risk Scorecard</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <QuantitativeRiskCard data={quantitativeRiskAssessment} />
-                </CardContent>
-              </Card>
-
+              {/* Card 1: Credit Risk Score — primary, authoritative */}
               {financialData && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Risk Assessment</CardTitle>
+                    <CardTitle>Credit Risk Score</CardTitle>
+                    <CardDescription>
+                      Weighted composite of FCCR, Senior Leverage, and Debt / Capital with trend analysis
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <WeightedRiskGauge
                       data={financialData}
                       debtHealthAssessment={debtHealthAssessment}
                       riskData={riskData}
+                      quantitativeData={quantitativeRiskAssessment}
+                      customFccrAdjustment={fccrAdjustment}
                     />
                   </CardContent>
                 </Card>
               )}
 
+              {/* Card 2: AI Credit Analyst Assessment — secondary, pillar-level */}
+              {riskData && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>AI Credit Analyst Assessment</CardTitle>
+                    <CardDescription>
+                      Five-pillar qualitative analysis generated from extracted financial data
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <RiskAssessment data={riskData} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Card 3: Adjusted EBITDA */}
               {financialData && (
                 <Card>
                   <CardHeader>
@@ -515,13 +532,14 @@ export default function ProjectDetail({
                 </Card>
               )}
 
+              {/* Card 4: Debt Health Indicators */}
               {financialData && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Debt Health Indicators</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <DebtHealthMeters data={financialData} />
+                    <DebtHealthMeters data={financialData} onFccrAdjustmentChange={setFccrAdjustment} />
                   </CardContent>
                 </Card>
               )}

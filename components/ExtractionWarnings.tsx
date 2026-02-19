@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertTriangle, ClipboardList, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, ClipboardList, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
@@ -10,6 +10,30 @@ interface ExtractionWarningsProps {
   extractionWarnings?: string[];
   chunkStats?: { total: number; successful: number; failed: number };
 }
+
+/**
+ * Sanitize developer-facing language from warning messages before display.
+ * Replaces internal field references with user-friendly equivalents.
+ */
+const sanitizeWarningText = (warning: string): string => {
+  return warning
+    .replace(/\(see merge_conflicts for details\)/gi, '')
+    .replace(/merge_conflicts/gi, 'data conflicts')
+    .trim();
+};
+
+/**
+ * Determine whether a warning is purely informational (resolved automatically)
+ * versus an actionable issue that requires user attention.
+ */
+const isInformationalWarning = (warning: string): boolean => {
+  const lower = warning.toLowerCase();
+  return (
+    lower.includes('detected and resolved') ||
+    lower.includes('automatically resolved') ||
+    lower.includes('conflicts detected and resolved')
+  );
+};
 
 export default function ExtractionWarnings({
   validationIssues,
@@ -27,9 +51,17 @@ export default function ExtractionWarnings({
     return null;
   }
 
+  // Split extraction warnings into informational vs. actionable
+  const informationalWarnings = (extractionWarnings ?? []).filter(isInformationalWarning);
+  const actionableWarnings = (extractionWarnings ?? []).filter(
+    (w) => !isInformationalWarning(w)
+  );
+  const hasInformational = informationalWarnings.length > 0;
+  const hasActionable = actionableWarnings.length > 0 && !hasPartialExtraction;
+
   return (
     <div className="space-y-3">
-      {/* Partial Extraction Warning */}
+      {/* Partial Extraction Warning — amber, actionable */}
       {hasPartialExtraction && (
         <Alert className="bg-amber-50 border-amber-200">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -42,16 +74,35 @@ export default function ExtractionWarnings({
         </Alert>
       )}
 
-      {/* Extraction Warnings */}
-      {extractionWarnings && extractionWarnings.length > 0 && !hasPartialExtraction && (
+      {/* Informational Warnings — blue, resolved automatically */}
+      {hasInformational && (
+        <Alert className="bg-sky-50 border-sky-200">
+          <Info className="h-4 w-4 text-sky-600" />
+          <AlertTitle className="text-sky-800">Data Processing Notice</AlertTitle>
+          <AlertDescription className="text-sky-700">
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              {informationalWarnings.map((warning, index) => {
+                const sanitized = sanitizeWarningText(warning);
+                if (!sanitized) return null;
+                return <li key={index}>{sanitized}</li>;
+              })}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Actionable Extraction Warnings — amber */}
+      {hasActionable && (
         <Alert className="bg-amber-50 border-amber-200">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertTitle className="text-amber-800">Extraction Notice</AlertTitle>
           <AlertDescription className="text-amber-700">
             <ul className="list-disc list-inside mt-1 space-y-1">
-              {extractionWarnings.map((warning, index) => (
-                <li key={index}>{warning}</li>
-              ))}
+              {actionableWarnings.map((warning, index) => {
+                const sanitized = sanitizeWarningText(warning);
+                if (!sanitized) return null;
+                return <li key={index}>{sanitized}</li>;
+              })}
             </ul>
           </AlertDescription>
         </Alert>

@@ -306,7 +306,7 @@ const sections: SectionConfig[] = [
       { key: 'funded_debt_to_ebitda', label: 'Funded Debt / EBITDA', format: 'ratio', highlight: true },
       { key: 'total_debt_to_capital', label: 'Total Debt / Capital', format: 'percent', highlight: true },
       { key: 'current_ratio', label: 'Current Ratio', format: 'ratio', highlight: true },
-      { key: 'interest_coverage_ratio', label: 'Interest Coverage Ratio', format: 'ratio' },
+      { key: 'interest_coverage_ratio', label: 'Interest Coverage Ratio (Adj. EBITDA)', format: 'ratio' },
       { key: 'debt_to_equity_ratio', label: 'Debt to Equity Ratio', format: 'ratio' },
     ],
   },
@@ -466,17 +466,14 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   return (
     <div className="w-full overflow-x-auto">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-semibold text-gray-800">
-          Financial Metrics
-        </h2>
         <span className="text-xs text-gray-500">(Values in thousands)</span>
       </div>
       <table className="min-w-full text-sm border-collapse">
-        <thead>
-          <tr className="bg-gray-100 border-b-2 border-gray-300">
-            <th className="py-3 px-4 text-left font-semibold text-gray-700">Metric</th>
+        <thead className="bg-gray-50">
+          <tr className="border-b-2 border-gray-200">
+            <th className="py-3 px-4 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Metric</th>
             {years.map((y) => (
-              <th key={y} className="py-3 px-4 text-right font-semibold text-gray-700">
+              <th key={y} className="py-3 px-4 text-right text-xs font-bold uppercase tracking-wider text-gray-500 tabular-nums font-mono">
                 {y}
               </th>
             ))}
@@ -549,7 +546,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                         return (
                           <td
                             key={y}
-                            className={`py-2 px-4 text-right ${colorClass} ${
+                            className={`py-2 px-4 text-right tabular-nums font-mono ${colorClass} ${
                               row.highlight && !colorClass ? 'font-medium' : ''
                             }`}
                           >
@@ -589,7 +586,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                   <tr className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-2 px-4 pl-8 text-gray-600">Adjusted EBITDA</td>
                     {years.map((y) => (
-                      <td key={y} className="py-2 px-4 text-right text-gray-600">
+                      <td key={y} className="py-2 px-4 text-right text-gray-600 tabular-nums font-mono">
                         {formatValue(getFccrBreakdownValue(y, 'adjusted_ebitda'), 'currency')}
                       </td>
                     ))}
@@ -598,7 +595,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                   <tr className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-2 px-4 pl-8 text-gray-600">Less: Unfunded CapEx</td>
                     {years.map((y) => (
-                      <td key={y} className="py-2 px-4 text-right text-gray-600">
+                      <td key={y} className="py-2 px-4 text-right text-gray-600 tabular-nums font-mono">
                         {formatValue(getFccrBreakdownValue(y, 'unfunded_capex'), 'currency')}
                       </td>
                     ))}
@@ -607,7 +604,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                   <tr className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-2 px-4 pl-8 text-gray-600">Less: Cash Taxes Paid</td>
                     {years.map((y) => (
-                      <td key={y} className="py-2 px-4 text-right text-gray-600">
+                      <td key={y} className="py-2 px-4 text-right text-gray-600 tabular-nums font-mono">
                         {formatValue(getFccrBreakdownValue(y, 'cash_taxes_paid'), 'currency')}
                       </td>
                     ))}
@@ -616,7 +613,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                   <tr className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-2 px-4 pl-8 text-gray-600">Less: Distributions Paid</td>
                     {years.map((y) => (
-                      <td key={y} className="py-2 px-4 text-right text-gray-600">
+                      <td key={y} className="py-2 px-4 text-right text-gray-600 tabular-nums font-mono">
                         {formatValue(getFccrBreakdownValue(y, 'distributions_paid'), 'currency')}
                       </td>
                     ))}
@@ -625,7 +622,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                   <tr className="border-b border-gray-100 hover:bg-gray-50 bg-blue-50/50">
                     <td className="py-2 px-4 pl-8 font-medium">= CFADS</td>
                     {years.map((y) => (
-                      <td key={y} className="py-2 px-4 text-right font-medium">
+                      <td key={y} className="py-2 px-4 text-right font-medium tabular-nums font-mono">
                         {formatValue(getFccrBreakdownValue(y, 'numerator'), 'currency')}
                       </td>
                     ))}
@@ -650,7 +647,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               <tr className="border-b border-gray-100 hover:bg-gray-50 bg-amber-50/50">
                 <td className="py-2 px-4 font-medium">Unfunded CapEx</td>
                 {years.map((y) => (
-                  <td key={y} className="py-2 px-4 text-right font-medium">
+                  <td key={y} className="py-2 px-4 text-right font-medium tabular-nums font-mono">
                     {formatValue(getFccrBreakdownValue(y, 'unfunded_capex'), 'currency')}
                   </td>
                 ))}
@@ -659,7 +656,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               <tr className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-2 px-4">FCCR Numerator (Cash Available)</td>
                 {years.map((y) => (
-                  <td key={y} className="py-2 px-4 text-right">
+                  <td key={y} className="py-2 px-4 text-right tabular-nums font-mono">
                     {formatValue(getFccrBreakdownValue(y, 'numerator'), 'currency')}
                   </td>
                 ))}
@@ -668,7 +665,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               <tr className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-2 px-4">TTM Principal Payments</td>
                 {years.map((y) => (
-                  <td key={y} className="py-2 px-4 text-right">
+                  <td key={y} className="py-2 px-4 text-right tabular-nums font-mono">
                     {formatValue(getFccrBreakdownValue(y, 'ttm_principal_payments'), 'currency')}
                   </td>
                 ))}
@@ -677,7 +674,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               <tr className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-2 px-4">TTM Interest Expense</td>
                 {years.map((y) => (
-                  <td key={y} className="py-2 px-4 text-right">
+                  <td key={y} className="py-2 px-4 text-right tabular-nums font-mono">
                     {formatValue(getFccrBreakdownValue(y, 'ttm_interest_expense'), 'currency')}
                   </td>
                 ))}
@@ -687,7 +684,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                 <tr className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-2 px-4">Lease Payments</td>
                   {years.map((y) => (
-                    <td key={y} className="py-2 px-4 text-right">
+                    <td key={y} className="py-2 px-4 text-right tabular-nums font-mono">
                       {formatValue(getFccrBreakdownValue(y, 'lease_payments'), 'currency')}
                     </td>
                   ))}
@@ -697,7 +694,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               <tr className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-2 px-4">FCCR Denominator (Fixed Charges)</td>
                 {years.map((y) => (
-                  <td key={y} className="py-2 px-4 text-right">
+                  <td key={y} className="py-2 px-4 text-right tabular-nums font-mono">
                     {formatValue(getFccrBreakdownValue(y, 'denominator'), 'currency')}
                   </td>
                 ))}

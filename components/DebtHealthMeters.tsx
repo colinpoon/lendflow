@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -95,6 +95,7 @@ interface YearMetrics {
 
 interface DebtHealthMetersProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
+  onFccrAdjustmentChange?: (totalAdjustment: number) => void;
 }
 
 type HealthLevel =
@@ -395,7 +396,7 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
 
         {/* Center content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold text-gray-800">
+          <span className="text-3xl font-bold text-gray-800 tabular-nums font-mono">
             {formatValue(value)}
           </span>
           <span className="text-sm text-gray-600 text-center px-2">
@@ -412,6 +413,7 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
 
 const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
   data,
+  onFccrAdjustmentChange,
 }) => {
   // Custom adjustments state for FCCR numerator
   const [customAdjustments, setCustomAdjustments] = useState<CustomAdjustment[]>([]);
@@ -441,6 +443,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
   // Calculate total custom adjustments
   const totalCustomAdjustments = customAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
+
+  // Report FCCR adjustments to parent for composite score sync
+  useEffect(() => {
+    onFccrAdjustmentChange?.(totalCustomAdjustments);
+  }, [totalCustomAdjustments, onFccrAdjustmentChange]);
 
   if (
     !data ||
@@ -518,11 +525,23 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
       {(() => {
         const latestYear = years[0];
         const metrics = data.metrics_by_year[latestYear];
+
+        // Compute the effective (possibly custom-adjusted) FCCR once so it is
+        // consistent between the accordion trigger badge and the content body.
+        // Guard: denominator must be a positive number to avoid division by zero.
+        const effectiveFccr =
+          customAdjustments.length > 0 &&
+          metrics.fccr_breakdown?.denominator &&
+          metrics.fccr_breakdown.denominator > 0
+            ? (metrics.fccr_breakdown.adjusted_ebitda + totalCustomAdjustments) /
+              metrics.fccr_breakdown.denominator
+            : metrics.fccr;
+
         return (
           <div className="mt-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            <p className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">
               Ratio Breakdowns ({latestYear})
-            </h3>
+            </p>
 
             <Accordion
               type="multiple"
@@ -544,44 +563,17 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         </span>
                       )}
                     </span>
-                    {metrics.fccr != null && (
+                    {effectiveFccr != null && (
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-gray-900">
-                          {customAdjustments.length > 0 &&
-                          metrics.fccr_breakdown?.denominator
-                            ? (
-                                (metrics.fccr_breakdown
-                                  .adjusted_ebitda +
-                                  totalCustomAdjustments) /
-                                metrics.fccr_breakdown.denominator
-                              ).toFixed(2)
-                            : metrics.fccr.toFixed(2)}
-                          x
+                        <span className="text-lg font-bold text-gray-900 tabular-nums font-mono">
+                          {effectiveFccr.toFixed(2)}x
                         </span>
                         <span
                           className={`px-2 py-0.5 rounded text-xs text-white font-medium ${
-                            getFCCRHealth(
-                              customAdjustments.length > 0 &&
-                                metrics.fccr_breakdown?.denominator
-                                ? (metrics.fccr_breakdown
-                                    .adjusted_ebitda +
-                                    totalCustomAdjustments) /
-                                    metrics.fccr_breakdown.denominator
-                                : metrics.fccr,
-                            ).bgClass
+                            getFCCRHealth(effectiveFccr).bgClass
                           }`}
                         >
-                          {getRatingLabel(
-                            getFCCRHealth(
-                              customAdjustments.length > 0 &&
-                                metrics.fccr_breakdown?.denominator
-                                ? (metrics.fccr_breakdown
-                                    .adjusted_ebitda +
-                                    totalCustomAdjustments) /
-                                    metrics.fccr_breakdown.denominator
-                                : metrics.fccr,
-                            ).level,
-                          )}
+                          {getRatingLabel(getFCCRHealth(effectiveFccr).level)}
                         </span>
                       </div>
                     )}
@@ -915,23 +907,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       </div>
 
                       {/* Reasoning */}
-                      {metrics.fccr != null && (
+                      {effectiveFccr != null && (
                         <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
                           {getFCCRReasoning(
-                            customAdjustments.length > 0 &&
-                              metrics.fccr_breakdown?.denominator
-                              ? (metrics.fccr_breakdown.numerator +
-                                  totalCustomAdjustments) /
-                                  metrics.fccr_breakdown.denominator
-                              : metrics.fccr,
-                            getFCCRHealth(
-                              customAdjustments.length > 0 &&
-                                metrics.fccr_breakdown?.denominator
-                                ? (metrics.fccr_breakdown.numerator +
-                                    totalCustomAdjustments) /
-                                    metrics.fccr_breakdown.denominator
-                                : metrics.fccr,
-                            ).level,
+                            effectiveFccr,
+                            getFCCRHealth(effectiveFccr).level,
                           )}
                         </p>
                       )}
@@ -957,7 +937,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     </span>
                     {metrics.senior_debt_to_ebitda != null && (
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-gray-900">
+                        <span className="text-lg font-bold text-gray-900 tabular-nums font-mono">
                           {metrics.senior_debt_to_ebitda.toFixed(2)}x
                         </span>
                         <span
@@ -990,10 +970,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
                       {/* Senior Debt Breakdown */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-indigo-700 mb-2">
+                        <div className="text-sm font-semibold text-blue-700 mb-2">
                           Numerator (Senior Debt)
                         </div>
-                        <div className="pl-4 border-l-2 border-indigo-200 space-y-1 text-sm">
+                        <div className="pl-4 border-l-2 border-blue-200 space-y-1 text-sm">
                           {metrics.debt_components ? (
                             <>
                               {/* Bank Debt Components */}
@@ -1114,7 +1094,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             </div>
                           )}
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-indigo-800">
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-blue-800">
                           <span>Total Senior Debt</span>
                           <span>
                             {formatCurrency(metrics.senior_debt)}
@@ -1124,10 +1104,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
                       {/* EBITDA */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-teal-700 mb-2">
+                        <div className="text-sm font-semibold text-slate-600 mb-2">
                           Denominator (Adjusted EBITDA)
                         </div>
-                        <div className="pl-4 border-l-2 border-teal-200 space-y-1 text-sm">
+                        <div className="pl-4 border-l-2 border-slate-200 space-y-1 text-sm">
                           <div className="flex justify-between items-start">
                             <span className="text-gray-600 flex items-center flex-wrap">
                               Reported EBITDA
@@ -1156,7 +1136,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             </div>
                           )}
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-teal-800">
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-slate-700">
                           <span>Adjusted EBITDA (Used)</span>
                           <span>
                             {formatCurrency(
@@ -1226,7 +1206,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     </span>
                     {metrics.total_debt_to_capital != null && (
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-gray-900">
+                        <span className="text-lg font-bold text-gray-900 tabular-nums font-mono">
                           {(
                             metrics.total_debt_to_capital * 100
                           ).toFixed(1)}
@@ -1262,10 +1242,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
                       {/* Total Debt Breakdown */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-rose-700 mb-2">
+                        <div className="text-sm font-semibold text-blue-700 mb-2">
                           Numerator (Total Debt)
                         </div>
-                        <div className="pl-4 border-l-2 border-rose-200 space-y-1 text-sm">
+                        <div className="pl-4 border-l-2 border-blue-200 space-y-1 text-sm">
                           {metrics.debt_components ? (
                             <>
                               {/* Bank Debt */}
@@ -1484,7 +1464,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             </div>
                           )}
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-rose-800">
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-blue-800">
                           <span>Total Debt</span>
                           <span>
                             {formatCurrency(metrics.total_debt)}
@@ -1494,10 +1474,10 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
                       {/* Total Capital Breakdown */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-emerald-700 mb-2">
+                        <div className="text-sm font-semibold text-slate-600 mb-2">
                           Denominator (Total Capital)
                         </div>
-                        <div className="pl-4 border-l-2 border-emerald-200 space-y-1 text-sm">
+                        <div className="pl-4 border-l-2 border-slate-200 space-y-1 text-sm">
                           <div className="flex justify-between items-start">
                             <span className="text-gray-600">
                               Total Debt
@@ -1521,12 +1501,12 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             </span>
                           </div>
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-emerald-800">
+                        <div className="flex justify-between mt-2 pt-2 border-t font-semibold text-slate-700">
                           <span>Total Capital</span>
                           <span>
                             {formatCurrency(
-                              metrics.total_debt +
-                                metrics.shareholders_equity,
+                              (metrics.total_debt ?? 0) +
+                                (metrics.shareholders_equity ?? 0),
                             )}
                           </span>
                         </div>
@@ -1604,16 +1584,16 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
       {years.length > 1 && (
         <div className="mt-6 pt-4 border-t">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">
+          <p className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3">
             Historical Comparison
-          </h3>
+          </p>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead>
+              <thead className="bg-gray-50">
                 <tr className="border-b">
-                  <th className="text-left py-2 pr-4">Metric</th>
+                  <th className="text-left py-2 pr-4 text-xs font-bold uppercase tracking-wider text-gray-500">Metric</th>
                   {years.map((yr) => (
-                    <th key={yr} className="text-right py-2 px-2">
+                    <th key={yr} className="text-right py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-500 tabular-nums font-mono">
                       {yr}
                     </th>
                   ))}
@@ -1621,7 +1601,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
               </thead>
               <tbody>
                 <tr className="border-b">
-                  <td className="py-2 pr-4">FCCR</td>
+                  <td className="py-2 pr-4 text-sm font-medium text-gray-700">FCCR</td>
                   {years.map((yr) => {
                     const val = data.metrics_by_year[yr].fccr;
                     const health =
@@ -1630,7 +1610,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
                           <span
-                            className={`px-2 py-0.5 rounded text-xs text-white ${health?.bgClass}`}
+                            className={`px-2 py-0.5 rounded text-xs text-white tabular-nums font-mono ${health?.bgClass}`}
                           >
                             {val.toFixed(2)}x
                           </span>
@@ -1642,7 +1622,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                   })}
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2 pr-4">
+                  <td className="py-2 pr-4 text-sm font-medium text-gray-700">
                     Senior Debt / Adj. EBITDA
                   </td>
                   {years.map((yr) => {
@@ -1656,7 +1636,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
                           <span
-                            className={`px-2 py-0.5 rounded text-xs text-white ${health?.bgClass}`}
+                            className={`px-2 py-0.5 rounded text-xs text-white tabular-nums font-mono ${health?.bgClass}`}
                           >
                             {val.toFixed(2)}x
                           </span>
@@ -1668,7 +1648,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                   })}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4">Total Debt / Capital</td>
+                  <td className="py-2 pr-4 text-sm font-medium text-gray-700">Total Debt / Capital</td>
                   {years.map((yr) => {
                     const val =
                       data.metrics_by_year[yr].total_debt_to_capital;
@@ -1680,7 +1660,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       <td key={yr} className="text-right py-2 px-2">
                         {val != null ? (
                           <span
-                            className={`px-2 py-0.5 rounded text-xs text-white ${health?.bgClass}`}
+                            className={`px-2 py-0.5 rounded text-xs text-white tabular-nums font-mono ${health?.bgClass}`}
                           >
                             {(val * 100).toFixed(1)}%
                           </span>

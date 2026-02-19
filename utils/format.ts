@@ -100,7 +100,7 @@ export function formatMargin(value: number | null | undefined): string {
  * @returns Cleaned text
  */
 export function sanitizeObservationText(text: string): string {
-  if (!text) return text;
+  if (!text) return '';
 
   return text
     // Revert common misformatting: "$2,023.00" → "2023"

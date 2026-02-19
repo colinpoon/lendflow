@@ -14,8 +14,15 @@ import {
   TrendingDown,
   BarChart3,
   ClipboardList,
+  ChevronRight,
+  Activity,
+  ThumbsUp,
+  ThumbsDown,
+  AlertCircle,
 } from 'lucide-react';
 import { RiskData } from '@/components/RiskAssessment';
+import { QuantitativeMetricsTable } from '@/components/QuantitativeRiskCard';
+import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 
 interface DebtHealthAssessment {
   weighted_score: number;
@@ -43,6 +50,7 @@ interface WeightedRiskGaugeProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
   debtHealthAssessment: DebtHealthAssessment | null;
   riskData?: RiskData | null;
+  quantitativeData?: QuantitativeRiskAssessment | null;
   // Custom FCCR adjustment from FCCRBreakdown (total of all custom adjustments)
   customFccrAdjustment?: number;
 }
@@ -148,24 +156,70 @@ const getRiskConfig = (score: number): RiskConfig => {
   };
 };
 
-// Get lending decision styling
-const getLendingDecisionStyle = (
+// Get lending decision styling and icon
+const getLendingDecisionConfig = (
   decision: string,
-): { bg: string; text: string } => {
+): {
+  bg: string;
+  border: string;
+  text: string;
+  labelText: string;
+  icon: React.ReactNode;
+} => {
   const lower = decision.toLowerCase();
+
   if (
     lower.includes('strong approve') ||
     (lower.includes('approve') && !lower.includes('conditional'))
   ) {
-    return { bg: 'bg-green-100', text: 'text-green-800' };
+    return {
+      bg: 'bg-green-50',
+      border: 'border-green-200',
+      text: 'text-green-800',
+      labelText: 'text-green-600',
+      icon: <ThumbsUp className="h-5 w-5 text-green-600" />,
+    };
   }
   if (lower.includes('conditional')) {
-    return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
+    return {
+      bg: 'bg-yellow-50',
+      border: 'border-yellow-200',
+      text: 'text-yellow-800',
+      labelText: 'text-yellow-600',
+      icon: <AlertCircle className="h-5 w-5 text-yellow-600" />,
+    };
   }
   if (lower.includes('decline') || lower.includes('reject')) {
-    return { bg: 'bg-red-100', text: 'text-red-800' };
+    return {
+      bg: 'bg-red-50',
+      border: 'border-red-200',
+      text: 'text-red-800',
+      labelText: 'text-red-600',
+      icon: <ThumbsDown className="h-5 w-5 text-red-600" />,
+    };
   }
-  return { bg: 'bg-gray-100', text: 'text-gray-800' };
+  return {
+    bg: 'bg-gray-50',
+    border: 'border-gray-200',
+    text: 'text-gray-800',
+    labelText: 'text-gray-600',
+    icon: <AlertCircle className="h-5 w-5 text-gray-500" />,
+  };
+};
+
+// Score badge with color coding (for historical table)
+const ScoreBadge: React.FC<{ score: number; format?: string }> = ({
+  score,
+  format = 'raw',
+}) => {
+  const config = getRiskConfig(score);
+  return (
+    <span
+      className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium text-white tabular-nums font-mono ${config.scoreBgClass}`}
+    >
+      {format === 'weighted' ? score.toFixed(1) : score.toFixed(0)}
+    </span>
+  );
 };
 
 const GAUGE_SIZE = 200;
@@ -185,7 +239,7 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
     circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="relative w-50 h-50">
+    <div className="relative w-[200px] h-[200px]">
       <svg
         width={size}
         height={size}
@@ -255,7 +309,7 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
-          className={`text-4xl font-bold ${config.scoreTextClass}`}
+          className={`text-4xl font-bold tabular-nums font-mono ${config.scoreTextClass}`}
         >
           {score.toFixed(1)}
         </span>
@@ -287,8 +341,8 @@ const MetricBadge: React.FC<MetricBadgeProps> = ({
 
   return (
     <div className="flex flex-col items-center p-3 bg-gray-50 rounded-lg">
-      <span className="text-xs text-gray-500 mb-1">{label}</span>
-      <span className={`text-lg font-bold ${config.scoreTextClass}`}>
+      <span className="text-xs text-gray-500 mb-1 text-center">{label}</span>
+      <span className={`text-lg font-bold tabular-nums font-mono ${config.scoreTextClass}`}>
         {value != null ? format(value) : 'N/A'}
       </span>
     </div>
@@ -300,12 +354,9 @@ interface HistoricalChartProps {
   data: { metrics_by_year: Record<string, YearMetrics> };
 }
 
-const HistoricalChart: React.FC<HistoricalChartProps> = ({
-  data,
-}) => {
+const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
   const years = Object.keys(data.metrics_by_year).sort();
 
-  // Calculate metrics for each year
   const chartData = years.map((year) => {
     const m = data.metrics_by_year[year];
     return {
@@ -318,7 +369,6 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
     };
   });
 
-  // Get max values for scaling
   const maxFccr = Math.max(...chartData.map((d) => d.fccr ?? 0), 3);
   const maxDebtEbitda = Math.max(
     ...chartData.map((d) => d.debtEbitda ?? 0),
@@ -329,18 +379,13 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
     <div className="space-y-6">
       {/* FCCR Chart */}
       <div>
-        <h5 className="text-sm font-medium text-gray-700 mb-2">
+        <p className="text-sm font-medium text-gray-700 mb-2">
           FCCR (Target: &gt; 1.2x)
-        </h5>
+        </p>
         <div className="space-y-2">
           {chartData.map((d) => (
-            <div
-              key={`fccr-${d.year}`}
-              className="flex items-center gap-2"
-            >
-              <span className="text-xs text-gray-500 w-12">
-                {d.year}
-              </span>
+            <div key={`fccr-${d.year}`} className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">{d.year}</span>
               <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
@@ -348,8 +393,8 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
                       ? d.fccr >= 1.2
                         ? 'bg-green-500'
                         : d.fccr >= 1.0
-                          ? 'bg-yellow-500'
-                          : 'bg-red-500'
+                        ? 'bg-yellow-500'
+                        : 'bg-red-500'
                       : 'bg-gray-300'
                   }`}
                   style={{
@@ -359,7 +404,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
                         : '0%',
                   }}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700 tabular-nums font-mono">
                   {d.fccr != null ? `${d.fccr.toFixed(2)}x` : 'N/A'}
                 </span>
               </div>
@@ -370,18 +415,13 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
 
       {/* Senior Debt / EBITDA Chart */}
       <div>
-        <h5 className="text-sm font-medium text-gray-700 mb-2">
+        <p className="text-sm font-medium text-gray-700 mb-2">
           Senior Debt / EBITDA (Target: &lt; 2.5x)
-        </h5>
+        </p>
         <div className="space-y-2">
           {chartData.map((d) => (
-            <div
-              key={`debt-${d.year}`}
-              className="flex items-center gap-2"
-            >
-              <span className="text-xs text-gray-500 w-12">
-                {d.year}
-              </span>
+            <div key={`debt-${d.year}`} className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">{d.year}</span>
               <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
@@ -389,8 +429,8 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
                       ? d.debtEbitda <= 2.5
                         ? 'bg-green-500'
                         : d.debtEbitda <= 3.5
-                          ? 'bg-yellow-500'
-                          : 'bg-red-500'
+                        ? 'bg-yellow-500'
+                        : 'bg-red-500'
                       : 'bg-gray-300'
                   }`}
                   style={{
@@ -400,7 +440,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
                         : '0%',
                   }}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700 tabular-nums font-mono">
                   {d.debtEbitda != null
                     ? `${d.debtEbitda.toFixed(2)}x`
                     : 'N/A'}
@@ -413,18 +453,13 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
 
       {/* Debt / Capital Chart */}
       <div>
-        <h5 className="text-sm font-medium text-gray-700 mb-2">
+        <p className="text-sm font-medium text-gray-700 mb-2">
           Debt / Capital (Target: &lt; 50%)
-        </h5>
+        </p>
         <div className="space-y-2">
           {chartData.map((d) => (
-            <div
-              key={`cap-${d.year}`}
-              className="flex items-center gap-2"
-            >
-              <span className="text-xs text-gray-500 w-12">
-                {d.year}
-              </span>
+            <div key={`cap-${d.year}`} className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">{d.year}</span>
               <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
@@ -432,8 +467,8 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
                       ? d.debtCapital <= 50
                         ? 'bg-green-500'
                         : d.debtCapital <= 65
-                          ? 'bg-yellow-500'
-                          : 'bg-red-500'
+                        ? 'bg-yellow-500'
+                        : 'bg-red-500'
                       : 'bg-gray-300'
                   }`}
                   style={{
@@ -443,7 +478,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
                         : '0%',
                   }}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700 tabular-nums font-mono">
                   {d.debtCapital != null
                     ? `${d.debtCapital.toFixed(1)}%`
                     : 'N/A'}
@@ -462,6 +497,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   debtHealthAssessment,
   /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   riskData,
+  quantitativeData,
   customFccrAdjustment = 0,
 }) => {
   if (
@@ -520,8 +556,8 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
       weightedScore <= 4
         ? 'Approve'
         : weightedScore <= 6
-          ? 'Conditional Approval'
-          : 'Further Review Required',
+        ? 'Conditional Approval'
+        : 'Further Review Required',
     key_risk_factors: [],
     positive_factors: [],
     recommendations: [],
@@ -530,34 +566,22 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
 
   const displayScore =
     debtHealthAssessment?.weighted_score ?? weightedScore;
-  const decisionStyle = getLendingDecisionStyle(
-    assessment.lending_decision,
-  );
+  const decisionConfig = getLendingDecisionConfig(assessment.lending_decision);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h3 className="text-xl font-bold text-gray-800">
-          Risk Assessment
-        </h3>
         <p className="text-sm text-gray-500">
-          Fiscal Year {latestYear} | Weighted Score Analysis
+          Fiscal Year {latestYear} — Weighted Score Analysis
         </p>
       </div>
 
-      {/* Main Gauge Section */}
+      {/* Main Gauge + Metric Badges */}
       <div className="flex flex-col md:flex-row items-center justify-center gap-8">
         {/* Large Gauge */}
         <div className="flex flex-col items-center">
           <RiskGauge score={displayScore} />
-          <div className="mt-4 text-center">
-            <span
-              className={`inline-block px-4 py-2 rounded-lg text-sm font-bold ${decisionStyle.bg} ${decisionStyle.text}`}
-            >
-              {assessment.lending_decision}
-            </span>
-          </div>
         </div>
 
         {/* Component Scores */}
@@ -594,11 +618,28 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         </div>
       </div>
 
+      {/* Lending Decision Banner */}
+      <div
+        className={`w-full flex items-center gap-4 px-5 py-4 rounded-lg border ${decisionConfig.bg} ${decisionConfig.border}`}
+      >
+        {decisionConfig.icon}
+        <div className="flex-1">
+          <p
+            className={`text-xs uppercase tracking-widest font-semibold ${decisionConfig.labelText}`}
+          >
+            Lending Decision
+          </p>
+          <p className={`text-xl font-bold mt-0.5 ${decisionConfig.text}`}>
+            {assessment.lending_decision}
+          </p>
+        </div>
+      </div>
+
       {/* Lending Recommendations Section */}
       {(assessment.recommendations?.length > 0 ||
         assessment.suggested_loan_structure) && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-blue-600" />
             <h4 className="font-semibold text-blue-900">
               Lending Recommendations
@@ -606,15 +647,13 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           </div>
 
           {assessment.recommendations?.length > 0 && (
-            <ul className="space-y-2 mb-3">
+            <ul className="space-y-2">
               {assessment.recommendations.map((rec, idx) => (
                 <li
                   key={idx}
                   className="flex items-start gap-2 text-sm text-blue-800"
                 >
-                  <span className="text-blue-500 font-bold mt-0.5">
-                    -
-                  </span>
+                  <ChevronRight className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                   <span>{rec}</span>
                 </li>
               ))}
@@ -622,9 +661,9 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           )}
 
           {assessment.suggested_loan_structure && (
-            <div className="bg-white rounded p-3 mt-2">
-              <p className="text-xs text-gray-500 mb-1">
-                Suggested Structure:
+            <div className="bg-white rounded-lg border border-blue-100 p-3 mt-2">
+              <p className="text-xs text-blue-500 uppercase tracking-wider font-semibold mb-1.5">
+                Suggested Loan Structure
               </p>
               <p className="text-sm text-gray-700">
                 {assessment.suggested_loan_structure}
@@ -634,12 +673,12 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         </div>
       )}
 
-      {/* Risk Factors Accordion */}
+      {/* Risk Factors Accordion — only Key Risk Factors open by default */}
       {(assessment.key_risk_factors?.length > 0 ||
         assessment.positive_factors?.length > 0) && (
         <Accordion
           type="multiple"
-          defaultValue={['risks', 'positives']}
+          defaultValue={['risks']}
           className="w-full space-y-3"
         >
           {/* Key Risk Factors */}
@@ -660,13 +699,11 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <ul className="space-y-2">
+                <ul className="space-y-2 pt-1">
                   {assessment.key_risk_factors.map((factor, idx) => (
                     <li key={idx} className="flex items-start gap-2">
                       <TrendingDown className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-gray-700">
-                        {factor}
-                      </span>
+                      <span className="text-sm text-gray-700">{factor}</span>
                     </li>
                   ))}
                 </ul>
@@ -692,13 +729,11 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <ul className="space-y-2">
+                <ul className="space-y-2 pt-1">
                   {assessment.positive_factors.map((factor, idx) => (
                     <li key={idx} className="flex items-start gap-2">
                       <TrendingUp className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-gray-700">
-                        {factor}
-                      </span>
+                      <span className="text-sm text-gray-700">{factor}</span>
                     </li>
                   ))}
                 </ul>
@@ -708,25 +743,29 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         </Accordion>
       )}
 
-      {/* Historical Comparison */}
+      {/* Historical Comparison Table */}
       {years.length > 1 && (
-        <div className="mt-6 pt-4 border-t">
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">
+        <div className="pt-4 border-t">
+          <p className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3">
             Historical Risk Score Comparison
-          </h4>
+          </p>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead>
+              <thead className="bg-gray-50">
                 <tr className="border-b">
-                  <th className="text-left py-2 pr-4">Year</th>
-                  <th className="text-right py-2 px-2">FCCR Score</th>
-                  <th className="text-right py-2 px-2">
+                  <th className="text-left py-2 pr-4 text-xs font-bold uppercase tracking-wider text-gray-500">
+                    Year
+                  </th>
+                  <th className="text-right py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-500">
+                    FCCR Score
+                  </th>
+                  <th className="text-right py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-500">
                     Debt/EBITDA Score
                   </th>
-                  <th className="text-right py-2 px-2">
+                  <th className="text-right py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-500">
                     Debt/Cap Score
                   </th>
-                  <th className="text-right py-2 px-2">
+                  <th className="text-right py-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-500">
                     Weighted Score
                   </th>
                 </tr>
@@ -742,31 +781,22 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
                     ym.total_debt_to_capital,
                   );
                   const yWeighted =
-                    yFccr * 0.5 +
-                    yDebtEbitda * 0.35 +
-                    yDebtCap * 0.15;
-                  const yConfig = getRiskConfig(yWeighted);
+                    yFccr * 0.5 + yDebtEbitda * 0.35 + yDebtCap * 0.15;
 
                   return (
                     <tr key={year} className="border-b">
-                      <td className="py-2 pr-4 font-medium">
-                        {year}
+                      <td className="py-2 pr-4 font-medium">{year}</td>
+                      <td className="text-right py-2 px-2">
+                        <ScoreBadge score={yFccr} />
                       </td>
                       <td className="text-right py-2 px-2">
-                        {yFccr.toFixed(0)}
+                        <ScoreBadge score={yDebtEbitda} />
                       </td>
                       <td className="text-right py-2 px-2">
-                        {yDebtEbitda.toFixed(0)}
+                        <ScoreBadge score={yDebtCap} />
                       </td>
                       <td className="text-right py-2 px-2">
-                        {yDebtCap.toFixed(0)}
-                      </td>
-                      <td className="text-right py-2 px-2">
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs text-white font-medium ${yConfig.scoreBgClass}`}
-                        >
-                          {yWeighted.toFixed(1)}
-                        </span>
+                        <ScoreBadge score={yWeighted} format="weighted" />
                       </td>
                     </tr>
                   );
@@ -802,63 +832,43 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         </div>
       )}
 
-      {/* Credit Risk Pillar Observations - temporarily disabled */}
-      {/* {riskData && riskData.pillars && Object.keys(riskData.pillars).length > 0 && (
-        <div className="mt-6 pt-4 border-t">
-          <Accordion type="single" collapsible defaultValue="pillars" className="w-full">
-            <AccordionItem value="pillars" className="border rounded-lg px-4">
+      {/* Trend & Trajectory Analysis — injects quantitative metrics table */}
+      {quantitativeData && (
+        <div className="pt-4 border-t">
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem
+              value="trend-trajectory"
+              className="border rounded-lg px-4"
+            >
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-purple-500" />
+                  <Activity className="h-4 w-4 text-violet-500" />
                   <span className="font-semibold text-gray-800">
-                    Credit Risk Pillar Analysis
+                    Trend &amp; Trajectory Analysis
                   </span>
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                    {PILLAR_KEYS.filter(k => riskData.pillars[k]).length} pillars
-                  </span>
+                  {quantitativeData.metrics.length > 0 && (
+                    <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">
+                      {quantitativeData.metrics.length} metrics
+                    </span>
+                  )}
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <div className="space-y-3">
-                  {PILLAR_KEYS.map((key) => {
-                    const p = riskData.pillars[key] as PillarScore | undefined;
-                    if (!p) return null;
-
-                    return (
-                      <div key={key} className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-gray-800 text-sm">
-                            {PILLAR_LABELS[key] || key.replace(/_/g, ' ')}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {p.impact && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${getImpactStyle(p.impact)}`}>
-                                {p.impact}
-                              </span>
-                            )}
-                            {p.score != null && (
-                              <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
-                                {typeof p.score === 'number' && p.score > 10
-                                  ? (p.score / 10).toFixed(1)
-                                  : p.score.toFixed(1)}/10
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {p.observations && (
-                          <p className="text-xs text-gray-600">
-                            {typeof p.observations === 'string' ? p.observations : ''}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="pt-2 space-y-3">
+                  {quantitativeData.trend_summary && (
+                    <p className="text-xs text-gray-500">
+                      {quantitativeData.trend_summary}
+                    </p>
+                  )}
+                  {quantitativeData.metrics.length > 0 && (
+                    <QuantitativeMetricsTable data={quantitativeData} />
+                  )}
                 </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
         </div>
-      )} */}
+      )}
     </div>
   );
 };

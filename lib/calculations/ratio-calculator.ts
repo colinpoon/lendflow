@@ -36,16 +36,19 @@ export function calculateSeniorDebtToEBITDA(
 
 /**
  * Calculate Interest Coverage Ratio
- * ICR = EBITDA / Interest Expense
+ * ICR = Adjusted EBITDA / Interest Expense
+ * Uses Adjusted EBITDA when available, falls back to raw EBITDA
+ * @param adjustedEbitda - Adjusted EBITDA (preferred); pass raw EBITDA as fallback
+ * @param interest - Interest expense
  * @returns Ratio value or null if cannot be calculated
  */
 export function calculateInterestCoverageRatio(
-  ebitda: number | null,
+  adjustedEbitda: number | null,
   interest: number | null
 ): number | null {
-  if (ebitda == null || interest == null || interest === 0) return null;
+  if (adjustedEbitda == null || interest == null || interest === 0) return null;
 
-  return ebitda / interest;
+  return adjustedEbitda / interest;
 }
 
 /**

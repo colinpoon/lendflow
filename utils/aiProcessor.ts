@@ -559,7 +559,7 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
   );
 
   result.interest_coverage_ratio = calculateInterestCoverageRatio(
-    result.ebitda,
+    result.adjusted_ebitda ?? result.ebitda,
     result.interest
   );
 
