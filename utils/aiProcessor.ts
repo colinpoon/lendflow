@@ -20,6 +20,7 @@ import {
   type ChunkResult,
   type ChunkProcessingResult,
   type AIExtractionResponse,
+  type ExtractionMetadata,
 } from '@/lib/chunk-processor';
 import { calculateTextCost } from '@/lib/benchmarks/cost';
 import {
@@ -27,6 +28,7 @@ import {
   normalizeScaleMismatch,
   validateCrossMetricScale,
   validateArithmeticConsistency,
+  applyDetectedScale,
   type MergeResult,
   type MetricConflict,
   type ScaleNormalizationResult,
@@ -210,6 +212,23 @@ export const extractFinancialData = async (
       console.log(`📅 Primary fiscal year identified: ${primary_fiscal_year}`);
     }
 
+    // Collect extraction_metadata from chunks — prefer the highest-confidence detection.
+    // Multiple chunks may independently detect the document scale; we sort by confidence
+    // (high > medium > low) and take the top result to drive the scale conversion step.
+    const confidenceOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
+    const extraction_metadata: ExtractionMetadata | null = allExtractions
+      .map((e) => e.extraction_metadata)
+      .filter((m): m is ExtractionMetadata => m != null)
+      .sort((a, b) => (confidenceOrder[b.scale_confidence] ?? 0) - (confidenceOrder[a.scale_confidence] ?? 0))[0] ?? null;
+
+    if (extraction_metadata) {
+      console.log(
+        `Scale detected: ${extraction_metadata.detected_scale}` +
+        ` (confidence: ${extraction_metadata.scale_confidence},` +
+        ` indicator: "${extraction_metadata.scale_indicator_found ?? 'none'}")`
+      );
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 4: Merge & Consolidate (conflict-aware weighted merge)
     // ─────────────────────────────────────────────────────────────────────────
@@ -296,9 +315,28 @@ export const extractFinancialData = async (
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4c-pre: AI-Detected Scale Conversion
+    // Applies a uniform multiplier based on the document's declared unit (millions,
+    // billions, raw_dollars). This runs BEFORE the heuristic scale checks so that
+    // documents explicitly labelled "(in millions)" are correctly scaled without
+    // relying on magnitude thresholds that can mis-fire on large companies.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const detectedScaleResult = applyDetectedScale(rawMerged, extraction_metadata);
+    rawMerged = detectedScaleResult.metrics;
+
+    if (detectedScaleResult.corrections.length > 0) {
+      extractionWarnings.push(...detectedScaleResult.corrections);
+      console.log(
+        `Scale conversion applied: ${detectedScaleResult.corrections.length} year(s) converted`
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Phase 4c: Cross-Metric Scale Validation
     // Detects when entire year is in raw dollars by checking EBITDA margin
     // Corrects ALL currency metrics if needed, or just Revenue if isolated
+    // Runs AFTER detected-scale conversion as a safety net for ambiguous documents
     // ─────────────────────────────────────────────────────────────────────────
 
     const crossMetricResult = validateCrossMetricScale(rawMerged);

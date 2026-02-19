@@ -11,6 +11,7 @@
 
 import { MERGE_CONFIG, SCALE_VALIDATION, CURRENCY_METRICS } from './constants';
 import { isTableSource } from './validation';
+import type { ExtractionMetadata } from './chunk-processor';
 
 // Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
 const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
@@ -740,6 +741,104 @@ export function validateArithmeticConsistency(
 // ─────────────────────────────────────────────────────────────────────────────
 // Scale Normalization
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Apply the AI-detected document scale to convert all currency values to thousands.
+ *
+ * The extraction prompt now instructs the AI to output values exactly as printed
+ * and report the document's scale in extraction_metadata. This function reads that
+ * metadata and applies the appropriate multiplier uniformly — eliminating the
+ * inconsistent per-field conversion that caused 1,000x errors in million-denominated
+ * documents (e.g., PBHC with $6.47B revenue).
+ *
+ * Scale mapping:
+ * - "thousands"  → no-op (already in target unit)
+ * - "millions"   → × 1,000
+ * - "billions"   → × 1,000,000
+ * - "raw_dollars"→ ÷ 1,000 (× 0.001)
+ * - "unknown"    → skip (let heuristic checks handle it)
+ *
+ * Low-confidence detections are skipped so the downstream heuristic checks
+ * (validateCrossMetricScale, normalizeScaleMismatch) act as the safety net.
+ *
+ * @param metrics  - Merged metrics by year (values still at document's native scale)
+ * @param metadata - Extraction metadata from the AI, or null if unavailable
+ * @returns Corrected metrics with a human-readable corrections log
+ */
+export function applyDetectedScale(
+  metrics: Record<string, YearMetrics>,
+  metadata: ExtractionMetadata | null
+): ScaleNormalizationResult {
+  const corrections: string[] = [];
+
+  // Nothing to do if metadata is absent or scale is already thousands/unknown
+  if (
+    !metadata ||
+    metadata.detected_scale === 'thousands' ||
+    metadata.detected_scale === 'unknown'
+  ) {
+    return { metrics, corrections };
+  }
+
+  // Skip low-confidence detections — let heuristic checks handle ambiguous cases
+  if (metadata.scale_confidence === 'low') {
+    corrections.push(
+      `Scale conversion skipped: detected_scale="${metadata.detected_scale}" but confidence is low — deferring to heuristic checks`
+    );
+    return { metrics, corrections };
+  }
+
+  let multiplier: number;
+  switch (metadata.detected_scale) {
+    case 'millions':
+      multiplier = 1_000;
+      break;
+    case 'billions':
+      multiplier = 1_000_000;
+      break;
+    case 'raw_dollars':
+      multiplier = 1 / 1_000;
+      break;
+    default:
+      // Exhaustive guard: any future detected_scale values fall through unchanged
+      return { metrics, corrections };
+  }
+
+  const corrected = structuredClone(metrics);
+
+  for (const [year, yearData] of Object.entries(corrected)) {
+    let count = 0;
+
+    // Scale all top-level currency metrics
+    for (const metric of CURRENCY_METRICS) {
+      const val = yearData[metric];
+      if (typeof val === 'number' && val !== 0) {
+        corrected[year][metric] = parseFloat((val * multiplier).toFixed(2));
+        count++;
+      }
+    }
+
+    // Scale nested objects (debt_components, fixed_charges, adjusted_ebitda_components)
+    for (const nestedKey of NESTED_KEYS) {
+      const nestedObj = corrected[year][nestedKey];
+      if (nestedObj && typeof nestedObj === 'object') {
+        for (const [key, val] of Object.entries(nestedObj as Record<string, unknown>)) {
+          if (typeof val === 'number' && val !== 0) {
+            (nestedObj as Record<string, unknown>)[key] = parseFloat((val * multiplier).toFixed(2));
+            count++;
+          }
+        }
+      }
+    }
+
+    corrections.push(
+      `${year}: Applied ${metadata.detected_scale}→thousands conversion (×${multiplier}) to ${count} values` +
+      ` (indicator: "${metadata.scale_indicator_found ?? 'none'}", confidence: ${metadata.scale_confidence})`
+    );
+  }
+
+  return { metrics: corrected, corrections };
+}
 
 /**
  * Normalize scale mismatches across years

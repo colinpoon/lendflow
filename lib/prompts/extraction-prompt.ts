@@ -523,35 +523,30 @@ CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • Do not add any keys, explanations, or narrative – JSON object only.
 
 SCALE NORMALIZATION (REQUIRED):
-ALL output values MUST be in THOUSANDS of the document's currency, regardless of how the document presents them.
+The system normalizes all values to THOUSANDS automatically. Your job is to DETECT the scale and OUTPUT values exactly as printed.
 
 STEP 1 - DETECT THE DOCUMENT'S REPORTED SCALE:
 Look for scale indicators in headers, footnotes, or column labels:
-• "(in thousands)" / "$000s" / "(000s)" → Document is in THOUSANDS → output as-is
-• "(in millions)" / "$M" / "(millions)" → Document is in MILLIONS → multiply by 1,000
-• "(in billions)" / "$B" → Document is in BILLIONS → multiply by 1,000,000
-• No indicator + large integers like 1,634,382,000 → Likely RAW DOLLARS → divide by 1,000
-• No indicator + decimals like 1,634.4 in millions context → Likely MILLIONS → multiply by 1,000
+• "(in thousands)" / "$000s" / "(000s)" → detected_scale: "thousands"
+• "(in millions)" / "$M" / "(millions)" → detected_scale: "millions"
+• "(in billions)" / "$B" → detected_scale: "billions"
+• No indicator + large integers like 1,634,382,000 → detected_scale: "raw_dollars"
+• No indicator + decimals like 1,634.4 in millions context → detected_scale: "millions"
 
-STEP 2 - APPLY CONVERSION:
-Convert ALL extracted values to thousands before output:
-• THOUSANDS → Extract as-is (no conversion needed)
-• MILLIONS → Multiply by 1,000 (e.g., $1.6M revenue → output 1,600)
-• BILLIONS → Multiply by 1,000,000 (e.g., $1.6B revenue → output 1,600,000)
-• RAW DOLLARS → Divide by 1,000 (e.g., $1,634,382 revenue → output 1,634)
+STEP 2 - OUTPUT VALUES AS PRINTED:
+Output ALL numeric values EXACTLY as they appear in the document tables, in the document's stated unit.
+• If document says "(in thousands)" and shows Revenue: 6,470,500 → output 6470500
+• If document says "(in millions)" and shows Revenue: 6,470.5 → output 6470.5
+• If document says "(in billions)" and shows Revenue: 6.47 → output 6.47
+• DO NOT multiply or divide values yourself — the system handles conversion using your detected_scale
 
-STEP 3 - VALIDATE BEFORE OUTPUT:
-Verify your normalized values are internally consistent:
-• EBITDA margin (ebitda ÷ revenue) should be 0.1% - 90%
-• Net margin (net_income ÷ revenue) should be 0.1% - 50%
-• Net Income must be smaller than Revenue
-• If any margin falls outside these bounds, RECHECK your scale detection
+STEP 3 - REPORT SCALE METADATA:
+Populate extraction_metadata accurately — this is how the system knows what conversion to apply:
+• detected_scale: The scale from Step 1
+• scale_indicator_found: The exact text you found (e.g., "(in millions of Canadian dollars)")
+• scale_confidence: "high" if explicit indicator found, "medium" if inferred from patterns, "low" if guessing
 
-COMMON SCALE PATTERNS:
-• Header: "Year Ended December 31, 2024 (in millions)" → All values in MILLIONS
-• Table note: "All amounts in $000s except per share data" → Values in THOUSANDS
-• Canadian/IFRS reports often use thousands; US large-cap 10-Ks often use millions
-• If you see Revenue of 1,634,382 and EBITDA of 163 in the same document, they are at different scales
+CRITICAL: If different sections of the document use different scales (e.g., main statements in millions but per-share data in raw dollars), use the scale of the MAIN financial statements. Per-share data should be output as-is — the system will not scale ratio/per-share fields.
 
 This schema must work for any financial statement worldwide.`;
 
