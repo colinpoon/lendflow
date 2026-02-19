@@ -113,6 +113,7 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       }
     }
   },
+  "primary_fiscal_year": "The fiscal year that this document is primarily reporting on (e.g., '2024'). Identify from the document title or cover page (e.g., 'FY2024 Annual Report'). If the title is not present in this chunk, set to null. Comparative/prior-year columns are NOT the primary year.",
   "extraction_metadata": {
     "detected_scale": "thousands"|"millions"|"billions"|"raw_dollars"|"unknown",
     "scale_indicator_found": string|null,

@@ -417,6 +417,11 @@ const yearMetricsSchema = {
 export const extractionToolSchema = {
   type: 'object' as const,
   properties: {
+    primary_fiscal_year: {
+      type: ['string', 'null'],
+      description:
+        "The most recent fiscal year that this document is primarily reporting on (e.g., '2024'). This is the year in the document title or the latest year with full financial statements. Comparative/prior-year columns visible on this page are NOT the primary year. Set to null if the document title or cover page is not visible on this page.",
+    },
     scale_note: {
       type: 'string',
       description:

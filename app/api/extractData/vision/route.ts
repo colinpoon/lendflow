@@ -312,7 +312,7 @@ export async function POST(req: NextRequest) {
               console.log(`⚠️ Year conflicts detected: ${conflictResult.conflicts.map(c => c.year).join(', ')}`);
 
               // Update document status to pending_conflict
-              await updateDocumentStatus(freshSupabase, documentId, 'processing');
+              await updateDocumentStatus(freshSupabase, documentId, 'pending_conflict');
 
               // Send conflict detected message and stop processing
               if (!writerClosed) {
@@ -406,7 +406,7 @@ export async function POST(req: NextRequest) {
 async function updateDocumentStatus(
   supabase: Awaited<ReturnType<typeof createClient>>,
   documentId: string,
-  status: 'pending' | 'processing' | 'completed' | 'failed',
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'pending_conflict',
   errorMessage?: string
 ) {
   const updateData: { processing_status: string; error_message?: string } = {

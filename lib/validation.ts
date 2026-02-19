@@ -168,6 +168,12 @@ const yearMetricsSchema = z.object({
 
 export const aiExtractionResponseSchema = z.object({
   metrics_by_year: z.record(z.string(), yearMetricsSchema).optional(),
+  /**
+   * The most recent fiscal year that this document is primarily reporting on.
+   * Document-level field (not per-year). Populated by the AI from the document
+   * title or the latest year with full financial statements.
+   */
+  primary_fiscal_year: z.string().nullable().optional(),
 }).passthrough();
 
 export type ValidatedAIResponse = z.infer<typeof aiExtractionResponseSchema>;

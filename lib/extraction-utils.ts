@@ -44,6 +44,16 @@ export interface YearConflict {
   };
   recommendation: 'keep_existing' | 'use_new';
   reason: string;
+  /**
+   * True when this conflicting year is the PRIMARY fiscal year reported
+   * by the NEW document (i.e., the year that document is primarily about).
+   */
+  isPrimaryYearInNew: boolean;
+  /**
+   * True when this conflicting year is the PRIMARY fiscal year reported
+   * by the EXISTING document (i.e., the year that document is primarily about).
+   */
+  isPrimaryYearInExisting: boolean;
 }
 
 export interface ConflictDetectionResult {
@@ -145,13 +155,18 @@ export function detectYearConflicts(
   const newYears = Object.keys(newData.metrics_by_year);
   const newFileName = newExtraction.documents?.file_name || 'New Document';
 
-  // Build a map of existing year data (most recent per year based on fiscal year end date)
+  // Build a map of existing year data (most recent per year based on fiscal year end date).
+  // We also carry the primary_fiscal_year of the owning extraction so that when two
+  // per-year fiscal_year_end_dates are equal (i.e. same year appears in both docs as
+  // either primary or comparative), we can apply the primary-year tiebreaker.
   const existingYearData = new Map<string, {
     document_id: string;
     file_name: string;
     fiscal_year_end_date: string | null;
     extracted_at: string;
     metrics: Record<string, unknown>;
+    /** The primary fiscal year of the extraction that contributed this entry. */
+    primary_fiscal_year: string | null;
   }>();
 
   for (const extraction of existingExtractions) {
@@ -167,6 +182,7 @@ export function detectYearConflicts(
           fiscal_year_end_date: metrics.fiscal_year_end_date || null,
           extracted_at: extraction.created_at,
           metrics,
+          primary_fiscal_year: data.primary_fiscal_year ?? null,
         };
 
         if (!existing) {
@@ -184,6 +200,8 @@ export function detectYearConflicts(
     }
   }
 
+  const newPrimaryFiscalYear = newData.primary_fiscal_year ?? null;
+
   // Check for conflicts
   for (const year of newYears) {
     const existing = existingYearData.get(year);
@@ -192,40 +210,86 @@ export function detectYearConflicts(
     const newMetrics = newData.metrics_by_year[year];
     const newFiscalYearEnd = newMetrics.fiscal_year_end_date || null;
 
-    const newIsMoreRecent = isMoreRecent(
-      { fiscal_year_end_date: newFiscalYearEnd, extracted_at: newExtraction.created_at },
-      { fiscal_year_end_date: existing.fiscal_year_end_date, extracted_at: existing.extracted_at }
-    );
+    // Determine whether this conflicting year is the primary year for each document.
+    // A document is maximally authoritative for the year it was primarily created to report on.
+    const isPrimaryYearInNew = newPrimaryFiscalYear === year;
+    const isPrimaryYearInExisting = existing.primary_fiscal_year === year;
+
+    const fyDateComparison = compareFiscalYearEndDates(newFiscalYearEnd, existing.fiscal_year_end_date);
 
     // Determine recommendation and reason
     let recommendation: 'keep_existing' | 'use_new';
     let reason: string;
 
     if (newFiscalYearEnd && existing.fiscal_year_end_date) {
-      // Both have fiscal year end dates - compare them
-      if (newIsMoreRecent) {
+      if (fyDateComparison > 0) {
+        // New document has a strictly later fiscal year end — it is more recent
         recommendation = 'use_new';
         reason = `New document has a later fiscal year end (${newFiscalYearEnd}) than existing (${existing.fiscal_year_end_date})`;
-      } else {
+      } else if (fyDateComparison < 0) {
+        // Existing document has a strictly later fiscal year end — it is more recent
         recommendation = 'keep_existing';
         reason = `Existing document has a later fiscal year end (${existing.fiscal_year_end_date}) than new (${newFiscalYearEnd})`;
+      } else {
+        // Dates are equal — same fiscal year appears in both documents.
+        // The document for which this is the PRIMARY reporting year is always more
+        // authoritative than the document where it appears as a comparative figure.
+        if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
+          recommendation = 'use_new';
+          reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
+        } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
+          recommendation = 'keep_existing';
+          reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
+        } else {
+          // Both or neither are primary — cannot determine authority automatically
+          recommendation = 'keep_existing';
+          reason = `Both documents cover year ${year} with equal authority; manual review suggested`;
+        }
       }
     } else if (newFiscalYearEnd && !existing.fiscal_year_end_date) {
-      // Can't reliably compare - default to keeping existing (safer)
-      recommendation = 'keep_existing';
-      reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
-    } else if (!newFiscalYearEnd && existing.fiscal_year_end_date) {
-      // Can't reliably compare - default to keeping existing (safer)
-      recommendation = 'keep_existing';
-      reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
-    } else {
-      // Neither has fiscal year end date - fall back to upload timestamp
-      if (newIsMoreRecent) {
+      // Can't reliably compare dates — apply primary-year tiebreaker first
+      if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
         recommendation = 'use_new';
-        reason = 'New document was uploaded more recently';
+        reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
+      } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
+        recommendation = 'keep_existing';
+        reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
       } else {
         recommendation = 'keep_existing';
-        reason = 'Existing document was uploaded more recently';
+        reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
+      }
+    } else if (!newFiscalYearEnd && existing.fiscal_year_end_date) {
+      // Can't reliably compare dates — apply primary-year tiebreaker first
+      if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
+        recommendation = 'use_new';
+        reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
+      } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
+        recommendation = 'keep_existing';
+        reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
+      } else {
+        recommendation = 'keep_existing';
+        reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
+      }
+    } else {
+      // Neither has fiscal year end date — apply primary-year tiebreaker before
+      // falling back to upload timestamp, which is the weakest possible signal.
+      if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
+        recommendation = 'use_new';
+        reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
+      } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
+        recommendation = 'keep_existing';
+        reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
+      } else {
+        // Last resort: upload timestamp
+        const newIsMoreRecentByTimestamp =
+          new Date(newExtraction.created_at) > new Date(existing.extracted_at);
+        if (newIsMoreRecentByTimestamp) {
+          recommendation = 'use_new';
+          reason = 'New document was uploaded more recently';
+        } else {
+          recommendation = 'keep_existing';
+          reason = 'Existing document was uploaded more recently';
+        }
       }
     }
 
@@ -245,6 +309,8 @@ export function detectYearConflicts(
       },
       recommendation,
       reason,
+      isPrimaryYearInNew,
+      isPrimaryYearInExisting,
     });
   }
 

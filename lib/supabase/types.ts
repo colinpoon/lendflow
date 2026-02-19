@@ -2,6 +2,14 @@
 // Note: Using ComputedMetrics for proper typing of year metrics
 export interface ExtractionResult {
   metrics_by_year: Record<string, ExtractionYearMetrics>;
+  /**
+   * The fiscal year for which this document is the PRIMARY report.
+   * For example, a 2024 annual report has primary_fiscal_year = "2024",
+   * even though it may also contain 2023 comparative figures.
+   * Used for conflict resolution: a document is always more authoritative
+   * for the year it primarily reports on than for comparative years.
+   */
+  primary_fiscal_year?: string | null;
   riskAssessment?: Record<string, unknown> | null;
   debtHealthAssessment?: Record<string, unknown> | null;
   quantitativeRiskAssessment?: {
@@ -103,7 +111,7 @@ export interface Database {
           file_type: string;
           file_size: number;
           storage_path: string;
-          processing_status: 'pending' | 'processing' | 'completed' | 'failed';
+          processing_status: 'pending' | 'processing' | 'completed' | 'failed' | 'pending_conflict';
           error_message: string | null;
           created_at: string;
           updated_at: string;
@@ -117,7 +125,7 @@ export interface Database {
           file_type: string;
           file_size: number;
           storage_path: string;
-          processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
+          processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | 'pending_conflict';
           error_message?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -131,7 +139,7 @@ export interface Database {
           file_type?: string;
           file_size?: number;
           storage_path?: string;
-          processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
+          processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | 'pending_conflict';
           error_message?: string | null;
           updated_at?: string;
         };

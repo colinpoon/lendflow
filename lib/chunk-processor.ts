@@ -338,6 +338,13 @@ export interface ExtractionMetadata {
  */
 export interface AIExtractionResponse {
   metrics_by_year?: Record<string, Partial<ExtractedMetrics>>;
+  /**
+   * The most recent fiscal year that this document is primarily reporting on.
+   * This is the year in the document title or the latest year with full financial
+   * statements. Comparative/prior-year columns are NOT the primary year.
+   * Document-level field — not per-year.
+   */
+  primary_fiscal_year?: string | null;
   extraction_metadata?: ExtractionMetadata;
   [key: string]: unknown; // Allow additional fields from AI response
 }

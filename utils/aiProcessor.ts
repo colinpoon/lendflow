@@ -62,6 +62,13 @@ import type { ComputedMetrics, ExtractedMetrics, RiskData, DebtHealthAssessment 
 
 export interface ExtractionResult {
   metrics_by_year?: Record<string, ComputedMetrics>;
+  /**
+   * The most recent fiscal year that this document is primarily reporting on.
+   * Derived from the AI's top-level primary_fiscal_year field — not per-year.
+   * Used by detectYearConflicts to distinguish the document's main year from
+   * comparative/prior-year columns that appear as secondary data.
+   */
+  primary_fiscal_year?: string | null;
   riskAssessment?: RiskData | null;
   debtHealthAssessment?: DebtHealthAssessment | null;
   quantitativeRiskAssessment?: QuantitativeRiskAssessment | null;
@@ -191,6 +198,17 @@ export const extractFinancialData = async (
     const allExtractions = successfulChunks
       .map((r) => r.result)
       .filter((result): result is AIExtractionResponse => result !== null);
+
+    // Derive primary_fiscal_year from chunk responses.
+    // Multiple chunks may each report one — take the first non-null value found.
+    // The AI is instructed to emit the document's primary reporting year (not
+    // comparative columns), so any chunk that identifies it is authoritative.
+    const primary_fiscal_year: string | null =
+      allExtractions.find((e) => e.primary_fiscal_year != null)?.primary_fiscal_year ?? null;
+
+    if (primary_fiscal_year) {
+      console.log(`📅 Primary fiscal year identified: ${primary_fiscal_year}`);
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 4: Merge & Consolidate (conflict-aware weighted merge)
@@ -367,6 +385,9 @@ export const extractFinancialData = async (
       console.log('✅ Extraction complete. Returning combined result.');
       return {
         ...(Object.keys(computed).length > 0 && { metrics_by_year: computed }),
+        // Document-level field: the year this document primarily reports on.
+        // null means the AI could not identify it (e.g., document title missing).
+        primary_fiscal_year,
         ...(riskSnapshot && { riskAssessment: riskSnapshot }),
         ...(debtHealthAssessment && { debtHealthAssessment }),
         ...(quantitativeRiskAssessment && { quantitativeRiskAssessment }),
