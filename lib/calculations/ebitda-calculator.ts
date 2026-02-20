@@ -16,6 +16,12 @@
  * - Guard 5: realized_fx_pl vs other_income_non_operating dedup
  * - Guard 6: interest_income vs other_income_non_operating dedup
  * - Guard 7: finance cost sub-component dedup (other_non_cash + other_one_time_expenses vs interest)
+ *
+ * Reference Values (Taiga FY2024):
+ * - Adjusted EBITDA: ~$80,720K
+ * - EBITDA: $80,831K (interest $811K from gross fallback — P&L net was -$261K)
+ * - Interest income: $5,877K — NOT subtracted (usedGrossFallback=true)
+ * - Other Non-Cash: $241K — zeroed by Check 1c (sub-component of gross fallback $811K)
  */
 
 import type {
@@ -38,12 +44,32 @@ export interface EBITDACalculationResult {
 }
 
 /**
+ * Tagged EBITDA result that carries metadata about which interest source was used.
+ * This is critical for downstream decisions like interest income exclusion.
+ */
+export interface EBITDAResult {
+  value: number;
+  /**
+   * true = the primary P&L `interest` field was negative or null and a fallback
+   * (fixed_charges, ttm_interest_expense, or cash_interest_paid) was used.
+   * This means the interest value is GROSS borrowing costs, and interest income
+   * is NOT embedded in it. Subtracting interest_income in Adjusted EBITDA
+   * would be a double-subtraction.
+   *
+   * false = the primary P&L `interest` field was positive and used directly.
+   * This may be a net figure (gross - interest income) for companies that present
+   * "Finance costs — net". Interest income may inflate EBITDA and should be subtracted.
+   */
+  usedGrossFallback: boolean;
+}
+
+/**
  * Calculate EBITDA from income statement components
  * EBITDA = Net Income + Interest + Taxes + Depreciation & Amortization
  */
-export function calculateEBITDA(metrics: ExtractedMetrics): number | null {
+export function calculateEBITDA(metrics: ExtractedMetrics): EBITDAResult | null {
   // If EBITDA is already provided, use it
-  if (metrics.ebitda != null) return metrics.ebitda;
+  if (metrics.ebitda != null) return { value: metrics.ebitda, usedGrossFallback: false };
 
   const netIncome = metrics.net_income;
 
@@ -53,6 +79,7 @@ export function calculateEBITDA(metrics: ExtractedMetrics): number | null {
   // level and prefer the first positive source found.
   const rawInterest = metrics.interest;
   let interest: number | null = null;
+  let usedGrossFallback = false;
 
   // Primary source: P&L interest (should be gross finance costs, always positive)
   if (rawInterest != null && rawInterest > 0) {
@@ -74,6 +101,7 @@ export function calculateEBITDA(metrics: ExtractedMetrics): number | null {
             `⚠️ INTEREST CORRECTION: Rejected negative interest (${rawInterest}), ` +
             `using fallback ${candidate.label}: ${candidate.value}`
           );
+          usedGrossFallback = true;
         }
         interest = candidate.value;
         break;
@@ -96,9 +124,12 @@ export function calculateEBITDA(metrics: ExtractedMetrics): number | null {
 
   // Need at minimum net_income and depreciation to calculate meaningful EBITDA
   if (netIncome != null && depAmort != null) {
-    return parseFloat(
-      (netIncome + (interest ?? 0) + (taxes ?? 0) + depAmort).toFixed(2)
-    );
+    return {
+      value: parseFloat(
+        (netIncome + (interest ?? 0) + (taxes ?? 0) + depAmort).toFixed(2)
+      ),
+      usedGrossFallback,
+    };
   }
 
   return null;
@@ -146,7 +177,8 @@ function deduplicateOtherNonCash(
   rawOtherNonCash: number,
   nonCashInterestExpense: number,
   interestExpense: number,
-  tolerance: number
+  tolerance: number,
+  usedGrossFallback: boolean = false
 ): number {
   if (rawOtherNonCash <= 0) return rawOtherNonCash;
 
@@ -180,12 +212,40 @@ function deduplicateOtherNonCash(
     return 0;
   }
 
+  // Check 1c: Fallback-sourced interest (net-finance-income companies like Taiga).
+  // When the P&L net finance line was negative and the fallback chain provided a
+  // gross borrowing cost, ALL finance cost sub-components (including amortization of
+  // deferred financing costs) are already inside that gross figure. If other_non_cash
+  // is under 35% of the fallback interest value AND non_cash_interest_expense was not
+  // separately extracted (meaning the AI didn't route the amortization there), treat
+  // it as a sub-component and zero it.
+  //
+  // Threshold calibrated on Taiga FY2024: $241K / $811K = 30%. The 35% ceiling
+  // accommodates minor extraction rounding. False-positive risk exists for legitimate
+  // non-cash items (pension accruals, warranty reserves) on larger net-finance-income
+  // companies — the nonCashInterestExpense === 0 gate mitigates this by ensuring
+  // Checks 1/1b have no anchor to compare against before this heuristic fires.
+  if (usedGrossFallback &&
+      nonCashInterestExpense === 0 &&
+      interestExpense > 0 &&
+      rawOtherNonCash > 0 &&
+      rawOtherNonCash <= interestExpense * 0.35) {
+    console.warn(
+      `⚠️ DEDUP [other_non_cash GROSS-FALLBACK]: value (${rawOtherNonCash}) is ` +
+      `${((rawOtherNonCash / interestExpense) * 100).toFixed(0)}% of gross fallback interest ` +
+      `(${interestExpense}) and non_cash_interest_expense is absent — ` +
+      `presumed finance cost sub-component, zeroing other_non_cash`
+    );
+    return 0;
+  }
+
   // Check 2: Warning only — other_non_cash may overlap with P&L interest.
   // We do NOT zero here because the size relationship alone is insufficient evidence.
   // Legitimate non-cash items (warranty provisions, pension costs, environmental accruals)
   // can be smaller than interest expense without being financing-related.
-  // Suppression requires an explicit non_cash_interest_expense match (Check 1/1b).
-  if (interestExpense > 0 && nonCashInterestExpense === 0 &&
+  // Suppression requires an explicit non_cash_interest_expense match (Check 1/1b)
+  // or gross fallback signal (Check 1c).
+  if (interestExpense > 0 && nonCashInterestExpense === 0 && !usedGrossFallback &&
       rawOtherNonCash <= interestExpense &&
       rawOtherNonCash > interestExpense * 0.05) {
     console.warn(
@@ -389,7 +449,8 @@ function deduplicateOneTimeGains(
  */
 export function calculateAdjustedEBITDA(
   ebitda: number,
-  metrics: ExtractedMetrics
+  metrics: ExtractedMetrics,
+  usedGrossFallback: boolean = false
 ): EBITDACalculationResult {
   const adj = (metrics.adjusted_ebitda_components || {}) as AdjustedEBITDAComponents;
 
@@ -403,7 +464,8 @@ export function calculateAdjustedEBITDA(
     rawOtherNonCash,
     nonCashInterestExpense,
     interestExpense,
-    DEDUP_TOLERANCE
+    DEDUP_TOLERANCE,
+    usedGrossFallback
   );
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -558,19 +620,55 @@ export function calculateAdjustedEBITDA(
   // 2. It creates asymmetry in coverage analysis (inflates numerator)
   // 3. Virtually all credit agreement EBITDA definitions exclude it
   //
-  // Base EBITDA is NOT affected — the formula adds back exactly the net P&L
-  // charge. This adjustment belongs exclusively in the Adjusted EBITDA bridge.
+  // GATE: Only subtract when the P&L interest figure was used directly in
+  // the EBITDA formula (usedGrossFallback === false). When the fallback
+  // chain provided a gross borrowing cost (because the P&L net figure was
+  // negative for net-finance-income companies like Taiga), interest income
+  // was never added into EBITDA — subtracting it would be a double-deduction.
+  //
+  // SECONDARY GATE (belt-and-suspenders): If interest_income > interest,
+  // the company earns more than it pays. The interest field CANNOT be
+  // net-of-income (a net figure would be negative, which calculateEBITDA
+  // rejects). So interest income is not embedded in EBITDA and must not
+  // be subtracted. This catches edge cases where usedGrossFallback is
+  // false but the primary P&L interest is still a gross figure.
   // ─────────────────────────────────────────────────────────────────────────
-  const interestIncomeExcluded = metrics.interest_income ?? 0;
+  const rawInterestIncome = metrics.interest_income ?? 0;
+  let interestIncomeExcluded = 0;
 
-  if (interestIncomeExcluded > 0 && ebitda > 0) {
-    const materialityPct = interestIncomeExcluded / ebitda;
-    if (materialityPct > 0.05) {
+  if (rawInterestIncome > 0) {
+    if (usedGrossFallback) {
+      // Fallback was used — interest field is gross borrowing costs.
+      // Interest income was never in EBITDA. Do NOT subtract.
       console.warn(
-        `⚠️ INTEREST INCOME EXCLUSION: Removing ${interestIncomeExcluded} interest income from ` +
-        `Adjusted EBITDA (${(materialityPct * 100).toFixed(1)}% of base EBITDA). ` +
-        `Non-operating treasury income. If structural, analyst may elect to retain it.`
+        `⚠️ INTEREST INCOME GATE: Suppressing ${rawInterestIncome} interest income exclusion — ` +
+        `EBITDA used gross fallback interest (P&L net was negative/null). ` +
+        `Interest income was never added to EBITDA; subtracting it would double-deduct.`
       );
+    } else if (rawInterestIncome > interestExpense && interestExpense > 0) {
+      // Arithmetic heuristic: interest_income > interest means the company
+      // earns more than it pays. The interest field cannot be net-of-income
+      // (net would be negative → rejected). Suppress subtraction.
+      console.warn(
+        `⚠️ INTEREST INCOME GATE: Suppressing ${rawInterestIncome} interest income exclusion — ` +
+        `interest_income (${rawInterestIncome}) > interest (${interestExpense}). ` +
+        `Interest field cannot be net-of-income; suppressing to avoid double-deduction.`
+      );
+    } else {
+      // Primary P&L interest was used. This may be a net figure (gross - interest income).
+      // Interest income inflates EBITDA and must be subtracted.
+      interestIncomeExcluded = rawInterestIncome;
+
+      if (ebitda > 0) {
+        const materialityPct = interestIncomeExcluded / ebitda;
+        if (materialityPct > 0.05) {
+          console.warn(
+            `⚠️ INTEREST INCOME EXCLUSION: Removing ${interestIncomeExcluded} interest income from ` +
+            `Adjusted EBITDA (${(materialityPct * 100).toFixed(1)}% of base EBITDA). ` +
+            `Non-operating treasury income. If structural, analyst may elect to retain it.`
+          );
+        }
+      }
     }
   }
 

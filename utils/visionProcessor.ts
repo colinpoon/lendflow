@@ -113,14 +113,17 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
   result.debt_breakdown = debtResult.debt_breakdown;
 
   // ── EBITDA ────────────────────────────────────────────────────────────────
-  const ebitda = calculateEBITDA(m);
-  if (ebitda != null) {
+  const ebitdaCalc = calculateEBITDA(m);
+  if (ebitdaCalc != null) {
+    const ebitda = ebitdaCalc.value;
+    const { usedGrossFallback } = ebitdaCalc;
+
     if (m.ebitda == null) {
       result.ebitda = ebitda;
       result.ebitda_calculated = true;
     }
 
-    const ebitdaResult = calculateAdjustedEBITDA(ebitda, m);
+    const ebitdaResult = calculateAdjustedEBITDA(ebitda, m, usedGrossFallback);
     result.adjusted_ebitda = ebitdaResult.adjusted_ebitda;
     result.calculated_adjusted_ebitda = ebitdaResult.calculated_adjusted_ebitda;
     result.adjusted_ebitda_breakdown = ebitdaResult.adjusted_ebitda_breakdown;
@@ -130,6 +133,7 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
       result.adjusted_ebitda_components = {
         ...result.adjusted_ebitda_components,
         other_non_cash: ebitdaResult.deduped_components.other_non_cash,
+        other_one_time_expenses: ebitdaResult.deduped_components.other_one_time_expenses,
       };
     }
   } else {

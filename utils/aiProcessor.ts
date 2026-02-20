@@ -498,13 +498,19 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
     console.log(`   ebitda (if reported):      ${m.ebitda ?? 'N/A (will calculate)'}`);
   }
 
-  const ebitda = calculateEBITDA(m);
-  if (ebitda != null) {
+  const ebitdaCalc = calculateEBITDA(m);
+  if (ebitdaCalc != null) {
+    const ebitda = ebitdaCalc.value;
+    const { usedGrossFallback } = ebitdaCalc;
+
     if (m.ebitda == null) {
       result.ebitda = ebitda;
       result.ebitda_calculated = true;
       if (DEBUG_FINANCIALS) {
         console.log(`   CALCULATED EBITDA:         ${ebitda} = ${m.net_income} + ${m.interest ?? 0} + ${m.taxes ?? 0} + ${m.depreciation_amortization}`);
+        if (usedGrossFallback) {
+          console.log(`   ⚠️ INTEREST SOURCE:        Gross fallback (P&L interest was negative/null)`);
+        }
       }
     } else {
       if (DEBUG_FINANCIALS) {
@@ -512,8 +518,8 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
       }
     }
 
-    // Adjusted EBITDA
-    const ebitdaResult = calculateAdjustedEBITDA(ebitda, m);
+    // Adjusted EBITDA — pass usedGrossFallback to gate interest income exclusion
+    const ebitdaResult = calculateAdjustedEBITDA(ebitda, m, usedGrossFallback);
     result.adjusted_ebitda = ebitdaResult.adjusted_ebitda;
     result.calculated_adjusted_ebitda = ebitdaResult.calculated_adjusted_ebitda;
     result.adjusted_ebitda_breakdown = ebitdaResult.adjusted_ebitda_breakdown;
