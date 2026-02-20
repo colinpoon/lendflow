@@ -65,8 +65,9 @@ export function calculateCapexDeduction(
 
     case 'unfunded':
     default:
-      // Deduct only unfunded CapEx (CapEx - Proceeds from LT Debt)
-      return Math.max(0, capitalExpenditures - proceedsFromLTDebt);
+      // Deduct unfunded CapEx (CapEx - Proceeds from LT Debt)
+      // Can be negative when debt proceeds exceed CapEx, reflecting surplus cash
+      return capitalExpenditures - proceedsFromLTDebt;
   }
 }
 
@@ -108,7 +109,8 @@ export function calculateFCCR(
   const proceedsFromLTDebt = metrics.proceeds_from_long_term_debt ?? 0;
 
   // Calculate unfunded CapEx (for reference, even if not using it)
-  const unfundedCapex = Math.max(0, capitalExpenditures - proceedsFromLTDebt);
+  // Negative when debt proceeds exceed CapEx, reflecting surplus cash
+  const unfundedCapex = capitalExpenditures - proceedsFromLTDebt;
 
   // Calculate actual CapEx deduction based on treatment mode
   const capexDeduction = calculateCapexDeduction(

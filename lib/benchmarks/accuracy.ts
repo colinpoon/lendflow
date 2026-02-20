@@ -147,7 +147,9 @@ const METRIC_DEFINITIONS: Record<string, MetricDef> = {
   'adjusted_ebitda_components.related_party_adjustments': { label: 'Related Party Adj.', category: 'EBITDA Adjustments' },
   'adjusted_ebitda_components.management_fees_adjustment': { label: 'Management Fees Adj.', category: 'EBITDA Adjustments' },
   'adjusted_ebitda_components.accounting_policy_adjustments': { label: 'Accounting Policy Adj.', category: 'EBITDA Adjustments' },
-  'adjusted_ebitda_components.foreign_exchange_adjustments': { label: 'FX Adjustments', category: 'EBITDA Adjustments' },
+  'adjusted_ebitda_components.foreign_exchange_adjustments': { label: 'FX Adjustments (Deprecated)', category: 'EBITDA Adjustments' },
+  'adjusted_ebitda_components.unrealized_fx_cash_flow': { label: 'Unrealized FX (CF)', category: 'EBITDA Adjustments' },
+  'adjusted_ebitda_components.realized_fx_pl': { label: 'Realized FX (P&L)', category: 'EBITDA Adjustments' },
   'adjusted_ebitda_components.pro_forma_cost_savings': { label: 'Pro Forma Cost Savings', category: 'EBITDA Adjustments' },
   'adjusted_ebitda_components.pro_forma_synergies': { label: 'Pro Forma Synergies', category: 'EBITDA Adjustments' },
 

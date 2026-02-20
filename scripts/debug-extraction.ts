@@ -82,7 +82,9 @@ async function debugExtraction() {
       console.log(`     other_one_time_gains:       ${adj.other_one_time_gains ?? 'null'}`);
 
       console.log('\n   OTHER ADJUSTMENTS:');
-      console.log(`     foreign_exchange_adjustments: ${adj.foreign_exchange_adjustments ?? 'null'}`);
+      console.log(`     foreign_exchange_adjustments: ${adj.foreign_exchange_adjustments ?? 'null'} (deprecated)`);
+      console.log(`     unrealized_fx_cash_flow:      ${adj.unrealized_fx_cash_flow ?? 'null'}`);
+      console.log(`     realized_fx_pl:               ${adj.realized_fx_pl ?? 'null'}`);
       console.log(`     owner_compensation_adjustment: ${adj.owner_compensation_adjustment ?? 'null'}`);
       console.log(`     related_party_adjustments:    ${adj.related_party_adjustments ?? 'null'}`);
       console.log(`     management_fees_adjustment:   ${adj.management_fees_adjustment ?? 'null'}`);

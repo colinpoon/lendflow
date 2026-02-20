@@ -218,8 +218,16 @@ const adjustedEbitdaComponentsSchema = {
     },
     // Foreign Exchange
     foreign_exchange_adjustments: {
+      type: ['null'],
+      description: 'DEPRECATED — always set to null. Use unrealized_fx_cash_flow and realized_fx_pl instead.',
+    },
+    unrealized_fx_cash_flow: {
       type: ['number', 'null'],
-      description: 'FX gain/loss. Positive = loss (add back). Negative = gain (subtract). See parentheses rules.',
+      description: 'Unrealized FX from cash flow statement operating activities. Positive = loss (add back). Negative = gain (subtract).',
+    },
+    realized_fx_pl: {
+      type: ['number', 'null'],
+      description: 'Realized FX from income statement P&L line. For analyst review only — not used in EBITDA calc.',
     },
     // Owner/Management
     owner_compensation_adjustment: {

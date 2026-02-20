@@ -163,109 +163,46 @@ function deduplicateOtherNonCash(
 }
 
 /**
- * FX / unrealized-gains deduplication guard.
+ * Resolve the unrealized FX adjustment from the new `unrealized_fx_cash_flow` field,
+ * falling back to the deprecated `foreign_exchange_adjustments` for backward compatibility
+ * with older extractions.
  *
- * HOW THE DOUBLE-COUNT OCCURS (KITS FY2024 example):
- *   - Income statement: "Exchange (gain)/loss (2,673)" — this is a REALIZED FX gain of $2,673K
- *     that already flows through net income (and therefore already into base EBITDA).
- *   - Cash flow statement: "Unrealized foreign exchange (gain) loss (444)" — this is the NON-CASH
- *     portion of FX movements; it is a legitimate adjustment because the cash-flow reconciliation
- *     adds it back to arrive at cash from operations.
- *   - The AI populates BOTH:
- *       foreign_exchange_adjustments = -2,673  (the P&L realized line — already in net income)
- *       unrealized_gains_losses      = -444    (the non-cash adjustment — legitimate)
- *   - Result: Adj EBITDA is over-reduced by $2,673K.
+ * The new schema separates FX into:
+ *   - unrealized_fx_cash_flow: non-cash FX from CF operating activities (valid EBITDA adjustment)
+ *   - realized_fx_pl: P&L FX line (already in net income — informational only, never adjusts EBITDA)
+ *   - foreign_exchange_adjustments: DEPRECATED — ignored when unrealized_fx_cash_flow is present
  *
- * DETECTION LOGIC:
- *   The income statement FX line is ALWAYS larger (or equal) in magnitude to the unrealized
- *   portion (unrealized ⊆ realized+unrealized). When:
- *     1. Both fields are non-zero and share the same sign (both gains or both losses), AND
- *     2. |foreign_exchange_adjustments| > |unrealized_gains_losses| × 2
- *   ... then `foreign_exchange_adjustments` almost certainly captured the gross P&L FX line
- *   that is already embedded in net income. Suppress it; retain only `unrealized_gains_losses`.
- *
- * SAFE CASES (guard does NOT trigger):
- *   - Opposite signs: one is a gain, the other a loss — they are distinct items, keep both.
- *   - Similar magnitudes (ratio ≤ 2×): may be the same unrealized amount duplicated across
- *     chunks; the size guard below will catch runaway values if needed.
- *   - Only one field is non-zero: no overlap possible, no action needed.
+ * Realized FX is logged when material (>5% of EBITDA) for analyst review.
  */
-function deduplicateFxAndUnrealized(
-  rawFxAdjustments: number,
-  rawUnrealizedGainsLosses: number | null | undefined
-): { fxAdjustments: number; unrealizedGainsLosses: number | null } {
-  const unrealized = rawUnrealizedGainsLosses ?? null;
+const REALIZED_FX_MATERIALITY_THRESHOLD = 0.05; // 5% of base EBITDA
 
-  // Guard only applies when both fields are non-zero and same-sign
-  if (
-    unrealized == null ||
-    rawFxAdjustments === 0 ||
-    unrealized === 0 ||
-    Math.sign(rawFxAdjustments) !== Math.sign(unrealized)
-  ) {
-    return { fxAdjustments: rawFxAdjustments, unrealizedGainsLosses: unrealized };
-  }
-
-  const absFx = Math.abs(rawFxAdjustments);
-  const absUnrealized = Math.abs(unrealized);
-
-  if (absFx > absUnrealized * 2) {
-    // foreign_exchange_adjustments is >2× larger than unrealized_gains_losses and same-direction.
-    // This indicates the AI populated the field with the gross income statement Exchange (gain)/loss
-    // line, which is ALREADY embedded in net income (and therefore in base EBITDA).
-    // Suppress foreign_exchange_adjustments; the non-cash unrealized portion is correctly
-    // captured in unrealized_gains_losses.
-    console.warn(
-      `⚠️ DEDUP [fx/unrealized]: foreign_exchange_adjustments (${rawFxAdjustments}) is same-direction ` +
-      `and >2× the magnitude of unrealized_gains_losses (${unrealized}). ` +
-      `The FX field likely contains the income statement Exchange (gain)/loss already embedded ` +
-      `in net income — zeroing foreign_exchange_adjustments to prevent double-subtraction.`
-    );
-    return { fxAdjustments: 0, unrealizedGainsLosses: unrealized };
-  }
-
-  // Similar magnitudes: both fields may be capturing the same unrealized amount from different
-  // document chunks. Log the overlap for review but do not suppress either.
-  console.warn(
-    `⚠️ OVERLAP [fx/unrealized]: Both foreign_exchange_adjustments (${rawFxAdjustments}) and ` +
-    `unrealized_gains_losses (${unrealized}) are non-zero with the same sign. ` +
-    `Values are close in magnitude (ratio ≤ 2×) — both retained. Review extraction for this period.`
-  );
-  return { fxAdjustments: rawFxAdjustments, unrealizedGainsLosses: unrealized };
-}
-
-/**
- * FX size sanity check.
- *
- * A single FX adjustment that moves Adj EBITDA by more than FX_EBITDA_IMPACT_THRESHOLD of
- * base EBITDA is almost certainly double-counting OCI/translation reserve items alongside the
- * P&L FX line, or conflating unrealized and realised FX across chunks.
- *
- * When the threshold is breached after the dedup guard, we log a warning and cap the FX
- * field to the threshold amount. The cap is conservative (20% of EBITDA) — it keeps the FX
- * adjustment material while preventing runaway deductions.
- *
- * NOTE: This guard operates on the already-deduped fxAdjustments value (post-Guard 2).
- */
-const FX_EBITDA_IMPACT_THRESHOLD = 0.20; // 20% of base EBITDA
-
-function applyFxSizeGuard(
-  fxAdjustments: number,
+function resolveUnrealizedFx(
+  adj: AdjustedEBITDAComponents,
   ebitda: number
 ): number {
-  if (ebitda <= 0 || fxAdjustments >= 0) return fxAdjustments; // only affects negative (gain) FX
-  const maxNegativeImpact = -(ebitda * FX_EBITDA_IMPACT_THRESHOLD);
-  if (fxAdjustments < maxNegativeImpact) {
+  // Prefer the new dedicated field
+  const unrealizedFxCf = adj.unrealized_fx_cash_flow ?? null;
+  if (unrealizedFxCf != null) return unrealizedFxCf;
+
+  // Backward compat: use deprecated foreign_exchange_adjustments if new field is absent
+  return adj.foreign_exchange_adjustments ?? 0;
+}
+
+function logRealizedFxIfMaterial(
+  adj: AdjustedEBITDAComponents,
+  ebitda: number
+): void {
+  const realizedFx = adj.realized_fx_pl ?? 0;
+  if (realizedFx === 0 || ebitda === 0) return;
+
+  if (Math.abs(realizedFx) > Math.abs(ebitda) * REALIZED_FX_MATERIALITY_THRESHOLD) {
     console.warn(
-      `⚠️ FX SIZE GUARD: foreign_exchange_adjustments (${fxAdjustments}) would reduce Adj EBITDA ` +
-      `by more than ${FX_EBITDA_IMPACT_THRESHOLD * 100}% of base EBITDA (${ebitda}). ` +
-      `This strongly suggests an OCI/translation reserve item is double-counted alongside the P&L FX line. ` +
-      `Capping fx_adjustments to ${maxNegativeImpact.toFixed(0)} for this period. ` +
-      `Review extraction for "foreign_exchange_adjustments" and "unrealized_gains_losses" values.`
+      `⚠️ REVIEW [realized_fx_pl]: Realized FX of ${realizedFx} is material ` +
+      `(>${REALIZED_FX_MATERIALITY_THRESHOLD * 100}% of EBITDA ${ebitda}). ` +
+      `Verify whether this gain/loss is recurring or one-time. ` +
+      `It is already in net income and has NOT been excluded from Adjusted EBITDA.`
     );
-    return maxNegativeImpact;
   }
-  return fxAdjustments;
 }
 
 /**
@@ -387,26 +324,15 @@ export function calculateAdjustedEBITDA(
   );
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Guard 2: foreign_exchange_adjustments vs unrealized_gains_losses
-  //
-  // The income statement "Exchange (gain)/loss" line is already embedded in net income
-  // (and therefore in base EBITDA). When the AI places this P&L line into
-  // foreign_exchange_adjustments AND also correctly places the non-cash unrealized
-  // portion into unrealized_gains_losses, the FX impact is double-subtracted.
-  //
-  // Fix: when foreign_exchange_adjustments is >2× the magnitude of unrealized_gains_losses
-  // (same direction), suppress foreign_exchange_adjustments. The non-cash portion is
-  // already correctly handled by unrealized_gains_losses.
+  // FX Handling: Use unrealized_fx_cash_flow (non-cash, from CF statement).
+  // Realized FX (realized_fx_pl) is already in net income — logged if material
+  // but never adjusts EBITDA.
   // ─────────────────────────────────────────────────────────────────────────
-  const rawFxAdjustments = adj.foreign_exchange_adjustments ?? 0;
-  const { fxAdjustments: dedupedFxAdjustments, unrealizedGainsLosses: dedupedUnrealized } =
-    deduplicateFxAndUnrealized(rawFxAdjustments, adj.unrealized_gains_losses);
+  const unrealizedFxValue = resolveUnrealizedFx(adj, ebitda);
+  logRealizedFxIfMaterial(adj, ebitda);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Guard 3: FX size sanity — cap disproportionately large negative FX values
-  // This is a backstop for cases where Guard 2 doesn't fully suppress the P&L FX line.
-  // ─────────────────────────────────────────────────────────────────────────
-  const guardedFxAdjustments = applyFxSizeGuard(dedupedFxAdjustments, ebitda);
+  // unrealized_gains_losses is now for non-FX mark-to-market only
+  const dedupedUnrealized = adj.unrealized_gains_losses ?? null;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Guard 4: Cross-field deduplication across one-time gain fields
@@ -433,13 +359,27 @@ export function calculateAdjustedEBITDA(
   // 2. Conservative underwriting treats disposal losses as operational, not one-time
   // 3. Disposal gains are still subtracted via the one-time gains bucket
 
+  // Sign-aware routing for unrealized items (non-FX mark-to-market).
+  // Prompt convention: positive = unrealized loss (non-cash expense → add back);
+  //                    negative = unrealized gain (non-cash income → subtract from EBITDA).
+  const unrealizedLossAddback =
+    dedupedUnrealized != null && dedupedUnrealized > 0 ? dedupedUnrealized : 0;
+  const unrealizedGainToSubtract =
+    dedupedUnrealized != null && dedupedUnrealized < 0 ? Math.abs(dedupedUnrealized) : 0;
+
+  // Sign-aware routing for unrealized FX (from CF statement).
+  // Same convention: positive = unrealized FX loss (add back); negative = unrealized FX gain (subtract).
+  const unrealizedFxLossAddback = unrealizedFxValue > 0 ? unrealizedFxValue : 0;
+  const unrealizedFxGainToSubtract = unrealizedFxValue < 0 ? Math.abs(unrealizedFxValue) : 0;
+
   const nonCashAdjustments = [
     adj.stock_based_compensation,
     adj.impairment_charges,
     adj.goodwill_impairment,
-    dedupedUnrealized,         // may be zeroed by Guard 2 if FX fully overlaps
+    unrealizedLossAddback,        // non-FX unrealized losses (positive values only)
+    unrealizedFxLossAddback,      // unrealized FX loss from CF statement (positive = add back)
     adj.deferred_compensation,
-    deduplicatedOtherNonCash,  // may be zeroed by Guard 1
+    deduplicatedOtherNonCash,     // may be zeroed by Guard 1
   ]
     .filter((v): v is number => v != null && v !== 0)
     .reduce((sum, v) => sum + v, 0);
@@ -475,6 +415,8 @@ export function calculateAdjustedEBITDA(
     otherIncomeNonOperating,    // deduped against gain_on_asset_sale
     insuranceProceeds,          // deduped against other_income_non_operating
     otherOneTimeGains,          // deduped against gain_on_asset_sale and other_income_non_operating
+    unrealizedGainToSubtract,   // non-FX unrealized gain (negative unrealized_gains_losses)
+    unrealizedFxGainToSubtract, // unrealized FX gain from CF statement (negative = gain → subtract)
   ]
     .filter((v): v is number => v != null)
     .map((v) => Math.abs(v)) // Normalize: gains should always be positive
@@ -507,6 +449,8 @@ export function calculateAdjustedEBITDA(
   // Calculate Adjusted EBITDA
   // ─────────────────────────────────────────────────────────────────────────
 
+  // Unrealized FX is now routed through nonCashAdjustments (loss) and oneTimeGains (gain).
+  // No separate fx_adjustments term — the deprecated field is zeroed for backward compat.
   const calculatedAdjustedEbitda = parseFloat(
     (
       ebitda +
@@ -514,7 +458,6 @@ export function calculateAdjustedEBITDA(
       oneTimeExpenses +
       ownerManagementAdjustments +
       accountingAdjustments +
-      guardedFxAdjustments +   // uses deduplicated, size-capped FX value
       proFormaAdjustments -
       oneTimeGains
     ).toFixed(2)
@@ -534,7 +477,7 @@ export function calculateAdjustedEBITDA(
       `⚠️ ADJ EBITDA SANITY: Calculated Adj EBITDA (${calculatedAdjustedEbitda}) is more than 10% below ` +
       `base EBITDA (${ebitda}). Net adjustment: ${netAdjustment.toFixed(0)}. ` +
       `Breakdown — nonCash: ${nonCashAdjustments}, oneTimeExp: ${oneTimeExpenses}, ` +
-      `ownerMgmt: ${ownerManagementAdjustments}, fxAdjustments: ${guardedFxAdjustments}, ` +
+      `ownerMgmt: ${ownerManagementAdjustments}, ` +
       `gains subtracted: ${oneTimeGains}. ` +
       `Review other_income_non_operating and other_non_cash for over-exclusion.`
     );
@@ -552,7 +495,9 @@ export function calculateAdjustedEBITDA(
       one_time_gains: oneTimeGains,
       owner_management_adjustments: ownerManagementAdjustments,
       accounting_adjustments: accountingAdjustments,
-      fx_adjustments: guardedFxAdjustments,
+      fx_adjustments: 0, // deprecated — FX now routed through non_cash/gains
+      unrealized_fx_adjustment: unrealizedFxValue,
+      realized_fx_pl: adj.realized_fx_pl ?? 0,
       pro_forma_adjustments: proFormaAdjustments,
       capital_expenditures_not_in_calc: capitalExpenditures,
       uses_reported_value: metrics.reported_adjusted_ebitda != null,

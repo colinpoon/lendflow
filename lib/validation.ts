@@ -111,6 +111,8 @@ const adjustedEbitdaComponentsSchema = z.object({
   management_fees_adjustment: numericValue.optional(),
   accounting_policy_adjustments: numericValue.optional(),
   foreign_exchange_adjustments: numericValue.optional(),
+  unrealized_fx_cash_flow: numericValue.optional(),
+  realized_fx_pl: numericValue.optional(),
   pro_forma_cost_savings: numericValue.optional(),
   pro_forma_synergies: numericValue.optional(),
 }).passthrough();

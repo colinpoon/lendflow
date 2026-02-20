@@ -106,6 +106,8 @@ export type GroundTruthValues = {
   'adjusted_ebitda_components.management_fees_adjustment'?: number;
   'adjusted_ebitda_components.accounting_policy_adjustments'?: number;
   'adjusted_ebitda_components.foreign_exchange_adjustments'?: number;
+  'adjusted_ebitda_components.unrealized_fx_cash_flow'?: number;
+  'adjusted_ebitda_components.realized_fx_pl'?: number;
   'adjusted_ebitda_components.pro_forma_cost_savings'?: number;
   'adjusted_ebitda_components.pro_forma_synergies'?: number;
 
@@ -240,6 +242,8 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'adjusted_ebitda_components.management_fees_adjustment': 0,
       'adjusted_ebitda_components.accounting_policy_adjustments': 0,
       'adjusted_ebitda_components.foreign_exchange_adjustments': 0,
+      'adjusted_ebitda_components.unrealized_fx_cash_flow': 0,
+      'adjusted_ebitda_components.realized_fx_pl': 0,
       'adjusted_ebitda_components.pro_forma_cost_savings': 0,
       'adjusted_ebitda_components.pro_forma_synergies': 0,
 
@@ -353,6 +357,8 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'adjusted_ebitda_components.management_fees_adjustment': 0,
       'adjusted_ebitda_components.accounting_policy_adjustments': 0,
       'adjusted_ebitda_components.foreign_exchange_adjustments': 0,
+      'adjusted_ebitda_components.unrealized_fx_cash_flow': 0,
+      'adjusted_ebitda_components.realized_fx_pl': 0,
       'adjusted_ebitda_components.pro_forma_cost_savings': 0,
       'adjusted_ebitda_components.pro_forma_synergies': 0,
 
@@ -466,6 +472,8 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'adjusted_ebitda_components.management_fees_adjustment': 0,
       'adjusted_ebitda_components.accounting_policy_adjustments': 0,
       'adjusted_ebitda_components.foreign_exchange_adjustments': 0,
+      'adjusted_ebitda_components.unrealized_fx_cash_flow': 0,
+      'adjusted_ebitda_components.realized_fx_pl': 0,
       'adjusted_ebitda_components.pro_forma_cost_savings': 0,
       'adjusted_ebitda_components.pro_forma_synergies': 0,
 

@@ -101,7 +101,9 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
         "related_party_adjustments": number|null,
         "management_fees_adjustment": number|null,
         "accounting_policy_adjustments": number|null,
-        "foreign_exchange_adjustments": number|null,
+        "foreign_exchange_adjustments": null,
+        "unrealized_fx_cash_flow": number|null,
+        "realized_fx_pl": number|null,
         "pro_forma_cost_savings": number|null,
         "pro_forma_synergies": number|null
       },
@@ -214,25 +216,34 @@ SUBTRACT from EBITDA (these inflate net income):
 • other_one_time_gains: "settlement income", "extraordinary gain"
 
 FOREIGN EXCHANGE (CRITICAL FOR ACCURACY):
-• unrealized_gains_losses: The ONLY FX adjustment that belongs in adjusted_ebitda_components is
-  the NON-CASH unrealized portion of FX movements. This appears in the CASH FLOW STATEMENT under
-  "Items not affecting cash" as "Unrealized foreign exchange (gain) loss" or similar. It is a
-  reconciling item that converts accrual net income to cash — it is a legitimate non-cash add-back.
-  - If shown as POSITIVE number (e.g., 146), it's an unrealized LOSS - extract as POSITIVE (adds to EBITDA)
-  - If shown in PARENTHESES like (444), it's an unrealized GAIN - extract as NEGATIVE (subtracts from EBITDA)
-  Example: "Unrealized foreign exchange (gain) loss (444)" → extract -444
+The income statement FX line contains BOTH realized and unrealized FX mixed together.
+Only the UNREALIZED (non-cash) portion is a valid EBITDA adjustment. The realized portion
+is already embedded in net income and must NOT be double-counted.
 
-• foreign_exchange_adjustments: LEAVE NULL in almost all cases. This field is reserved for the
-  rare situation where an FX amount is NOT already flowing through net income — for example, a
-  cumulative translation adjustment reclassified from OCI upon disposal of a foreign operation.
-  CRITICAL — DO NOT USE for the income statement "Exchange (gain)/loss" line:
-  That P&L line (e.g., "Exchange (gain)/loss (2,673)") is already included in net income and
-  therefore already in base EBITDA. Placing it in foreign_exchange_adjustments would subtract
-  the FX gain a second time, producing a materially understated Adjusted EBITDA.
-  CRITICAL — DO NOT USE for the cash flow "Foreign exchange effect on cash and cash equivalents"
-  line. That is a balance sheet reconciling item for cash translation, not an EBITDA adjustment.
-  Rule of thumb: if the FX amount already appears anywhere on the income statement, set
-  foreign_exchange_adjustments to null.
+• unrealized_fx_cash_flow: Extract ONLY from the CASH FLOW STATEMENT under "Operating activities"
+  or "Adjustments for non-cash items" — specifically the line labelled "Unrealized foreign exchange
+  (gain) loss", "Unrealized FX", or similar non-cash reconciling item.
+  - Positive number = unrealized LOSS → add back to EBITDA (non-cash expense)
+  - Number in PARENTHESES = unrealized GAIN → extract as NEGATIVE (subtracts from EBITDA)
+  Example: "Unrealized foreign exchange (gain) loss (444)" → extract -444
+  If you cannot find an explicit unrealized FX line in the cash flow reconciliation, set to null.
+  Do NOT estimate or infer from the income statement FX line.
+  Do NOT use the cash flow "Effect of exchange rate changes on cash" line — that is a balance
+  sheet reconciliation item, not an operating adjustment.
+
+• realized_fx_pl: Extract from the INCOME STATEMENT "Exchange (gain)/loss" or "Foreign exchange
+  (gain) loss" line. This is for analyst review ONLY — the calculator will NOT use it in EBITDA.
+  It is already embedded in net income. Positive = FX loss. Negative = FX gain (parentheses).
+  Example: "Exchange (gain)/loss (2,673)" → extract -2673
+  Set to null if no P&L FX line exists.
+
+• unrealized_gains_losses: NON-FX mark-to-market items ONLY. Use this field for unrealized gains/losses
+  on investments, derivatives, or other financial instruments that are NOT foreign exchange.
+  If the only unrealized item is FX, use unrealized_fx_cash_flow instead and set this to null.
+  - Positive = unrealized loss (add back). Negative = unrealized gain (subtract).
+
+• foreign_exchange_adjustments: ALWAYS SET TO NULL. This field is deprecated.
+  All FX adjustments are now handled via unrealized_fx_cash_flow and realized_fx_pl.
 
 PARENTHESES CONVENTION IN FINANCIAL STATEMENTS:
 - Numbers in parentheses = opposite of the label
@@ -247,7 +258,7 @@ Owner/Management Adjustments (add back):
 
 Other Adjustments:
 • accounting_policy_adjustments: "change in accounting policy", "change in estimate"
-• foreign_exchange_adjustments: See FOREIGN EXCHANGE section above — leave null unless an FX amount is verifiably NOT already in net income (extremely rare). Do NOT use the income statement Exchange (gain)/loss line here.
+• foreign_exchange_adjustments: ALWAYS NULL — deprecated. Use unrealized_fx_cash_flow and realized_fx_pl instead (see FOREIGN EXCHANGE section above).
 • pro_forma_cost_savings: "pro forma", "run-rate", "cost savings", "headcount reduction", "facility closure"
 • pro_forma_synergies: "synergies", "operational efficiencies"
 
@@ -571,7 +582,7 @@ CRITICAL - ADJUSTED EBITDA COMPONENTS:
   - A "Gain on disposal of equipment" line → gain_on_asset_sale only, not also in other_one_time_gains
   - An "Other income" aggregate that includes an FX gain already in foreign_exchange_adjustments → set other_income_non_operating to the non-FX portion only, or null if entirely FX
   - "Settlement income" → other_one_time_gains only, not also in other_income_non_operating
-• FX / UNREALIZED MUTUAL EXCLUSIVITY CHECK: Verify that foreign_exchange_adjustments and unrealized_gains_losses do not both capture the same income-statement FX line. If they do, set unrealized_gains_losses to null and keep foreign_exchange_adjustments.
+• FX FIELD CHECK: foreign_exchange_adjustments must ALWAYS be null. If you extracted an FX value, it belongs in either unrealized_fx_cash_flow (from cash flow statement) or realized_fx_pl (from income statement). Verify that unrealized_fx_cash_flow and unrealized_gains_losses do not both capture the same item — if the unrealized item is FX, use unrealized_fx_cash_flow and set unrealized_gains_losses to null.
 
 • Do not add any keys, explanations, or narrative – JSON object only.
 

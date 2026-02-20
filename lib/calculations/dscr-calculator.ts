@@ -121,7 +121,9 @@ export function calculateDSCR(
   if (totalDebtService === 0) {
     return {
       dscr: null,
-      funded_debt: fundedDebt > 0 ? fundedDebt : null,
+      // A zero funded debt balance is meaningful (all debt paid off) — display it, don't null it.
+      // Only null when fundedDebt itself could not be computed (i.e. debt_components absent).
+      funded_debt: fundedDebt != null ? fundedDebt : null,
       funded_debt_to_ebitda: null,
       dscr_breakdown: null,
     };
@@ -137,14 +139,17 @@ export function calculateDSCR(
   // Calculate Funded Debt / EBITDA
   // ─────────────────────────────────────────────────────────────────────────
 
+  // A negative funded debt/EBITDA ratio is a critical distress signal — do NOT suppress it.
+  // Only guard against division by zero (adjustedEbitda === 0) and a missing funded debt position.
   const fundedDebtToEbitda =
-    fundedDebt > 0 && adjustedEbitda > 0
+    fundedDebt != null && adjustedEbitda !== 0
       ? parseFloat((fundedDebt / adjustedEbitda).toFixed(2))
       : null;
 
   return {
     dscr,
-    funded_debt: fundedDebt > 0 ? fundedDebt : null,
+    // Zero funded debt is valid (fully paid off) — only null when the value was never computable.
+    funded_debt: fundedDebt != null ? fundedDebt : null,
     funded_debt_to_ebitda: fundedDebtToEbitda,
     dscr_breakdown: {
       calculation_type: 'banker_covenant',

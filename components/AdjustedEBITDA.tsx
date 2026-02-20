@@ -144,7 +144,6 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       breakdown.one_time_gains !== 0 ||
       breakdown.owner_management_adjustments !== 0 ||
       breakdown.accounting_adjustments !== 0 ||
-      breakdown.fx_adjustments !== 0 ||
       breakdown.pro_forma_adjustments !== 0 ||
       breakdown.capital_expenditures_not_in_calc !== 0);
 
@@ -190,7 +189,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       {/* Formula */}
       <div className="bg-gray-50 rounded-lg p-3 text-center">
         <span className="font-mono text-xs text-gray-600">
-          Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time Expenses - One-Time Gains - CapEx
+          Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time Expenses - One-Time Gains
         </span>
       </div>
 
@@ -217,6 +216,13 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               </div>
 
               {/* Non-Cash Adjustments */}
+              {/*
+                unrealized_gains_losses sign convention (from extraction prompt):
+                  positive  = unrealized loss  → add back (shown here)
+                  negative  = unrealized gain  → subtract (shown in One-Time Gains below)
+                We pass only the positive (loss) portion into this block so the display
+                matches the calculator's sign-aware routing.
+              */}
               <AdjustmentCategory
                 title="Non-Cash Adjustments"
                 total={breakdown.non_cash_adjustments}
@@ -234,8 +240,22 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                     value: components.goodwill_impairment,
                   },
                   {
-                    label: 'Unrealized Gains/Losses',
-                    value: components.unrealized_gains_losses,
+                    // Only show unrealized loss (positive value) as an addback here.
+                    label: 'Unrealized Loss (Non-Cash)',
+                    value:
+                      components.unrealized_gains_losses != null &&
+                      components.unrealized_gains_losses > 0
+                        ? components.unrealized_gains_losses
+                        : null,
+                  },
+                  {
+                    // Unrealized FX loss from CF statement (positive = loss → add back)
+                    label: 'Unrealized FX Loss (Non-Cash)',
+                    value:
+                      components.unrealized_fx_cash_flow != null &&
+                      components.unrealized_fx_cash_flow > 0
+                        ? components.unrealized_fx_cash_flow
+                        : null,
                   },
                   {
                     label: 'Deferred Compensation',
@@ -305,6 +325,24 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                     label: 'Other One-Time Gains',
                     value: components.other_one_time_gains,
                   },
+                  {
+                    // Unrealized gain: negative unrealized_gains_losses inflated net income.
+                    label: 'Unrealized Gain (Non-Cash)',
+                    value:
+                      components.unrealized_gains_losses != null &&
+                      components.unrealized_gains_losses < 0
+                        ? Math.abs(components.unrealized_gains_losses)
+                        : null,
+                  },
+                  {
+                    // Unrealized FX gain from CF statement (negative = gain → subtract)
+                    label: 'Unrealized FX Gain (Non-Cash)',
+                    value:
+                      components.unrealized_fx_cash_flow != null &&
+                      components.unrealized_fx_cash_flow < 0
+                        ? Math.abs(components.unrealized_fx_cash_flow)
+                        : null,
+                  },
                 ]}
               />
 
@@ -342,19 +380,21 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                 />
               )}
 
-              {/* FX Adjustments - positive = loss (add), negative = gain (subtract) */}
-              {breakdown.fx_adjustments !== 0 && (
-                <AdjustmentCategory
-                  title={breakdown.fx_adjustments >= 0 ? "Foreign Exchange Loss (Add Back)" : "Foreign Exchange Gain (Subtract)"}
-                  total={Math.abs(breakdown.fx_adjustments)}
-                  isSubtraction={breakdown.fx_adjustments < 0}
-                  items={[
-                    {
-                      label: breakdown.fx_adjustments >= 0 ? 'FX Loss' : 'FX Gain',
-                      value: Math.abs(components.foreign_exchange_adjustments ?? 0),
-                    },
-                  ]}
-                />
+              {/* Realized FX — informational only, not in EBITDA calc */}
+              {breakdown.realized_fx_pl !== 0 && (
+                <div className="mb-4 bg-amber-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <h5 className="text-sm font-semibold text-amber-700">
+                      Realized FX (P&L) — Not in Adjusted EBITDA
+                    </h5>
+                    <span className="text-sm font-bold text-amber-700">
+                      {formatCurrency(breakdown.realized_fx_pl)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-600">
+                    Already embedded in net income. Shown for analyst review — verify if recurring or one-time.
+                  </p>
+                </div>
               )}
 
               {/* Pro Forma Adjustments */}
@@ -370,17 +410,19 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                 ]}
               />
 
-              {/* Capital Expenditures (subtract) */}
+              {/* Capital Expenditures — informational only, not in Adjusted EBITDA */}
               {breakdown.capital_expenditures_not_in_calc !== 0 && (
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h5 className="text-sm font-semibold text-gray-700">Capital Expenditures (Maintenance CapEx)</h5>
-                    <span className="text-sm font-bold text-red-600">
-                      {formatSignedCurrency(breakdown.capital_expenditures_not_in_calc, true)}
+                <div className="mb-4 bg-gray-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <h5 className="text-sm font-semibold text-gray-500">
+                      Maintenance CapEx — Not in Adjusted EBITDA
+                    </h5>
+                    <span className="text-sm font-bold text-gray-500">
+                      {formatCurrency(breakdown.capital_expenditures_not_in_calc)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 pl-4">
-                    Cash required to maintain productive capacity of the business
+                  <p className="text-xs text-gray-400">
+                    Shown for reference per standard lending convention. Deducted separately in FCCR.
                   </p>
                 </div>
               )}

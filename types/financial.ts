@@ -90,7 +90,18 @@ export interface AdjustedEBITDAComponents {
 
   // Other adjustments
   accounting_policy_adjustments: number | null;
+  /**
+   * @deprecated Use unrealized_fx_cash_flow instead. Retained for backward compatibility
+   * with existing extractions. The calculator will ignore this field when
+   * unrealized_fx_cash_flow is present.
+   */
   foreign_exchange_adjustments: number | null;
+  /** Non-cash unrealized FX from cash flow statement operating activities reconciliation.
+   *  Positive = unrealized loss (add back). Negative = unrealized gain (subtract). */
+  unrealized_fx_cash_flow: number | null;
+  /** Realized FX from income statement P&L line. For analyst visibility ONLY —
+   *  already embedded in net income, never adjusts EBITDA. */
+  realized_fx_pl: number | null;
   pro_forma_cost_savings: number | null;
   pro_forma_synergies: number | null;
 }
@@ -116,7 +127,12 @@ export interface AdjustedEBITDABreakdown {
   one_time_gains: number;
   owner_management_adjustments: number;
   accounting_adjustments: number;
+  /** @deprecated Replaced by unrealized_fx_adjustment. Kept for backward compat. */
   fx_adjustments: number;
+  /** Unrealized FX from CF statement routed into non-cash (loss) or gains (gain). */
+  unrealized_fx_adjustment: number;
+  /** Realized FX from P&L — informational only, not in EBITDA calc. */
+  realized_fx_pl: number;
   pro_forma_adjustments: number;
   capital_expenditures_not_in_calc: number;
   uses_reported_value: boolean;
