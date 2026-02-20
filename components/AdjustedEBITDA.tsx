@@ -142,6 +142,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
     (breakdown.non_cash_adjustments !== 0 ||
       breakdown.one_time_expenses !== 0 ||
       breakdown.one_time_gains !== 0 ||
+      breakdown.interest_income_excluded !== 0 ||
       breakdown.owner_management_adjustments !== 0 ||
       breakdown.accounting_adjustments !== 0 ||
       breakdown.pro_forma_adjustments !== 0 ||
@@ -189,7 +190,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       {/* Formula */}
       <div className="bg-gray-50 rounded-lg p-3 text-center">
         <span className="font-mono text-xs text-gray-600">
-          Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time Expenses - One-Time Gains
+          Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time Expenses - One-Time Gains - Interest Income
         </span>
       </div>
 
@@ -404,6 +405,29 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                     },
                   ]}
                 />
+              )}
+
+              {/* Interest Income Exclusion */}
+              {breakdown.interest_income_excluded != null && breakdown.interest_income_excluded > 0 && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h5 className="text-sm font-semibold text-gray-700">Interest Income (Excluded)</h5>
+                    <span className="text-sm font-bold text-red-600">
+                      {formatSignedCurrency(breakdown.interest_income_excluded, true)}
+                    </span>
+                  </div>
+                  <div className="pl-4 border-l-2 border-gray-200">
+                    <div className="flex justify-between text-sm py-1">
+                      <span className="text-gray-600">Interest Income (Non-Operating)</span>
+                      <span className="font-medium text-red-600">
+                        {formatSignedCurrency(breakdown.interest_income_excluded, true)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 pl-4">
+                    Treasury income on cash balances — excluded from Adjusted EBITDA per standard lending convention.
+                  </p>
+                </div>
               )}
 
               {/* Realized FX — informational only, not in EBITDA calc */}

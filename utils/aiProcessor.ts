@@ -523,6 +523,7 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
       result.adjusted_ebitda_components = {
         ...result.adjusted_ebitda_components,
         other_non_cash: ebitdaResult.deduped_components.other_non_cash,
+        other_one_time_expenses: ebitdaResult.deduped_components.other_one_time_expenses,
       };
     }
 
@@ -661,6 +662,8 @@ function logAdjustedEBITDA(
   console.log(`   - One-time Gains:            ${breakdown.one_time_gains}`);
   console.log(`     other_income_non_operating: ${adj.other_income_non_operating ?? 0}`);
   console.log(`     (disposal gains excluded - operational: ${adj.gain_on_disposal ?? 0})`);
+  console.log(`   - Interest Income Excluded:  ${breakdown.interest_income_excluded}`);
+  console.log(`     interest_income:            ${m.interest_income ?? 0}`);
   console.log(`   ─────────────────────────────────────`);
   console.log(`   = Calculated Adj. EBITDA:    ${result.calculated_adjusted_ebitda}`);
   console.log(`   Reported Adj. EBITDA:        ${m.reported_adjusted_ebitda ?? 'N/A'}`);

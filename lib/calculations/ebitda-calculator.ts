@@ -9,8 +9,13 @@
  * - Total Debt/Total Cap: 69.5%
  *
  * Reference Values (KITS FY2024):
- * - Adjusted EBITDA: ~$8,642K
- * - Calculation: EBITDA $8,088K + SBC $1,005K - unrealized FX gain $444K - lease extinguishment gain $7K
+ * - Adjusted EBITDA: $8,062K
+ * - Calculation: EBITDA $8,088K + SBC $1,005K - unrealized FX gain $444K
+ *   - lease extinguishment gain $7K - interest income $580K = $8,062K
+ * - Finance costs — net $975K = gross $1,555K - interest income $580K (Note 15c)
+ * - Guard 5: realized_fx_pl vs other_income_non_operating dedup
+ * - Guard 6: interest_income vs other_income_non_operating dedup
+ * - Guard 7: finance cost sub-component dedup (other_non_cash + other_one_time_expenses vs interest)
  */
 
 import type {
@@ -28,6 +33,7 @@ export interface EBITDACalculationResult {
   /** Post-dedup component overrides for UI display accuracy */
   deduped_components: {
     other_non_cash: number;
+    other_one_time_expenses: number;
   };
 }
 
@@ -155,11 +161,30 @@ function deduplicateOtherNonCash(
     return 0;
   }
 
+  // Check 1b: Sub-component of non_cash_interest_expense.
+  // When non_cash_interest_expense is populated and other_non_cash is a sizable fraction
+  // (>=30%) of it, the AI likely extracted the same finance cost breakdown at two
+  // granularity levels. E.g., KITS: non_cash_interest_expense=$361K, other_non_cash=$163K
+  // (45% — accretion sub-item already in the $361K).
+  // The 30% floor prevents false-positives from unrelated small non-cash items
+  // (e.g., $50K straight-line rent when non_cash_interest_expense is $400K).
+  if (nonCashInterestExpense > 0 &&
+      rawOtherNonCash > 0 &&
+      rawOtherNonCash < nonCashInterestExpense &&
+      rawOtherNonCash >= nonCashInterestExpense * 0.30) {
+    console.warn(
+      `⚠️ DEDUP [other_non_cash]: value (${rawOtherNonCash}) is ${((rawOtherNonCash / nonCashInterestExpense) * 100).toFixed(0)}% of ` +
+      `non_cash_interest_expense (${nonCashInterestExpense}) — likely a sub-component ` +
+      `already in finance costs, zeroing other_non_cash`
+    );
+    return 0;
+  }
+
   // Check 2: Warning only — other_non_cash may overlap with P&L interest.
   // We do NOT zero here because the size relationship alone is insufficient evidence.
   // Legitimate non-cash items (warranty provisions, pension costs, environmental accruals)
   // can be smaller than interest expense without being financing-related.
-  // Suppression requires an explicit non_cash_interest_expense match (Check 1).
+  // Suppression requires an explicit non_cash_interest_expense match (Check 1/1b).
   if (interestExpense > 0 && nonCashInterestExpense === 0 &&
       rawOtherNonCash <= interestExpense &&
       rawOtherNonCash > interestExpense * 0.05) {
@@ -171,6 +196,61 @@ function deduplicateOtherNonCash(
   }
 
   return rawOtherNonCash;
+}
+
+/**
+ * Guard 7: Finance cost sub-component dedup for other_one_time_expenses.
+ *
+ * When the AI reads a Finance Costs note (e.g., KITS Note 15c), it may extract
+ * fair-value changes (loss on loan estimate changes, loss on promissory note
+ * estimate changes) into other_one_time_expenses. But these items are already
+ * part of the top-level "interest" field — adding them back double-counts.
+ *
+ * Condition: when non_cash_interest_expense > 0 (proving the AI read the
+ * finance cost note) AND the sum of non_cash_interest_expense + other_one_time_expenses
+ * fits within the total interest envelope, the expenses are finance cost sub-items.
+ */
+function deduplicateFinanceCostExpenses(
+  rawOtherOneTimeExpenses: number,
+  nonCashInterestExpense: number,
+  interestExpense: number,
+  tolerance: number
+): number {
+  if (rawOtherOneTimeExpenses <= 0 || nonCashInterestExpense <= 0 || interestExpense <= 0) {
+    return rawOtherOneTimeExpenses;
+  }
+
+  // Materiality gate: non_cash_interest_expense must be >= 25% of total interest.
+  // This proves the AI found a material non-cash component from the finance cost note,
+  // not just a small amortization item. Without this, the envelope test could
+  // false-positive on companies with small non-cash interest and coincidentally
+  // similar-sized legitimate one-time expenses.
+  const nonCashRatio = nonCashInterestExpense / interestExpense;
+  if (nonCashRatio < 0.25) {
+    return rawOtherOneTimeExpenses;
+  }
+
+  // The finance cost envelope includes both cash and non-cash components.
+  // If the non-cash portion + the suspected expenses fit within total interest,
+  // these expenses are likely sub-line-items from the finance cost note.
+  // LIMITATION: This is an arithmetic proxy, not an identity check. The prompt's
+  // FINANCE COST SUB-COMPONENT CHECK is the primary prevention; this guard
+  // catches cases where the AI ignores that instruction.
+  const financeCostSubtotal = nonCashInterestExpense + rawOtherOneTimeExpenses;
+  const envelopeMax = interestExpense * (1 + tolerance);
+
+  if (financeCostSubtotal <= envelopeMax) {
+    console.warn(
+      `⚠️ DEDUP [finance_cost_expenses]: other_one_time_expenses (${rawOtherOneTimeExpenses}) + ` +
+      `non_cash_interest_expense (${nonCashInterestExpense}) = ${financeCostSubtotal} ` +
+      `fits within interest envelope (${interestExpense}), and non_cash_interest is ` +
+      `${(nonCashRatio * 100).toFixed(0)}% of interest (>25% materiality gate). ` +
+      `These are likely finance cost sub-components. Zeroing other_one_time_expenses.`
+    );
+    return 0;
+  }
+
+  return rawOtherOneTimeExpenses;
 }
 
 /**
@@ -354,6 +434,36 @@ export function calculateAdjustedEBITDA(
   );
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Guard 5: Realized FX vs other_income_non_operating dedup
+  //
+  // The AI sometimes classifies the income statement "Exchange (gain)/loss"
+  // line into BOTH realized_fx_pl (informational, correct) AND
+  // other_income_non_operating (subtracted from EBITDA, WRONG).
+  // Since realized FX is already embedded in net income → already in EBITDA,
+  // subtracting it again via other_income_non_operating double-counts it.
+  //
+  // When the two values match within tolerance, zero out
+  // other_income_non_operating to prevent the double-subtraction.
+  // ─────────────────────────────────────────────────────────────────────────
+  let dedupedOtherIncomeNonOperating = otherIncomeNonOperating;
+  const realizedFxPl = adj.realized_fx_pl ?? 0;
+
+  if (
+    dedupedOtherIncomeNonOperating != null &&
+    Math.abs(dedupedOtherIncomeNonOperating) > 0 &&
+    Math.abs(realizedFxPl) > 0 &&
+    valuesOverlapWithinTolerance(dedupedOtherIncomeNonOperating, realizedFxPl, DEDUP_TOLERANCE)
+  ) {
+    console.warn(
+      `⚠️ DEDUP [realized_fx]: other_income_non_operating (${dedupedOtherIncomeNonOperating}) matches ` +
+      `realized_fx_pl (${realizedFxPl}) within ${DEDUP_TOLERANCE * 100}% — ` +
+      `zeroing other_income_non_operating to prevent double-subtraction ` +
+      `(realized FX is already in net income → already in EBITDA)`
+    );
+    dedupedOtherIncomeNonOperating = 0;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Insurance Proceeds materiality check (H8)
   //
   // LIMITATION: The extraction schema does not distinguish business interruption
@@ -408,6 +518,21 @@ export function calculateAdjustedEBITDA(
     .reduce((sum, v) => sum + v, 0);
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Guard 7: Finance cost sub-component dedup for other_one_time_expenses
+  //
+  // When the AI reads a Finance Costs note, it may extract fair-value changes
+  // (e.g., "loss on loan estimate changes") into other_one_time_expenses.
+  // These are already in the top-level interest field — adding them back
+  // double-counts. Check if the sum fits within the interest envelope.
+  // ─────────────────────────────────────────────────────────────────────────
+  const deduplicatedOtherOneTimeExpenses = deduplicateFinanceCostExpenses(
+    adj.other_one_time_expenses ?? 0,
+    nonCashInterestExpense,
+    interestExpense,
+    DEDUP_TOLERANCE
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
   // One-Time Expenses (add back)
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -418,10 +543,54 @@ export function calculateAdjustedEBITDA(
     adj.legal_settlements,
     adj.professional_fees_one_time,
     adj.casualty_losses,
-    adj.other_one_time_expenses,
+    deduplicatedOtherOneTimeExpenses,  // may be zeroed by Guard 7
   ]
     .filter((v): v is number => v != null)
     .reduce((sum, v) => sum + v, 0);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Interest Income Exclusion
+  //
+  // Interest income earned on cash balances is a treasury function, not an
+  // operating function. Standard commercial lending removes it from Adjusted
+  // EBITDA because:
+  // 1. It is rate-sensitive and balance-sensitive (cash may be deployed)
+  // 2. It creates asymmetry in coverage analysis (inflates numerator)
+  // 3. Virtually all credit agreement EBITDA definitions exclude it
+  //
+  // Base EBITDA is NOT affected — the formula adds back exactly the net P&L
+  // charge. This adjustment belongs exclusively in the Adjusted EBITDA bridge.
+  // ─────────────────────────────────────────────────────────────────────────
+  const interestIncomeExcluded = metrics.interest_income ?? 0;
+
+  if (interestIncomeExcluded > 0 && ebitda > 0) {
+    const materialityPct = interestIncomeExcluded / ebitda;
+    if (materialityPct > 0.05) {
+      console.warn(
+        `⚠️ INTEREST INCOME EXCLUSION: Removing ${interestIncomeExcluded} interest income from ` +
+        `Adjusted EBITDA (${(materialityPct * 100).toFixed(1)}% of base EBITDA). ` +
+        `Non-operating treasury income. If structural, analyst may elect to retain it.`
+      );
+    }
+  }
+
+  // Guard 6: interest_income vs other_income_non_operating dedup
+  // If the AI lumps interest income into other_income_non_operating AND also
+  // extracts interest_income separately, we'd subtract it twice. When the two
+  // values match within tolerance, zero out other_income_non_operating.
+  if (
+    interestIncomeExcluded > 0 &&
+    dedupedOtherIncomeNonOperating != null &&
+    Math.abs(dedupedOtherIncomeNonOperating) > 0 &&
+    valuesOverlapWithinTolerance(interestIncomeExcluded, dedupedOtherIncomeNonOperating, DEDUP_TOLERANCE)
+  ) {
+    console.warn(
+      `⚠️ DEDUP [interest_income]: interest_income (${interestIncomeExcluded}) matches ` +
+      `other_income_non_operating (${dedupedOtherIncomeNonOperating}) within ${DEDUP_TOLERANCE * 100}% — ` +
+      `zeroing other_income_non_operating (interest_income is more specific)`
+    );
+    dedupedOtherIncomeNonOperating = 0;
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // One-Time Gains (subtract)
@@ -434,9 +603,9 @@ export function calculateAdjustedEBITDA(
   // ─────────────────────────────────────────────────────────────────────────
 
   const oneTimeGains = [
-    gainOnAssetSale,            // deduped against other_one_time_gains and other_income_non_operating
-    otherIncomeNonOperating,    // deduped against gain_on_asset_sale
-    insuranceProceeds,          // deduped against other_income_non_operating
+    gainOnAssetSale,                  // deduped against other_one_time_gains and other_income_non_operating
+    dedupedOtherIncomeNonOperating,   // deduped against gain_on_asset_sale, realized_fx_pl, AND interest_income
+    insuranceProceeds,                // deduped against other_income_non_operating
     otherOneTimeGains,          // deduped against gain_on_asset_sale and other_income_non_operating
     unrealizedGainToSubtract,   // non-FX unrealized gain (negative unrealized_gains_losses)
     unrealizedFxGainToSubtract, // unrealized FX gain from CF statement (negative = gain → subtract)
@@ -506,7 +675,8 @@ export function calculateAdjustedEBITDA(
       ownerManagementAdjustments +
       accountingAdjustments +
       proFormaAdjustments -
-      oneTimeGains
+      oneTimeGains -
+      interestIncomeExcluded
     ).toFixed(2)
   );
 
@@ -525,7 +695,7 @@ export function calculateAdjustedEBITDA(
       `base EBITDA (${ebitda}). Net adjustment: ${netAdjustment.toFixed(0)}. ` +
       `Breakdown — nonCash: ${nonCashAdjustments}, oneTimeExp: ${oneTimeExpenses}, ` +
       `ownerMgmt: ${ownerManagementAdjustments}, ` +
-      `gains subtracted: ${oneTimeGains}. ` +
+      `gains subtracted: ${oneTimeGains}, interest_income: ${interestIncomeExcluded}. ` +
       `Review other_income_non_operating and other_non_cash for over-exclusion.`
     );
   }
@@ -540,6 +710,7 @@ export function calculateAdjustedEBITDA(
       non_cash_adjustments: nonCashAdjustments,
       one_time_expenses: oneTimeExpenses,
       one_time_gains: oneTimeGains,
+      interest_income_excluded: interestIncomeExcluded,
       owner_management_adjustments: ownerManagementAdjustments,
       accounting_adjustments: accountingAdjustments,
       fx_adjustments: 0, // deprecated — FX now routed through non_cash/gains
@@ -551,6 +722,7 @@ export function calculateAdjustedEBITDA(
     },
     deduped_components: {
       other_non_cash: deduplicatedOtherNonCash,
+      other_one_time_expenses: deduplicatedOtherOneTimeExpenses,
     },
   };
 }

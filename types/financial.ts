@@ -125,6 +125,8 @@ export interface AdjustedEBITDABreakdown {
   non_cash_adjustments: number;
   one_time_expenses: number;
   one_time_gains: number;
+  /** Interest income stripped from Adjusted EBITDA (non-operating treasury income). */
+  interest_income_excluded: number;
   owner_management_adjustments: number;
   accounting_adjustments: number;
   /** @deprecated Replaced by unrealized_fx_adjustment. Kept for backward compat. */
@@ -239,6 +241,9 @@ export interface ExtractedMetrics {
   expenses: number | null;
   profit_margins: number | null;
   interest: number | null;
+  /** Interest income earned on cash/investments. Non-operating treasury income
+   *  stripped from Adjusted EBITDA. Extracted as positive. */
+  interest_income: number | null;
   taxes: number | null;
   depreciation_amortization: number | null;
 

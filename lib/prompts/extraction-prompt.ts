@@ -23,6 +23,7 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "expenses": number|null,
       "profit_margins": number|null,
       "interest": number|null,
+      "interest_income": number|null,
       "taxes": number|null,
       "depreciation_amortization": number|null,
       "depreciation_equipment": number|null,
@@ -187,12 +188,12 @@ Non-Cash Adjustments (ADD BACK to EBITDA):
 • loss_on_disposal: Sum disposal LOSSES from income statement ONLY when they are genuinely non-recurring and material. Look for "Loss on sale of equipment", "Loss on disposal of right-of-use assets". ONLY include lines where the number is POSITIVE (not in parentheses) — positive means a real loss. Extract as a positive number. Example: "Loss (gain) on sale of equipment 27" + "Loss (gain) on disposal of right-of-use assets 81" = 108. IMPORTANT: If the number is in PARENTHESES like (139), that is a GAIN — do NOT put it here, put it in gain_on_disposal instead. Each line item goes into ONLY ONE field. Never put the same amount in both loss_on_disposal and gain_on_disposal.
   EQUIPMENT-INTENSIVE BUSINESSES: For companies whose core operations involve regularly cycling equipment (e.g., equipment rental, construction, mining, security-tower companies), routine disposal losses are a RECURRING OPERATING COST and should NOT be placed in loss_on_disposal. Only use this field for genuinely non-recurring, material disposal events (e.g., a plant closure, a one-time fleet liquidation). If disposal losses appear every year at similar magnitudes, they are operational — leave loss_on_disposal null.
   NOTE: The calculator does NOT add loss_on_disposal back to EBITDA by design — conservative underwriting treats routine disposal losses as operational. However, populating this field still matters for accurate reporting; it simply will not increase Adjusted EBITDA.
-• other_non_cash: Non-cash charges not covered above. Examples: "non-cash rent expense", "straight-line rent adjustment", "asset retirement obligation accretion", "non-cash interest expense", "amortization of deferred financing costs", "amortization of debt discount".
-  IMPORTANT: Do NOT include items already captured in other dedicated fields:
+• other_non_cash: Non-cash charges not covered above. Examples: "non-cash rent expense", "straight-line rent adjustment".
+  IMPORTANT — EXCLUSIONS (placing these items here will DOUBLE-COUNT them in Adjusted EBITDA):
   - Depreciation or amortization (already in depreciation_amortization)
   - Stock-based compensation (already in stock_based_compensation above)
   - Impairment charges (already in impairment_charges above)
-  Placing these items in other_non_cash will DOUBLE-COUNT them in Adjusted EBITDA.
+  - ANY item that appears in the Finance Costs / Interest Expense note breakdown (e.g., accretion expense on notes/debentures, non-cash interest, amortization of deferred financing costs, amortization of debt discount, fair value changes on financial instruments). These are already in the top-level "interest" field and are added back in the EBITDA formula — extracting them again here inflates Adjusted EBITDA.
 
 One-Time/Non-Recurring Expenses (ADD BACK to EBITDA):
 • restructuring_costs: "restructuring", "reorganization costs"
@@ -212,6 +213,7 @@ SUBTRACT from EBITDA (these inflate net income):
   PARENTHESES CONVENTION: A label like "Other (income) expenses" with an amount in PARENTHESES like (2,159) means the net result is INCOME of 2,159. Extract as positive 2,159.
   CRITICAL: If the income statement shows "Other (income) expenses" with a parenthesized amount, the income is REDUCING the company's reported expenses (net income is higher because of it). This non-recurring income INFLATES net income and must be SUBTRACTED when computing Adjusted EBITDA. Always put it in other_income_non_operating — NEVER in other_one_time_expenses.
   Extract as a POSITIVE number. The calculator will subtract it from EBITDA automatically.
+  FX EXCLUSION: Do NOT include any "Exchange (gain)/loss" or "Foreign exchange (gain)/loss" amounts from the income statement in this field. Those belong exclusively in realized_fx_pl. If the "Other income" line is entirely composed of an FX gain, set other_income_non_operating to null and populate realized_fx_pl instead. If "Other income" is an aggregate that mixes FX and non-FX items, extract only the non-FX portion here.
 • insurance_proceeds: "insurance proceeds"
 • other_one_time_gains: "settlement income", "extraordinary gain"
 
@@ -310,6 +312,24 @@ INCOME STATEMENT FIELDS - CRITICAL:
   Extract the gross borrowing cost into BOTH the "interest" field AND "fixed_charges.total_interest_expense" for cross-validation.
   PURPOSE: Primary interest field used in the EBITDA formula (net_income + interest + taxes + D&A). This is the accrual-basis P&L figure. For cash-basis interest, see cash_interest_paid.
   Do NOT separately extract these sub-components into adjusted_ebitda_components — they are already in this total.
+
+• "interest_income": Interest income earned during the period. Extract as a POSITIVE number.
+  WHERE TO FIND IT:
+  - Finance cost note breakdown: when the P&L shows "Finance costs — net" or "Interest expense, net",
+    look in the note (e.g., "Note 16: Finance costs") for the interest income credit that was netted
+    against gross expense. Example: "Interest income net of bank charges: ($580)" → extract 580.
+  - Standalone "Finance income" or "Interest income" line on the income statement (IFRS).
+  - "Interest received" in cash flow supplemental disclosures.
+  - "Investment income" when explicitly described as interest on deposits or money market funds.
+  DO NOT extract: FX gains (use realized_fx_pl), dividend income, equity method income, or gains
+  on financial instruments (use gain_on_asset_sale or unrealized_gains_losses).
+  SPECIAL CASE — NET FINANCE INCOME COMPANIES: If interest income is already captured as a negative
+  within a "Finance income, net" line that is net-negative (interest income > expense) and the
+  fallback logic in the "interest" field found gross borrowing costs, do NOT also extract
+  interest_income — it would double-count.
+  PURPOSE: Removed from Adjusted EBITDA as non-operating treasury income. Base EBITDA is unaffected.
+  Extract as POSITIVE number. If no interest income identifiable, output null.
+
 • "taxes": TOTAL income tax expense from the Income Statement (current + deferred combined). Look for:
   - "Income tax expense" / "Provision for income taxes" / "Tax expense" / "Income taxes"
   - "Income tax recovery" / "Income tax benefit" — these are NEGATIVE (a recovery reduces EBITDA addback)
@@ -577,10 +597,17 @@ CRITICAL - ADJUSTED EBITDA COMPONENTS:
 • Look for "Loss (gain) on sale/disposal" line items - positive numbers are LOSSES (loss_on_disposal), numbers in parentheses are GAINS (gain_on_disposal). Each line goes into ONE field only, never both. For equipment-intensive businesses (regular asset cycling), loss_on_disposal should be null unless the event is clearly non-recurring.
 • These adjustments are ESSENTIAL for calculating Adjusted EBITDA accurately.
 • MISCLASSIFICATION CHECK: Before finalising, verify that no income item (parenthesized amount under an "expenses" label, or explicit income line) was accidentally placed in other_one_time_expenses. If it was, move it to other_income_non_operating.
-• DOUBLE-COUNTING CHECK: Before finalizing, verify that no item included in the top-level "interest" field (finance costs) has ALSO been placed in adjusted_ebitda_components.other_non_cash. Common offenders: accretion of discount, non-cash interest expense, amortization of financing fees. If found in both places, REMOVE it from other_non_cash.
+• FINANCE COST SUB-COMPONENT CHECK (CRITICAL): The top-level "interest" field captures the ENTIRE Finance Costs / Interest Expense line from the income statement. This amount is already added back when computing EBITDA (Net Income + Interest + Tax + D&A). Therefore, ANY sub-component from the Finance Costs note breakdown must NEVER appear in adjusted_ebitda_components. Common sub-components that must be EXCLUDED from all adjusted_ebitda_components fields:
+  - Accretion expense (on promissory notes, debentures, asset retirement obligations)
+  - Non-cash interest expense / amortization of deferred financing costs / amortization of debt discount
+  - Fair value changes on loan estimates or financial instruments
+  - Loss on changes in fair value of promissory notes / contingent consideration
+  If the financial statements have a note (e.g., "Note 15 — Finance Costs") that breaks down the top-level interest/finance cost line, NONE of those sub-items should appear in other_non_cash, other_one_time_expenses, or any other adjusted_ebitda_components field.
+• DOUBLE-COUNTING CHECK: Before finalizing, verify that no item included in the top-level "interest" field (finance costs) has ALSO been placed in ANY adjusted_ebitda_components field — especially other_non_cash and other_one_time_expenses. If found in both places, REMOVE it from the adjusted_ebitda_components field.
 • GAIN FIELD MUTUAL EXCLUSIVITY CHECK: Each gain or income item must appear in EXACTLY ONE gain field. Before finalizing, scan gain_on_asset_sale, other_income_non_operating, other_one_time_gains, and insurance_proceeds. If the same dollar amount appears in two fields (or one is a sub-line of an aggregate in another), keep it in the most specific field and set the others to null. Examples:
   - A "Gain on disposal of equipment" line → gain_on_asset_sale only, not also in other_one_time_gains
   - An "Other income" aggregate that includes an FX gain already in foreign_exchange_adjustments → set other_income_non_operating to the non-FX portion only, or null if entirely FX
+  - CRITICAL — FX GAIN ON INCOME STATEMENT: If the income statement has an "Exchange (gain)/loss" or "Foreign exchange (gain)/loss" line, that amount belongs EXCLUSIVELY in realized_fx_pl. Do NOT also place it in other_income_non_operating, even if the label looks like non-operating income. The FX gain is already embedded in net income and therefore already in EBITDA. Placing it in other_income_non_operating causes a double-subtraction that artificially depresses Adjusted EBITDA. Rule: if you populated realized_fx_pl with a value, verify that other_income_non_operating does NOT contain that same amount or any FX-sourced amount.
   - "Settlement income" → other_one_time_gains only, not also in other_income_non_operating
 • FX FIELD CHECK: foreign_exchange_adjustments must ALWAYS be null. If you extracted an FX value, it belongs in either unrealized_fx_cash_flow (from cash flow statement) or realized_fx_pl (from income statement). Verify that unrealized_fx_cash_flow and unrealized_gains_losses do not both capture the same item — if the unrealized item is FX, use unrealized_fx_cash_flow and set unrealized_gains_losses to null.
 
