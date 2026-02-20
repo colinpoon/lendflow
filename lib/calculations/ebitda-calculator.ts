@@ -354,6 +354,26 @@ export function calculateAdjustedEBITDA(
   );
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Insurance Proceeds materiality check (H8)
+  //
+  // LIMITATION: The extraction schema does not distinguish business interruption
+  // (BI) proceeds from property damage proceeds. BI proceeds represent lost
+  // revenue/profit and should remain in EBITDA (not excluded); property damage
+  // proceeds are a non-recurring capital recovery and should be excluded.
+  // Until the extraction prompt is updated to separate these, flag material
+  // insurance proceeds for analyst review rather than silently excluding them.
+  // ─────────────────────────────────────────────────────────────────────────
+  const insuranceProceedsDeduped = insuranceProceeds ?? 0;
+  if (insuranceProceedsDeduped > 0 && ebitda > 0 && insuranceProceedsDeduped / ebitda > 0.05) {
+    console.warn(
+      `⚠️ INSURANCE PROCEEDS: ${insuranceProceedsDeduped} is ` +
+      `>${((insuranceProceedsDeduped / ebitda) * 100).toFixed(1)}% of EBITDA. ` +
+      `Review whether this is business interruption (should remain in EBITDA) ` +
+      `or property damage (correctly excluded).`
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Non-Cash Adjustments (add back)
   // ─────────────────────────────────────────────────────────────────────────
   // NOTE: loss_on_disposal is intentionally EXCLUDED. Disposal losses are already reflected in
@@ -442,9 +462,33 @@ export function calculateAdjustedEBITDA(
   // ─────────────────────────────────────────────────────────────────────────
 
   const accountingAdjustments = adj.accounting_policy_adjustments ?? 0;
-  const proFormaAdjustments = [adj.pro_forma_cost_savings, adj.pro_forma_synergies]
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Pro Forma Adjustments with 15% cap
+  //
+  // Uncapped pro forma adjustments (cost savings, synergies) can materially
+  // inflate Adjusted EBITDA without supporting evidence. Conservative
+  // commercial lending practice caps pro forma additions at 15% of base
+  // EBITDA to limit the risk of speculative forward-looking adjustments.
+  // ─────────────────────────────────────────────────────────────────────────
+  const PRO_FORMA_CAP_PCT = 0.15;
+
+  const rawProFormaAdjustments = [adj.pro_forma_cost_savings, adj.pro_forma_synergies]
     .filter((v): v is number => v != null)
     .reduce((sum, v) => sum + v, 0);
+
+  const proFormaCap = Math.abs(ebitda) * PRO_FORMA_CAP_PCT;
+  const proFormaAdjustments =
+    rawProFormaAdjustments > proFormaCap && ebitda !== 0
+      ? proFormaCap
+      : rawProFormaAdjustments;
+
+  if (rawProFormaAdjustments > proFormaCap && ebitda !== 0) {
+    console.warn(
+      `⚠️ PRO FORMA CAP: Raw pro forma adjustments (${rawProFormaAdjustments}) exceed ` +
+      `${PRO_FORMA_CAP_PCT * 100}% of EBITDA (${ebitda}). Capped at ${proFormaCap.toFixed(2)}.`
+    );
+  }
 
   const capitalExpenditures = metrics.capital_expenditures ?? 0;
 

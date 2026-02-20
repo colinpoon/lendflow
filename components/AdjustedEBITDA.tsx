@@ -261,13 +261,26 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                     label: 'Deferred Compensation',
                     value: components.deferred_compensation,
                   },
-                  {
-                    label: 'Loss on Disposal of Assets',
-                    value: components.loss_on_disposal,
-                  },
                   { label: 'Other Non-Cash', value: components.other_non_cash },
                 ]}
               />
+
+              {/* Loss on Disposal — informational only, not in Adjusted EBITDA */}
+              {components.loss_on_disposal != null && components.loss_on_disposal !== 0 && (
+                <div className="mb-4 bg-gray-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <h5 className="text-sm font-semibold text-gray-500">
+                      Loss on Disposal of Assets — Excluded
+                    </h5>
+                    <span className="text-sm font-bold text-gray-500">
+                      {formatCurrency(components.loss_on_disposal)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Excluded from adjustment — no cash impact. Analyst should verify whether this represents a recurring disposal pattern.
+                  </p>
+                </div>
+              )}
 
               {/* One-Time Expenses */}
               <AdjustmentCategory
@@ -299,16 +312,29 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                 ]}
               />
 
+              {/* Gain on Disposal — informational only, not in Adjusted EBITDA */}
+              {components.gain_on_disposal != null && components.gain_on_disposal !== 0 && (
+                <div className="mb-4 bg-gray-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <h5 className="text-sm font-semibold text-gray-500">
+                      Gain on Disposal of Assets — Excluded
+                    </h5>
+                    <span className="text-sm font-bold text-gray-500">
+                      {formatCurrency(components.gain_on_disposal)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Excluded from adjustment — no cash impact. Analyst should verify whether this represents a recurring disposal pattern.
+                  </p>
+                </div>
+              )}
+
               {/* One-Time Gains (subtract) */}
               <AdjustmentCategory
                 title="One-Time Gains/Income (Subtracted)"
                 total={breakdown.one_time_gains}
                 isSubtraction
                 items={[
-                  {
-                    label: 'Gain on Disposal of Assets',
-                    value: components.gain_on_disposal,
-                  },
                   {
                     label: 'Gain on Asset Sale',
                     value: components.gain_on_asset_sale,

@@ -102,14 +102,25 @@ export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtServi
     // (accretion, amortization of financing fees) that slightly inflate the
     // denominator. It is retained as a last-resort fallback only. The preferred
     // signals are fcTotalInterest and ttmInterest which are closer to cash basis.
-    const accrualBest = Math.max(fcTotalInterest, ttmInterest, plInterest);
+    // Determine the best accrual figure and track which variable won directly,
+    // avoiding floating-point === comparisons after Math.max which can silently
+    // mislabel the source when two values are nearly identical.
+    let accrualBest = 0;
+    let accrualBestSource: DebtServiceSource = 'none';
+    if (fcTotalInterest >= ttmInterest && fcTotalInterest >= plInterest) {
+      accrualBest = fcTotalInterest;
+      accrualBestSource = 'total_interest_expense';
+    } else if (ttmInterest >= plInterest) {
+      accrualBest = ttmInterest;
+      accrualBestSource = 'ttm_interest_expense';
+    } else {
+      accrualBest = plInterest;
+      accrualBestSource = 'interest_accrual';
+    }
+
     if (accrualBest > cashInterest * 1.5) {
       interest = accrualBest;
-      interestSource = accrualBest === fcTotalInterest
-        ? 'total_interest_expense'
-        : accrualBest === ttmInterest
-          ? 'ttm_interest_expense'
-          : 'interest_accrual';
+      interestSource = accrualBestSource;
     }
   } else if (fcTotalInterest > 0) {
     interest = fcTotalInterest;

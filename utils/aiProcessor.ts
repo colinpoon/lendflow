@@ -468,8 +468,12 @@ export const extractFinancialData = async (
  * @returns Computed metrics including ratios and breakdowns
  */
 function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
-  // Shallow copy to avoid mutating the input object
-  const result = { ...m } as ComputedMetrics;
+  // Deep clone to prevent nested objects (debt_components, fixed_charges,
+  // adjusted_ebitda_components, etc.) from sharing references with the caller's
+  // copy of `m`. A shallow spread would let mutations on `result` silently mutate
+  // `m`, causing hard-to-diagnose cross-year contamination.
+  // structuredClone is available in Node 17+ and all modern browsers.
+  const result = structuredClone(m) as ComputedMetrics;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Debt Calculation
