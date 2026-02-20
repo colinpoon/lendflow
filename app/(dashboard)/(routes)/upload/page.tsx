@@ -5,6 +5,8 @@ import {
   FileSpreadsheet,
   BarChart4,
   Shield,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 
 import FileUpload from '@/components/FileUpload';
@@ -71,6 +73,8 @@ const Home = () => {
     useState<DebtHealthAssessment | null>(null);
   const [quantitativeRiskAssessment, setQuantitativeRiskAssessment] =
     useState<QuantitativeRiskAssessment | null>(null);
+  const [validationIssues, setValidationIssues] = useState<string[]>([]);
+  const [validationAlertDismissed, setValidationAlertDismissed] = useState(false);
 
   // Custom adjustments state (lifted from FCCRBreakdown for cross-component sharing)
   const [customAdjustments, setCustomAdjustments] = useState<CustomAdjustment[]>([]);
@@ -93,6 +97,14 @@ const Home = () => {
     };
   }) => {
     setExtractedData(data);
+    setValidationAlertDismissed(false);
+
+    // Collect validation issues from the extraction result (Record<string, string[]> shape)
+    const rawIssues =
+      (data as { validation_issues?: Record<string, string[]> }).validation_issues ??
+      (data.financialMetrics as { validation_issues?: Record<string, string[]> } | undefined)?.validation_issues ??
+      {};
+    setValidationIssues(Object.values(rawIssues).flat());
 
     // Accept either data.financialMetrics or a root-level metrics_by_year
     if (data.financialMetrics) {
@@ -148,6 +160,31 @@ const Home = () => {
             Upload a financial document to begin your bank loan risk
             analysis.
           </AlertDescription>
+        </Alert>
+      )}
+
+      {validationIssues.length > 0 && !validationAlertDismissed && (
+        <Alert variant="destructive" className="mt-4 relative pr-10">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Data Validation Warnings</AlertTitle>
+          <AlertDescription>
+            <p className="mb-2">
+              The following issues were detected during extraction. Review
+              the figures below carefully before making a lending decision.
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-sm">
+              {validationIssues.map((issue, index) => (
+                <li key={index}>{issue}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+          <button
+            onClick={() => setValidationAlertDismissed(true)}
+            aria-label="Dismiss validation warnings"
+            className="absolute top-3 right-3 rounded-sm opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-1"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </Alert>
       )}
       <Tabs

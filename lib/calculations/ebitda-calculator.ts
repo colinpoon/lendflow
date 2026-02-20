@@ -99,6 +99,17 @@ export function calculateEBITDA(metrics: ExtractedMetrics): number | null {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Module-level constants
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Shared deduplication tolerance: 5%.
+ * Tight enough to catch genuine duplicates; wide enough to preserve distinct items
+ * with minor rounding differences across document sections.
+ */
+const DEDUP_TOLERANCE = 0.05;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Internal deduplication helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -176,10 +187,7 @@ function deduplicateOtherNonCash(
  */
 const REALIZED_FX_MATERIALITY_THRESHOLD = 0.05; // 5% of base EBITDA
 
-function resolveUnrealizedFx(
-  adj: AdjustedEBITDAComponents,
-  ebitda: number
-): number {
+function resolveUnrealizedFx(adj: AdjustedEBITDAComponents): number {
   // Prefer the new dedicated field
   const unrealizedFxCf = adj.unrealized_fx_cash_flow ?? null;
   if (unrealizedFxCf != null) return unrealizedFxCf;
@@ -305,11 +313,6 @@ export function calculateAdjustedEBITDA(
 ): EBITDACalculationResult {
   const adj = (metrics.adjusted_ebitda_components || {}) as AdjustedEBITDAComponents;
 
-  // Shared deduplication tolerance: 5%
-  // Tight enough to catch genuine duplicates; wide enough to preserve distinct items with
-  // minor rounding differences across document sections.
-  const DEDUP_TOLERANCE = 0.05;
-
   // ─────────────────────────────────────────────────────────────────────────
   // Guard 1: other_non_cash vs finance cost components
   // ─────────────────────────────────────────────────────────────────────────
@@ -328,7 +331,7 @@ export function calculateAdjustedEBITDA(
   // Realized FX (realized_fx_pl) is already in net income — logged if material
   // but never adjusts EBITDA.
   // ─────────────────────────────────────────────────────────────────────────
-  const unrealizedFxValue = resolveUnrealizedFx(adj, ebitda);
+  const unrealizedFxValue = resolveUnrealizedFx(adj);
   logRealizedFxIfMaterial(adj, ebitda);
 
   // unrealized_gains_losses is now for non-FX mark-to-market only

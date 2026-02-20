@@ -45,7 +45,7 @@ export function calculateInterestCoverageRatio(
 ): number | null {
   if (ebitda == null || interest == null || interest === 0) return null;
 
-  return ebitda / interest;
+  return parseFloat((ebitda / interest).toFixed(2));
 }
 
 /**
@@ -61,7 +61,7 @@ export function calculateDebtToEquityRatio(
     return null;
   }
 
-  return totalDebt / shareholdersEquity;
+  return parseFloat((totalDebt / shareholdersEquity).toFixed(2));
 }
 
 /**

@@ -56,6 +56,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
   }
 
+  const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+  const ALLOWED_MIME_TYPES = new Set([
+    'application/pdf',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ]);
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    console.error(`❗ File too large: ${file.size} bytes`);
+    return NextResponse.json(
+      { error: 'File too large. Maximum size is 50 MB.' },
+      { status: 413 }
+    );
+  }
+
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    console.error(`❗ Unsupported file type: ${file.type}`);
+    return NextResponse.json(
+      { error: `Unsupported file type "${file.type}". Accepted formats: PDF, Excel, Word.` },
+      { status: 415 }
+    );
+  }
+
   console.log(
     `📁 File received: ${file.name}, size: ${file.size}, type: ${file.type}`
   );
@@ -297,13 +322,6 @@ export async function POST(req: NextRequest) {
               // Update document status to pending_conflict
               await updateDocumentStatus(freshSupabase, documentId, 'pending_conflict');
 
-              // Clean up temp file before returning
-              try {
-                fs.unlinkSync(tempPath);
-              } catch {
-                // Ignore cleanup errors
-              }
-
               // Send conflict detected message and stop processing
               if (!writerClosed) {
                 await writer.write(encoder.encode(sseMessage({
@@ -339,14 +357,6 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Clean up temp file
-        try {
-          fs.unlinkSync(tempPath);
-          console.log('🧹 Temp file cleaned up');
-        } catch (cleanupError) {
-          console.warn('⚠️ Failed to clean up temp file:', cleanupError);
-        }
-
         // Send final complete message with data
         if (!writerClosed) {
           await writer.write(encoder.encode(sseMessage({
@@ -371,17 +381,19 @@ export async function POST(req: NextRequest) {
         const errorSupabase = await createClient();
         await updateDocumentStatus(errorSupabase, documentId, 'failed', errorMessage);
 
-        try {
-          fs.unlinkSync(tempPath);
-        } catch {
-          // Ignore cleanup errors
-        }
-
         await sendProgress({
           stage: 'error',
           progress: 0,
           message: errorMessage,
         });
+      } finally {
+        // Always clean up the temp file regardless of success or failure
+        try {
+          fs.unlinkSync(tempPath);
+          console.log('Temp file cleaned up');
+        } catch (cleanupError) {
+          console.warn('Failed to clean up temp file:', cleanupError);
+        }
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

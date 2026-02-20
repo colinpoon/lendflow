@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { extractFinancialData } from '@/utils/aiProcessor';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
@@ -10,6 +11,12 @@ export const maxDuration = 150;
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   let tempFilePath: string | null = null;
 
   try {
