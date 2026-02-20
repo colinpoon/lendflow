@@ -31,10 +31,10 @@ export default function ExtractionWarnings({
     <div className="space-y-3">
       {/* Partial Extraction Warning */}
       {hasPartialExtraction && (
-        <Alert className="bg-amber-50 border-amber-200">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertTitle className="text-amber-800">Partial Extraction</AlertTitle>
-          <AlertDescription className="text-amber-700">
+        <Alert className="bg-card border-border">
+          <AlertTriangle className="h-4 w-4 text-warning" />
+          <AlertTitle className="text-foreground">Partial Extraction</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
             {chunkStats.failed} of {chunkStats.total} document sections could not
             be fully processed. The analysis below is based on successfully
             extracted data.
@@ -44,10 +44,10 @@ export default function ExtractionWarnings({
 
       {/* Extraction Warnings */}
       {extractionWarnings && extractionWarnings.length > 0 && !hasPartialExtraction && (
-        <Alert className="bg-amber-50 border-amber-200">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertTitle className="text-amber-800">Extraction Notice</AlertTitle>
-          <AlertDescription className="text-amber-700">
+        <Alert className="bg-card border-border">
+          <AlertTriangle className="h-4 w-4 text-warning" />
+          <AlertTitle className="text-foreground">Extraction Notice</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
             <ul className="list-disc list-inside mt-1 space-y-1">
               {extractionWarnings.map((warning, index) => (
                 <li key={index}>{warning}</li>
@@ -59,14 +59,14 @@ export default function ExtractionWarnings({
 
       {/* Validation Issues */}
       {hasValidationIssues && (
-        <Alert className="bg-yellow-50 border-yellow-200">
-          <ClipboardList className="h-4 w-4 text-yellow-600" />
-          <AlertTitle className="text-yellow-800 flex items-center gap-2">
+        <Alert className="bg-card border-border">
+          <ClipboardList className="h-4 w-4 text-warning" />
+          <AlertTitle className="text-foreground flex items-center gap-2">
             Data Quality Notes
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-yellow-700 hover:text-yellow-900 hover:bg-yellow-100"
+              className="h-6 px-2 text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={() => setShowDetails(!showDetails)}
             >
               {showDetails ? (
@@ -80,7 +80,7 @@ export default function ExtractionWarnings({
               )}
             </Button>
           </AlertTitle>
-          <AlertDescription className="text-yellow-700">
+          <AlertDescription className="text-muted-foreground">
             {/* Summary line */}
             <p className="mb-2">
               {Object.keys(validationIssues).length} year
@@ -90,12 +90,12 @@ export default function ExtractionWarnings({
 
             {/* Detailed issues per year */}
             {showDetails && (
-              <ul className="space-y-2 mt-3 pt-3 border-t border-yellow-200">
+              <ul className="space-y-2 mt-3 pt-3 border-t border-border">
                 {Object.entries(validationIssues)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([year, issues]) => (
                     <li key={year}>
-                      <span className="font-medium">{year}:</span>
+                      <span className="font-medium text-foreground">{year}:</span>
                       <ul className="list-disc list-inside ml-4 text-sm">
                         {issues.map((issue, idx) => (
                           <li key={idx}>{issue}</li>

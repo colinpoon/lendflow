@@ -50,9 +50,9 @@ const AdjustmentLine: React.FC<AdjustmentLineProps> = ({
 
   return (
     <div className="flex justify-between text-sm py-1">
-      <span className="text-gray-600">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
       <span
-        className={`font-medium ${isSubtraction ? 'text-red-600' : 'text-green-600'}`}
+        className={`font-medium ${isSubtraction ? 'text-error' : 'text-success'}`}
       >
         {formatSignedCurrency(value, isSubtraction)}
       </span>
@@ -80,14 +80,14 @@ const AdjustmentCategory: React.FC<AdjustmentCategoryProps> = ({
   return (
     <div className="mb-4">
       <div className="flex justify-between items-center mb-2">
-        <h5 className="text-sm font-semibold text-gray-700">{title}</h5>
+        <h5 className="text-sm font-semibold text-foreground">{title}</h5>
         <span
-          className={`text-sm font-bold ${isSubtraction ? 'text-red-600' : 'text-green-600'}`}
+          className={`text-sm font-bold ${isSubtraction ? 'text-error' : 'text-success'}`}
         >
           {formatSignedCurrency(total, isSubtraction)}
         </span>
       </div>
-      <div className="pl-4 border-l-2 border-gray-200">
+      <div className="pl-4 border-l-2 border-border">
         {items.map(
           (item) =>
             item.value != null &&
@@ -112,7 +112,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
     Object.keys(data.metrics_by_year).length === 0
   ) {
     return (
-      <p className="text-gray-500">No EBITDA data available.</p>
+      <p className="text-muted-foreground">No EBITDA data available.</p>
     );
   }
 
@@ -123,7 +123,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
 
   if (metrics.ebitda == null) {
     return (
-      <p className="text-gray-500">
+      <p className="text-muted-foreground">
         No EBITDA data available for {latestYear}.
       </p>
     );
@@ -151,18 +151,18 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-2">
-        <span className="text-xs text-gray-500">(Values in thousands)</span>
-        <span className="text-sm text-gray-500">Fiscal Year {latestYear}</span>
+        <span className="text-xs text-muted-foreground">(Values in thousands)</span>
+        <span className="text-sm text-muted-foreground">Fiscal Year {latestYear}</span>
       </div>
 
       {/* Reported vs Calculated indicator */}
       {usesReportedValue && (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-          <p className="text-sm text-purple-700">
+        <div className="bg-secondary border border-border rounded-lg p-3">
+          <p className="text-sm text-secondary-foreground">
             <span className="font-semibold">Company-Reported Value:</span> Using Adjusted EBITDA as reported by the company in their financial documents.
           </p>
           {calculatedAdjustedEBITDA != null && calculatedAdjustedEBITDA !== adjustedEBITDA && (
-            <p className="text-xs text-purple-600 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Our calculated estimate: {formatCurrency(calculatedAdjustedEBITDA)}
             </p>
           )}
@@ -171,25 +171,25 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
 
       {/* Main EBITDA values */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-blue-50 rounded-lg p-4 text-center">
-          <p className="text-sm text-blue-600 font-medium">Reported EBITDA</p>
-          <p className="text-2xl font-bold text-blue-800">
+        <div className="bg-info/10 rounded-lg p-4 text-center">
+          <p className="text-sm text-info font-medium">Reported EBITDA</p>
+          <p className="text-2xl font-bold text-foreground">
             {formatCurrency(metrics.ebitda)}
           </p>
         </div>
-        <div className={`rounded-lg p-4 text-center ${usesReportedValue ? 'bg-purple-50' : 'bg-green-50'}`}>
-          <p className={`text-sm font-medium ${usesReportedValue ? 'text-purple-600' : 'text-green-600'}`}>
+        <div className={`rounded-lg p-4 text-center ${usesReportedValue ? 'bg-secondary' : 'bg-success/10'}`}>
+          <p className={`text-sm font-medium ${usesReportedValue ? 'text-secondary-foreground' : 'text-success'}`}>
             Adjusted EBITDA {usesReportedValue && '(Reported)'}
           </p>
-          <p className={`text-2xl font-bold ${usesReportedValue ? 'text-purple-800' : 'text-green-800'}`}>
+          <p className={`text-2xl font-bold ${usesReportedValue ? 'text-foreground' : 'text-success'}`}>
             {formatCurrency(adjustedEBITDA)}
           </p>
         </div>
       </div>
 
       {/* Formula */}
-      <div className="bg-gray-50 rounded-lg p-3 text-center">
-        <span className="font-mono text-xs text-gray-600">
+      <div className="bg-muted rounded-lg p-3 text-center">
+        <span className="font-mono text-xs text-muted-foreground">
           Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time Expenses - One-Time Gains - Interest Income
         </span>
       </div>
@@ -198,20 +198,20 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       <Accordion type="multiple" defaultValue={['breakdown', 'historical']} className="w-full">
         {/* Adjustment Breakdown Accordion */}
         {hasAdjustments && breakdown && components && (
-          <AccordionItem value="breakdown" className="border rounded-lg px-4">
+          <AccordionItem value="breakdown" className="border border-border rounded-lg px-4">
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-gray-800">Adjustment Breakdown</span>
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                <span className="font-semibold text-foreground">Adjustment Breakdown</span>
+                <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded">
                   {formatCurrency(adjustedEBITDA)}
                 </span>
               </div>
             </AccordionTrigger>
             <AccordionContent>
               {/* Reported EBITDA */}
-              <div className="flex justify-between items-center mb-4 pb-2 border-b">
-                <span className="font-medium text-gray-700">Reported EBITDA</span>
-                <span className="font-bold text-gray-900">
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
+                <span className="font-medium text-foreground">Reported EBITDA</span>
+                <span className="font-bold text-foreground">
                   {formatCurrency(breakdown.reported_ebitda)}
                 </span>
               </div>
@@ -268,16 +268,16 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
 
               {/* Loss on Disposal — informational only, not in Adjusted EBITDA */}
               {components.loss_on_disposal != null && components.loss_on_disposal !== 0 && (
-                <div className="mb-4 bg-gray-50 rounded-lg p-3">
+                <div className="mb-4 bg-muted rounded-lg p-3">
                   <div className="flex justify-between items-center mb-1">
-                    <h5 className="text-sm font-semibold text-gray-500">
+                    <h5 className="text-sm font-semibold text-muted-foreground">
                       Loss on Disposal of Assets — Excluded
                     </h5>
-                    <span className="text-sm font-bold text-gray-500">
+                    <span className="text-sm font-bold text-muted-foreground">
                       {formatCurrency(components.loss_on_disposal)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-muted-foreground/70">
                     Excluded from adjustment — no cash impact. Analyst should verify whether this represents a recurring disposal pattern.
                   </p>
                 </div>
@@ -315,16 +315,16 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
 
               {/* Gain on Disposal — informational only, not in Adjusted EBITDA */}
               {components.gain_on_disposal != null && components.gain_on_disposal !== 0 && (
-                <div className="mb-4 bg-gray-50 rounded-lg p-3">
+                <div className="mb-4 bg-muted rounded-lg p-3">
                   <div className="flex justify-between items-center mb-1">
-                    <h5 className="text-sm font-semibold text-gray-500">
+                    <h5 className="text-sm font-semibold text-muted-foreground">
                       Gain on Disposal of Assets — Excluded
                     </h5>
-                    <span className="text-sm font-bold text-gray-500">
+                    <span className="text-sm font-bold text-muted-foreground">
                       {formatCurrency(components.gain_on_disposal)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-muted-foreground/70">
                     Excluded from adjustment — no cash impact. Analyst should verify whether this represents a recurring disposal pattern.
                   </p>
                 </div>
@@ -411,20 +411,20 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               {breakdown.interest_income_excluded != null && breakdown.interest_income_excluded > 0 && (
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <h5 className="text-sm font-semibold text-gray-700">Interest Income (Excluded)</h5>
-                    <span className="text-sm font-bold text-red-600">
+                    <h5 className="text-sm font-semibold text-foreground">Interest Income (Excluded)</h5>
+                    <span className="text-sm font-bold text-error">
                       {formatSignedCurrency(breakdown.interest_income_excluded, true)}
                     </span>
                   </div>
-                  <div className="pl-4 border-l-2 border-gray-200">
+                  <div className="pl-4 border-l-2 border-border">
                     <div className="flex justify-between text-sm py-1">
-                      <span className="text-gray-600">Interest Income (Non-Operating)</span>
-                      <span className="font-medium text-red-600">
+                      <span className="text-muted-foreground">Interest Income (Non-Operating)</span>
+                      <span className="font-medium text-error">
                         {formatSignedCurrency(breakdown.interest_income_excluded, true)}
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1 pl-4">
+                  <p className="text-xs text-muted-foreground/70 mt-1 pl-4">
                     Treasury income on cash balances — excluded from Adjusted EBITDA per standard lending convention.
                   </p>
                 </div>
@@ -432,16 +432,16 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
 
               {/* Realized FX — informational only, not in EBITDA calc */}
               {breakdown.realized_fx_pl !== 0 && (
-                <div className="mb-4 bg-amber-50 rounded-lg p-3">
+                <div className="mb-4 bg-warning/10 rounded-lg p-3">
                   <div className="flex justify-between items-center mb-1">
-                    <h5 className="text-sm font-semibold text-amber-700">
+                    <h5 className="text-sm font-semibold text-warning">
                       Realized FX (P&L) — Not in Adjusted EBITDA
                     </h5>
-                    <span className="text-sm font-bold text-amber-700">
+                    <span className="text-sm font-bold text-warning">
                       {formatCurrency(breakdown.realized_fx_pl)}
                     </span>
                   </div>
-                  <p className="text-xs text-amber-600">
+                  <p className="text-xs text-warning/80">
                     Already embedded in net income. Shown for analyst review — verify if recurring or one-time.
                   </p>
                 </div>
@@ -462,25 +462,25 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
 
               {/* Capital Expenditures — informational only, not in Adjusted EBITDA */}
               {breakdown.capital_expenditures_not_in_calc !== 0 && (
-                <div className="mb-4 bg-gray-50 rounded-lg p-3">
+                <div className="mb-4 bg-muted rounded-lg p-3">
                   <div className="flex justify-between items-center mb-1">
-                    <h5 className="text-sm font-semibold text-gray-500">
+                    <h5 className="text-sm font-semibold text-muted-foreground">
                       Maintenance CapEx — Not in Adjusted EBITDA
                     </h5>
-                    <span className="text-sm font-bold text-gray-500">
+                    <span className="text-sm font-bold text-muted-foreground">
                       {formatCurrency(breakdown.capital_expenditures_not_in_calc)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-muted-foreground/70">
                     Shown for reference per standard lending convention. Deducted separately in FCCR.
                   </p>
                 </div>
               )}
 
               {/* Total */}
-              <div className="flex justify-between items-center mt-4 pt-4 border-t-2 border-gray-300">
-                <span className="font-bold text-gray-800">Adjusted EBITDA</span>
-                <span className="font-bold text-xl text-green-700">
+              <div className="flex justify-between items-center mt-4 pt-4 border-t-2 border-border">
+                <span className="font-bold text-foreground">Adjusted EBITDA</span>
+                <span className="font-bold text-xl text-success">
                   {formatCurrency(adjustedEBITDA)}
                 </span>
               </div>
@@ -489,8 +489,8 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
         )}
 
         {!hasAdjustments && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p className="text-sm text-yellow-700">
+          <div className="bg-warning/10 border border-warning/25 rounded-lg p-4">
+            <p className="text-sm text-muted-foreground">
               No EBITDA adjustments were identified in the financial documents.
               The Adjusted EBITDA equals the Reported EBITDA.
             </p>
@@ -499,36 +499,36 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
 
         {/* Historical Comparison Accordion */}
         {years.length > 1 && (
-          <AccordionItem value="historical" className="border rounded-lg px-4 mt-4">
+          <AccordionItem value="historical" className="border border-border rounded-lg px-4 mt-4">
             <AccordionTrigger className="hover:no-underline">
-              <span className="font-semibold text-gray-800">Historical EBITDA Comparison</span>
+              <span className="font-semibold text-foreground">Historical EBITDA Comparison</span>
             </AccordionTrigger>
             <AccordionContent>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 pr-4">Metric</th>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 pr-4 text-foreground">Metric</th>
                       {years.map((yr) => (
-                        <th key={yr} className="text-right py-2 px-2">
+                        <th key={yr} className="text-right py-2 px-2 text-foreground">
                           {yr}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b">
-                      <td className="py-2 pr-4">Reported EBITDA</td>
+                    <tr className="border-b border-border">
+                      <td className="py-2 pr-4 text-foreground">Reported EBITDA</td>
                       {years.map((yr) => (
-                        <td key={yr} className="text-right py-2 px-2">
+                        <td key={yr} className="text-right py-2 px-2 text-foreground">
                           {formatCurrency(data.metrics_by_year[yr].ebitda)}
                         </td>
                       ))}
                     </tr>
-                    <tr className="border-b bg-green-50">
-                      <td className="py-2 pr-4 font-medium">Adjusted EBITDA</td>
+                    <tr className="border-b border-border bg-success/5">
+                      <td className="py-2 pr-4 font-medium text-foreground">Adjusted EBITDA</td>
                       {years.map((yr) => (
-                        <td key={yr} className="text-right py-2 px-2 font-medium">
+                        <td key={yr} className="text-right py-2 px-2 font-medium text-success">
                           {formatCurrency(data.metrics_by_year[yr].adjusted_ebitda)}
                         </td>
                       ))}

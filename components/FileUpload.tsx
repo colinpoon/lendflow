@@ -328,14 +328,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
       />
     )}
 
-    <div className="p-6 border rounded-lg shadow-sm w-full max-w-md mx-auto space-y-4">
+    <div className="p-6 border border-border rounded-lg shadow-sm w-full max-w-md mx-auto space-y-4">
       {/* Success State */}
       {stage === 'complete' && (
-        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
-          <CheckCircle className="h-5 w-5 text-green-500" />
+        <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/25 rounded-md">
+          <CheckCircle className="h-5 w-5 text-success" />
           <div className="text-sm">
-            <span className="font-medium text-green-800">Extraction Complete</span>
-            <span className="text-green-600 ml-1">— {extractedFileName}</span>
+            <span className="font-medium text-foreground">Extraction Complete</span>
+            <span className="text-muted-foreground ml-1">— {extractedFileName}</span>
           </div>
         </div>
       )}
@@ -353,13 +353,15 @@ const FileUpload: React.FC<FileUploadProps> = ({
         <label
           htmlFor="file-input"
           className={`w-full text-center py-3 px-4 border-2 border-dashed rounded-md cursor-pointer transition-colors
-            ${isProcessing || isCompressing ? 'opacity-50 cursor-not-allowed border-gray-200' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}
+            ${isProcessing || isCompressing
+              ? 'opacity-50 cursor-not-allowed border-border'
+              : 'border-border hover:border-primary/30 hover:bg-primary/5'}`}
         >
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-muted-foreground">
             {isCompressing ? 'Optimizing PDF...' : file ? file.name : 'Click to select a file'}
           </span>
           {compressionInfo && !isCompressing && (
-            <span className="block text-xs text-green-600 mt-1">{compressionInfo}</span>
+            <span className="block text-xs text-success mt-1">{compressionInfo}</span>
           )}
         </label>
 
@@ -368,8 +370,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
           disabled={isProcessing || isCompressing || !file}
           className={`w-full py-2 rounded-md font-medium text-sm transition-colors
             ${isProcessing || isCompressing || !file
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+              ? 'bg-muted text-muted-foreground cursor-not-allowed'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
         >
           {isCompressing ? 'Optimizing...' : isProcessing ? 'Processing...' : stage === 'complete' ? 'Process Another' : 'Process File'}
         </button>
@@ -378,7 +380,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       {/* Progress */}
       {isProcessing && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span>{STAGE_LABELS[currentStage] || currentStage}</span>
@@ -386,7 +388,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             <span>{progress}%</span>
           </div>
           <Progress value={progress} className="h-1.5" />
-          <p className="text-xs text-gray-400 text-center">{stageMessage}</p>
+          <p className="text-xs text-muted-foreground/70 text-center">{stageMessage}</p>
         </div>
       )}
     </div>

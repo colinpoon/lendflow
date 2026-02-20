@@ -58,7 +58,7 @@
   --color-ring: var(--ring);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Chart Colors
+   * Chart Colors — Monochromatic scale
    * ───────────────────────────────────────────────────────────────────────── */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -67,7 +67,7 @@
   --color-chart-5: var(--chart-5);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Sidebar
+   * Sidebar — Dark variant
    * ───────────────────────────────────────────────────────────────────────── */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -79,7 +79,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Border Radius
+   * Border Radius — Tighter for precision
    * ───────────────────────────────────────────────────────────────────────── */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -88,27 +88,27 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Background & Foreground
+   * Background & Foreground — Pure Neutral
    * ───────────────────────────────────────────────────────────────────────── */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.15 0 0);
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Brand Colors - Professional Blue
-   * Primary: Trust, stability, professionalism
-   * Accent: Data visualization, secondary actions
+   * Brand Colors — Pure Black/White
+   * Primary: Near-black for authority and precision
+   * Accent: Light gray for secondary surfaces
    * ───────────────────────────────────────────────────────────────────────── */
-  --primary: oklch(0.45 0.12 250);
+  --primary: oklch(0.145 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  --accent: oklch(0.55 0.10 200);
-  --accent-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0.145 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Semantic Colors - Risk & Status
-   * Used for financial metrics and status indicators
+   * Semantic Colors - Risk & Status (UNCHANGED)
+   * Used for financial metrics and status indicators ONLY
    * ───────────────────────────────────────────────────────────────────────── */
   --success: oklch(0.55 0.15 155);
   --success-foreground: oklch(0.985 0 0);
@@ -120,65 +120,64 @@
   --info-foreground: oklch(0.985 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * UI Components
+   * UI Components — Zero Chroma
    * ───────────────────────────────────────────────────────────────────────── */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0 0);
+  --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0 0);
+  --popover-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.96 0 0);
-  --secondary-foreground: oklch(0.20 0 0);
+  --secondary-foreground: oklch(0.145 0 0);
   --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.45 0 0);
+  --muted-foreground: oklch(0.55 0 0);
   --destructive: oklch(0.55 0.22 25);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Borders & Focus - Improved Contrast
+   * Borders & Focus — Pure Gray
    * ───────────────────────────────────────────────────────────────────────── */
-  --border: oklch(0.90 0 0);
-  --input: oklch(0.90 0 0);
-  --ring: oklch(0.45 0.12 250);
+  --border: oklch(0.91 0 0);
+  --input: oklch(0.91 0 0);
+  --ring: oklch(0.145 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Chart Colors - Data Visualization
+   * Chart Colors — Monochromatic grayscale
    * ───────────────────────────────────────────────────────────────────────── */
-  --chart-1: oklch(0.45 0.12 250);
-  --chart-2: oklch(0.55 0.15 155);
-  --chart-3: oklch(0.65 0.15 75);
-  --chart-4: oklch(0.55 0.10 200);
-  --chart-5: oklch(0.55 0.22 25);
+  --chart-1: oklch(0.145 0 0);
+  --chart-2: oklch(0.40 0 0);
+  --chart-3: oklch(0.60 0 0);
+  --chart-4: oklch(0.75 0 0);
+  --chart-5: oklch(0.88 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Sidebar
+   * Sidebar — Dark for maximum contrast
    * ───────────────────────────────────────────────────────────────────────── */
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.15 0 0);
-  --sidebar-primary: oklch(0.45 0.12 250);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.96 0 0);
-  --sidebar-accent-foreground: oklch(0.20 0 0);
-  --sidebar-border: oklch(0.90 0 0);
-  --sidebar-ring: oklch(0.45 0.12 250);
+  --sidebar: oklch(0.08 0 0);
+  --sidebar-foreground: oklch(0.92 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.08 0 0);
+  --sidebar-accent: oklch(0.16 0 0);
+  --sidebar-accent-foreground: oklch(0.92 0 0);
+  --sidebar-border: oklch(0.18 0 0);
+  --sidebar-ring: oklch(0.30 0 0);
 }
 
 .dark {
   /* ─────────────────────────────────────────────────────────────────────────
-   * Background & Foreground - Dark Mode
+   * Background & Foreground — Dark Neutral
    * ───────────────────────────────────────────────────────────────────────── */
-  --background: oklch(0.15 0 0);
-  --foreground: oklch(0.95 0 0);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.97 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Brand Colors - Dark Mode
-   * Lighter variants for dark backgrounds
+   * Brand Colors — Dark Mode
    * ───────────────────────────────────────────────────────────────────────── */
-  --primary: oklch(0.65 0.15 250);
-  --primary-foreground: oklch(0.15 0 0);
-  --accent: oklch(0.65 0.12 200);
-  --accent-foreground: oklch(0.15 0 0);
+  --primary: oklch(0.97 0 0);
+  --primary-foreground: oklch(0.145 0 0);
+  --accent: oklch(0.22 0 0);
+  --accent-foreground: oklch(0.97 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Semantic Colors - Dark Mode
+   * Semantic Colors — Dark Mode (brighter for legibility)
    * ───────────────────────────────────────────────────────────────────────── */
   --success: oklch(0.65 0.18 155);
   --success-foreground: oklch(0.15 0 0);
@@ -190,45 +189,45 @@
   --info-foreground: oklch(0.15 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * UI Components - Dark Mode
+   * UI Components — Dark Mode
    * ───────────────────────────────────────────────────────────────────────── */
-  --card: oklch(0.20 0 0);
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.20 0 0);
-  --popover-foreground: oklch(0.95 0 0);
-  --secondary: oklch(0.27 0 0);
-  --secondary-foreground: oklch(0.95 0 0);
-  --muted: oklch(0.27 0 0);
+  --card: oklch(0.19 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.19 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.22 0 0);
   --muted-foreground: oklch(0.65 0 0);
   --destructive: oklch(0.65 0.22 25);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Borders & Focus - Dark Mode
+   * Borders & Focus — Dark Mode
    * ───────────────────────────────────────────────────────────────────────── */
-  --border: oklch(0.30 0 0);
-  --input: oklch(0.30 0 0);
-  --ring: oklch(0.65 0.15 250);
+  --border: oklch(0.27 0 0);
+  --input: oklch(0.27 0 0);
+  --ring: oklch(0.55 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Chart Colors - Dark Mode
+   * Chart Colors — Dark Mode
    * ───────────────────────────────────────────────────────────────────────── */
-  --chart-1: oklch(0.65 0.15 250);
-  --chart-2: oklch(0.65 0.18 155);
-  --chart-3: oklch(0.75 0.15 75);
-  --chart-4: oklch(0.65 0.12 200);
-  --chart-5: oklch(0.65 0.22 25);
+  --chart-1: oklch(0.97 0 0);
+  --chart-2: oklch(0.75 0 0);
+  --chart-3: oklch(0.55 0 0);
+  --chart-4: oklch(0.40 0 0);
+  --chart-5: oklch(0.25 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * Sidebar - Dark Mode
+   * Sidebar — Dark Mode (slightly lighter than background)
    * ───────────────────────────────────────────────────────────────────────── */
-  --sidebar: oklch(0.20 0 0);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.65 0.15 250);
-  --sidebar-primary-foreground: oklch(0.95 0 0);
-  --sidebar-accent: oklch(0.27 0 0);
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.30 0 0);
-  --sidebar-ring: oklch(0.65 0.15 250);
+  --sidebar: oklch(0.10 0 0);
+  --sidebar-foreground: oklch(0.92 0 0);
+  --sidebar-primary: oklch(0.97 0 0);
+  --sidebar-primary-foreground: oklch(0.10 0 0);
+  --sidebar-accent: oklch(0.18 0 0);
+  --sidebar-accent-foreground: oklch(0.92 0 0);
+  --sidebar-border: oklch(0.22 0 0);
+  --sidebar-ring: oklch(0.40 0 0);
 }
 
 @layer base {

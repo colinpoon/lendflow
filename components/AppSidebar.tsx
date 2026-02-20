@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SignOutButton } from '@clerk/nextjs';
 import {
-  Home,
   LayoutDashboard,
   Upload,
   LogOut,
@@ -17,57 +16,72 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar';
 
 const navItems = [
-  {
-    title: 'Home',
-    href: '/',
-    icon: Home,
-  },
   {
     title: 'Projects',
     href: '/dashboard',
     icon: LayoutDashboard,
   },
   {
-    title: 'New Project',
+    title: 'New Analysis',
     href: '/dashboard/new',
     icon: Upload,
   },
   {
-    title: 'Vision Upload',
+    title: 'Vision',
     href: '/vision',
     icon: Eye,
   },
 ];
 
+function SidebarWordmark() {
+  const { state } = useSidebar();
+
+  return (
+    <Link href="/dashboard" className="flex items-center gap-2.5 px-1">
+      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold shrink-0">
+        LF
+      </div>
+      {state === 'expanded' && (
+        <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">
+          Lendflow
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-lg font-bold">Lendflow</span>
-        </Link>
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="px-3 py-4">
+        <SidebarWordmark />
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
-                    isActive={item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)}
+                    isActive={
+                      item.href === '/dashboard'
+                        ? pathname === '/dashboard'
+                        : pathname.startsWith(item.href)
+                    }
+                    tooltip={item.title}
                   >
                     <Link href={item.href}>
                       <item.icon className="h-4 w-4" />
@@ -81,11 +95,14 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4">
+      <SidebarFooter className="p-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SignOutButton>
-              <SidebarMenuButton className="w-full cursor-pointer text-muted-foreground hover:text-foreground">
+              <SidebarMenuButton
+                className="w-full cursor-pointer"
+                tooltip="Sign out"
+              >
                 <LogOut className="h-4 w-4" />
                 <span>Sign out</span>
               </SidebarMenuButton>
@@ -93,6 +110,8 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+
+      <SidebarRail />
     </Sidebar>
   );
 }

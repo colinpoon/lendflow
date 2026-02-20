@@ -379,7 +379,7 @@ function deduplicateOneTimeGains(
   otherOneTimeGains: number | null;
   insuranceProceeds: number | null;
 } {
-  let gainOnAssetSale = rawGainOnAssetSale ?? null;
+  const gainOnAssetSale = rawGainOnAssetSale ?? null;
   let otherIncomeNonOperating = rawOtherIncomeNonOperating ?? null;
   let otherOneTimeGains = rawOtherOneTimeGains ?? null;
   let insuranceProceeds = rawInsuranceProceeds ?? null;

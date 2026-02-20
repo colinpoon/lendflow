@@ -371,42 +371,45 @@ const formatValue = (
   }
 };
 
+// Ratio color function using semantic tokens.
+// 5-level scale: excellent → success, good → success/70, adequate → warning,
+// weak → warning/80 (via text-warning), poor → error
 const getRatioColor = (key: string, value: number | null): string => {
   if (value === null) return '';
 
   switch (key) {
     case 'fccr':
     case 'dscr':
-      if (value >= 2.0) return 'text-green-600 font-semibold';
-      if (value >= 1.5) return 'text-lime-600 font-semibold';
-      if (value >= 1.2) return 'text-yellow-600 font-semibold';
-      if (value >= 1.0) return 'text-orange-600 font-semibold';
-      return 'text-red-600 font-semibold';
+      if (value >= 2.0) return 'text-success font-semibold';
+      if (value >= 1.5) return 'text-success/70 font-semibold';
+      if (value >= 1.2) return 'text-warning font-semibold';
+      if (value >= 1.0) return 'text-warning/80 font-semibold';
+      return 'text-error font-semibold';
     case 'senior_debt_to_ebitda':
     case 'funded_debt_to_ebitda':
-      if (value <= 1.5) return 'text-green-600 font-semibold';
-      if (value <= 2.5) return 'text-lime-600 font-semibold';
-      if (value <= 3.0) return 'text-yellow-600 font-semibold';
-      if (value <= 4.0) return 'text-orange-600 font-semibold';
-      return 'text-red-600 font-semibold';
+      if (value <= 1.5) return 'text-success font-semibold';
+      if (value <= 2.5) return 'text-success/70 font-semibold';
+      if (value <= 3.0) return 'text-warning font-semibold';
+      if (value <= 4.0) return 'text-warning/80 font-semibold';
+      return 'text-error font-semibold';
     case 'total_debt_to_capital':
-      if (value < 0.3) return 'text-green-600 font-semibold';
-      if (value <= 0.5) return 'text-lime-600 font-semibold';
-      if (value <= 0.6) return 'text-yellow-600 font-semibold';
-      if (value <= 0.7) return 'text-orange-600 font-semibold';
-      return 'text-red-600 font-semibold';
+      if (value < 0.3) return 'text-success font-semibold';
+      if (value <= 0.5) return 'text-success/70 font-semibold';
+      if (value <= 0.6) return 'text-warning font-semibold';
+      if (value <= 0.7) return 'text-warning/80 font-semibold';
+      return 'text-error font-semibold';
     case 'interest_coverage_ratio':
-      if (value >= 5.0) return 'text-green-600 font-semibold';
-      if (value >= 3.0) return 'text-lime-600 font-semibold';
-      if (value >= 2.0) return 'text-yellow-600 font-semibold';
-      if (value >= 1.5) return 'text-orange-600 font-semibold';
-      return 'text-red-600 font-semibold';
+      if (value >= 5.0) return 'text-success font-semibold';
+      if (value >= 3.0) return 'text-success/70 font-semibold';
+      if (value >= 2.0) return 'text-warning font-semibold';
+      if (value >= 1.5) return 'text-warning/80 font-semibold';
+      return 'text-error font-semibold';
     case 'current_ratio':
-      if (value >= 2.0) return 'text-green-600 font-semibold';
-      if (value >= 1.5) return 'text-lime-600 font-semibold';
-      if (value >= 1.2) return 'text-yellow-600 font-semibold';
-      if (value >= 1.0) return 'text-orange-600 font-semibold';
-      return 'text-red-600 font-semibold';
+      if (value >= 2.0) return 'text-success font-semibold';
+      if (value >= 1.5) return 'text-success/70 font-semibold';
+      if (value >= 1.2) return 'text-warning font-semibold';
+      if (value >= 1.0) return 'text-warning/80 font-semibold';
+      return 'text-error font-semibold';
     default:
       return '';
   }
@@ -429,7 +432,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
     Object.keys(data.metrics_by_year).length === 0
   ) {
     return (
-      <p className="text-gray-500">No financial data available.</p>
+      <p className="text-muted-foreground">No financial data available.</p>
     );
   }
 
@@ -484,16 +487,16 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
     return (
       <React.Fragment key={section.title}>
         <tr
-          className={`bg-gray-50 ${section.collapsible ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+          className={`bg-muted ${section.collapsible ? 'cursor-pointer hover:bg-muted/80' : ''}`}
           onClick={() => section.collapsible && toggleSection(section.title)}
         >
           <td
             colSpan={years.length + 1}
-            className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-wide border-t border-gray-200"
+            className="py-2 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide border-t border-border"
           >
             <div className="flex items-center gap-2">
               {section.collapsible && (
-                <span className="text-gray-400">
+                <span className="text-muted-foreground/60">
                   {isCollapsed ? '▶' : '▼'}
                 </span>
               )}
@@ -511,11 +514,11 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
           return (
             <tr
               key={`${section.title}-${row.key}`}
-              className={`border-b border-gray-100 hover:bg-gray-50 ${
-                row.highlight ? 'bg-blue-50/50' : ''
+              className={`border-b border-border hover:bg-muted/50 ${
+                row.highlight ? 'bg-primary/5' : ''
               }`}
             >
-              <td className={`py-2 px-4 ${row.highlight ? 'font-medium' : ''} ${row.indent ? 'pl-8' : ''}`}>
+              <td className={`py-2 px-4 text-foreground ${row.highlight ? 'font-medium' : ''} ${row.indent ? 'pl-8' : ''}`}>
                 {row.label}
               </td>
               {years.map((y) => {
@@ -526,7 +529,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                     ? (nestedObj as unknown as Record<string, unknown>)[row.key]
                     : metrics[row.key as keyof typeof metrics];
                   return (
-                    <td key={y} className={`py-2 px-4 text-right ${row.indent ? '' : ''}`}>
+                    <td key={y} className="py-2 px-4 text-right text-foreground">
                       {typeof rawVal === 'string' ? rawVal : '—'}
                     </td>
                   );
@@ -539,8 +542,8 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                   <td
                     key={y}
                     className={`py-2 px-4 text-right ${colorClass} ${
-                      row.highlight && !colorClass ? 'font-medium' : ''
-                    }`}
+                      row.highlight && !colorClass ? 'font-medium text-foreground' : ''
+                    } ${!colorClass && !row.highlight ? 'text-foreground' : ''}`}
                   >
                     {formatValue(val, row.format)}
                   </td>
@@ -562,15 +565,15 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
     return (
       <React.Fragment key="fccr-components">
         <tr
-          className="bg-gray-50 cursor-pointer hover:bg-gray-100"
+          className="bg-muted cursor-pointer hover:bg-muted/80"
           onClick={() => toggleSection('FCCR Components')}
         >
           <td
             colSpan={years.length + 1}
-            className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-wide border-t border-gray-200"
+            className="py-2 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide border-t border-border"
           >
             <div className="flex items-center gap-2">
-              <span className="text-gray-400">
+              <span className="text-muted-foreground/60">
                 {isCollapsed ? '▶' : '▼'}
               </span>
               FCCR Components
@@ -579,51 +582,51 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         </tr>
         {!isCollapsed && (
           <>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-2 px-4 pl-8">FCCR Numerator (Cash Available)</td>
+            <tr className="border-b border-border hover:bg-muted/50">
+              <td className="py-2 px-4 pl-8 text-foreground">FCCR Numerator (Cash Available)</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right">
+                <td key={y} className="py-2 px-4 text-right text-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'numerator'), 'currency')}
                 </td>
               ))}
             </tr>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-2 px-4 pl-8 text-gray-600">Less: Unfunded CapEx</td>
+            <tr className="border-b border-border hover:bg-muted/50">
+              <td className="py-2 px-4 pl-8 text-muted-foreground">Less: Unfunded CapEx</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right text-gray-600">
+                <td key={y} className="py-2 px-4 text-right text-muted-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'unfunded_capex'), 'currency')}
                 </td>
               ))}
             </tr>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-2 px-4 pl-8">FCCR Denominator (Fixed Charges)</td>
+            <tr className="border-b border-border hover:bg-muted/50">
+              <td className="py-2 px-4 pl-8 text-foreground">FCCR Denominator (Fixed Charges)</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right">
+                <td key={y} className="py-2 px-4 text-right text-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'denominator'), 'currency')}
                 </td>
               ))}
             </tr>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-2 px-4 pl-8 text-gray-600">TTM Principal Payments</td>
+            <tr className="border-b border-border hover:bg-muted/50">
+              <td className="py-2 px-4 pl-8 text-muted-foreground">TTM Principal Payments</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right text-gray-600">
+                <td key={y} className="py-2 px-4 text-right text-muted-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'ttm_principal_payments'), 'currency')}
                 </td>
               ))}
             </tr>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-2 px-4 pl-8 text-gray-600">TTM Interest Expense</td>
+            <tr className="border-b border-border hover:bg-muted/50">
+              <td className="py-2 px-4 pl-8 text-muted-foreground">TTM Interest Expense</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right text-gray-600">
+                <td key={y} className="py-2 px-4 text-right text-muted-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'ttm_interest_expense'), 'currency')}
                 </td>
               ))}
             </tr>
             {years.some((y) => getFccrBreakdownValue(y, 'lease_payments') !== null && getFccrBreakdownValue(y, 'lease_payments') !== 0) && (
-              <tr className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-2 px-4 pl-8 text-gray-600">Lease Payments</td>
+              <tr className="border-b border-border hover:bg-muted/50">
+                <td className="py-2 px-4 pl-8 text-muted-foreground">Lease Payments</td>
                 {years.map((y) => (
-                  <td key={y} className="py-2 px-4 text-right text-gray-600">
+                  <td key={y} className="py-2 px-4 text-right text-muted-foreground">
                     {formatValue(getFccrBreakdownValue(y, 'lease_payments'), 'currency')}
                   </td>
                 ))}
@@ -644,15 +647,15 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
     return (
       <React.Fragment key="cfads-components">
         <tr
-          className="bg-gray-50 cursor-pointer hover:bg-gray-100"
+          className="bg-muted cursor-pointer hover:bg-muted/80"
           onClick={() => toggleSection('CFADS Components')}
         >
           <td
             colSpan={years.length + 1}
-            className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-wide border-t border-gray-200"
+            className="py-2 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide border-t border-border"
           >
             <div className="flex items-center gap-2">
-              <span className="text-gray-400">
+              <span className="text-muted-foreground/60">
                 {isCollapsed ? '▶' : '▼'}
               </span>
               CFADS Components
@@ -661,42 +664,42 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         </tr>
         {!isCollapsed && (
           <>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-2 px-4 pl-8 text-gray-600">Adjusted EBITDA</td>
+            <tr className="border-b border-border hover:bg-muted/50">
+              <td className="py-2 px-4 pl-8 text-muted-foreground">Adjusted EBITDA</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right text-gray-600">
+                <td key={y} className="py-2 px-4 text-right text-muted-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'adjusted_ebitda'), 'currency')}
                 </td>
               ))}
             </tr>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-2 px-4 pl-8 text-gray-600">Less: Unfunded CapEx</td>
+            <tr className="border-b border-border hover:bg-muted/50">
+              <td className="py-2 px-4 pl-8 text-muted-foreground">Less: Unfunded CapEx</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right text-gray-600">
+                <td key={y} className="py-2 px-4 text-right text-muted-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'unfunded_capex'), 'currency')}
                 </td>
               ))}
             </tr>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-2 px-4 pl-8 text-gray-600">Less: Cash Taxes Paid</td>
+            <tr className="border-b border-border hover:bg-muted/50">
+              <td className="py-2 px-4 pl-8 text-muted-foreground">Less: Cash Taxes Paid</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right text-gray-600">
+                <td key={y} className="py-2 px-4 text-right text-muted-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'cash_taxes_paid'), 'currency')}
                 </td>
               ))}
             </tr>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-2 px-4 pl-8 text-gray-600">Less: Distributions Paid</td>
+            <tr className="border-b border-border hover:bg-muted/50">
+              <td className="py-2 px-4 pl-8 text-muted-foreground">Less: Distributions Paid</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right text-gray-600">
+                <td key={y} className="py-2 px-4 text-right text-muted-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'distributions_paid'), 'currency')}
                 </td>
               ))}
             </tr>
-            <tr className="border-b border-gray-100 hover:bg-gray-50 bg-blue-50/50">
-              <td className="py-2 px-4 pl-8 font-medium">= CFADS (= FCCR Numerator)</td>
+            <tr className="border-b border-border hover:bg-muted/50 bg-primary/5">
+              <td className="py-2 px-4 pl-8 font-medium text-foreground">= CFADS (= FCCR Numerator)</td>
               {years.map((y) => (
-                <td key={y} className="py-2 px-4 text-right font-medium">
+                <td key={y} className="py-2 px-4 text-right font-medium text-foreground">
                   {formatValue(getFccrBreakdownValue(y, 'numerator'), 'currency')}
                 </td>
               ))}
@@ -710,17 +713,17 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   return (
     <div className="w-full overflow-x-auto">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-semibold text-gray-800">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
           Financial Metrics
         </h2>
-        <span className="text-xs text-gray-500">(Values in thousands)</span>
+        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Values in thousands</span>
       </div>
-      <table className="min-w-full text-sm border-collapse">
+      <table className="min-w-full text-sm tabular-nums border-collapse">
         <thead>
-          <tr className="bg-gray-100 border-b-2 border-gray-300">
-            <th className="py-3 px-4 text-left font-semibold text-gray-700">Metric</th>
+          <tr className="bg-primary border-b-2 border-primary">
+            <th className="py-3 px-4 text-left font-semibold text-primary-foreground">Metric</th>
             {years.map((y) => (
-              <th key={y} className="py-3 px-4 text-right font-semibold text-gray-700">
+              <th key={y} className="py-3 px-4 text-right font-semibold text-primary-foreground">
                 {y}
               </th>
             ))}

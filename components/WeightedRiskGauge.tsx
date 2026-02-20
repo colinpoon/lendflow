@@ -95,60 +95,60 @@ const getDebtCapitalRiskScore = (value: number | null): number => {
   return 9;
 };
 
-// Get risk configuration based on weighted score
+// Get risk configuration based on weighted score — uses semantic token classes
 const getRiskConfig = (score: number): RiskConfig => {
   if (score <= 2)
     return {
       level: 'very-low',
       label: 'Very Low Risk',
       color: '#22c55e',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-700',
-      scoreTextClass: 'text-green-500',
-      scoreBgClass: 'bg-green-500',
+      bgColor: 'bg-success/10',
+      textColor: 'text-success',
+      scoreTextClass: 'text-success',
+      scoreBgClass: 'bg-success',
     };
   if (score <= 4)
     return {
       level: 'low',
       label: 'Low Risk',
       color: '#84cc16',
-      bgColor: 'bg-lime-50',
-      textColor: 'text-lime-700',
-      scoreTextClass: 'text-lime-500',
-      scoreBgClass: 'bg-lime-500',
+      bgColor: 'bg-success/10',
+      textColor: 'text-success',
+      scoreTextClass: 'text-success',
+      scoreBgClass: 'bg-success/70',
     };
   if (score <= 6)
     return {
       level: 'moderate',
       label: 'Moderate Risk',
       color: '#eab308',
-      bgColor: 'bg-yellow-50',
-      textColor: 'text-yellow-700',
-      scoreTextClass: 'text-yellow-500',
-      scoreBgClass: 'bg-yellow-500',
+      bgColor: 'bg-warning/10',
+      textColor: 'text-warning',
+      scoreTextClass: 'text-warning',
+      scoreBgClass: 'bg-warning',
     };
   if (score <= 8)
     return {
       level: 'elevated',
       label: 'Elevated Risk',
       color: '#f97316',
-      bgColor: 'bg-orange-50',
-      textColor: 'text-orange-700',
-      scoreTextClass: 'text-orange-500',
-      scoreBgClass: 'bg-orange-500',
+      bgColor: 'bg-error/10',
+      textColor: 'text-error',
+      scoreTextClass: 'text-error',
+      scoreBgClass: 'bg-error/80',
     };
   return {
     level: 'high',
     label: 'High Risk',
     color: '#ef4444',
-    bgColor: 'bg-red-50',
-    textColor: 'text-red-700',
-    scoreTextClass: 'text-red-500',
-    scoreBgClass: 'bg-red-500',
+    bgColor: 'bg-error/15',
+    textColor: 'text-error',
+    scoreTextClass: 'text-error',
+    scoreBgClass: 'bg-error',
   };
 };
 
-// Get lending decision styling
+// Get lending decision styling using semantic tokens
 const getLendingDecisionStyle = (
   decision: string,
 ): { bg: string; text: string } => {
@@ -157,15 +157,15 @@ const getLendingDecisionStyle = (
     lower.includes('strong approve') ||
     (lower.includes('approve') && !lower.includes('conditional'))
   ) {
-    return { bg: 'bg-green-100', text: 'text-green-800' };
+    return { bg: 'bg-success/15', text: 'text-success' };
   }
   if (lower.includes('conditional')) {
-    return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
+    return { bg: 'bg-warning/15', text: 'text-warning' };
   }
   if (lower.includes('decline') || lower.includes('reject')) {
-    return { bg: 'bg-red-100', text: 'text-red-800' };
+    return { bg: 'bg-error/15', text: 'text-error' };
   }
-  return { bg: 'bg-gray-100', text: 'text-gray-800' };
+  return { bg: 'bg-muted', text: 'text-muted-foreground' };
 };
 
 const GAUGE_SIZE = 200;
@@ -191,6 +191,7 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
         height={size}
         className="transform -rotate-90"
       >
+        {/* SVG track/progress hex colors retained — CSS vars not accessible in SVG attributes */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -259,7 +260,7 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
         >
           {score.toFixed(1)}
         </span>
-        <span className="text-sm text-gray-500">/ 10</span>
+        <span className="text-sm text-muted-foreground">/ 10</span>
         <span
           className={`mt-1 px-3 py-1 rounded-full text-xs font-semibold ${config.bgColor} ${config.textColor}`}
         >
@@ -286,8 +287,8 @@ const MetricBadge: React.FC<MetricBadgeProps> = ({
   const config = getRiskConfig(score);
 
   return (
-    <div className="flex flex-col items-center p-3 bg-gray-50 rounded-lg">
-      <span className="text-xs text-gray-500 mb-1">{label}</span>
+    <div className="flex flex-col items-center p-3 bg-muted rounded-lg">
+      <span className="text-xs text-muted-foreground mb-1">{label}</span>
       <span className={`text-lg font-bold ${config.scoreTextClass}`}>
         {value != null ? format(value) : 'N/A'}
       </span>
@@ -329,7 +330,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
     <div className="space-y-6">
       {/* FCCR Chart */}
       <div>
-        <h5 className="text-sm font-medium text-gray-700 mb-2">
+        <h5 className="text-sm font-medium text-foreground mb-2">
           FCCR (Target: &gt; 1.2x)
         </h5>
         <div className="space-y-2">
@@ -338,19 +339,19 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
               key={`fccr-${d.year}`}
               className="flex items-center gap-2"
             >
-              <span className="text-xs text-gray-500 w-12">
+              <span className="text-xs text-muted-foreground w-12">
                 {d.year}
               </span>
-              <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+              <div className="flex-1 bg-muted rounded-full h-6 relative overflow-hidden">
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
                     d.fccr != null
                       ? d.fccr >= 1.2
-                        ? 'bg-green-500'
+                        ? 'bg-success'
                         : d.fccr >= 1.0
-                          ? 'bg-yellow-500'
-                          : 'bg-red-500'
-                      : 'bg-gray-300'
+                          ? 'bg-warning'
+                          : 'bg-error'
+                      : 'bg-border'
                   }`}
                   style={{
                     width:
@@ -359,7 +360,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
                         : '0%',
                   }}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-foreground">
                   {d.fccr != null ? `${d.fccr.toFixed(2)}x` : 'N/A'}
                 </span>
               </div>
@@ -370,7 +371,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
 
       {/* Senior Debt / EBITDA Chart */}
       <div>
-        <h5 className="text-sm font-medium text-gray-700 mb-2">
+        <h5 className="text-sm font-medium text-foreground mb-2">
           Senior Debt / EBITDA (Target: &lt; 2.5x)
         </h5>
         <div className="space-y-2">
@@ -379,19 +380,19 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
               key={`debt-${d.year}`}
               className="flex items-center gap-2"
             >
-              <span className="text-xs text-gray-500 w-12">
+              <span className="text-xs text-muted-foreground w-12">
                 {d.year}
               </span>
-              <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+              <div className="flex-1 bg-muted rounded-full h-6 relative overflow-hidden">
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
                     d.debtEbitda != null
                       ? d.debtEbitda <= 2.5
-                        ? 'bg-green-500'
+                        ? 'bg-success'
                         : d.debtEbitda <= 3.5
-                          ? 'bg-yellow-500'
-                          : 'bg-red-500'
-                      : 'bg-gray-300'
+                          ? 'bg-warning'
+                          : 'bg-error'
+                      : 'bg-border'
                   }`}
                   style={{
                     width:
@@ -400,7 +401,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
                         : '0%',
                   }}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-foreground">
                   {d.debtEbitda != null
                     ? `${d.debtEbitda.toFixed(2)}x`
                     : 'N/A'}
@@ -413,7 +414,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
 
       {/* Debt / Capital Chart */}
       <div>
-        <h5 className="text-sm font-medium text-gray-700 mb-2">
+        <h5 className="text-sm font-medium text-foreground mb-2">
           Debt / Capital (Target: &lt; 50%)
         </h5>
         <div className="space-y-2">
@@ -422,19 +423,19 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
               key={`cap-${d.year}`}
               className="flex items-center gap-2"
             >
-              <span className="text-xs text-gray-500 w-12">
+              <span className="text-xs text-muted-foreground w-12">
                 {d.year}
               </span>
-              <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+              <div className="flex-1 bg-muted rounded-full h-6 relative overflow-hidden">
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
                     d.debtCapital != null
                       ? d.debtCapital <= 50
-                        ? 'bg-green-500'
+                        ? 'bg-success'
                         : d.debtCapital <= 65
-                          ? 'bg-yellow-500'
-                          : 'bg-red-500'
-                      : 'bg-gray-300'
+                          ? 'bg-warning'
+                          : 'bg-error'
+                      : 'bg-border'
                   }`}
                   style={{
                     width:
@@ -443,7 +444,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({
                         : '0%',
                   }}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-foreground">
                   {d.debtCapital != null
                     ? `${d.debtCapital.toFixed(1)}%`
                     : 'N/A'}
@@ -470,7 +471,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
     Object.keys(data.metrics_by_year).length === 0
   ) {
     return (
-      <p className="text-gray-500">
+      <p className="text-muted-foreground">
         No metrics available for risk assessment.
       </p>
     );
@@ -538,10 +539,10 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h3 className="text-xl font-bold text-gray-800">
+        <h3 className="text-xl font-bold text-foreground">
           Risk Assessment
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Fiscal Year {latestYear} | Weighted Score Analysis
         </p>
       </div>
@@ -585,7 +586,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             format={(v) => `${(v * 100).toFixed(1)}%`}
           />
           {customFccrAdjustment !== 0 && (
-            <div className="text-xs text-blue-600 bg-blue-50 rounded p-2 text-center">
+            <div className="text-xs text-info bg-info/10 rounded p-2 text-center">
               * FCCR includes custom adjustments ($
               {customFccrAdjustment > 0 ? '+' : ''}
               {customFccrAdjustment.toLocaleString()}K)
@@ -597,10 +598,10 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
       {/* Lending Recommendations Section */}
       {(assessment.recommendations?.length > 0 ||
         assessment.suggested_loan_structure) && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-info/10 border border-info/25 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
-            <ClipboardList className="h-5 w-5 text-blue-600" />
-            <h4 className="font-semibold text-blue-900">
+            <ClipboardList className="h-5 w-5 text-info" />
+            <h4 className="font-semibold text-foreground">
               Lending Recommendations
             </h4>
           </div>
@@ -610,9 +611,9 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
               {assessment.recommendations.map((rec, idx) => (
                 <li
                   key={idx}
-                  className="flex items-start gap-2 text-sm text-blue-800"
+                  className="flex items-start gap-2 text-sm text-foreground"
                 >
-                  <span className="text-blue-500 font-bold mt-0.5">
+                  <span className="text-info font-bold mt-0.5">
                     -
                   </span>
                   <span>{rec}</span>
@@ -622,11 +623,11 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           )}
 
           {assessment.suggested_loan_structure && (
-            <div className="bg-white rounded p-3 mt-2">
-              <p className="text-xs text-gray-500 mb-1">
+            <div className="bg-background rounded p-3 mt-2">
+              <p className="text-xs text-muted-foreground mb-1">
                 Suggested Structure:
               </p>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-foreground">
                 {assessment.suggested_loan_structure}
               </p>
             </div>
@@ -646,15 +647,15 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           {assessment.key_risk_factors?.length > 0 && (
             <AccordionItem
               value="risks"
-              className="border rounded-lg px-4"
+              className="border border-border rounded-lg px-4"
             >
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-orange-500" />
-                  <span className="font-semibold text-gray-800">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <span className="font-semibold text-foreground">
                     Key Risk Factors
                   </span>
-                  <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-warning/10 text-warning px-2 py-0.5 rounded-full">
                     {assessment.key_risk_factors.length}
                   </span>
                 </div>
@@ -663,8 +664,8 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
                 <ul className="space-y-2">
                   {assessment.key_risk_factors.map((factor, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <TrendingDown className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-gray-700">
+                      <TrendingDown className="h-4 w-4 text-error mt-0.5 shrink-0" />
+                      <span className="text-sm text-foreground">
                         {factor}
                       </span>
                     </li>
@@ -678,15 +679,15 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           {assessment.positive_factors?.length > 0 && (
             <AccordionItem
               value="positives"
-              className="border rounded-lg px-4"
+              className="border border-border rounded-lg px-4"
             >
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="font-semibold text-gray-800">
+                  <CheckCircle className="h-4 w-4 text-success" />
+                  <span className="font-semibold text-foreground">
                     Positive Factors
                   </span>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full">
                     {assessment.positive_factors.length}
                   </span>
                 </div>
@@ -695,8 +696,8 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
                 <ul className="space-y-2">
                   {assessment.positive_factors.map((factor, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <TrendingUp className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-gray-700">
+                      <TrendingUp className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                      <span className="text-sm text-foreground">
                         {factor}
                       </span>
                     </li>
@@ -710,23 +711,23 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
 
       {/* Historical Comparison */}
       {years.length > 1 && (
-        <div className="mt-6 pt-4 border-t">
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">
+        <div className="mt-6 pt-4 border-t border-border">
+          <h4 className="text-sm font-semibold text-foreground mb-3">
             Historical Risk Score Comparison
           </h4>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 pr-4">Year</th>
-                  <th className="text-right py-2 px-2">FCCR Score</th>
-                  <th className="text-right py-2 px-2">
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 pr-4 text-foreground">Year</th>
+                  <th className="text-right py-2 px-2 text-foreground">FCCR Score</th>
+                  <th className="text-right py-2 px-2 text-foreground">
                     Debt/EBITDA Score
                   </th>
-                  <th className="text-right py-2 px-2">
+                  <th className="text-right py-2 px-2 text-foreground">
                     Debt/Cap Score
                   </th>
-                  <th className="text-right py-2 px-2">
+                  <th className="text-right py-2 px-2 text-foreground">
                     Weighted Score
                   </th>
                 </tr>
@@ -748,17 +749,17 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
                   const yConfig = getRiskConfig(yWeighted);
 
                   return (
-                    <tr key={year} className="border-b">
-                      <td className="py-2 pr-4 font-medium">
+                    <tr key={year} className="border-b border-border">
+                      <td className="py-2 pr-4 font-medium text-foreground">
                         {year}
                       </td>
-                      <td className="text-right py-2 px-2">
+                      <td className="text-right py-2 px-2 text-muted-foreground">
                         {yFccr.toFixed(0)}
                       </td>
-                      <td className="text-right py-2 px-2">
+                      <td className="text-right py-2 px-2 text-muted-foreground">
                         {yDebtEbitda.toFixed(0)}
                       </td>
-                      <td className="text-right py-2 px-2">
+                      <td className="text-right py-2 px-2 text-muted-foreground">
                         {yDebtCap.toFixed(0)}
                       </td>
                       <td className="text-right py-2 px-2">
@@ -784,12 +785,12 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           >
             <AccordionItem
               value="chart"
-              className="border rounded-lg px-4"
+              className="border border-border rounded-lg px-4"
             >
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-indigo-500" />
-                  <span className="font-semibold text-gray-800">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-foreground">
                     Historical Metrics Chart
                   </span>
                 </div>
