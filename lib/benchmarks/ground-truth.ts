@@ -215,8 +215,7 @@ export function getGroundTruth(
       normalizedInput === entryFilename ||
       normalizedInput.includes(entryFilename) ||
       entryFilename.includes(normalizedInput) ||
-      normalizedInput.includes(documentName) ||
-      (documentName && normalizedInput.indexOf(documentName) !== -1)
+      normalizedInput.includes(documentName)
     );
   });
 }

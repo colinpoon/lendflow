@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Bug, Upload, Loader2 } from 'lucide-react';
+import { Bug, Upload, Loader2, RefreshCw } from 'lucide-react';
 import { H1 } from '@/components/ui/typography';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,6 +16,10 @@ interface CompareResult {
   extracted_error: string | null;
 }
 
+function getSortedYears(extracted: ExtractionResult | null): string[] {
+  return Object.keys(extracted?.metrics_by_year ?? {}).sort().reverse();
+}
+
 const ComparePage = () => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -24,7 +28,7 @@ const ComparePage = () => {
   const [selectedYear, setSelectedYear] = useState<string>('');
 
   const availableYears = results?.extracted
-    ? Object.keys(results.extracted.metrics_by_year ?? {}).sort().reverse()
+    ? getSortedYears(results.extracted)
     : [];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,7 +46,7 @@ const ComparePage = () => {
   };
 
   const handleUpload = useCallback(async () => {
-    if (!file) return;
+    if (!file || loading) return;
 
     setLoading(true);
     setError(null);
@@ -65,8 +69,7 @@ const ComparePage = () => {
       const resultData = data as CompareResult;
       setResults(resultData);
 
-      // Set default year to most recent
-      const years = Object.keys(resultData.extracted?.metrics_by_year ?? {}).sort().reverse();
+      const years = getSortedYears(resultData.extracted);
       if (years.length > 0) {
         setSelectedYear(years[0]);
       }
@@ -75,7 +78,7 @@ const ComparePage = () => {
     } finally {
       setLoading(false);
     }
-  }, [file]);
+  }, [file, loading]);
 
   const currentMetrics =
     results?.extracted && selectedYear
@@ -151,7 +154,7 @@ const ComparePage = () => {
           )}
 
           {results && (
-            <div className="flex flex-wrap gap-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               {results.extracted && (
                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded dark:bg-blue-900/30 dark:text-blue-400">
                   Extracted: {Object.keys(results.extracted.metrics_by_year ?? {}).length} year(s)
@@ -162,6 +165,16 @@ const ComparePage = () => {
                   Error: {results.extracted_error}
                 </span>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUpload}
+                disabled={loading}
+                title="Re-run extraction on the same file"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                Re-extract
+              </Button>
             </div>
           )}
         </CardContent>

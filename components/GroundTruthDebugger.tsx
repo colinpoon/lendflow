@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronRight, Download, Upload, RotateCcw, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -17,12 +18,13 @@ import {
   calculateExtractionAccuracy,
   calculateVariance,
   getStatus,
-  getMetricCategories,
+  METRIC_CATEGORIES,
   getMetricsByCategory,
   resolveMetricValue,
   type MetricCategory,
   type AccuracyStatus,
 } from '@/lib/benchmarks/accuracy';
+import type { GroundTruthValues } from '@/lib/benchmarks/ground-truth';
 import type { ComputedMetrics } from '@/types';
 
 interface GroundTruthDebuggerProps {
@@ -45,7 +47,6 @@ const STATUS_LABELS: Record<AccuracyStatus, string> = {
   missing: 'N/A',
 };
 
-// Categories expanded by default
 const DEFAULT_EXPANDED: MetricCategory[] = ['Computed Ratios', 'Income Statement'];
 
 function formatValue(value: number | null | undefined): string {
@@ -95,7 +96,7 @@ function EditableCell({
       onSave(undefined);
     } else {
       const num = parseFloat(trimmed);
-      if (!isNaN(num)) onSave(num);
+      if (Number.isFinite(num)) onSave(num);
     }
   };
 
@@ -106,7 +107,6 @@ function EditableCell({
       setEditing(false);
     } else if (e.key === 'Tab') {
       commit();
-      // Let default tab behavior continue
     }
   };
 
@@ -150,7 +150,7 @@ function CategorySection({
 }: {
   category: MetricCategory;
   metrics: ComputedMetrics | null;
-  groundTruth: Record<string, unknown>;
+  groundTruth: GroundTruthValues;
   onUpdateField: (key: string, value: number | undefined) => void;
   hideEmpty: boolean;
   defaultExpanded: boolean;
@@ -158,26 +158,27 @@ function CategorySection({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const categoryMetrics = getMetricsByCategory(category);
 
-  // Filter out empty rows if toggle is on
-  const visibleMetrics = hideEmpty
-    ? categoryMetrics.filter(({ key }) => {
-        const gt = groundTruth[key] as number | undefined;
-        const extracted = metrics ? resolveMetricValue(metrics, key) : null;
-        return gt !== undefined || extracted !== null;
-      })
-    : categoryMetrics;
+  const visibleMetrics = useMemo(() => {
+    if (!hideEmpty) return categoryMetrics;
+    return categoryMetrics.filter(({ key }) => {
+      const gt = (groundTruth as Record<string, unknown>)[key] as number | undefined;
+      const extracted = metrics ? resolveMetricValue(metrics, key) : null;
+      return gt !== undefined || extracted !== null;
+    });
+  }, [categoryMetrics, hideEmpty, groundTruth, metrics]);
+
+  const categoryAccuracy = useMemo(() => {
+    return calculateExtractionAccuracy(
+      Object.fromEntries(
+        visibleMetrics
+          .filter(({ key }) => (groundTruth as Record<string, unknown>)[key] !== undefined)
+          .map(({ key }) => [key, (groundTruth as Record<string, unknown>)[key]])
+      ),
+      metrics,
+    );
+  }, [visibleMetrics, groundTruth, metrics]);
 
   if (visibleMetrics.length === 0) return null;
-
-  // Calculate category-level stats
-  const categoryAccuracy = calculateExtractionAccuracy(
-    Object.fromEntries(
-      visibleMetrics
-        .filter(({ key }) => (groundTruth[key] as number | undefined) !== undefined)
-        .map(({ key }) => [key, groundTruth[key]])
-    ),
-    metrics,
-  );
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -231,7 +232,7 @@ function CategorySection({
           </TableHeader>
           <TableBody>
             {visibleMetrics.map(({ key, def }) => {
-              const gt = groundTruth[key] as number | undefined;
+              const gt = (groundTruth as Record<string, unknown>)[key] as number | undefined;
               const extracted = metrics ? resolveMetricValue(metrics, key) : null;
               const variance =
                 gt !== undefined ? calculateVariance(extracted, gt) : null;
@@ -290,12 +291,13 @@ export function GroundTruthDebugger({
   } = useGroundTruth(filename, selectedYear);
 
   const [hideEmpty, setHideEmpty] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const categories = getMetricCategories();
-
-  // Overall accuracy
-  const summary = calculateExtractionAccuracy(groundTruth, metrics);
+  const summary = useMemo(
+    () => calculateExtractionAccuracy(groundTruth, metrics),
+    [groundTruth, metrics],
+  );
 
   const handleExport = useCallback(() => {
     const json = exportJSON();
@@ -316,12 +318,9 @@ export function GroundTruthDebugger({
       reader.onload = () => {
         const text = reader.result as string;
         const ok = importJSON(text);
-        if (!ok) {
-          alert('Invalid JSON file. Expected an object with numeric values.');
-        }
+        setImportError(ok ? null : 'Invalid JSON file. Expected an object with numeric values.');
       };
       reader.readAsText(file);
-      // Reset input so re-importing the same file works
       e.target.value = '';
     },
     [importJSON],
@@ -390,7 +389,7 @@ export function GroundTruthDebugger({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => { setImportError(null); fileInputRef.current?.click(); }}
             >
               <Upload className="h-4 w-4 mr-1" />
               Import
@@ -414,15 +413,21 @@ export function GroundTruthDebugger({
             <span className="text-gray-400">{summary.missing_count} missing</span>
           </div>
         )}
+
+        {importError && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertDescription>{importError}</AlertDescription>
+          </Alert>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {categories.map((category) => (
+        {METRIC_CATEGORIES.map((category) => (
           <CategorySection
             key={category}
             category={category}
             metrics={metrics}
-            groundTruth={groundTruth as unknown as Record<string, unknown>}
+            groundTruth={groundTruth}
             onUpdateField={updateField}
             hideEmpty={hideEmpty}
             defaultExpanded={DEFAULT_EXPANDED.includes(category)}

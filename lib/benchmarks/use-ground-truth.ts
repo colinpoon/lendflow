@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useReducer, useCallback, useEffect, useRef } from 'react';
 import {
   GROUND_TRUTH_STORAGE_KEY,
   getGroundTruth,
@@ -32,29 +32,75 @@ function saveToStorage(key: string, values: GroundTruthValues): void {
   localStorage.setItem(key, JSON.stringify(values));
 }
 
-export interface UseGroundTruthReturn {
-  /** Current ground truth values */
+// ─────────────────────────────────────────────────────────────────────────────
+// Reducer
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface State {
   groundTruth: GroundTruthValues;
-  /** Update a single field (dot-notation key) */
-  updateField: (key: string, value: number | undefined) => void;
-  /** Reset to seed data (from GROUND_TRUTH constant) */
-  resetToSeed: () => void;
-  /** Pre-fill undefined ground truth fields with extracted values */
-  populateFromExtracted: (metrics: ComputedMetrics) => void;
-  /** Whether ground truth has been modified from seed */
   isDirty: boolean;
-  /** Export ground truth as JSON string */
+}
+
+type Action =
+  | { type: 'UPDATE_FIELD'; fieldKey: string; value: number | undefined; storageKey: string }
+  | { type: 'RESET'; values: GroundTruthValues; storageKey: string }
+  | { type: 'POPULATE'; metrics: ComputedMetrics; storageKey: string }
+  | { type: 'IMPORT'; values: GroundTruthValues; storageKey: string }
+  | { type: 'LOAD'; groundTruth: GroundTruthValues; isDirty: boolean };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'UPDATE_FIELD': {
+      const next = { ...state.groundTruth };
+      if (action.value === undefined) {
+        delete (next as Record<string, unknown>)[action.fieldKey];
+      } else {
+        (next as Record<string, unknown>)[action.fieldKey] = action.value;
+      }
+      saveToStorage(action.storageKey, next);
+      return { groundTruth: next, isDirty: true };
+    }
+    case 'RESET': {
+      saveToStorage(action.storageKey, action.values);
+      return { groundTruth: { ...action.values }, isDirty: false };
+    }
+    case 'POPULATE': {
+      const next = { ...state.groundTruth };
+      const allKeys = getAllMetricKeys();
+      for (const metricKey of allKeys) {
+        if ((next as Record<string, unknown>)[metricKey] !== undefined) continue;
+        const extracted = resolveMetricValue(action.metrics, metricKey);
+        if (extracted !== null) {
+          (next as Record<string, unknown>)[metricKey] = extracted;
+        }
+      }
+      saveToStorage(action.storageKey, next);
+      return { groundTruth: next, isDirty: true };
+    }
+    case 'IMPORT': {
+      saveToStorage(action.storageKey, action.values);
+      return { groundTruth: action.values, isDirty: true };
+    }
+    case 'LOAD': {
+      return { groundTruth: action.groundTruth, isDirty: action.isDirty };
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hook
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface UseGroundTruthReturn {
+  groundTruth: GroundTruthValues;
+  updateField: (key: string, value: number | undefined) => void;
+  resetToSeed: () => void;
+  populateFromExtracted: (metrics: ComputedMetrics) => void;
+  isDirty: boolean;
   exportJSON: () => string;
-  /** Import ground truth from JSON string. Returns true on success. */
   importJSON: (json: string) => boolean;
 }
 
-/**
- * React hook for managing ground truth values with localStorage persistence.
- *
- * On mount: checks localStorage for saved values, falls back to seed data from GROUND_TRUTH.
- * All mutations immediately write-through to localStorage.
- */
 export function useGroundTruth(
   filename: string,
   fiscalYear: string,
@@ -63,82 +109,51 @@ export function useGroundTruth(
   const seedEntry = getGroundTruth(filename, fiscalYear);
   const seedValues = seedEntry?.values ?? {};
 
-  const [groundTruth, setGroundTruth] = useState<GroundTruthValues>(() => {
-    return loadFromStorage(key) ?? { ...seedValues };
-  });
-  const [isDirty, setIsDirty] = useState<boolean>(() => {
-    return loadFromStorage(key) !== null;
+  const [state, dispatch] = useReducer(reducer, undefined, () => {
+    const stored = loadFromStorage(key);
+    return {
+      groundTruth: stored ?? { ...seedValues },
+      isDirty: stored !== null,
+    };
   });
 
-  // Track key changes to reload
+  // Reload when key changes (different document or year)
   const prevKeyRef = useRef(key);
   useEffect(() => {
     if (prevKeyRef.current !== key) {
       prevKeyRef.current = key;
       const stored = loadFromStorage(key);
       if (stored) {
-        setGroundTruth(stored);
-        setIsDirty(true);
+        dispatch({ type: 'LOAD', groundTruth: stored, isDirty: true });
       } else {
         const seed = getGroundTruth(filename, fiscalYear);
-        setGroundTruth(seed?.values ?? {});
-        setIsDirty(false);
+        dispatch({ type: 'LOAD', groundTruth: seed?.values ?? {}, isDirty: false });
       }
     }
   }, [key, filename, fiscalYear]);
 
   const updateField = useCallback(
     (fieldKey: string, value: number | undefined) => {
-      setGroundTruth((prev) => {
-        const next = { ...prev };
-        if (value === undefined) {
-          delete (next as Record<string, unknown>)[fieldKey];
-        } else {
-          (next as Record<string, unknown>)[fieldKey] = value;
-        }
-        saveToStorage(key, next);
-        return next;
-      });
-      setIsDirty(true);
+      dispatch({ type: 'UPDATE_FIELD', fieldKey, value, storageKey: key });
     },
     [key],
   );
 
   const resetToSeed = useCallback(() => {
     const seed = getGroundTruth(filename, fiscalYear);
-    const values = seed?.values ?? {};
-    setGroundTruth({ ...values });
-    saveToStorage(key, values);
-    setIsDirty(false);
+    dispatch({ type: 'RESET', values: seed?.values ?? {}, storageKey: key });
   }, [filename, fiscalYear, key]);
 
   const populateFromExtracted = useCallback(
     (metrics: ComputedMetrics) => {
-      setGroundTruth((prev) => {
-        const next = { ...prev };
-        const allKeys = getAllMetricKeys();
-
-        for (const metricKey of allKeys) {
-          // Only fill fields that are currently undefined/null
-          if ((next as Record<string, unknown>)[metricKey] !== undefined) continue;
-
-          const extracted = resolveMetricValue(metrics, metricKey);
-          if (extracted !== null) {
-            (next as Record<string, unknown>)[metricKey] = extracted;
-          }
-        }
-
-        saveToStorage(key, next);
-        return next;
-      });
-      setIsDirty(true);
+      dispatch({ type: 'POPULATE', metrics, storageKey: key });
     },
     [key],
   );
 
   const exportJSON = useCallback(() => {
-    return JSON.stringify(groundTruth, null, 2);
-  }, [groundTruth]);
+    return JSON.stringify(state.groundTruth, null, 2);
+  }, [state.groundTruth]);
 
   const importJSON = useCallback(
     (json: string): boolean => {
@@ -147,16 +162,13 @@ export function useGroundTruth(
         if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
           return false;
         }
-        // Validate: all values should be numbers or undefined
         const cleaned: GroundTruthValues = {};
         for (const [k, v] of Object.entries(parsed)) {
           if (typeof v === 'number') {
             (cleaned as Record<string, unknown>)[k] = v;
           }
         }
-        setGroundTruth(cleaned);
-        saveToStorage(key, cleaned);
-        setIsDirty(true);
+        dispatch({ type: 'IMPORT', values: cleaned, storageKey: key });
         return true;
       } catch {
         return false;
@@ -166,11 +178,11 @@ export function useGroundTruth(
   );
 
   return {
-    groundTruth,
+    groundTruth: state.groundTruth,
     updateField,
     resetToSeed,
     populateFromExtracted,
-    isDirty,
+    isDirty: state.isDirty,
     exportJSON,
     importJSON,
   };
