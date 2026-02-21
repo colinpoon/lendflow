@@ -2,8 +2,8 @@
 
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
-import { Separator } from '@/components/ui/separator';
 import { UserButton } from '@clerk/nextjs';
+import CommandPalette from '@/components/CommandPalette';
 
 export default function DashboardLayout({
   children,
@@ -11,18 +11,23 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
+      {/* CommandPalette is rendered here so it is always mounted within the
+          dashboard session and can respond to Cmd+K from any route. */}
+      <CommandPalette />
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/95 backdrop-blur-sm px-4">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <span className="text-sm font-medium tracking-tight text-foreground">
-              Lendflow
-            </span>
           </div>
-          <UserButton afterSignOutUrl="/" />
+          <div className="flex items-center gap-3">
+            {/* Keyboard hint — visible on md+ screens only */}
+            <kbd className="hidden md:inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground font-mono select-none">
+              <span>⌘</span>K
+            </kbd>
+            <UserButton afterSignOutUrl="/" />
+          </div>
         </header>
         <main className="flex-1 overflow-auto">
           {children}

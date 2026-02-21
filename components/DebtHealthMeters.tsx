@@ -1,12 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+// ─── Domain Interfaces ────────────────────────────────────────────────────────
 
 interface CustomAdjustment {
   id: string;
@@ -104,36 +115,61 @@ type HealthLevel =
   | 'weak'
   | 'poor';
 
+interface HealthConfig {
+  level: HealthLevel;
+  color: string;
+  bgClass: string;
+  percentage: number;
+}
+
+// ─── Motion Variants ──────────────────────────────────────────────────────────
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.06 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.25, 1, 0.5, 1] as [number, number, number, number],
+    },
+  },
+};
+
+// ─── Formatters ───────────────────────────────────────────────────────────────
+
 /**
- * Format currency values displayed in thousands (as commonly reported in financial statements)
+ * Format currency values displayed in thousands (as commonly reported in
+ * financial statements).
  */
 const formatCurrency = (value: number | null): string => {
   if (value == null) return 'N/A';
-
   const absValue = Math.abs(value);
   const sign = value < 0 ? '-' : '';
-
   return `${sign}$${absValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
 };
 
-// Helper to show source info (extracted value)
+// ─── Sub-Components ───────────────────────────────────────────────────────────
+
+/** Inline extracted-value annotation rendered next to line-item labels. */
 const SourceInfo: React.FC<{
   value: number | null | undefined;
   label?: string;
-}> = ({ value, label }) => {
-  if (value == null) {
-    return (
-      <span className="text-xs text-muted-foreground/60 ml-1">
-        ({label || 'extracted'}: null)
-      </span>
-    );
-  }
-  return (
-    <span className="text-xs text-muted-foreground/60 ml-1">
-      ({label || 'extracted'}: {value.toLocaleString()})
-    </span>
-  );
-};
+}> = ({ value, label }) => (
+  <span className="text-xs text-muted-foreground/60 ml-1">
+    ({label ?? 'extracted'}:{' '}
+    {value == null ? 'null' : value.toLocaleString()})
+  </span>
+);
+
+// ─── Health Scoring ───────────────────────────────────────────────────────────
 
 const getRatingLabel = (level: HealthLevel): string => {
   switch (level) {
@@ -149,6 +185,123 @@ const getRatingLabel = (level: HealthLevel): string => {
       return 'Poor';
   }
 };
+
+
+/** FCCR: Higher is better — more cash flow to cover fixed charges. */
+const getFCCRHealth = (value: number): HealthConfig => {
+  if (value >= 2.0)
+    return {
+      level: 'excellent',
+      color: '#22c55e',
+      bgClass: 'bg-success',
+      percentage: 100,
+    };
+  if (value >= 1.5)
+    return {
+      level: 'good',
+      color: '#84cc16',
+      bgClass: 'bg-success/70',
+      percentage: 80,
+    };
+  if (value >= 1.2)
+    return {
+      level: 'adequate',
+      color: '#eab308',
+      bgClass: 'bg-warning',
+      percentage: 60,
+    };
+  if (value >= 1.0)
+    return {
+      level: 'weak',
+      color: '#f97316',
+      bgClass: 'bg-error/80',
+      percentage: 40,
+    };
+  return {
+    level: 'poor',
+    color: '#ef4444',
+    bgClass: 'bg-error',
+    percentage: 20,
+  };
+};
+
+/** Senior Debt/EBITDA: Lower is better — less leverage. */
+const getSeniorDebtEBITDAHealth = (value: number): HealthConfig => {
+  if (value <= 1.5)
+    return {
+      level: 'excellent',
+      color: '#22c55e',
+      bgClass: 'bg-success',
+      percentage: 100,
+    };
+  if (value <= 2.5)
+    return {
+      level: 'good',
+      color: '#84cc16',
+      bgClass: 'bg-success/70',
+      percentage: 80,
+    };
+  if (value <= 3.0)
+    return {
+      level: 'adequate',
+      color: '#eab308',
+      bgClass: 'bg-warning',
+      percentage: 60,
+    };
+  if (value <= 4.0)
+    return {
+      level: 'weak',
+      color: '#f97316',
+      bgClass: 'bg-error/80',
+      percentage: 40,
+    };
+  return {
+    level: 'poor',
+    color: '#ef4444',
+    bgClass: 'bg-error',
+    percentage: 20,
+  };
+};
+
+/** Total Debt/Total Capital: Lower is better — less debt financing. */
+const getTotalDebtCapitalHealth = (value: number): HealthConfig => {
+  if (value < 0.3)
+    return {
+      level: 'excellent',
+      color: '#22c55e',
+      bgClass: 'bg-success',
+      percentage: 100,
+    };
+  if (value <= 0.5)
+    return {
+      level: 'good',
+      color: '#84cc16',
+      bgClass: 'bg-success/70',
+      percentage: 80,
+    };
+  if (value <= 0.6)
+    return {
+      level: 'adequate',
+      color: '#eab308',
+      bgClass: 'bg-warning',
+      percentage: 60,
+    };
+  if (value <= 0.7)
+    return {
+      level: 'weak',
+      color: '#f97316',
+      bgClass: 'bg-error/80',
+      percentage: 40,
+    };
+  return {
+    level: 'poor',
+    color: '#ef4444',
+    bgClass: 'bg-error',
+    percentage: 20,
+  };
+};
+
+// ─── Reasoning Copy ───────────────────────────────────────────────────────────
 
 const getFCCRReasoning = (
   value: number,
@@ -205,229 +358,136 @@ const getDebtCapitalReasoning = (
   }
 };
 
-interface HealthConfig {
-  level: HealthLevel;
-  color: string;
-  bgClass: string;
-  percentage: number;
-}
+// ─── LinearMeterCard ─────────────────────────────────────────────────────────
 
-// FCCR: Higher is better (more cash flow to cover fixed charges)
-// bgClass uses semantic tokens; color hex values are for SVG stroke only
-const getFCCRHealth = (value: number): HealthConfig => {
-  if (value >= 2.0)
-    return { level: 'excellent', color: '#22c55e', bgClass: 'bg-success',     percentage: 100 };
-  if (value >= 1.5)
-    return { level: 'good',      color: '#84cc16', bgClass: 'bg-success/70',  percentage: 80 };
-  if (value >= 1.2)
-    return { level: 'adequate',  color: '#eab308', bgClass: 'bg-warning',     percentage: 60 };
-  if (value >= 1.0)
-    return { level: 'weak',      color: '#f97316', bgClass: 'bg-error/80',    percentage: 40 };
-  return       { level: 'poor',      color: '#ef4444', bgClass: 'bg-error',       percentage: 20 };
-};
-
-// Senior Debt/EBITDA: Lower is better (less leverage)
-const getSeniorDebtEBITDAHealth = (value: number): HealthConfig => {
-  if (value <= 1.5)
-    return { level: 'excellent', color: '#22c55e', bgClass: 'bg-success',     percentage: 100 };
-  if (value <= 2.5)
-    return { level: 'good',      color: '#84cc16', bgClass: 'bg-success/70',  percentage: 80 };
-  if (value <= 3.0)
-    return { level: 'adequate',  color: '#eab308', bgClass: 'bg-warning',     percentage: 60 };
-  if (value <= 4.0)
-    return { level: 'weak',      color: '#f97316', bgClass: 'bg-error/80',    percentage: 40 };
-  return       { level: 'poor',      color: '#ef4444', bgClass: 'bg-error',       percentage: 20 };
-};
-
-// Total Debt/Total Capital: Lower is better (less debt financing)
-const getTotalDebtCapitalHealth = (value: number): HealthConfig => {
-  if (value < 0.3)
-    return { level: 'excellent', color: '#22c55e', bgClass: 'bg-success',     percentage: 100 };
-  if (value <= 0.5)
-    return { level: 'good',      color: '#84cc16', bgClass: 'bg-success/70',  percentage: 80 };
-  if (value <= 0.6)
-    return { level: 'adequate',  color: '#eab308', bgClass: 'bg-warning',     percentage: 60 };
-  if (value <= 0.7)
-    return { level: 'weak',      color: '#f97316', bgClass: 'bg-error/80',    percentage: 40 };
-  return       { level: 'poor',      color: '#ef4444', bgClass: 'bg-error',       percentage: 20 };
-};
-
-interface CircularGaugeProps {
-  value: number | null;
+interface LinearMeterCardProps {
   label: string;
+  value: number | null;
+  target: string;
   formatValue: (v: number) => string;
   getHealth: (v: number) => HealthConfig;
-  subtitle?: string;
 }
 
-const CircularGauge: React.FC<CircularGaugeProps> = ({
-  value,
+const meterGradientMap: Record<HealthLevel, string> = {
+  excellent: 'from-emerald-950 via-emerald-900/80 to-black',
+  good: 'from-emerald-950 via-emerald-900/80 to-black',
+  adequate: 'from-amber-950 via-amber-900/80 to-black',
+  weak: 'from-amber-950 via-amber-900/80 to-black',
+  poor: 'from-red-950 via-red-900/80 to-black',
+};
+
+const meterSubtitleMap: Record<HealthLevel, string> = {
+  excellent: 'text-emerald-300',
+  good: 'text-emerald-300',
+  adequate: 'text-amber-300',
+  weak: 'text-amber-300',
+  poor: 'text-red-300',
+};
+
+const meterValueMap: Record<HealthLevel, string> = {
+  excellent: 'text-emerald-300',
+  good: 'text-emerald-300',
+  adequate: 'text-amber-300',
+  weak: 'text-amber-300',
+  poor: 'text-red-300',
+};
+
+const LinearMeterCard: React.FC<LinearMeterCardProps> = ({
   label,
+  value,
+  target,
   formatValue,
   getHealth,
-  subtitle,
 }) => {
-  const size = 160;
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  if (value == null) {
-    return (
-      <div className="flex flex-col items-center p-4">
-        <div className="relative w-40 h-40">
-          <svg
-            width={size}
-            height={size}
-            className="transform -rotate-90"
-          >
-            {/* SVG stroke hex retained — CSS vars not accessible in SVG attributes */}
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke="#e5e7eb"
-              strokeWidth={strokeWidth}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-muted-foreground">
-              N/A
-            </span>
-            <span className="text-sm text-muted-foreground">{label}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const health = getHealth(value);
-  const strokeDashoffset =
-    circumference - (health.percentage / 100) * circumference;
+  const health = value != null ? getHealth(value) : null;
+  const fillWidth = health ? health.percentage : 0;
+  const gradient = health ? meterGradientMap[health.level] : 'from-zinc-800 via-zinc-900 to-black';
+  const valueColor = health ? meterValueMap[health.level] : 'text-white';
+  const subtitleColor = health ? meterSubtitleMap[health.level] : 'text-zinc-400';
 
   return (
-    <div className="flex flex-col items-center p-4">
-      <div className="relative w-40 h-40">
-        {/* Background circle with tick marks */}
-        <svg
-          width={size}
-          height={size}
-          className="transform -rotate-90"
-        >
-          {/* Background track */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
+    <motion.div variants={itemVariants}>
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 min-h-[140px] flex flex-col justify-between shadow-lg`}>
+        {/* Noise texture overlay */}
+        <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
+        {/* Subtle top-left highlight */}
+        <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-white/[0.07] blur-2xl" />
+
+        <div className="relative flex justify-between items-start">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.15em] font-medium text-white/50">
+              {label}
+            </p>
+            <p className="text-[10px] text-white/30 mt-0.5">
+              {target}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${valueColor}`}>
+              {value != null ? formatValue(value) : '—'}
+            </p>
+            {health && (
+              <span className={`text-[10px] font-semibold uppercase tracking-wide ${subtitleColor}`}>
+                {getRatingLabel(health.level)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Linear progress bar */}
+        <div className="relative h-1.5 rounded-full bg-white/10 overflow-hidden mt-auto">
+          <div
+            className="h-full rounded-full transition-all duration-700 ease-out"
+            style={{
+              width: `${fillWidth}%`,
+              backgroundColor: health?.color ?? 'transparent',
+            }}
           />
-          {/* Progress arc — color hex retained for SVG stroke */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={health.color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-700 ease-out"
-          />
-        </svg>
-
-        {/* Tick marks */}
-        <svg
-          width={size}
-          height={size}
-          className="absolute top-0 left-0 -rotate-90"
-        >
-          {Array.from({ length: 60 }).map((_, i) => {
-            const angle = (i / 60) * 360;
-            const isLargeTick = i % 5 === 0;
-            const tickLength = isLargeTick ? 6 : 3;
-            const outerRadius = radius + strokeWidth / 2 + 2;
-            const innerRadius = outerRadius - tickLength;
-
-            const x1 =
-              size / 2 +
-              outerRadius * Math.cos((angle * Math.PI) / 180);
-            const y1 =
-              size / 2 +
-              outerRadius * Math.sin((angle * Math.PI) / 180);
-            const x2 =
-              size / 2 +
-              innerRadius * Math.cos((angle * Math.PI) / 180);
-            const y2 =
-              size / 2 +
-              innerRadius * Math.sin((angle * Math.PI) / 180);
-
-            return (
-              <line
-                key={i}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke="#d1d5db"
-                strokeWidth={isLargeTick ? 1.5 : 0.75}
-              />
-            );
-          })}
-        </svg>
-
-        {/* Center content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold text-foreground">
-            {formatValue(value)}
-          </span>
-          <span className="text-sm text-muted-foreground text-center px-2">
-            {label}
-          </span>
         </div>
       </div>
-      {subtitle && (
-        <span className="text-xs text-muted-foreground mt-2">{subtitle}</span>
-      )}
-    </div>
+    </motion.div>
   );
 };
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
   data,
 }) => {
   // Custom adjustments state for FCCR numerator
-  const [customAdjustments, setCustomAdjustments] = useState<CustomAdjustment[]>([]);
-  const [newAdjustmentAmount, setNewAdjustmentAmount] = useState<string>('');
-  const [newAdjustmentDescription, setNewAdjustmentDescription] = useState<string>('');
+  const [customAdjustments, setCustomAdjustments] = useState<
+    CustomAdjustment[]
+  >([]);
+  const [newAdjustmentAmount, setNewAdjustmentAmount] =
+    useState<string>('');
+  const [newAdjustmentDescription, setNewAdjustmentDescription] =
+    useState<string>('');
 
-  // Handler to add a new adjustment
   const handleAddAdjustment = () => {
     const amount = parseFloat(newAdjustmentAmount);
     if (isNaN(amount) || !newAdjustmentDescription.trim()) return;
-
-    const newAdjustment: CustomAdjustment = {
-      id: Date.now().toString(),
-      amount,
-      description: newAdjustmentDescription.trim(),
-    };
-
-    setCustomAdjustments([...customAdjustments, newAdjustment]);
+    setCustomAdjustments([
+      ...customAdjustments,
+      {
+        id: Date.now().toString(),
+        amount,
+        description: newAdjustmentDescription.trim(),
+      },
+    ]);
     setNewAdjustmentAmount('');
     setNewAdjustmentDescription('');
   };
 
-  // Handler to remove an adjustment
   const handleRemoveAdjustment = (id: string) => {
-    setCustomAdjustments(customAdjustments.filter(adj => adj.id !== id));
+    setCustomAdjustments(
+      customAdjustments.filter((adj) => adj.id !== id),
+    );
   };
 
-  // Calculate total custom adjustments
-  const totalCustomAdjustments = customAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
+  const totalCustomAdjustments = customAdjustments.reduce(
+    (sum, adj) => sum + adj.amount,
+    0,
+  );
 
   if (
     !data ||
@@ -435,22 +495,24 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
     Object.keys(data.metrics_by_year).length === 0
   ) {
     return (
-      <p className="text-muted-foreground">No debt metrics available.</p>
+      <p className="text-muted-foreground">
+        No debt metrics available.
+      </p>
     );
   }
 
-  // Get all years sorted (most recent first)
   const years = Object.keys(data.metrics_by_year).sort().reverse();
 
   return (
     <div className="space-y-8">
+      {/* Values in thousands label */}
       <div className="flex justify-start items-center">
-        <span className="text-xs text-muted-foreground">
-          (Values in thousands)
+        <span className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground">
+          Values in thousands
         </span>
       </div>
 
-      {/* Render gauges for each year in accordions */}
+      {/* ── Year Accordions ─────────────────────────────────────────────── */}
       <Accordion
         type="multiple"
         defaultValue={[years[0]]}
@@ -462,52 +524,115 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
             <AccordionItem
               key={year}
               value={year}
-              className="border border-border rounded-lg px-4 bg-card shadow-sm"
+              className="border border-surface-border-1 rounded-xl px-5 bg-card shadow-[0_1px_4px_oklch(0_0_0/0.04)] hover:shadow-[0_2px_8px_oklch(0_0_0/0.06)] transition-shadow duration-200"
             >
-              <AccordionTrigger className="hover:no-underline">
-                <span className="text-lg font-semibold text-foreground">
-                  Fiscal Year {year}
-                </span>
+              {/* Data-forward accordion header */}
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span className="text-sm font-bold tracking-tight text-foreground">
+                    FY {year}
+                  </span>
+                  <div className="flex items-center gap-4 mr-4">
+                    {metrics.fccr != null && (
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                          FCCR
+                        </p>
+                        <p
+                          className="text-sm font-bold tabular-nums"
+                          style={{
+                            color: getFCCRHealth(metrics.fccr).color,
+                          }}
+                        >
+                          {metrics.fccr.toFixed(2)}x
+                        </p>
+                      </div>
+                    )}
+                    {metrics.senior_debt_to_ebitda != null && (
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                          Sr.Debt/EBITDA
+                        </p>
+                        <p
+                          className="text-sm font-bold tabular-nums"
+                          style={{
+                            color: getSeniorDebtEBITDAHealth(
+                              metrics.senior_debt_to_ebitda,
+                            ).color,
+                          }}
+                        >
+                          {metrics.senior_debt_to_ebitda.toFixed(2)}x
+                        </p>
+                      </div>
+                    )}
+                    {metrics.total_debt_to_capital != null && (
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                          Debt/Cap
+                        </p>
+                        <p
+                          className="text-sm font-bold tabular-nums"
+                          style={{
+                            color: getTotalDebtCapitalHealth(
+                              metrics.total_debt_to_capital,
+                            ).color,
+                          }}
+                        >
+                          {(
+                            metrics.total_debt_to_capital * 100
+                          ).toFixed(1)}
+                          %
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </AccordionTrigger>
+
               <AccordionContent>
-                <div className="flex flex-wrap justify-center gap-8 py-4">
-                  <CircularGauge
-                    value={metrics.fccr}
+                {/* Linear meter card grid */}
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 md:grid-cols-3 gap-3 py-4"
+                >
+                  <LinearMeterCard
                     label="FCCR"
-                    formatValue={(v) => v.toFixed(2)}
+                    value={metrics.fccr}
+                    target="Target: > 1.2x"
+                    formatValue={(v) => v.toFixed(2) + 'x'}
                     getHealth={getFCCRHealth}
-                    subtitle="Target: > 1.2x"
                   />
-
-                  <CircularGauge
-                    value={metrics.senior_debt_to_ebitda}
+                  <LinearMeterCard
                     label="Sr. Debt / EBITDA"
-                    formatValue={(v) => v.toFixed(2)}
+                    value={metrics.senior_debt_to_ebitda}
+                    target="Target: < 2.5x"
+                    formatValue={(v) => v.toFixed(2) + 'x'}
                     getHealth={getSeniorDebtEBITDAHealth}
-                    subtitle="Target: < 2.5x"
                   />
-
-                  <CircularGauge
-                    value={metrics.total_debt_to_capital}
+                  <LinearMeterCard
                     label="Debt / Capital"
+                    value={metrics.total_debt_to_capital}
+                    target="Target: < 30%"
                     formatValue={(v) => `${(v * 100).toFixed(1)}%`}
                     getHealth={getTotalDebtCapitalHealth}
-                    subtitle="Target: < 30%"
                   />
-                </div>
+                </motion.div>
               </AccordionContent>
             </AccordionItem>
           );
         })}
       </Accordion>
 
-      {/* Calculation Breakdowns - show for most recent year */}
+      {/* ── Calculation Breakdowns (most recent year) ────────────────────── */}
       {(() => {
         const latestYear = years[0];
         const metrics = data.metrics_by_year[latestYear];
+
         return (
           <div className="mt-4">
-            <h3 className="text-lg font-semibold text-foreground mb-4">
+            <h3 className="text-lg font-semibold tracking-tight text-foreground mb-4">
               Ratio Breakdowns ({latestYear})
             </h3>
 
@@ -516,14 +641,14 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
               defaultValue={['fccr']}
               className="w-full space-y-3"
             >
-              {/* FCCR Breakdown */}
+              {/* ── FCCR Breakdown ─────────────────────────────────────── */}
               <AccordionItem
                 value="fccr"
-                className="border border-border rounded-lg px-4"
+                className="border border-surface-border-1 rounded-xl px-5 bg-card shadow-[0_1px_4px_oklch(0_0_0/0.04)] hover:shadow-[0_2px_8px_oklch(0_0_0/0.06)] transition-shadow duration-200"
               >
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-4">
-                    <span className="font-semibold text-foreground">
+                    <span className="font-semibold tracking-tight text-foreground">
                       Fixed Charge Coverage Ratio (FCCR)
                       {customAdjustments.length > 0 && (
                         <span className="text-xs text-info ml-2">
@@ -531,55 +656,42 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         </span>
                       )}
                     </span>
-                    {metrics.fccr != null && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-foreground">
-                          {customAdjustments.length > 0 &&
+                    {metrics.fccr != null &&
+                      (() => {
+                        const effectiveFCCR =
+                          customAdjustments.length > 0 &&
                           metrics.fccr_breakdown?.denominator
-                            ? (
-                                (metrics.fccr_breakdown
-                                  .adjusted_ebitda +
-                                  totalCustomAdjustments) /
-                                metrics.fccr_breakdown.denominator
-                              ).toFixed(2)
-                            : metrics.fccr.toFixed(2)}
-                          x
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs text-white font-medium ${
-                            getFCCRHealth(
-                              customAdjustments.length > 0 &&
-                                metrics.fccr_breakdown?.denominator
-                                ? (metrics.fccr_breakdown
-                                    .adjusted_ebitda +
-                                    totalCustomAdjustments) /
-                                    metrics.fccr_breakdown.denominator
-                                : metrics.fccr,
-                            ).bgClass
-                          }`}
-                        >
-                          {getRatingLabel(
-                            getFCCRHealth(
-                              customAdjustments.length > 0 &&
-                                metrics.fccr_breakdown?.denominator
-                                ? (metrics.fccr_breakdown
-                                    .adjusted_ebitda +
-                                    totalCustomAdjustments) /
-                                    metrics.fccr_breakdown.denominator
-                                : metrics.fccr,
-                            ).level,
-                          )}
-                        </span>
-                      </div>
-                    )}
+                            ? (metrics.fccr_breakdown
+                                .adjusted_ebitda +
+                                totalCustomAdjustments) /
+                              metrics.fccr_breakdown.denominator
+                            : metrics.fccr;
+                        const health = getFCCRHealth(effectiveFCCR);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold tabular-nums text-foreground">
+                              {effectiveFCCR.toFixed(2)}x
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs text-white font-semibold ${health.bgClass}`}
+                              style={{
+                                boxShadow: `0 0 0 1px ${health.color}40`,
+                              }}
+                            >
+                              {getRatingLabel(health.level)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                   </div>
                 </AccordionTrigger>
+
                 <AccordionContent>
                   {metrics.fccr_breakdown ? (
                     <>
-                      {/* Calculation Formula */}
+                      {/* Formula header */}
                       <div className="flex justify-between items-center mb-3">
-                        <span className="font-mono text-xs bg-muted px-2 py-1 rounded text-muted-foreground">
+                        <span className="font-mono text-xs bg-surface-2 border border-surface-border-1 rounded-lg px-3 py-2 text-muted-foreground">
                           (Adj. EBITDA - CapEx - Taxes -
                           Distributions) ÷ Debt Service
                         </span>
@@ -589,24 +701,27 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         </span>
                       </div>
 
-                      {/* Numerator Components */}
+                      {/* Numerator */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-info mb-2">
-                          Numerator (Cash Available for Debt Service)
+                        <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
+                          <h5 className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Numerator — Cash Available for Debt
+                            Service
+                          </h5>
                         </div>
-                        <div className="pl-4 border-l-2 border-info/25 space-y-1 text-sm">
-                          <div className="flex justify-between">
+                        <div className="divide-y divide-border/40 text-sm">
+                          <div className="flex justify-between items-center py-1.5 px-3">
                             <span className="text-muted-foreground">
                               Adjusted EBITDA
                             </span>
-                            <span className="font-medium text-foreground">
+                            <span className="font-medium tabular-nums text-foreground">
                               {formatCurrency(
                                 metrics.fccr_breakdown
                                   .adjusted_ebitda,
                               )}
                             </span>
                           </div>
-                          <div className="flex justify-between items-start">
+                          <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                             <span className="text-muted-foreground flex items-center flex-wrap">
                               - Unfunded CapEx
                               {metrics.fccr_breakdown.sources && (
@@ -621,7 +736,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 </span>
                               )}
                             </span>
-                            <span className="font-medium text-error">
+                            <span className="font-medium tabular-nums text-error">
                               -{' '}
                               {formatCurrency(
                                 metrics.fccr_breakdown
@@ -629,7 +744,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               )}
                             </span>
                           </div>
-                          <div className="flex justify-between items-start">
+                          <div className="flex justify-between items-center py-1.5 px-3">
                             <span className="text-muted-foreground flex items-center flex-wrap">
                               - Cash Taxes Paid
                               {metrics.fccr_breakdown.sources && (
@@ -641,7 +756,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 />
                               )}
                             </span>
-                            <span className="font-medium text-error">
+                            <span className="font-medium tabular-nums text-error">
                               -{' '}
                               {formatCurrency(
                                 metrics.fccr_breakdown
@@ -649,7 +764,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               )}
                             </span>
                           </div>
-                          <div className="flex justify-between items-start">
+                          <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                             <span className="text-muted-foreground flex items-center flex-wrap">
                               - Distributions Paid
                               {metrics.fccr_breakdown.sources && (
@@ -661,7 +776,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 />
                               )}
                             </span>
-                            <span className="font-medium text-error">
+                            <span className="font-medium tabular-nums text-error">
                               -{' '}
                               {formatCurrency(
                                 metrics.fccr_breakdown
@@ -669,103 +784,106 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               )}
                             </span>
                           </div>
+                        </div>
 
-                          {/* Custom Adjustments */}
-                          {customAdjustments.length > 0 && (
-                            <div className="border-t border-info/25 pt-2 mt-2">
-                              <div className="text-xs text-info font-medium mb-2">
-                                Custom Adjustments:
-                              </div>
-                              {customAdjustments.map((adj) => (
-                                <div
-                                  key={adj.id}
-                                  className="flex justify-between items-center text-muted-foreground group"
-                                >
-                                  <span className="flex items-center gap-2">
-                                    <button
-                                      onClick={() =>
-                                        handleRemoveAdjustment(adj.id)
-                                      }
-                                      className="opacity-0 group-hover:opacity-100 text-error/60 hover:text-error text-xs"
-                                    >
-                                      ×
-                                    </button>
-                                    {adj.description}
-                                  </span>
-                                  <span
-                                    className={
-                                      adj.amount >= 0
-                                        ? 'text-success'
-                                        : 'text-error'
+                        {/* Custom Adjustments */}
+                        {customAdjustments.length > 0 && (
+                          <div className="border-t border-border/60 pt-2 mt-2">
+                            <div className="text-[11px] uppercase tracking-widest font-medium text-info mb-2 px-3">
+                              Custom Adjustments
+                            </div>
+                            {customAdjustments.map((adj, idx) => (
+                              <div
+                                key={adj.id}
+                                className={`flex justify-between items-center py-1.5 px-3 text-muted-foreground group text-sm ${
+                                  idx % 2 === 0
+                                    ? ''
+                                    : 'bg-surface-2/60'
+                                }`}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <button
+                                    onClick={() =>
+                                      handleRemoveAdjustment(adj.id)
                                     }
+                                    className="opacity-0 group-hover:opacity-100 text-error/60 hover:text-error text-xs"
                                   >
-                                    {adj.amount >= 0 ? '+ ' : '- '}
-                                    {formatCurrency(
-                                      Math.abs(adj.amount),
-                                    )}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Add Adjustment Input */}
-                          <div className="border-t border-info/25 pt-3 mt-2">
-                            <div className="text-xs text-info font-medium mb-2">
-                              Add Adjustment:
-                            </div>
-                            <div className="flex gap-2">
-                              <div className="relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                                  $
+                                    ×
+                                  </button>
+                                  {adj.description}
                                 </span>
-                                <input
-                                  type="number"
-                                  value={newAdjustmentAmount}
-                                  onChange={(e) =>
-                                    setNewAdjustmentAmount(
-                                      e.target.value,
-                                    )
-                                  }
-                                  placeholder="0"
-                                  className="w-24 pl-6 pr-2 py-1.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                                />
+                                <span
+                                  className={`tabular-nums ${adj.amount >= 0 ? 'text-success' : 'text-error'}`}
+                                >
+                                  {adj.amount >= 0 ? '+ ' : '- '}
+                                  {formatCurrency(
+                                    Math.abs(adj.amount),
+                                  )}
+                                </span>
                               </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Add Adjustment Input */}
+                        <div className="border-t border-border/60 pt-3 mt-2">
+                          <div className="text-[11px] uppercase tracking-widest font-medium text-info mb-2 px-3">
+                            Add Adjustment
+                          </div>
+                          <div className="flex gap-2 px-3">
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                                $
+                              </span>
                               <input
-                                type="text"
-                                value={newAdjustmentDescription}
+                                type="number"
+                                value={newAdjustmentAmount}
                                 onChange={(e) =>
-                                  setNewAdjustmentDescription(
+                                  setNewAdjustmentAmount(
                                     e.target.value,
                                   )
                                 }
-                                placeholder="Description..."
-                                className="flex-1 px-2 py-1.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter')
-                                    handleAddAdjustment();
-                                }}
+                                placeholder="0"
+                                className="w-24 pl-6 pr-2 py-1.5 text-sm tabular-nums border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                               />
-                              <button
-                                onClick={handleAddAdjustment}
-                                disabled={
-                                  !newAdjustmentAmount ||
-                                  !newAdjustmentDescription.trim()
-                                }
-                                className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
-                              >
-                                Add
-                              </button>
                             </div>
-                            <p className="text-xs text-muted-foreground/60 mt-1">
-                              Use negative values for deductions,
-                              positive for additions
-                            </p>
+                            <input
+                              type="text"
+                              value={newAdjustmentDescription}
+                              onChange={(e) =>
+                                setNewAdjustmentDescription(
+                                  e.target.value,
+                                )
+                              }
+                              placeholder="Description..."
+                              className="flex-1 px-2 py-1.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter')
+                                  handleAddAdjustment();
+                              }}
+                            />
+                            <button
+                              onClick={handleAddAdjustment}
+                              disabled={
+                                !newAdjustmentAmount ||
+                                !newAdjustmentDescription.trim()
+                              }
+                              className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+                            >
+                              Add
+                            </button>
                           </div>
+                          <p className="text-xs text-muted-foreground/60 mt-1 px-3">
+                            Use negative values for deductions,
+                            positive for additions
+                          </p>
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t border-border font-semibold text-info">
-                          <span>= Cash for Debt Service</span>
-                          <span>
+
+                        <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
+                          <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            = Cash for Debt Service
+                          </span>
+                          <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
                             {formatCurrency(
                               metrics.fccr_breakdown.numerator +
                                 totalCustomAdjustments,
@@ -774,38 +892,50 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         </div>
                       </div>
 
-                      {/* Denominator - Total Debt Service */}
+                      {/* Denominator */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-warning mb-2">
-                          Denominator (Total Debt Service)
+                        <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
+                          <h5 className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Denominator — Total Debt Service
+                          </h5>
                         </div>
-                        <div className="pl-4 border-l-2 border-warning/25 space-y-1 text-sm">
-                          <div className="flex justify-between items-start">
+                        <div className="divide-y divide-border/40 text-sm">
+                          <div className="flex justify-between items-center py-1.5 px-3">
                             <span className="text-muted-foreground flex items-center flex-wrap">
                               Principal Payments
                               {metrics.fccr_breakdown.sources && (
                                 <span className="text-xs text-muted-foreground/60 ml-1">
-                                  (via {metrics.fccr_breakdown.sources.principal_source})
+                                  (via{' '}
+                                  {
+                                    metrics.fccr_breakdown.sources
+                                      .principal_source
+                                  }
+                                  )
                                 </span>
                               )}
                             </span>
-                            <span className="font-medium text-foreground">
+                            <span className="font-medium tabular-nums text-foreground">
                               {formatCurrency(
                                 metrics.fccr_breakdown
                                   .ttm_principal_payments,
                               )}
                             </span>
                           </div>
-                          <div className="flex justify-between items-start">
+                          <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                             <span className="text-muted-foreground flex items-center flex-wrap">
                               + Interest Expense
                               {metrics.fccr_breakdown.sources && (
                                 <span className="text-xs text-muted-foreground/60 ml-1">
-                                  (via {metrics.fccr_breakdown.sources.interest_source})
+                                  (via{' '}
+                                  {
+                                    metrics.fccr_breakdown.sources
+                                      .interest_source
+                                  }
+                                  )
                                 </span>
                               )}
                             </span>
-                            <span className="font-medium text-foreground">
+                            <span className="font-medium tabular-nums text-foreground">
                               +{' '}
                               {formatCurrency(
                                 metrics.fccr_breakdown
@@ -815,16 +945,21 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           </div>
                           {metrics.fccr_breakdown.lease_payments >
                             0 && (
-                            <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-center py-1.5 px-3">
                               <span className="text-muted-foreground flex items-center flex-wrap">
                                 + Lease Payments
                                 {metrics.fccr_breakdown.sources && (
                                   <span className="text-xs text-muted-foreground/60 ml-1">
-                                    (via {metrics.fccr_breakdown.sources.lease_source})
+                                    (via{' '}
+                                    {
+                                      metrics.fccr_breakdown.sources
+                                        .lease_source
+                                    }
+                                    )
                                   </span>
                                 )}
                               </span>
-                              <span className="font-medium text-foreground">
+                              <span className="font-medium tabular-nums text-foreground">
                                 +{' '}
                                 {formatCurrency(
                                   metrics.fccr_breakdown
@@ -834,9 +969,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             </div>
                           )}
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t border-border font-semibold text-warning">
-                          <span>= Total Debt Service</span>
-                          <span>
+                        <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
+                          <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            = Total Debt Service
+                          </span>
+                          <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
                             {formatCurrency(
                               metrics.fccr_breakdown.denominator,
                             )}
@@ -844,84 +981,91 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         </div>
                       </div>
 
-                      {/* Final Calculation */}
-                      <div className="bg-muted rounded-lg p-3 mb-4">
-                        <div className="font-mono text-xs text-muted-foreground space-y-1">
-                          <div>
-                            <span className="text-muted-foreground/70">
-                              Numerator =
-                            </span>{' '}
-                            {metrics.fccr_breakdown.adjusted_ebitda.toLocaleString()}{' '}
-                            -{' '}
-                            {metrics.fccr_breakdown.capex_deduction.toLocaleString()}{' '}
-                            -{' '}
-                            {metrics.fccr_breakdown.cash_taxes_paid.toLocaleString()}{' '}
-                            -{' '}
-                            {metrics.fccr_breakdown.distributions_paid.toLocaleString()}{' '}
-                            ={' '}
-                            <span className="font-semibold text-info">
-                              {metrics.fccr_breakdown.numerator.toLocaleString()}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground/70">
-                              Denominator =
-                            </span>{' '}
-                            {metrics.fccr_breakdown.ttm_principal_payments.toLocaleString()}{' '}
-                            +{' '}
-                            {metrics.fccr_breakdown.ttm_interest_expense.toLocaleString()}
-                            {metrics.fccr_breakdown.lease_payments > 0
-                              ? ` + ${metrics.fccr_breakdown.lease_payments.toLocaleString()}`
-                              : ''}{' '}
-                            ={' '}
-                            <span className="font-semibold text-warning">
-                              {metrics.fccr_breakdown.denominator.toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="pt-2 border-t border-border">
-                            <span className="text-muted-foreground/70">
-                              FCCR =
-                            </span>{' '}
-                            {(
-                              metrics.fccr_breakdown.numerator +
-                              totalCustomAdjustments
-                            ).toLocaleString()}{' '}
-                            /{' '}
-                            {metrics.fccr_breakdown.denominator.toLocaleString()}{' '}
-                            ={' '}
-                            <span className="text-foreground">
-                              {(
-                                (metrics.fccr_breakdown.numerator +
-                                  totalCustomAdjustments) /
-                                metrics.fccr_breakdown.denominator
-                              ).toFixed(2)}
-                              x
-                            </span>
+                      {/* Final Calculation Formula Block */}
+                      <div className="rounded-xl border border-surface-border-1  bg-surface-3 mb-4">
+                        <div className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          <div className="space-y-1">
+                            <div>
+                              <span className="text-muted-foreground/70">
+                                Numerator =
+                              </span>{' '}
+                              <span className="tabular-nums">
+                                {metrics.fccr_breakdown.adjusted_ebitda.toLocaleString()}{' '}
+                                -{' '}
+                                {metrics.fccr_breakdown.capex_deduction.toLocaleString()}{' '}
+                                -{' '}
+                                {metrics.fccr_breakdown.cash_taxes_paid.toLocaleString()}{' '}
+                                -{' '}
+                                {metrics.fccr_breakdown.distributions_paid.toLocaleString()}{' '}
+                                ={' '}
+                              </span>
+                              <span className="font-semibold tabular-nums text-info">
+                                {metrics.fccr_breakdown.numerator.toLocaleString()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground/70">
+                                Denominator =
+                              </span>{' '}
+                              <span className="tabular-nums">
+                                {metrics.fccr_breakdown.ttm_principal_payments.toLocaleString()}{' '}
+                                +{' '}
+                                {metrics.fccr_breakdown.ttm_interest_expense.toLocaleString()}
+                                {metrics.fccr_breakdown
+                                  .lease_payments > 0
+                                  ? ` + ${metrics.fccr_breakdown.lease_payments.toLocaleString()}`
+                                  : ''}{' '}
+                                ={' '}
+                              </span>
+                              <span className="font-semibold tabular-nums text-warning">
+                                {metrics.fccr_breakdown.denominator.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="pt-2 border-t border-border">
+                              <span className="text-muted-foreground/70">
+                                FCCR =
+                              </span>{' '}
+                              <span className="tabular-nums">
+                                {(
+                                  metrics.fccr_breakdown.numerator +
+                                  totalCustomAdjustments
+                                ).toLocaleString()}{' '}
+                                /{' '}
+                                {metrics.fccr_breakdown.denominator.toLocaleString()}{' '}
+                                ={' '}
+                              </span>
+                              <span className="tabular-nums text-foreground">
+                                {(
+                                  (metrics.fccr_breakdown.numerator +
+                                    totalCustomAdjustments) /
+                                  metrics.fccr_breakdown.denominator
+                                ).toFixed(2)}
+                                x
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Reasoning */}
-                      {metrics.fccr != null && (
-                        <p className="text-xs text-muted-foreground italic bg-muted p-2 rounded">
-                          {getFCCRReasoning(
+                      {metrics.fccr != null &&
+                        (() => {
+                          const effectiveValue =
                             customAdjustments.length > 0 &&
-                              metrics.fccr_breakdown?.denominator
+                            metrics.fccr_breakdown?.denominator
                               ? (metrics.fccr_breakdown.numerator +
                                   totalCustomAdjustments) /
-                                  metrics.fccr_breakdown.denominator
-                              : metrics.fccr,
-                            getFCCRHealth(
-                              customAdjustments.length > 0 &&
-                                metrics.fccr_breakdown?.denominator
-                                ? (metrics.fccr_breakdown.numerator +
-                                    totalCustomAdjustments) /
-                                    metrics.fccr_breakdown.denominator
-                                : metrics.fccr,
-                            ).level,
-                          )}
-                        </p>
-                      )}
+                                metrics.fccr_breakdown.denominator
+                              : metrics.fccr;
+                          return (
+                            <p className="rounded-xl bg-surface-2 border border-surface-border-1 p-4 text-xs text-muted-foreground italic">
+                              {getFCCRReasoning(
+                                effectiveValue,
+                                getFCCRHealth(effectiveValue).level,
+                              )}
+                            </p>
+                          );
+                        })()}
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground italic">
@@ -932,59 +1076,65 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Senior Debt / EBITDA Breakdown */}
+              {/* ── Senior Debt / EBITDA Breakdown ─────────────────────── */}
               <AccordionItem
                 value="senior-debt-ebitda"
-                className="border border-border rounded-lg px-4"
+                className="border border-surface-border-1 rounded-xl px-5 bg-card shadow-[0_1px_4px_oklch(0_0_0/0.04)] hover:shadow-[0_2px_8px_oklch(0_0_0/0.06)] transition-shadow duration-200"
               >
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-4">
-                    <span className="font-semibold text-foreground">
+                    <span className="font-semibold tracking-tight text-foreground">
                       Senior Debt / Adjusted EBITDA
                     </span>
-                    {metrics.senior_debt_to_ebitda != null && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-foreground">
-                          {metrics.senior_debt_to_ebitda.toFixed(2)}x
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs text-white font-medium ${
-                            getSeniorDebtEBITDAHealth(
-                              metrics.senior_debt_to_ebitda,
-                            ).bgClass
-                          }`}
-                        >
-                          {getRatingLabel(
-                            getSeniorDebtEBITDAHealth(
-                              metrics.senior_debt_to_ebitda,
-                            ).level,
-                          )}
-                        </span>
-                      </div>
-                    )}
+                    {metrics.senior_debt_to_ebitda != null &&
+                      (() => {
+                        const health = getSeniorDebtEBITDAHealth(
+                          metrics.senior_debt_to_ebitda,
+                        );
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold tabular-nums text-foreground">
+                              {metrics.senior_debt_to_ebitda.toFixed(
+                                2,
+                              )}
+                              x
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs text-white font-semibold ${health.bgClass}`}
+                              style={{
+                                boxShadow: `0 0 0 1px ${health.color}40`,
+                              }}
+                            >
+                              {getRatingLabel(health.level)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                   </div>
                 </AccordionTrigger>
+
                 <AccordionContent>
                   {metrics.senior_debt != null &&
                   (metrics.adjusted_ebitda != null ||
                     metrics.ebitda != null) ? (
                     <>
                       <div className="flex justify-between items-center mb-3">
-                        <span className="font-mono text-xs bg-muted px-2 py-1 rounded text-muted-foreground">
+                        <span className="font-mono text-xs bg-surface-2 border border-surface-border-1 rounded-lg px-3 py-2 text-muted-foreground">
                           Senior Debt ÷ Adjusted EBITDA
                         </span>
                       </div>
 
                       {/* Senior Debt Breakdown */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-primary mb-2">
-                          Numerator (Senior Debt)
+                        <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
+                          <h5 className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Numerator — Senior Debt
+                          </h5>
                         </div>
-                        <div className="pl-4 border-l-2 border-primary/20 space-y-1 text-sm">
+                        <div className="divide-y divide-border/40 text-sm">
                           {metrics.debt_components ? (
                             <>
-                              {/* Bank Debt Components */}
-                              <div className="flex justify-between items-start">
+                              <div className="flex justify-between items-center py-1.5 px-3">
                                 <span className="text-muted-foreground flex items-center flex-wrap">
                                   Bank Debt - Current
                                   <SourceInfo
@@ -994,14 +1144,14 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                     }
                                   />
                                 </span>
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium tabular-nums text-foreground">
                                   {formatCurrency(
                                     metrics.debt_components
                                       .bank_debt_current ?? 0,
                                   )}
                                 </span>
                               </div>
-                              <div className="flex justify-between items-start">
+                              <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                                 <span className="text-muted-foreground flex items-center flex-wrap">
                                   + Bank Debt - Long-term
                                   <SourceInfo
@@ -1011,7 +1161,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                     }
                                   />
                                 </span>
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium tabular-nums text-foreground">
                                   +{' '}
                                   {formatCurrency(
                                     metrics.debt_components
@@ -1019,8 +1169,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                   )}
                                 </span>
                               </div>
-                              {/* Lease Liabilities */}
-                              <div className="flex justify-between items-start">
+                              <div className="flex justify-between items-center py-1.5 px-3">
                                 <span className="text-muted-foreground flex items-center flex-wrap">
                                   + Lease Liabilities - Current
                                   <SourceInfo
@@ -1030,7 +1179,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                     }
                                   />
                                 </span>
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium tabular-nums text-foreground">
                                   +{' '}
                                   {formatCurrency(
                                     metrics.debt_components
@@ -1038,7 +1187,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                   )}
                                 </span>
                               </div>
-                              <div className="flex justify-between items-start">
+                              <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                                 <span className="text-muted-foreground flex items-center flex-wrap">
                                   + Lease Liabilities - Long-term
                                   <SourceInfo
@@ -1048,7 +1197,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                     }
                                   />
                                 </span>
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium tabular-nums text-foreground">
                                   +{' '}
                                   {formatCurrency(
                                     metrics.debt_components
@@ -1062,11 +1211,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             <>
                               {metrics.debt_breakdown.bank_debt >
                                 0 && (
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center py-1.5 px-3">
                                   <span className="text-muted-foreground">
                                     Bank Debt (Current + Long-term)
                                   </span>
-                                  <span className="font-medium text-foreground">
+                                  <span className="font-medium tabular-nums text-foreground">
                                     {formatCurrency(
                                       metrics.debt_breakdown
                                         .bank_debt,
@@ -1075,12 +1224,13 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 </div>
                               )}
                               {metrics.debt_breakdown
-                                .lease_liabilities_in_senior_debt > 0 && (
-                                <div className="flex justify-between">
+                                .lease_liabilities_in_senior_debt >
+                                0 && (
+                                <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                                   <span className="text-muted-foreground">
                                     + Lease Liabilities (IFRS 16)
                                   </span>
-                                  <span className="font-medium text-foreground">
+                                  <span className="font-medium tabular-nums text-foreground">
                                     +{' '}
                                     {formatCurrency(
                                       metrics.debt_breakdown
@@ -1091,42 +1241,46 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               )}
                             </>
                           ) : (
-                            <div className="flex justify-between text-muted-foreground italic">
+                            <div className="flex justify-between items-center py-1.5 px-3 text-muted-foreground italic">
                               <span>
                                 No debt component breakdown available
                               </span>
-                              <span>
+                              <span className="tabular-nums">
                                 {formatCurrency(metrics.senior_debt)}
                               </span>
                             </div>
                           )}
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t border-border font-semibold text-primary">
-                          <span>Total Senior Debt</span>
-                          <span>
+                        <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
+                          <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Total Senior Debt
+                          </span>
+                          <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
                             {formatCurrency(metrics.senior_debt)}
                           </span>
                         </div>
                       </div>
 
-                      {/* EBITDA */}
+                      {/* EBITDA Denominator */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-success mb-2">
-                          Denominator (Adjusted EBITDA)
+                        <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
+                          <h5 className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Denominator — Adjusted EBITDA
+                          </h5>
                         </div>
-                        <div className="pl-4 border-l-2 border-success/25 space-y-1 text-sm">
-                          <div className="flex justify-between items-start">
+                        <div className="divide-y divide-border/40 text-sm">
+                          <div className="flex justify-between items-center py-1.5 px-3">
                             <span className="text-muted-foreground flex items-center flex-wrap">
                               Reported EBITDA
                               <SourceInfo value={metrics.ebitda} />
                             </span>
-                            <span className="font-medium text-foreground">
+                            <span className="font-medium tabular-nums text-foreground">
                               {formatCurrency(metrics.ebitda)}
                             </span>
                           </div>
                           {metrics.reported_adjusted_ebitda !=
                             null && (
-                            <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                               <span className="text-muted-foreground flex items-center flex-wrap">
                                 Company-Reported Adj. EBITDA
                                 <SourceInfo
@@ -1135,7 +1289,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                   }
                                 />
                               </span>
-                              <span className="font-medium text-secondary-foreground">
+                              <span className="font-medium tabular-nums text-secondary-foreground">
                                 {formatCurrency(
                                   metrics.reported_adjusted_ebitda,
                                 )}
@@ -1143,9 +1297,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             </div>
                           )}
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t border-border font-semibold text-success">
-                          <span>Adjusted EBITDA (Used)</span>
-                          <span>
+                        <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
+                          <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Adjusted EBITDA (Used)
+                          </span>
+                          <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
                             {formatCurrency(
                               metrics.adjusted_ebitda ??
                                 metrics.ebitda,
@@ -1154,36 +1310,40 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         </div>
                       </div>
 
-                      {/* Calculation Formula */}
-                      <div className="bg-muted rounded-lg p-3 mb-4">
-                        <div className="font-mono text-xs text-muted-foreground space-y-1">
-                          <div>
-                            <span className="text-muted-foreground/70">
-                              Ratio =
-                            </span>{' '}
-                            {(
-                              metrics.senior_debt ?? 0
-                            ).toLocaleString()}{' '}
-                            /{' '}
-                            {(
-                              metrics.adjusted_ebitda ??
-                              metrics.ebitda ??
-                              0
-                            ).toLocaleString()}{' '}
-                            ={' '}
-                            <span className="font-semibold text-foreground">
-                              {metrics.senior_debt_to_ebitda?.toFixed(
-                                2,
-                              )}
-                              x
-                            </span>
+                      {/* Formula Block */}
+                      <div className="rounded-xl border border-surface-border-1 bg-surface-3 mb-4">
+                        <div className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          <div className="space-y-1">
+                            <div>
+                              <span className="text-muted-foreground/70">
+                                Ratio =
+                              </span>{' '}
+                              <span className="tabular-nums">
+                                {(
+                                  metrics.senior_debt ?? 0
+                                ).toLocaleString()}{' '}
+                                /{' '}
+                                {(
+                                  metrics.adjusted_ebitda ??
+                                  metrics.ebitda ??
+                                  0
+                                ).toLocaleString()}{' '}
+                                ={' '}
+                              </span>
+                              <span className="font-semibold tabular-nums text-foreground">
+                                {metrics.senior_debt_to_ebitda?.toFixed(
+                                  2,
+                                )}
+                                x
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Reasoning */}
                       {metrics.senior_debt_to_ebitda != null && (
-                        <p className="text-xs text-muted-foreground italic bg-muted p-2 rounded">
+                        <p className="rounded-xl bg-surface-2 border border-surface-border-1 p-4 text-xs text-muted-foreground italic">
                           {getDebtEBITDAReasoning(
                             metrics.senior_debt_to_ebitda,
                             getSeniorDebtEBITDAHealth(
@@ -1201,47 +1361,49 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Total Debt / Total Capital Breakdown */}
+              {/* ── Total Debt / Total Capital Breakdown ────────────────── */}
               <AccordionItem
                 value="total-debt-capital"
-                className="border border-border rounded-lg px-4"
+                className="border border-surface-border-1 rounded-xl px-5 bg-card shadow-[0_1px_4px_oklch(0_0_0/0.04)] hover:shadow-[0_2px_8px_oklch(0_0_0/0.06)] transition-shadow duration-200"
               >
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-4">
-                    <span className="font-semibold text-foreground">
+                    <span className="font-semibold tracking-tight text-foreground">
                       Total Debt / Total Capital
                     </span>
-                    {metrics.total_debt_to_capital != null && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-foreground">
-                          {(
-                            metrics.total_debt_to_capital * 100
-                          ).toFixed(1)}
-                          %
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs text-white font-medium ${
-                            getTotalDebtCapitalHealth(
-                              metrics.total_debt_to_capital,
-                            ).bgClass
-                          }`}
-                        >
-                          {getRatingLabel(
-                            getTotalDebtCapitalHealth(
-                              metrics.total_debt_to_capital,
-                            ).level,
-                          )}
-                        </span>
-                      </div>
-                    )}
+                    {metrics.total_debt_to_capital != null &&
+                      (() => {
+                        const health = getTotalDebtCapitalHealth(
+                          metrics.total_debt_to_capital,
+                        );
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold tabular-nums text-foreground">
+                              {(
+                                metrics.total_debt_to_capital * 100
+                              ).toFixed(1)}
+                              %
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs text-white font-semibold ${health.bgClass}`}
+                              style={{
+                                boxShadow: `0 0 0 1px ${health.color}40`,
+                              }}
+                            >
+                              {getRatingLabel(health.level)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                   </div>
                 </AccordionTrigger>
+
                 <AccordionContent>
                   {metrics.total_debt != null &&
                   metrics.shareholders_equity != null ? (
                     <>
                       <div className="flex justify-between items-center mb-3">
-                        <span className="font-mono text-xs bg-muted px-2 py-1 rounded text-muted-foreground">
+                        <span className="font-mono text-xs bg-surface-2 border border-surface-border-1 rounded-lg px-3 py-2 text-muted-foreground">
                           Total Debt ÷ (Total Debt +
                           Shareholders&apos; Equity)
                         </span>
@@ -1249,14 +1411,15 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
                       {/* Total Debt Breakdown */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-error mb-2">
-                          Numerator (Total Debt)
+                        <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
+                          <h5 className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Numerator — Total Debt
+                          </h5>
                         </div>
-                        <div className="pl-4 border-l-2 border-error/25 space-y-1 text-sm">
+                        <div className="divide-y divide-border/40 text-sm">
                           {metrics.debt_components ? (
                             <>
-                              {/* Bank Debt */}
-                              <div className="flex justify-between items-start">
+                              <div className="flex justify-between items-center py-1.5 px-3">
                                 <span className="text-muted-foreground flex items-center flex-wrap">
                                   Bank Debt - Current
                                   <SourceInfo
@@ -1266,14 +1429,14 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                     }
                                   />
                                 </span>
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium tabular-nums text-foreground">
                                   {formatCurrency(
                                     metrics.debt_components
                                       .bank_debt_current ?? 0,
                                   )}
                                 </span>
                               </div>
-                              <div className="flex justify-between items-start">
+                              <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                                 <span className="text-muted-foreground flex items-center flex-wrap">
                                   + Bank Debt - Long-term
                                   <SourceInfo
@@ -1283,7 +1446,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                     }
                                   />
                                 </span>
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium tabular-nums text-foreground">
                                   +{' '}
                                   {formatCurrency(
                                     metrics.debt_components
@@ -1291,8 +1454,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                   )}
                                 </span>
                               </div>
-                              {/* Lease Liabilities */}
-                              <div className="flex justify-between items-start">
+                              <div className="flex justify-between items-center py-1.5 px-3">
                                 <span className="text-muted-foreground flex items-center flex-wrap">
                                   + Lease Liabilities - Current
                                   <SourceInfo
@@ -1302,7 +1464,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                     }
                                   />
                                 </span>
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium tabular-nums text-foreground">
                                   +{' '}
                                   {formatCurrency(
                                     metrics.debt_components
@@ -1310,7 +1472,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                   )}
                                 </span>
                               </div>
-                              <div className="flex justify-between items-start">
+                              <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                                 <span className="text-muted-foreground flex items-center flex-wrap">
                                   + Lease Liabilities - Long-term
                                   <SourceInfo
@@ -1320,7 +1482,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                     }
                                   />
                                 </span>
-                                <span className="font-medium text-foreground">
+                                <span className="font-medium tabular-nums text-foreground">
                                   +{' '}
                                   {formatCurrency(
                                     metrics.debt_components
@@ -1329,12 +1491,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                   )}
                                 </span>
                               </div>
-                              {/* Subordinated/Other Debt */}
                               {metrics.debt_components
                                 .notes_payable != null &&
                                 metrics.debt_components
                                   .notes_payable > 0 && (
-                                  <div className="flex justify-between items-start">
+                                  <div className="flex justify-between items-center py-1.5 px-3">
                                     <span className="text-muted-foreground flex items-center flex-wrap">
                                       + Notes Payable
                                       <SourceInfo
@@ -1344,7 +1505,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                         }
                                       />
                                     </span>
-                                    <span className="font-medium text-foreground">
+                                    <span className="font-medium tabular-nums text-foreground">
                                       +{' '}
                                       {formatCurrency(
                                         metrics.debt_components
@@ -1357,7 +1518,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 .subordinated_debt != null &&
                                 metrics.debt_components
                                   .subordinated_debt > 0 && (
-                                  <div className="flex justify-between items-start">
+                                  <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                                     <span className="text-muted-foreground flex items-center flex-wrap">
                                       + Subordinated Debt
                                       <SourceInfo
@@ -1367,7 +1528,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                         }
                                       />
                                     </span>
-                                    <span className="font-medium text-foreground">
+                                    <span className="font-medium tabular-nums text-foreground">
                                       +{' '}
                                       {formatCurrency(
                                         metrics.debt_components
@@ -1380,7 +1541,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 .other_borrowings != null &&
                                 metrics.debt_components
                                   .other_borrowings > 0 && (
-                                  <div className="flex justify-between items-start">
+                                  <div className="flex justify-between items-center py-1.5 px-3">
                                     <span className="text-muted-foreground flex items-center flex-wrap">
                                       + Other Borrowings
                                       <SourceInfo
@@ -1390,7 +1551,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                         }
                                       />
                                     </span>
-                                    <span className="font-medium text-foreground">
+                                    <span className="font-medium tabular-nums text-foreground">
                                       +{' '}
                                       {formatCurrency(
                                         metrics.debt_components
@@ -1404,11 +1565,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             <>
                               {metrics.debt_breakdown.bank_debt >
                                 0 && (
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center py-1.5 px-3">
                                   <span className="text-muted-foreground">
                                     Bank Debt
                                   </span>
-                                  <span className="font-medium text-foreground">
+                                  <span className="font-medium tabular-nums text-foreground">
                                     {formatCurrency(
                                       metrics.debt_breakdown
                                         .bank_debt,
@@ -1418,11 +1579,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               )}
                               {metrics.debt_breakdown
                                 .lease_liabilities > 0 && (
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                                   <span className="text-muted-foreground">
                                     + Lease Liabilities
                                   </span>
-                                  <span className="font-medium text-foreground">
+                                  <span className="font-medium tabular-nums text-foreground">
                                     +{' '}
                                     {formatCurrency(
                                       metrics.debt_breakdown
@@ -1433,11 +1594,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               )}
                               {metrics.debt_breakdown.notes_payable >
                                 0 && (
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center py-1.5 px-3">
                                   <span className="text-muted-foreground">
                                     + Notes Payable
                                   </span>
-                                  <span className="font-medium text-foreground">
+                                  <span className="font-medium tabular-nums text-foreground">
                                     +{' '}
                                     {formatCurrency(
                                       metrics.debt_breakdown
@@ -1448,11 +1609,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               )}
                               {metrics.debt_breakdown
                                 .subordinated_debt > 0 && (
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                                   <span className="text-muted-foreground">
                                     + Subordinated Debt
                                   </span>
-                                  <span className="font-medium text-foreground">
+                                  <span className="font-medium tabular-nums text-foreground">
                                     +{' '}
                                     {formatCurrency(
                                       metrics.debt_breakdown
@@ -1463,17 +1624,19 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               )}
                             </>
                           ) : (
-                            <div className="flex justify-between text-muted-foreground italic">
+                            <div className="flex justify-between items-center py-1.5 px-3 text-muted-foreground italic">
                               <span>No debt breakdown available</span>
-                              <span>
+                              <span className="tabular-nums">
                                 {formatCurrency(metrics.total_debt)}
                               </span>
                             </div>
                           )}
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t border-border font-semibold text-error">
-                          <span>Total Debt</span>
-                          <span>
+                        <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
+                          <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Total Debt
+                          </span>
+                          <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
                             {formatCurrency(metrics.total_debt)}
                           </span>
                         </div>
@@ -1481,26 +1644,28 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
                       {/* Total Capital Breakdown */}
                       <div className="mb-4">
-                        <div className="text-sm font-semibold text-success mb-2">
-                          Denominator (Total Capital)
+                        <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
+                          <h5 className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Denominator — Total Capital
+                          </h5>
                         </div>
-                        <div className="pl-4 border-l-2 border-success/25 space-y-1 text-sm">
-                          <div className="flex justify-between items-start">
+                        <div className="divide-y divide-border/40 text-sm">
+                          <div className="flex justify-between items-center py-1.5 px-3">
                             <span className="text-muted-foreground">
                               Total Debt
                             </span>
-                            <span className="font-medium text-foreground">
+                            <span className="font-medium tabular-nums text-foreground">
                               {formatCurrency(metrics.total_debt)}
                             </span>
                           </div>
-                          <div className="flex justify-between items-start">
+                          <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
                             <span className="text-muted-foreground flex items-center flex-wrap">
                               + Shareholders&apos; Equity
                               <SourceInfo
                                 value={metrics.shareholders_equity}
                               />
                             </span>
-                            <span className="font-medium text-foreground">
+                            <span className="font-medium tabular-nums text-foreground">
                               +{' '}
                               {formatCurrency(
                                 metrics.shareholders_equity,
@@ -1508,9 +1673,11 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                             </span>
                           </div>
                         </div>
-                        <div className="flex justify-between mt-2 pt-2 border-t border-border font-semibold text-success">
-                          <span>Total Capital</span>
-                          <span>
+                        <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
+                          <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                            Total Capital
+                          </span>
+                          <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
                             {formatCurrency(
                               metrics.total_debt +
                                 metrics.shareholders_equity,
@@ -1519,55 +1686,61 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         </div>
                       </div>
 
-                      {/* Calculation Formula */}
-                      <div className="bg-muted rounded-lg p-3 mb-4">
-                        <div className="font-mono text-xs text-muted-foreground space-y-1">
-                          <div>
-                            <span className="text-muted-foreground/70">
-                              Total Capital =
-                            </span>{' '}
-                            {(
-                              metrics.total_debt ?? 0
-                            ).toLocaleString()}{' '}
-                            +{' '}
-                            {(
-                              metrics.shareholders_equity ?? 0
-                            ).toLocaleString()}{' '}
-                            ={' '}
-                            <span className="font-semibold text-foreground">
-                              {(
-                                (metrics.total_debt ?? 0) +
-                                (metrics.shareholders_equity ?? 0)
-                              ).toLocaleString()}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground/70">
-                              Ratio =
-                            </span>{' '}
-                            {(
-                              metrics.total_debt ?? 0
-                            ).toLocaleString()}{' '}
-                            /{' '}
-                            {(
-                              (metrics.total_debt ?? 0) +
-                              (metrics.shareholders_equity ?? 0)
-                            ).toLocaleString()}{' '}
-                            ={' '}
-                            <span className="font-semibold text-foreground">
-                              {(
-                                (metrics.total_debt_to_capital ?? 0) *
-                                100
-                              ).toFixed(1)}
-                              %
-                            </span>
+                      {/* Formula Block */}
+                      <div className="rounded-xl border border-surface-border-1 bg-surface-3 mb-4">
+                        <div className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          <div className="space-y-1">
+                            <div>
+                              <span className="text-muted-foreground/70">
+                                Total Capital =
+                              </span>{' '}
+                              <span className="tabular-nums">
+                                {(
+                                  metrics.total_debt ?? 0
+                                ).toLocaleString()}{' '}
+                                +{' '}
+                                {(
+                                  metrics.shareholders_equity ?? 0
+                                ).toLocaleString()}{' '}
+                                ={' '}
+                              </span>
+                              <span className="font-semibold tabular-nums text-foreground">
+                                {(
+                                  (metrics.total_debt ?? 0) +
+                                  (metrics.shareholders_equity ?? 0)
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground/70">
+                                Ratio =
+                              </span>{' '}
+                              <span className="tabular-nums">
+                                {(
+                                  metrics.total_debt ?? 0
+                                ).toLocaleString()}{' '}
+                                /{' '}
+                                {(
+                                  (metrics.total_debt ?? 0) +
+                                  (metrics.shareholders_equity ?? 0)
+                                ).toLocaleString()}{' '}
+                                ={' '}
+                              </span>
+                              <span className="font-semibold tabular-nums text-foreground">
+                                {(
+                                  (metrics.total_debt_to_capital ??
+                                    0) * 100
+                                ).toFixed(1)}
+                                %
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Reasoning */}
                       {metrics.total_debt_to_capital != null && (
-                        <p className="text-xs text-muted-foreground italic bg-muted p-2 rounded">
+                        <p className="rounded-xl bg-surface-2 border border-surface-border-1 p-4 text-xs text-muted-foreground italic">
                           {getDebtCapitalReasoning(
                             metrics.total_debt_to_capital,
                             getTotalDebtCapitalHealth(
@@ -1589,49 +1762,65 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
         );
       })()}
 
+      {/* ── Historical Comparison Table ──────────────────────────────────── */}
       {years.length > 1 && (
         <div className="mt-6 pt-4 border-t border-border">
-          <h3 className="text-sm font-medium text-foreground mb-3">
+          <h3 className="text-sm font-medium tracking-tight text-foreground mb-3">
             Historical Comparison
           </h3>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 pr-4 text-foreground">Metric</th>
+            <Table className="table-financial">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground">
+                    Metric
+                  </TableHead>
                   {years.map((yr) => (
-                    <th key={yr} className="text-right py-2 px-2 text-foreground">
+                    <TableHead
+                      key={yr}
+                      className="text-right text-[11px] uppercase tracking-widest font-medium text-muted-foreground"
+                    >
                       {yr}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-border">
-                  <td className="py-2 pr-4 text-foreground">FCCR</td>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {/* FCCR row */}
+                <TableRow>
+                  <TableCell className="text-foreground font-medium">
+                    FCCR
+                  </TableCell>
                   {years.map((yr) => {
                     const val = data.metrics_by_year[yr].fccr;
                     const health =
                       val != null ? getFCCRHealth(val) : null;
                     return (
-                      <td key={yr} className="text-right py-2 px-2">
+                      <TableCell key={yr} className="text-right">
                         {val != null ? (
                           <span
-                            className={`px-2 py-0.5 rounded text-xs text-white ${health?.bgClass}`}
+                            className={`px-2 py-0.5 rounded-full text-xs text-white tabular-nums font-semibold ${health?.bgClass}`}
+                            style={{
+                              boxShadow: `0 0 0 1px ${health?.color ?? 'transparent'}40`,
+                            }}
                           >
                             {val.toFixed(2)}x
                           </span>
                         ) : (
-                          '—'
+                          <span className="text-muted-foreground">
+                            —
+                          </span>
                         )}
-                      </td>
+                      </TableCell>
                     );
                   })}
-                </tr>
-                <tr className="border-b border-border">
-                  <td className="py-2 pr-4 text-foreground">
+                </TableRow>
+
+                {/* Senior Debt / Adj. EBITDA row */}
+                <TableRow>
+                  <TableCell className="text-foreground font-medium">
                     Senior Debt / Adj. EBITDA
-                  </td>
+                  </TableCell>
                   {years.map((yr) => {
                     const val =
                       data.metrics_by_year[yr].senior_debt_to_ebitda;
@@ -1640,22 +1829,31 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         ? getSeniorDebtEBITDAHealth(val)
                         : null;
                     return (
-                      <td key={yr} className="text-right py-2 px-2">
+                      <TableCell key={yr} className="text-right">
                         {val != null ? (
                           <span
-                            className={`px-2 py-0.5 rounded text-xs text-white ${health?.bgClass}`}
+                            className={`px-2 py-0.5 rounded-full text-xs text-white tabular-nums font-semibold ${health?.bgClass}`}
+                            style={{
+                              boxShadow: `0 0 0 1px ${health?.color ?? 'transparent'}40`,
+                            }}
                           >
                             {val.toFixed(2)}x
                           </span>
                         ) : (
-                          '—'
+                          <span className="text-muted-foreground">
+                            —
+                          </span>
                         )}
-                      </td>
+                      </TableCell>
                     );
                   })}
-                </tr>
-                <tr>
-                  <td className="py-2 pr-4 text-foreground">Total Debt / Capital</td>
+                </TableRow>
+
+                {/* Total Debt / Capital row */}
+                <TableRow>
+                  <TableCell className="text-foreground font-medium">
+                    Total Debt / Capital
+                  </TableCell>
                   {years.map((yr) => {
                     const val =
                       data.metrics_by_year[yr].total_debt_to_capital;
@@ -1664,22 +1862,27 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         ? getTotalDebtCapitalHealth(val)
                         : null;
                     return (
-                      <td key={yr} className="text-right py-2 px-2">
+                      <TableCell key={yr} className="text-right">
                         {val != null ? (
                           <span
-                            className={`px-2 py-0.5 rounded text-xs text-white ${health?.bgClass}`}
+                            className={`px-2 py-0.5 rounded-full text-xs text-white tabular-nums font-semibold ${health?.bgClass}`}
+                            style={{
+                              boxShadow: `0 0 0 1px ${health?.color ?? 'transparent'}40`,
+                            }}
                           >
                             {(val * 100).toFixed(1)}%
                           </span>
                         ) : (
-                          '—'
+                          <span className="text-muted-foreground">
+                            —
+                          </span>
                         )}
-                      </td>
+                      </TableCell>
                     );
                   })}
-                </tr>
-              </tbody>
-            </table>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}

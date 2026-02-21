@@ -139,19 +139,44 @@ function MetricCard({
   subtitle?: string;
   colorClass?: string;
 }) {
+  // Map semantic text-color classes to gradient tints
+  const gradientMap: Record<string, string> = {
+    'text-success': 'from-emerald-950 via-emerald-900/80 to-black',
+    'text-warning': 'from-amber-950 via-amber-900/80 to-black',
+    'text-error': 'from-red-950 via-red-900/80 to-black',
+  };
+  const gradient = (colorClass && gradientMap[colorClass]) || 'from-zinc-800 via-zinc-900 to-black';
+
+  // Map to light foreground tints for the subtitle
+  const subtitleMap: Record<string, string> = {
+    'text-success': 'text-emerald-300',
+    'text-warning': 'text-amber-300',
+    'text-error': 'text-red-300',
+  };
+  const subtitleColor = (colorClass && subtitleMap[colorClass]) || 'text-zinc-400';
+
   return (
-    <div className="border border-border rounded-lg p-4 space-y-1">
-      <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
+    <div
+      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 flex flex-col justify-between min-h-[140px] shadow-lg`}
+    >
+      {/* Noise texture overlay */}
+      <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
+      {/* Subtle top-left highlight */}
+      <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-white/[0.07] blur-2xl" />
+
+      <p className="relative text-[10px] uppercase tracking-[0.15em] text-white/50 font-medium">
         {label}
       </p>
-      <p className={`text-2xl font-bold tabular-nums ${colorClass || 'text-foreground'}`}>
-        {value}
-      </p>
-      {subtitle && (
-        <p className={`text-xs ${colorClass || 'text-muted-foreground'}`}>
-          {subtitle}
+      <div className="relative mt-auto">
+        <p className="text-3xl font-bold tabular-nums tracking-tight text-white">
+          {value}
         </p>
-      )}
+        {subtitle && (
+          <p className={`text-xs font-medium mt-1 ${subtitleColor}`}>
+            {subtitle}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

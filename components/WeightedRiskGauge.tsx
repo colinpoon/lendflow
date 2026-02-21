@@ -1,12 +1,21 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   AlertTriangle,
   CheckCircle,
@@ -16,6 +25,18 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { RiskData } from '@/components/RiskAssessment';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Cell,
+} from 'recharts';
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface DebtHealthAssessment {
   weighted_score: number;
@@ -43,16 +64,11 @@ interface WeightedRiskGaugeProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
   debtHealthAssessment: DebtHealthAssessment | null;
   riskData?: RiskData | null;
-  // Custom FCCR adjustment from FCCRBreakdown (total of all custom adjustments)
+  /** Custom FCCR adjustment from FCCRBreakdown (total of all custom adjustments) */
   customFccrAdjustment?: number;
 }
 
-type RiskLevel =
-  | 'very-low'
-  | 'low'
-  | 'moderate'
-  | 'elevated'
-  | 'high';
+type RiskLevel = 'very-low' | 'low' | 'moderate' | 'elevated' | 'high';
 
 interface RiskConfig {
   level: RiskLevel;
@@ -64,7 +80,9 @@ interface RiskConfig {
   scoreBgClass: string;
 }
 
-// Convert FCCR to risk score (0-10, higher = worse)
+// ─── Business Logic — Risk Scoring ────────────────────────────────────────────
+
+/** Convert FCCR to risk score (0–10, higher = worse) */
 const getFCCRRiskScore = (value: number | null): number => {
   if (value == null) return 5;
   if (value >= 2.0) return 1;
@@ -75,7 +93,7 @@ const getFCCRRiskScore = (value: number | null): number => {
   return 10;
 };
 
-// Convert Senior Debt/EBITDA to risk score (0-10, higher = worse)
+/** Convert Senior Debt/EBITDA to risk score (0–10, higher = worse) */
 const getDebtEBITDARiskScore = (value: number | null): number => {
   if (value == null) return 5;
   if (value <= 1.5) return 1;
@@ -85,7 +103,7 @@ const getDebtEBITDARiskScore = (value: number | null): number => {
   return 9;
 };
 
-// Convert Total Debt/Capital to risk score (0-10, higher = worse)
+/** Convert Total Debt/Capital to risk score (0–10, higher = worse) */
 const getDebtCapitalRiskScore = (value: number | null): number => {
   if (value == null) return 5;
   if (value < 0.3) return 1;
@@ -95,7 +113,7 @@ const getDebtCapitalRiskScore = (value: number | null): number => {
   return 9;
 };
 
-// Get risk configuration based on weighted score — uses semantic token classes
+/** Map a weighted score to a full risk configuration using semantic token classes */
 const getRiskConfig = (score: number): RiskConfig => {
   if (score <= 2)
     return {
@@ -148,10 +166,8 @@ const getRiskConfig = (score: number): RiskConfig => {
   };
 };
 
-// Get lending decision styling using semantic tokens
-const getLendingDecisionStyle = (
-  decision: string,
-): { bg: string; text: string } => {
+/** Map lending decision text to background/text styling using semantic tokens */
+const getLendingDecisionStyle = (decision: string): { bg: string; text: string } => {
   const lower = decision.toLowerCase();
   if (
     lower.includes('strong approve') ||
@@ -168,295 +184,335 @@ const getLendingDecisionStyle = (
   return { bg: 'bg-muted', text: 'text-muted-foreground' };
 };
 
-const GAUGE_SIZE = 200;
+// ─── Color helpers for Recharts (hex required — CSS classes not readable) ─────
+
+const getFccrBarColor = (value: number | null): string => {
+  if (value == null) return '#6b7280';
+  if (value >= 1.2) return '#22c55e';
+  if (value >= 1.0) return '#eab308';
+  return '#ef4444';
+};
+
+const getDebtEbitdaBarColor = (value: number | null): string => {
+  if (value == null) return '#6b7280';
+  if (value <= 2.5) return '#22c55e';
+  if (value <= 3.5) return '#eab308';
+  return '#ef4444';
+};
+
+const getDebtCapitalBarColor = (value: number | null): string => {
+  if (value == null) return '#6b7280';
+  if (value <= 50) return '#22c55e';
+  if (value <= 65) return '#eab308';
+  return '#ef4444';
+};
+
+// ─── Framer Motion Variants ────────────────────────────────────────────────────
+
+const containerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.25, 1, 0.5, 1] as [number, number, number, number],
+    },
+  },
+};
+
+// ─── SVG Half-Circle Gauge ─────────────────────────────────────────────────────
 
 const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
-  const size = GAUGE_SIZE;
-  const strokeWidth = 12;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-
   const config = getRiskConfig(score);
-  const percentage = Math.max(
-    0,
-    Math.min(100, ((10 - score) / 10) * 100),
-  );
-  const strokeDashoffset =
-    circumference - (percentage / 100) * circumference;
+  const fillPct = Math.max(0, Math.min(1, score / 10));
 
   return (
-    <div className="relative w-50 h-50">
-      <svg
-        width={size}
-        height={size}
-        className="transform -rotate-90"
-      >
-        {/* SVG track/progress hex colors retained — CSS vars not accessible in SVG attributes */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#e5e7eb"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={config.color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className="transition-all duration-1000 ease-out"
-        />
-      </svg>
-
-      <svg
-        width={size}
-        height={size}
-        className="absolute top-0 left-0 -rotate-90"
-      >
-        {Array.from({ length: 50 }).map((_, i) => {
-          const angle = (i / 50) * 360;
-          const isLargeTick = i % 5 === 0;
-          const tickLength = isLargeTick ? 8 : 4;
-          const outerRadius = radius + strokeWidth / 2 + 3;
-          const innerRadius = outerRadius - tickLength;
-
-          const x1 =
-            size / 2 +
-            outerRadius * Math.cos((angle * Math.PI) / 180);
-          const y1 =
-            size / 2 +
-            outerRadius * Math.sin((angle * Math.PI) / 180);
-          const x2 =
-            size / 2 +
-            innerRadius * Math.cos((angle * Math.PI) / 180);
-          const y2 =
-            size / 2 +
-            innerRadius * Math.sin((angle * Math.PI) / 180);
-
-          return (
-            <line
-              key={i}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#d1d5db"
-              strokeWidth={isLargeTick ? 2 : 1}
-            />
-          );
-        })}
-      </svg>
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span
-          className={`text-4xl font-bold ${config.scoreTextClass}`}
+    <div className="relative flex flex-col items-center">
+      <div className="relative w-[200px] h-[110px] overflow-hidden">
+        <svg
+          width="200"
+          height="120"
+          viewBox="0 0 200 120"
+          className="absolute top-0 left-0"
         >
-          {score.toFixed(1)}
-        </span>
-        <span className="text-sm text-muted-foreground">/ 10</span>
-        <span
-          className={`mt-1 px-3 py-1 rounded-full text-xs font-semibold ${config.bgColor} ${config.textColor}`}
-        >
-          {config.label}
-        </span>
+          {/* Track arc */}
+          <path
+            d="M 10 110 A 90 90 0 0 1 190 110"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="10"
+            className="text-surface-3"
+            strokeLinecap="round"
+          />
+          {/* Fill arc */}
+          <path
+            d="M 10 110 A 90 90 0 0 1 190 110"
+            fill="none"
+            stroke={config.color}
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeDasharray={`${Math.PI * 90}`}
+            strokeDashoffset={Math.PI * 90 * (1 - fillPct)}
+            style={{
+              transition: 'stroke-dashoffset 0.8s cubic-bezier(0.25, 1, 0.5, 1)',
+              filter: `drop-shadow(0 0 6px ${config.color}60)`,
+            }}
+          />
+          {/* Tick markers at 0, 2, 4, 6, 8, 10 */}
+          {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map((pct, i) => {
+            const angle = Math.PI - pct * Math.PI;
+            const x1 = 100 + 90 * Math.cos(angle);
+            const y1 = 110 - 90 * Math.sin(angle);
+            const x2 = 100 + 82 * Math.cos(angle);
+            const y2 = 110 - 82 * Math.sin(angle);
+            return (
+              <line
+                key={i}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="text-border"
+              />
+            );
+          })}
+        </svg>
+
+        {/* Score overlay at bottom center of arc */}
+        <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center">
+          <span
+            className={`text-5xl font-bold tabular-nums tracking-tighter leading-none ${config.scoreTextClass}`}
+          >
+            {score.toFixed(1)}
+          </span>
+          <span className="text-[11px] text-muted-foreground mt-0.5">/ 10</span>
+        </div>
+      </div>
+
+      {/* Risk label pill */}
+      <div
+        className={`mt-3 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide ${config.bgColor} ${config.textColor}`}
+        style={{ boxShadow: `0 0 0 1px ${config.color}30` }}
+      >
+        {config.label}
       </div>
     </div>
   );
 };
+
+// ─── MetricBadge ───────────────────────────────────────────────────────────────
 
 interface MetricBadgeProps {
   label: string;
   value: number | null;
   score: number;
   format: (v: number) => string;
+  weight?: number;
 }
 
-const MetricBadge: React.FC<MetricBadgeProps> = ({
-  label,
-  value,
-  score,
-  format,
-}) => {
+const MetricBadge: React.FC<MetricBadgeProps> = ({ label, value, score, format, weight }) => {
   const config = getRiskConfig(score);
+  const severityPct = score / 10;
 
   return (
-    <div className="flex flex-col items-center p-3 bg-muted rounded-lg">
-      <span className="text-xs text-muted-foreground mb-1">{label}</span>
-      <span className={`text-lg font-bold ${config.scoreTextClass}`}>
-        {value != null ? format(value) : 'N/A'}
-      </span>
+    <div className="relative rounded-xl border border-surface-border-1 bg-card p-4 overflow-hidden">
+      {/* Left colored accent bar */}
+      <div
+        className="absolute left-0 inset-y-0 w-1 rounded-r-full"
+        style={{ backgroundColor: config.color, opacity: 0.7 }}
+      />
+      <div className="pl-3">
+        <div className="flex justify-between items-start mb-2">
+          <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground leading-tight">
+            {label.replace(/\s*\(\d+%\)\s*\*?/, '')}
+          </span>
+          {weight != null && (
+            <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+              {weight}%
+            </span>
+          )}
+        </div>
+        <span className={`text-xl font-bold tabular-nums ${config.scoreTextClass}`}>
+          {value != null ? format(value) : 'N/A'}
+        </span>
+        {/* Mini severity progress bar */}
+        <div className="mt-2 h-1 rounded-full bg-surface-3">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${severityPct * 100}%`, backgroundColor: config.color }}
+          />
+        </div>
+      </div>
     </div>
   );
 };
 
-// Simple bar chart component for historical metrics
+// ─── HistoricalChart ───────────────────────────────────────────────────────────
+
+const historicalChartConfig = {
+  value: { label: 'Value' },
+} satisfies ChartConfig;
+
 interface HistoricalChartProps {
   data: { metrics_by_year: Record<string, YearMetrics> };
 }
 
-const HistoricalChart: React.FC<HistoricalChartProps> = ({
-  data,
-}) => {
+const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
   const years = Object.keys(data.metrics_by_year).sort();
 
-  // Calculate metrics for each year
-  const chartData = years.map((year) => {
-    const m = data.metrics_by_year[year];
+  const fccrData = years.map((year) => ({
+    year,
+    value: data.metrics_by_year[year].fccr ?? 0,
+    raw: data.metrics_by_year[year].fccr,
+  }));
+
+  const debtEbitdaData = years.map((year) => ({
+    year,
+    value: data.metrics_by_year[year].senior_debt_to_ebitda ?? 0,
+    raw: data.metrics_by_year[year].senior_debt_to_ebitda,
+  }));
+
+  const debtCapitalData = years.map((year) => {
+    const raw = data.metrics_by_year[year].total_debt_to_capital;
     return {
       year,
-      fccr: m.fccr,
-      debtEbitda: m.senior_debt_to_ebitda,
-      debtCapital: m.total_debt_to_capital
-        ? m.total_debt_to_capital * 100
-        : null,
+      value: raw != null ? raw * 100 : 0,
+      raw,
     };
   });
 
-  // Get max values for scaling
-  const maxFccr = Math.max(...chartData.map((d) => d.fccr ?? 0), 3);
-  const maxDebtEbitda = Math.max(
-    ...chartData.map((d) => d.debtEbitda ?? 0),
-    5,
-  );
-
   return (
-    <div className="space-y-6">
-      {/* FCCR Chart */}
+    <div className="space-y-8">
+      {/* FCCR */}
       <div>
-        <h5 className="text-sm font-medium text-foreground mb-2">
+        <h5 className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground mb-3">
           FCCR (Target: &gt; 1.2x)
         </h5>
-        <div className="space-y-2">
-          {chartData.map((d) => (
-            <div
-              key={`fccr-${d.year}`}
-              className="flex items-center gap-2"
-            >
-              <span className="text-xs text-muted-foreground w-12">
-                {d.year}
-              </span>
-              <div className="flex-1 bg-muted rounded-full h-6 relative overflow-hidden">
-                <div
-                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
-                    d.fccr != null
-                      ? d.fccr >= 1.2
-                        ? 'bg-success'
-                        : d.fccr >= 1.0
-                          ? 'bg-warning'
-                          : 'bg-error'
-                      : 'bg-border'
-                  }`}
-                  style={{
-                    width:
-                      d.fccr != null
-                        ? `${Math.min((d.fccr / maxFccr) * 100, 100)}%`
-                        : '0%',
-                  }}
+        <ChartContainer config={historicalChartConfig} className="h-[120px] w-full">
+          <BarChart
+            layout="vertical"
+            data={fccrData}
+            margin={{ top: 0, right: 40, bottom: 0, left: 32 }}
+          >
+            <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+            <YAxis
+              type="category"
+              dataKey="year"
+              tick={{ fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              width={32}
+            />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(v) => [`${Number(v).toFixed(2)}x`, 'FCCR']}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-foreground">
-                  {d.fccr != null ? `${d.fccr.toFixed(2)}x` : 'N/A'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+              }
+            />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20}>
+              {fccrData.map((d, i) => (
+                <Cell key={i} fill={getFccrBarColor(d.raw)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
       </div>
 
-      {/* Senior Debt / EBITDA Chart */}
+      {/* Senior Debt / EBITDA */}
       <div>
-        <h5 className="text-sm font-medium text-foreground mb-2">
+        <h5 className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground mb-3">
           Senior Debt / EBITDA (Target: &lt; 2.5x)
         </h5>
-        <div className="space-y-2">
-          {chartData.map((d) => (
-            <div
-              key={`debt-${d.year}`}
-              className="flex items-center gap-2"
-            >
-              <span className="text-xs text-muted-foreground w-12">
-                {d.year}
-              </span>
-              <div className="flex-1 bg-muted rounded-full h-6 relative overflow-hidden">
-                <div
-                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
-                    d.debtEbitda != null
-                      ? d.debtEbitda <= 2.5
-                        ? 'bg-success'
-                        : d.debtEbitda <= 3.5
-                          ? 'bg-warning'
-                          : 'bg-error'
-                      : 'bg-border'
-                  }`}
-                  style={{
-                    width:
-                      d.debtEbitda != null
-                        ? `${Math.min((d.debtEbitda / maxDebtEbitda) * 100, 100)}%`
-                        : '0%',
-                  }}
+        <ChartContainer config={historicalChartConfig} className="h-[120px] w-full">
+          <BarChart
+            layout="vertical"
+            data={debtEbitdaData}
+            margin={{ top: 0, right: 40, bottom: 0, left: 32 }}
+          >
+            <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+            <YAxis
+              type="category"
+              dataKey="year"
+              tick={{ fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              width={32}
+            />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(v) => [`${Number(v).toFixed(2)}x`, 'Sr. Debt / EBITDA']}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-foreground">
-                  {d.debtEbitda != null
-                    ? `${d.debtEbitda.toFixed(2)}x`
-                    : 'N/A'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+              }
+            />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20}>
+              {debtEbitdaData.map((d, i) => (
+                <Cell key={i} fill={getDebtEbitdaBarColor(d.raw)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
       </div>
 
-      {/* Debt / Capital Chart */}
+      {/* Debt / Capital */}
       <div>
-        <h5 className="text-sm font-medium text-foreground mb-2">
+        <h5 className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground mb-3">
           Debt / Capital (Target: &lt; 50%)
         </h5>
-        <div className="space-y-2">
-          {chartData.map((d) => (
-            <div
-              key={`cap-${d.year}`}
-              className="flex items-center gap-2"
-            >
-              <span className="text-xs text-muted-foreground w-12">
-                {d.year}
-              </span>
-              <div className="flex-1 bg-muted rounded-full h-6 relative overflow-hidden">
-                <div
-                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
-                    d.debtCapital != null
-                      ? d.debtCapital <= 50
-                        ? 'bg-success'
-                        : d.debtCapital <= 65
-                          ? 'bg-warning'
-                          : 'bg-error'
-                      : 'bg-border'
-                  }`}
-                  style={{
-                    width:
-                      d.debtCapital != null
-                        ? `${Math.min(d.debtCapital, 100)}%`
-                        : '0%',
-                  }}
+        <ChartContainer config={historicalChartConfig} className="h-[120px] w-full">
+          <BarChart
+            layout="vertical"
+            data={debtCapitalData}
+            margin={{ top: 0, right: 40, bottom: 0, left: 32 }}
+          >
+            <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis
+              type="number"
+              domain={[0, 100]}
+              tick={{ fontSize: 10 }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}%`}
+            />
+            <YAxis
+              type="category"
+              dataKey="year"
+              tick={{ fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              width={32}
+            />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(v) => [`${Number(v).toFixed(1)}%`, 'Debt / Capital']}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-foreground">
-                  {d.debtCapital != null
-                    ? `${d.debtCapital.toFixed(1)}%`
-                    : 'N/A'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+              }
+            />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20}>
+              {debtCapitalData.map((d, i) => (
+                <Cell key={i} fill={getDebtCapitalBarColor(d.value)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
       </div>
     </div>
   );
 };
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   data,
@@ -482,12 +538,10 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   const latestYear = years[0];
   const metrics = data.metrics_by_year[latestYear];
 
-  // Calculate adjusted FCCR if custom adjustments exist
+  // Calculate adjusted FCCR when custom adjustments exist
   const fccrBreakdown = metrics.fccr_breakdown;
   const adjustedFccr =
-    customFccrAdjustment !== 0 &&
-    fccrBreakdown &&
-    fccrBreakdown.denominator > 0
+    customFccrAdjustment !== 0 && fccrBreakdown && fccrBreakdown.denominator > 0
       ? parseFloat(
           (
             (fccrBreakdown.numerator + customFccrAdjustment) /
@@ -496,24 +550,18 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         )
       : metrics.fccr;
 
-  // Calculate individual risk scores (use adjusted FCCR if available)
+  // Individual risk scores — use adjusted FCCR when available
   const fccrScore = getFCCRRiskScore(adjustedFccr);
-  const debtEbitdaScore = getDebtEBITDARiskScore(
-    metrics.senior_debt_to_ebitda,
-  );
-  const debtCapitalScore = getDebtCapitalRiskScore(
-    metrics.total_debt_to_capital,
-  );
+  const debtEbitdaScore = getDebtEBITDARiskScore(metrics.senior_debt_to_ebitda);
+  const debtCapitalScore = getDebtCapitalRiskScore(metrics.total_debt_to_capital);
 
-  // Calculate weighted score
+  // Weighted composite score (weights: FCCR 50%, Debt/EBITDA 35%, Debt/Cap 15%)
   const weightedScore =
-    fccrScore * 0.5 +
-    debtEbitdaScore * 0.35 +
-    debtCapitalScore * 0.15;
+    fccrScore * 0.5 + debtEbitdaScore * 0.35 + debtCapitalScore * 0.15;
 
   const riskConfig = getRiskConfig(weightedScore);
 
-  // Use AI assessment if available, otherwise use calculated values
+  // Use AI assessment if available; fall back to calculated values
   const assessment = debtHealthAssessment || {
     weighted_score: weightedScore,
     risk_band: riskConfig.label,
@@ -529,93 +577,102 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
     suggested_loan_structure: '',
   };
 
-  const displayScore =
-    debtHealthAssessment?.weighted_score ?? weightedScore;
-  const decisionStyle = getLendingDecisionStyle(
-    assessment.lending_decision,
-  );
+  const displayScore = debtHealthAssessment?.weighted_score ?? weightedScore;
+  const decisionStyle = getLendingDecisionStyle(assessment.lending_decision);
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Header */}
-      <div className="text-center">
-        <h3 className="text-xl font-bold text-foreground">
+      <motion.div variants={itemVariants} className="text-center">
+        <h3 className="text-xl font-bold tracking-tight text-foreground">
           Risk Assessment
         </h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-1">
           Fiscal Year {latestYear} | Weighted Score Analysis
         </p>
-      </div>
+      </motion.div>
 
-      {/* Main Gauge Section */}
-      <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-        {/* Large Gauge */}
+      {/* Gauge + Metric Badges */}
+      <motion.div
+        variants={itemVariants}
+        className="flex flex-col md:flex-row items-center justify-center gap-8"
+      >
+        {/* Half-circle SVG gauge */}
         <div className="flex flex-col items-center">
           <RiskGauge score={displayScore} />
-          <div className="mt-4 text-center">
-            <span
-              className={`inline-block px-4 py-2 rounded-lg text-sm font-bold ${decisionStyle.bg} ${decisionStyle.text}`}
-            >
+
+          {/* Lending Decision verdict */}
+          <div
+            className={`w-full mt-4 rounded-xl border px-5 py-3.5 text-center ${decisionStyle.bg}`}
+            style={{ borderColor: `color-mix(in oklch, currentColor, transparent 70%)` }}
+          >
+            <p className="text-[10px] uppercase tracking-[0.15em] font-semibold text-muted-foreground mb-0.5">
+              Lending Decision
+            </p>
+            <p className={`text-lg font-bold tracking-tight ${decisionStyle.text}`}>
               {assessment.lending_decision}
-            </span>
+            </p>
           </div>
         </div>
 
-        {/* Component Scores */}
+        {/* Component score badges */}
         <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
           <MetricBadge
-            label={
-              customFccrAdjustment !== 0
-                ? 'FCCR (50%) *'
-                : 'FCCR (50%)'
-            }
+            label={customFccrAdjustment !== 0 ? 'FCCR (50%) *' : 'FCCR (50%)'}
             value={adjustedFccr}
             score={fccrScore}
             format={(v) => `${v.toFixed(2)}x`}
+            weight={50}
           />
           <MetricBadge
             label="Senior Debt / EBITDA (35%)"
             value={metrics.senior_debt_to_ebitda}
             score={debtEbitdaScore}
             format={(v) => `${v.toFixed(2)}x`}
+            weight={35}
           />
           <MetricBadge
             label="Total Debt / Capital (15%)"
             value={metrics.total_debt_to_capital}
             score={debtCapitalScore}
             format={(v) => `${(v * 100).toFixed(1)}%`}
+            weight={15}
           />
           {customFccrAdjustment !== 0 && (
-            <div className="text-xs text-info bg-info/10 rounded p-2 text-center">
-              * FCCR includes custom adjustments ($
-              {customFccrAdjustment > 0 ? '+' : ''}
-              {customFccrAdjustment.toLocaleString()}K)
+            <div className="rounded-xl border border-surface-border-1 bg-surface-2 p-3 text-center">
+              <span className="font-mono text-[11px] text-muted-foreground">
+                * FCCR includes custom adjustments ($
+                {customFccrAdjustment > 0 ? '+' : ''}
+                {customFccrAdjustment.toLocaleString()}K)
+              </span>
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Lending Recommendations Section */}
-      {(assessment.recommendations?.length > 0 ||
-        assessment.suggested_loan_structure) && (
-        <div className="bg-info/10 border border-info/25 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <ClipboardList className="h-5 w-5 text-info" />
-            <h4 className="font-semibold text-foreground">
+      {/* Lending Recommendations */}
+      {(assessment.recommendations?.length > 0 || assessment.suggested_loan_structure) && (
+        <motion.div
+          variants={itemVariants}
+          className="rounded-xl border border-surface-border-1 bg-surface-2 overflow-hidden"
+        >
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-surface-border-1">
+            <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
+            <h4 className="font-semibold tracking-tight text-foreground">
               Lending Recommendations
             </h4>
           </div>
 
           {assessment.recommendations?.length > 0 && (
-            <ul className="space-y-2 mb-3">
+            <ul className="px-5 py-4 space-y-2.5">
               {assessment.recommendations.map((rec, idx) => (
-                <li
-                  key={idx}
-                  className="flex items-start gap-2 text-sm text-foreground"
-                >
-                  <span className="text-info font-bold mt-0.5">
-                    -
-                  </span>
+                <li key={idx} className="flex items-start gap-3 text-sm text-foreground">
+                  <span className="mt-[6px] h-1.5 w-1.5 rounded-full bg-foreground/30 shrink-0" />
                   <span>{rec}</span>
                 </li>
               ))}
@@ -623,160 +680,156 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           )}
 
           {assessment.suggested_loan_structure && (
-            <div className="bg-background rounded p-3 mt-2">
-              <p className="text-xs text-muted-foreground mb-1">
-                Suggested Structure:
+            <div className="px-5 py-3.5 border-t border-surface-border-1 bg-surface-3">
+              <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground mb-1">
+                Suggested Structure
               </p>
               <p className="text-sm text-foreground">
                 {assessment.suggested_loan_structure}
               </p>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
 
-      {/* Risk Factors Accordion */}
+      {/* Risk Factors / Positive Factors Accordions */}
       {(assessment.key_risk_factors?.length > 0 ||
         assessment.positive_factors?.length > 0) && (
-        <Accordion
-          type="multiple"
-          defaultValue={['risks', 'positives']}
-          className="w-full space-y-3"
-        >
-          {/* Key Risk Factors */}
-          {assessment.key_risk_factors?.length > 0 && (
-            <AccordionItem
-              value="risks"
-              className="border border-border rounded-lg px-4"
-            >
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                  <span className="font-semibold text-foreground">
-                    Key Risk Factors
-                  </span>
-                  <span className="text-xs bg-warning/10 text-warning px-2 py-0.5 rounded-full">
-                    {assessment.key_risk_factors.length}
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <ul className="space-y-2">
-                  {assessment.key_risk_factors.map((factor, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <TrendingDown className="h-4 w-4 text-error mt-0.5 shrink-0" />
-                      <span className="text-sm text-foreground">
-                        {factor}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
-          )}
+        <motion.div variants={itemVariants}>
+          <Accordion
+            type="multiple"
+            defaultValue={['risks', 'positives']}
+            className="w-full space-y-3"
+          >
+            {assessment.key_risk_factors?.length > 0 && (
+              <AccordionItem
+                value="risks"
+                className="border border-surface-border-1 rounded-xl px-5 bg-card shadow-[0_1px_4px_oklch(0_0_0/0.04)] hover:shadow-[0_2px_8px_oklch(0_0_0/0.06)] transition-shadow duration-200"
+              >
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    <span className="font-semibold text-foreground">
+                      Key Risk Factors
+                    </span>
+                    <span className="text-xs bg-warning/10 text-warning px-2 py-0.5 rounded-full">
+                      {assessment.key_risk_factors.length}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ul className="space-y-2">
+                    {assessment.key_risk_factors.map((factor, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <TrendingDown className="h-4 w-4 text-error mt-0.5 shrink-0" />
+                        <span className="text-sm text-foreground">{factor}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            )}
 
-          {/* Positive Factors */}
-          {assessment.positive_factors?.length > 0 && (
-            <AccordionItem
-              value="positives"
-              className="border border-border rounded-lg px-4"
-            >
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-success" />
-                  <span className="font-semibold text-foreground">
-                    Positive Factors
-                  </span>
-                  <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full">
-                    {assessment.positive_factors.length}
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <ul className="space-y-2">
-                  {assessment.positive_factors.map((factor, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <TrendingUp className="h-4 w-4 text-success mt-0.5 shrink-0" />
-                      <span className="text-sm text-foreground">
-                        {factor}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
-          )}
-        </Accordion>
+            {assessment.positive_factors?.length > 0 && (
+              <AccordionItem
+                value="positives"
+                className="border border-surface-border-1 rounded-xl px-5 bg-card shadow-[0_1px_4px_oklch(0_0_0/0.04)] hover:shadow-[0_2px_8px_oklch(0_0_0/0.06)] transition-shadow duration-200"
+              >
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="font-semibold text-foreground">
+                      Positive Factors
+                    </span>
+                    <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full">
+                      {assessment.positive_factors.length}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ul className="space-y-2">
+                    {assessment.positive_factors.map((factor, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <TrendingUp className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                        <span className="text-sm text-foreground">{factor}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+          </Accordion>
+        </motion.div>
       )}
 
       {/* Historical Comparison */}
       {years.length > 1 && (
-        <div className="mt-6 pt-4 border-t border-border">
-          <h4 className="text-sm font-semibold text-foreground mb-3">
+        <motion.div
+          variants={itemVariants}
+          className="mt-6 pt-4 border-t border-surface-border-1"
+        >
+          <h4 className="text-sm font-semibold tracking-tight text-foreground mb-3">
             Historical Risk Score Comparison
           </h4>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 pr-4 text-foreground">Year</th>
-                  <th className="text-right py-2 px-2 text-foreground">FCCR Score</th>
-                  <th className="text-right py-2 px-2 text-foreground">
-                    Debt/EBITDA Score
-                  </th>
-                  <th className="text-right py-2 px-2 text-foreground">
-                    Debt/Cap Score
-                  </th>
-                  <th className="text-right py-2 px-2 text-foreground">
-                    Weighted Score
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {years.map((year) => {
-                  const ym = data.metrics_by_year[year];
-                  const yFccr = getFCCRRiskScore(ym.fccr);
-                  const yDebtEbitda = getDebtEBITDARiskScore(
-                    ym.senior_debt_to_ebitda,
-                  );
-                  const yDebtCap = getDebtCapitalRiskScore(
-                    ym.total_debt_to_capital,
-                  );
-                  const yWeighted =
-                    yFccr * 0.5 +
-                    yDebtEbitda * 0.35 +
-                    yDebtCap * 0.15;
-                  const yConfig = getRiskConfig(yWeighted);
 
-                  return (
-                    <tr key={year} className="border-b border-border">
-                      <td className="py-2 pr-4 font-medium text-foreground">
-                        {year}
-                      </td>
-                      <td className="text-right py-2 px-2 text-muted-foreground">
-                        {yFccr.toFixed(0)}
-                      </td>
-                      <td className="text-right py-2 px-2 text-muted-foreground">
-                        {yDebtEbitda.toFixed(0)}
-                      </td>
-                      <td className="text-right py-2 px-2 text-muted-foreground">
-                        {yDebtCap.toFixed(0)}
-                      </td>
-                      <td className="text-right py-2 px-2">
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs text-white font-medium ${yConfig.scoreBgClass}`}
-                        >
-                          {yWeighted.toFixed(1)}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Table className="table-financial">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  Year
+                </TableHead>
+                <TableHead className="text-right text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  FCCR Score
+                </TableHead>
+                <TableHead className="text-right text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  Debt/EBITDA Score
+                </TableHead>
+                <TableHead className="text-right text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  Debt/Cap Score
+                </TableHead>
+                <TableHead className="text-right text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  Weighted Score
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {years.map((year) => {
+                const ym = data.metrics_by_year[year];
+                const yFccr = getFCCRRiskScore(ym.fccr);
+                const yDebtEbitda = getDebtEBITDARiskScore(ym.senior_debt_to_ebitda);
+                const yDebtCap = getDebtCapitalRiskScore(ym.total_debt_to_capital);
+                const yWeighted = yFccr * 0.5 + yDebtEbitda * 0.35 + yDebtCap * 0.15;
+                const yConfig = getRiskConfig(yWeighted);
 
-          {/* Historical Chart Accordion */}
+                return (
+                  <TableRow key={year}>
+                    <TableCell className="font-medium text-foreground">
+                      {year}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {yFccr.toFixed(0)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {yDebtEbitda.toFixed(0)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {yDebtCap.toFixed(0)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs text-white font-medium tabular-nums ${yConfig.scoreBgClass}`}
+                        style={{ boxShadow: `0 0 0 1px ${yConfig.color}40` }}
+                      >
+                        {yWeighted.toFixed(1)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+
+          {/* Historical Metrics Chart */}
           <Accordion
             type="single"
             collapsible
@@ -785,12 +838,12 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           >
             <AccordionItem
               value="chart"
-              className="border border-border rounded-lg px-4"
+              className="border border-surface-border-1 rounded-xl px-5 bg-card shadow-[0_1px_4px_oklch(0_0_0/0.04)] hover:shadow-[0_2px_8px_oklch(0_0_0/0.06)] transition-shadow duration-200"
             >
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-primary" />
-                  <span className="font-semibold text-foreground">
+                  <span className="font-semibold tracking-tight text-foreground">
                     Historical Metrics Chart
                   </span>
                 </div>
@@ -800,67 +853,16 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-        </div>
+        </motion.div>
       )}
 
       {/* Credit Risk Pillar Observations - temporarily disabled */}
       {/* {riskData && riskData.pillars && Object.keys(riskData.pillars).length > 0 && (
         <div className="mt-6 pt-4 border-t">
-          <Accordion type="single" collapsible defaultValue="pillars" className="w-full">
-            <AccordionItem value="pillars" className="border rounded-lg px-4">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-purple-500" />
-                  <span className="font-semibold text-gray-800">
-                    Credit Risk Pillar Analysis
-                  </span>
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                    {PILLAR_KEYS.filter(k => riskData.pillars[k]).length} pillars
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3">
-                  {PILLAR_KEYS.map((key) => {
-                    const p = riskData.pillars[key] as PillarScore | undefined;
-                    if (!p) return null;
-
-                    return (
-                      <div key={key} className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-gray-800 text-sm">
-                            {PILLAR_LABELS[key] || key.replace(/_/g, ' ')}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {p.impact && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${getImpactStyle(p.impact)}`}>
-                                {p.impact}
-                              </span>
-                            )}
-                            {p.score != null && (
-                              <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
-                                {typeof p.score === 'number' && p.score > 10
-                                  ? (p.score / 10).toFixed(1)
-                                  : p.score.toFixed(1)}/10
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {p.observations && (
-                          <p className="text-xs text-gray-600">
-                            {typeof p.observations === 'string' ? p.observations : ''}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          ...
         </div>
       )} */}
-    </div>
+    </motion.div>
   );
 };
 

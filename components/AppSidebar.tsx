@@ -8,6 +8,7 @@ import {
   Upload,
   LogOut,
   Eye,
+  GitCompareArrows,
 } from 'lucide-react';
 
 import {
@@ -34,6 +35,11 @@ const navItems = [
     title: 'New Analysis',
     href: '/dashboard/new',
     icon: Upload,
+  },
+  {
+    title: 'Compare',
+    href: '/compare',
+    icon: GitCompareArrows,
   },
   {
     title: 'Vision',
