@@ -246,6 +246,7 @@ export const CURRENCY_METRICS = [
   'net_income',
   'expenses',
   'interest',
+  'interest_income',
   'taxes',
   'depreciation_amortization',
   'depreciation_equipment',
@@ -272,3 +273,75 @@ export const CURRENCY_METRICS = [
 ] as const;
 
 export type CurrencyMetric = (typeof CURRENCY_METRICS)[number];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Canonical Statement Map
+// Defines which financial statement is authoritative for each metric.
+// Used by the merger to prefer values from the canonical source during conflicts.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import type { SourceStatementType } from '@/types/extraction';
+
+export const CANONICAL_STATEMENT_MAP: Record<string, SourceStatementType> = {
+  // Income Statement metrics
+  revenue: 'income_statement',
+  net_income: 'income_statement',
+  expenses: 'income_statement',
+  profit_margins: 'income_statement',
+  interest: 'income_statement',
+  interest_income: 'income_statement',
+  taxes: 'income_statement',
+  depreciation_amortization: 'income_statement',
+  depreciation_equipment: 'income_statement',
+  depreciation_rou: 'income_statement',
+  depreciation_other: 'income_statement',
+  amortization_intangibles: 'income_statement',
+  ebitda: 'income_statement',
+
+  // Cash Flow Statement metrics
+  capital_expenditures: 'cash_flow_statement',
+  proceeds_from_long_term_debt: 'cash_flow_statement',
+  cash_taxes_paid: 'cash_flow_statement',
+  distributions_paid: 'cash_flow_statement',
+  repayment_of_debt: 'cash_flow_statement',
+  payment_of_lease_liability: 'cash_flow_statement',
+  cash_interest_paid: 'cash_flow_statement',
+  non_cash_interest_expense: 'cash_flow_statement',
+  ttm_principal_payments: 'cash_flow_statement',
+  ttm_interest_expense: 'cash_flow_statement',
+  reported_adjusted_ebitda: 'cash_flow_statement',
+
+  // Balance Sheet metrics
+  shareholders_equity: 'balance_sheet',
+  total_debt: 'balance_sheet',
+  senior_debt: 'balance_sheet',
+  current_assets: 'balance_sheet',
+  current_liabilities: 'balance_sheet',
+  // debt_components.* — handled by prefix match in merger
+  'debt_components.bank_debt_current': 'balance_sheet',
+  'debt_components.bank_debt_long_term': 'balance_sheet',
+  'debt_components.term_loans': 'balance_sheet',
+  'debt_components.revolving_credit_facilities': 'balance_sheet',
+  'debt_components.overdraft_facilities': 'balance_sheet',
+  'debt_components.lease_liabilities_current': 'balance_sheet',
+  'debt_components.lease_liabilities_long_term': 'balance_sheet',
+  'debt_components.finance_lease_liabilities': 'balance_sheet',
+  'debt_components.operating_lease_liabilities': 'balance_sheet',
+  'debt_components.notes_payable': 'balance_sheet',
+  'debt_components.subordinated_debt': 'balance_sheet',
+  'debt_components.convertible_debt': 'balance_sheet',
+  'debt_components.bonds_debentures': 'balance_sheet',
+  'debt_components.lines_of_credit': 'balance_sheet',
+  'debt_components.other_borrowings': 'balance_sheet',
+  // fixed_charges.* — interest from income statement, payments from cash flow
+  'fixed_charges.senior_debt_interest': 'income_statement',
+  'fixed_charges.subordinated_debt_interest': 'income_statement',
+  'fixed_charges.lease_interest': 'income_statement',
+  'fixed_charges.total_interest_expense': 'income_statement',
+  'fixed_charges.minimum_lease_payments': 'cash_flow_statement',
+  'fixed_charges.finance_lease_payments': 'cash_flow_statement',
+  'fixed_charges.operating_lease_payments': 'cash_flow_statement',
+  'fixed_charges.principal_payments': 'cash_flow_statement',
+  'fixed_charges.preferred_dividends': 'income_statement',
+  'fixed_charges.other_fixed_charges': 'income_statement',
+};

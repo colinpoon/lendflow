@@ -33,7 +33,7 @@ import {
   type MetricConflict,
   type ScaleNormalizationResult,
 } from '@/lib/extraction-merger';
-import { MERGE_CONFIG } from '@/lib/constants';
+import { MERGE_CONFIG, CANONICAL_STATEMENT_MAP } from '@/lib/constants';
 import { resolveHighVarianceConflicts } from '@/lib/extraction-reconciler';
 import {
   generateRiskAssessment,
@@ -251,6 +251,26 @@ export const extractFinancialData = async (
       extractionWarnings.push(
         `${mergeResult.conflictsDetected} metric conflicts detected and resolved (see merge_conflicts for details)`
       );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4 post-merge: Canonical Source Validation
+    // Check if resolved metrics came from their canonical statement.
+    // Non-canonical wins are informational warnings to track accuracy.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    for (const conflict of mergeResult.conflicts) {
+      if (conflict.resolution === 'canonical_statement') continue; // already canonical
+      const canonicalStatement = CANONICAL_STATEMENT_MAP[conflict.metric];
+      if (!canonicalStatement) continue;
+
+      // Check if the winning candidate came from a non-canonical source
+      const winner = conflict.candidates.find((c) => c.value === conflict.resolvedValue);
+      if (winner && winner.sourceStatement !== 'unknown' && winner.sourceStatement !== canonicalStatement) {
+        extractionWarnings.push(
+          `${conflict.year}/${conflict.metric}: resolved from ${winner.sourceStatement} (canonical: ${canonicalStatement})`
+        );
+      }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

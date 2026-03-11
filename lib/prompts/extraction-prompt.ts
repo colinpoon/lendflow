@@ -113,6 +113,9 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       },
       "_confidence": {
         "<metric_name>": "high"|"medium"|"low"
+      },
+      "_source_statements": {
+        "<metric_name>": "income_statement"|"cash_flow_statement"|"balance_sheet"|"notes"|"unknown"
       }
     }
   },
@@ -142,7 +145,7 @@ For each metric you extract, record in _sources the exact document section where
   - "medium": Inferred from context or requires interpretation (e.g., summing line items)
   - "low": Estimated or calculated from incomplete data
 
-Example _sources and _confidence:
+Example _sources, _confidence, and _source_statements:
 {
   "_sources": {
     "revenue": "Income Statement, line 1",
@@ -153,8 +156,26 @@ Example _sources and _confidence:
     "revenue": "high",
     "ebitda": "medium",
     "total_debt": "high"
+  },
+  "_source_statements": {
+    "revenue": "income_statement",
+    "ebitda": "cash_flow_statement",
+    "total_debt": "notes"
   }
 }
+
+SOURCE STATEMENT CLASSIFICATION (REQUIRED):
+For each metric you extract, tag which primary financial statement you found it in using _source_statements. This is critical for conflict resolution — the system uses this to prefer values from the authoritative (canonical) statement when multiple chunks disagree.
+
+Valid values: "income_statement", "cash_flow_statement", "balance_sheet", "notes", "unknown"
+
+Canonical statement guidance (where each metric is TYPICALLY most authoritative):
+• Income Statement: revenue, net_income, expenses, profit_margins, interest, interest_income, taxes, depreciation_amortization, depreciation_equipment, depreciation_rou, depreciation_other, amortization_intangibles, ebitda
+• Cash Flow Statement: capital_expenditures, proceeds_from_long_term_debt, cash_taxes_paid, distributions_paid, repayment_of_debt, payment_of_lease_liability, cash_interest_paid, non_cash_interest_expense, ttm_principal_payments, ttm_interest_expense, reported_adjusted_ebitda
+• Balance Sheet: shareholders_equity, total_debt, senior_debt, current_assets, current_liabilities, debt_components.*
+• Fixed Charges: fixed_charges interest fields (senior_debt_interest, subordinated_debt_interest, lease_interest, total_interest_expense) → income_statement; payment fields (minimum_lease_payments, finance_lease_payments, operating_lease_payments, principal_payments) → cash_flow_statement
+
+IMPORTANT: If you extract a value from a NON-canonical statement (e.g., interest from Cash Flow reconciliation instead of Income Statement), tag it honestly with the actual source. Do NOT lie about where you found it. The system uses honest tags to prefer canonical sources during conflict resolution — mislabeling defeats this mechanism.
 
 EXTRACTION METADATA (REQUIRED):
 You MUST populate the extraction_metadata object with scale detection information:

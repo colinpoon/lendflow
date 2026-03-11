@@ -8,6 +8,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * The financial statement a metric was extracted from.
+ * Used for canonical source preference during conflict resolution.
+ */
+export type SourceStatementType =
+  | 'income_statement'
+  | 'cash_flow_statement'
+  | 'balance_sheet'
+  | 'notes'
+  | 'unknown';
+
+/**
  * Confidence levels for extracted values
  * - high: Value found in primary financial statement (Income Statement, Balance Sheet, Cash Flow)
  * - medium: Value found in notes or supporting schedules
@@ -29,6 +40,8 @@ export interface ChainOfThoughtValue {
   reasoning: string;
   /** The chunk index this value came from */
   chunk_index: number;
+  /** Which financial statement this value was extracted from */
+  source_statement?: SourceStatementType;
 }
 
 /**
@@ -58,6 +71,8 @@ export interface MetricWithConfidence {
   confidence: ConfidenceLevel;
   source_description: string;
   reasoning: string;
+  /** Which financial statement this value was extracted from */
+  source_statement?: SourceStatementType;
 }
 
 /**

@@ -16,6 +16,7 @@ import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import RiskAssessment, {
   RiskData,
 } from '@/components/RiskAssessment';
+import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import FCCRBreakdown from '@/components/FCCRBreakdown';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
@@ -220,16 +221,29 @@ const Home = () => {
 
         <TabsContent value="analysis" key="analysis">
           {financialData && (
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Financial Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ErrorBoundary errorTitle="Error displaying financial data">
-                  <FinancialTable data={financialData} />
-                </ErrorBoundary>
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle>Adjusted EBITDA</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ErrorBoundary errorTitle="Error displaying EBITDA data">
+                    <AdjustedEBITDA data={financialData} />
+                  </ErrorBoundary>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle>Financial Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ErrorBoundary errorTitle="Error displaying financial data">
+                    <FinancialTable data={financialData} />
+                  </ErrorBoundary>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </TabsContent>
 
