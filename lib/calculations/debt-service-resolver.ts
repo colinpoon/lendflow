@@ -148,21 +148,7 @@ export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtServi
     leases = dc.lease_liabilities_current;
     leaseSource = 'lease_liabilities_current';
   } else if (metrics.payment_of_lease_liability != null && metrics.payment_of_lease_liability > 0) {
-    // Under IFRS 16, the cash flow statement presents lease payments as a single
-    // line that combines both principal repayment and interest paid on the lease
-    // liability (e.g., PetValu: $64,898 principal + $23,409 interest = $88,307 total).
-    //
-    // The `interest` variable already captures lease interest as part of
-    // `total_interest_expense` (or whichever interest source won above). Adding the
-    // gross payment_of_lease_liability would therefore count lease interest twice —
-    // once in `interest` and again here in `leases`.
-    //
-    // Fix: subtract fc.lease_interest to isolate the principal-only portion before
-    // adding it to the denominator. This ensures each charge is counted exactly once:
-    //   Denominator = bank_principal + bank/lease_interest (via interest resolver)
-    //               + lease_principal (this value, after stripping interest)
-    const leaseInterest = fc.lease_interest ?? 0;
-    leases = Math.max(0, metrics.payment_of_lease_liability - leaseInterest);
+    leases = metrics.payment_of_lease_liability;
     leaseSource = 'payment_of_lease_liability';
   }
 
