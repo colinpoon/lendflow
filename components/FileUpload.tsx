@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, CloudUpload, Loader2, FileText, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import { PDFDocument } from 'pdf-lib';
 import { YearConflictDialog } from '@/components/YearConflictDialog';
 import type { YearConflict, ConflictResolution } from '@/lib/extraction-utils';
@@ -41,44 +43,46 @@ const STAGE_LABELS: Record<string, string> = {
   error: 'Error',
 };
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
+
+const ACCEPTED_FORMATS = [
+  { ext: 'PDF', mime: 'application/pdf' },
+  { ext: 'Excel', mime: '.xls / .xlsx' },
+  { ext: 'Word', mime: '.doc / .docx' },
+];
 
 /**
- * Compress a PDF file by re-saving it with pdf-lib
- * This removes unused objects, optimizes structure, and can reduce file size
+ * Compress a PDF file by re-saving it with pdf-lib.
+ * Removes unused objects, optimizes structure, and can reduce file size.
  */
 async function compressPDF(file: File): Promise<File> {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer, {
       ignoreEncryption: true,
-      updateMetadata: false
+      updateMetadata: false,
     });
 
-    // Save with optimization - this removes unused objects
     const compressedBytes = await pdfDoc.save({
       useObjectStreams: true,
       addDefaultPage: false,
     });
 
-    // Convert Uint8Array to ArrayBuffer for Blob compatibility
     const compressedBlob = new Blob([new Uint8Array(compressedBytes)], { type: 'application/pdf' });
     const compressedFile = new File([compressedBlob], file.name, { type: 'application/pdf' });
 
-    console.log(`📄 PDF compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
-
     return compressedFile;
   } catch (error) {
-    console.warn('⚠️ PDF compression failed, using original file:', error);
+    console.warn('PDF compression failed, using original file:', error);
     return file;
   }
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({
-  onDataExtracted,
-  onUploadStart,
-  projectId,
-}) => {
+// ─────────────────────────────────────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────────────────────────────────────
+
+const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart, projectId }) => {
   const [file, setFile] = useState<File | null>(null);
   const [stage, setStage] = useState<ProcessingStage>('idle');
   const [progress, setProgress] = useState<number>(0);
@@ -86,6 +90,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const [stageMessage, setStageMessage] = useState<string>('');
   const [extractedFileName, setExtractedFileName] = useState<string | null>(null);
   const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Conflict handling state
@@ -99,63 +104,93 @@ const FileUpload: React.FC<FileUploadProps> = ({
     };
   }, []);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files?.[0]) {
-      const selectedFile = event.target.files[0];
-      const originalSize = selectedFile.size;
+  // ─────────────────────────────────────────────────────────────────────────
+  // File selection & compression
+  // ─────────────────────────────────────────────────────────────────────────
 
-      if (originalSize > MAX_FILE_SIZE * 3) {
-        // Reject files over 30MB even before compression
-        alert('File size exceeds 30MB. Please use a smaller file.');
+  const processFile = async (selectedFile: File) => {
+    const originalSize = selectedFile.size;
+
+    if (originalSize > MAX_FILE_SIZE * 3) {
+      toast.error('File size exceeds 30MB. Please use a smaller file.');
+      return;
+    }
+
+    if (stage === 'complete' || stage === 'error') {
+      setStage('idle');
+      setProgress(0);
+      setExtractedFileName(null);
+      setCompressionInfo(null);
+    }
+
+    if (
+      selectedFile.type === 'application/pdf' ||
+      selectedFile.name.toLowerCase().endsWith('.pdf')
+    ) {
+      setStage('compressing');
+      setCompressionInfo('Optimizing PDF...');
+
+      const compressedFile = await compressPDF(selectedFile);
+      const savedPercent = Math.round((1 - compressedFile.size / originalSize) * 100);
+
+      if (compressedFile.size > MAX_FILE_SIZE) {
+        toast.error(
+          `File is still ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB after compression. Maximum is 10MB.`
+        );
+        setStage('idle');
+        setCompressionInfo(null);
         return;
       }
 
-      // Reset state
-      if (stage === 'complete' || stage === 'error') {
-        setStage('idle');
-        setProgress(0);
-        setExtractedFileName(null);
-        setCompressionInfo(null);
+      setCompressionInfo(savedPercent > 0 ? `Optimized — saved ${savedPercent}%` : 'Already optimized');
+      setFile(compressedFile);
+      setStage('idle');
+    } else {
+      if (originalSize > MAX_FILE_SIZE) {
+        toast.error('File size exceeds 10MB limit.');
+        return;
       }
-
-      // Compress PDF files
-      if (selectedFile.type === 'application/pdf' || selectedFile.name.toLowerCase().endsWith('.pdf')) {
-        setStage('compressing');
-        setCompressionInfo('Optimizing PDF...');
-
-        const compressedFile = await compressPDF(selectedFile);
-        const savedPercent = Math.round((1 - compressedFile.size / originalSize) * 100);
-
-        if (compressedFile.size > MAX_FILE_SIZE) {
-          alert(`File is still ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB after compression. Maximum is 10MB.`);
-          setStage('idle');
-          setCompressionInfo(null);
-          return;
-        }
-
-        if (savedPercent > 0) {
-          setCompressionInfo(`Optimized: saved ${savedPercent}%`);
-        } else {
-          setCompressionInfo('Already optimized');
-        }
-
-        setFile(compressedFile);
-        setStage('idle');
-      } else {
-        // Non-PDF files
-        if (originalSize > MAX_FILE_SIZE) {
-          alert('File size exceeds 10MB limit.');
-          return;
-        }
-        setFile(selectedFile);
-      }
+      setFile(selectedFile);
     }
   };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files?.[0]) {
+      await processFile(event.target.files[0]);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Drag & drop handlers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      await processFile(droppedFile);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Upload & SSE stream
+  // ─────────────────────────────────────────────────────────────────────────
 
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!file) {
-      alert('Please select a file.');
+      toast.warning('Please select a file.');
       return;
     }
 
@@ -166,7 +201,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
     setExtractedFileName(file.name);
     onUploadStart?.();
 
-    // Create abort controller for cleanup
     abortControllerRef.current = new AbortController();
 
     const formData = new FormData();
@@ -185,7 +219,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
       if (response.status === 413) throw new Error('File too large.');
       if (!response.ok) throw new Error('Upload failed');
 
-      // Read SSE stream
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No response stream');
 
@@ -198,43 +231,37 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
         buffer += decoder.decode(value, { stream: true });
 
-        // Parse SSE messages (format: "data: {...}\n\n")
         const lines = buffer.split('\n\n');
-        buffer = lines.pop() || ''; // Keep incomplete message in buffer
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
               const data: SSEProgress = JSON.parse(line.slice(6));
 
-              // Update UI with progress
               setProgress(data.progress);
               setCurrentStage(data.stage);
               setStageMessage(data.message);
 
-              // Handle conflict detection
               if (data.stage === 'conflict_detected' && data.conflicts) {
                 setStage('conflict');
                 setYearConflicts(data.conflicts);
                 setPendingExtractionId(data.extractionId || null);
                 setPendingDocumentId(data.pendingDocumentId || null);
-                // Don't proceed - wait for user resolution
                 return;
               }
 
-              // Handle completion
               if (data.stage === 'complete' && data.data) {
                 setStage('complete');
                 onDataExtracted(data.data);
               }
 
-              // Handle error
               if (data.stage === 'error') {
                 setStage('error');
-                alert(data.message || 'Processing failed');
+                toast.error(data.message || 'Processing failed');
               }
             } catch {
-              // Ignore parse errors
+              // Ignore parse errors on SSE messages
             }
           }
         }
@@ -242,15 +269,15 @@ const FileUpload: React.FC<FileUploadProps> = ({
     } catch (error: unknown) {
       if (error instanceof Error && error.name !== 'AbortError') {
         setStage('error');
-        alert(error.message);
+        toast.error(error.message);
       }
     }
   };
 
-  const isProcessing = stage === 'processing';
-  const isCompressing = stage === 'compressing';
+  // ─────────────────────────────────────────────────────────────────────────
+  // Conflict resolution
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Handle conflict resolution
   const handleConflictResolve = async (resolutions: ConflictResolution) => {
     if (!pendingExtractionId || !projectId) {
       console.error('Missing extraction ID or project ID for conflict resolution');
@@ -288,12 +315,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
       onDataExtracted(result.data);
     } catch (error: unknown) {
       setStage('error');
-      alert(error instanceof Error ? error.message : 'Failed to resolve conflicts');
+      toast.error(error instanceof Error ? error.message : 'Failed to resolve conflicts');
     }
   };
 
   const handleConflictCancel = async () => {
-    // User cancelled - optionally delete the pending extraction
     if (pendingExtractionId) {
       try {
         await fetch('/api/resolve-conflict', {
@@ -316,82 +342,189 @@ const FileUpload: React.FC<FileUploadProps> = ({
     setProgress(0);
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Derived state
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const isProcessing = stage === 'processing';
+  const isCompressing = stage === 'compressing';
+  const isDisabled = isProcessing || isCompressing;
+
+  const buttonLabel = isCompressing
+    ? 'Optimizing...'
+    : isProcessing
+    ? 'Processing...'
+    : stage === 'complete'
+    ? 'Process Another'
+    : 'Analyze Document';
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <>
-    {/* Year Conflict Dialog */}
-    {yearConflicts && yearConflicts.length > 0 && (
-      <YearConflictDialog
-        open={stage === 'conflict'}
-        conflicts={yearConflicts}
-        onResolve={handleConflictResolve}
-        onCancel={handleConflictCancel}
-      />
-    )}
-
-    <div className="p-6 border border-border rounded-lg shadow-sm w-full max-w-md mx-auto space-y-4">
-      {/* Success State */}
-      {stage === 'complete' && (
-        <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/25 rounded-md">
-          <CheckCircle className="h-5 w-5 text-success" />
-          <div className="text-sm">
-            <span className="font-medium text-foreground">Extraction Complete</span>
-            <span className="text-muted-foreground ml-1">— {extractedFileName}</span>
-          </div>
-        </div>
+      {/* Year Conflict Dialog */}
+      {yearConflicts && yearConflicts.length > 0 && (
+        <YearConflictDialog
+          open={stage === 'conflict'}
+          conflicts={yearConflicts}
+          onResolve={handleConflictResolve}
+          onCancel={handleConflictCancel}
+        />
       )}
 
-      {/* Upload Form */}
-      <form onSubmit={handleUpload} className="flex flex-col items-center gap-3">
+      <form onSubmit={handleUpload} className="w-full space-y-4">
+
+        {/* ── Success banner ──────────────────────────────────────────────── */}
+        {stage === 'complete' && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-success/10 border border-success/25">
+            <CheckCircle className="h-4 w-4 text-success shrink-0" />
+            <div className="text-sm min-w-0">
+              <span className="font-medium text-foreground">Extraction complete</span>
+              {extractedFileName && (
+                <span className="text-muted-foreground ml-1 truncate"> — {extractedFileName}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Drop zone ───────────────────────────────────────────────────── */}
         <input
           type="file"
           accept=".pdf,.xls,.xlsx,.doc,.docx"
           onChange={handleFileChange}
           className="hidden"
           id="file-input"
-          disabled={isProcessing || isCompressing}
+          disabled={isDisabled}
         />
         <label
           htmlFor="file-input"
-          className={`w-full text-center py-3 px-4 border-2 border-dashed rounded-md cursor-pointer transition-colors
-            ${isProcessing || isCompressing
-              ? 'opacity-50 cursor-not-allowed border-border'
-              : 'border-border hover:border-primary/30 hover:bg-primary/5'}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={[
+            'flex flex-col items-center justify-center gap-4',
+            'w-full min-h-[200px] rounded-xl border-2 border-dashed',
+            'cursor-pointer transition-all duration-200 px-6 py-8',
+            isDisabled
+              ? 'opacity-50 cursor-not-allowed border-border bg-muted/20'
+              : isDragging
+              ? 'drop-zone-active cursor-copy'
+              : file
+              ? 'border-success/40 bg-success/5 hover:border-success/60'
+              : 'border-border bg-card hover:border-primary/30 hover:bg-primary/[0.03]',
+          ].join(' ')}
         >
-          <span className="text-sm text-muted-foreground">
-            {isCompressing ? 'Optimizing PDF...' : file ? file.name : 'Click to select a file'}
-          </span>
-          {compressionInfo && !isCompressing && (
-            <span className="block text-xs text-success mt-1">{compressionInfo}</span>
+          {/* Icon */}
+          <div
+            className={[
+              'h-14 w-14 rounded-full flex items-center justify-center transition-colors',
+              isDragging
+                ? 'bg-[oklch(0.68_0.19_155/0.20)]'
+                : file
+                ? 'bg-success/10'
+                : 'bg-muted',
+            ].join(' ')}
+          >
+            {file ? (
+              <FileText
+                className="h-6 w-6 text-success"
+                strokeWidth={1.5}
+              />
+            ) : (
+              <CloudUpload
+                className={[
+                  'h-6 w-6 transition-colors',
+                  isDragging ? 'text-[oklch(0.68_0.19_155)]' : 'text-muted-foreground',
+                ].join(' ')}
+                strokeWidth={1.5}
+              />
+            )}
+          </div>
+
+          {/* Text */}
+          <div className="text-center space-y-1">
+            {isCompressing ? (
+              <>
+                <p className="text-sm font-medium text-foreground">Optimizing PDF...</p>
+                <p className="text-xs text-muted-foreground">Please wait</p>
+              </>
+            ) : file ? (
+              <>
+                <p className="text-sm font-medium text-foreground truncate max-w-xs">
+                  {file.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                  {compressionInfo && (
+                    <span className="text-success ml-1.5">&middot; {compressionInfo}</span>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Click or drag to replace
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-foreground">
+                  {isDragging ? 'Drop to upload' : 'Drop your file here'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  or <span className="text-primary underline underline-offset-2">browse files</span>
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Supported formats */}
+          {!file && !isCompressing && (
+            <div className="flex items-center gap-2 mt-1">
+              {ACCEPTED_FORMATS.map((fmt) => (
+                <span
+                  key={fmt.ext}
+                  className="px-2 py-0.5 rounded text-[10px] uppercase tracking-[0.08em] font-medium border border-border text-muted-foreground bg-muted/50"
+                >
+                  {fmt.ext}
+                </span>
+              ))}
+              <span className="text-[10px] text-muted-foreground/60">· Max 10 MB</span>
+            </div>
           )}
         </label>
 
-        <button
+        {/* ── Submit button ───────────────────────────────────────────────── */}
+        <Button
           type="submit"
-          disabled={isProcessing || isCompressing || !file}
-          className={`w-full py-2 rounded-md font-medium text-sm transition-colors
-            ${isProcessing || isCompressing || !file
-              ? 'bg-muted text-muted-foreground cursor-not-allowed'
-              : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
+          disabled={isDisabled || !file}
+          className="w-full gap-2"
+          size="lg"
         >
-          {isCompressing ? 'Optimizing...' : isProcessing ? 'Processing...' : stage === 'complete' ? 'Process Another' : 'Process File'}
-        </button>
-      </form>
+          {isProcessing || isCompressing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          {buttonLabel}
+        </Button>
 
-      {/* Progress */}
-      {isProcessing && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>{STAGE_LABELS[currentStage] || currentStage}</span>
+        {/* ── Processing progress ─────────────────────────────────────────── */}
+        {isProcessing && (
+          <div className="space-y-2.5 pt-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="font-medium">{STAGE_LABELS[currentStage] || currentStage}</span>
+              </div>
+              <span className="tabular-nums font-mono">{progress}%</span>
             </div>
-            <span>{progress}%</span>
+            <Progress value={progress} className="h-1" />
+            {stageMessage && (
+              <p className="text-[11px] text-muted-foreground/70 text-center">{stageMessage}</p>
+            )}
           </div>
-          <Progress value={progress} className="h-1.5" />
-          <p className="text-xs text-muted-foreground/70 text-center">{stageMessage}</p>
-        </div>
-      )}
-    </div>
+        )}
+      </form>
     </>
   );
 };

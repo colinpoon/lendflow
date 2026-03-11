@@ -13,6 +13,7 @@ import {
   X,
   MoreHorizontal,
   ArrowUpDown,
+  TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Project } from '@/lib/supabase/types';
+import { toast } from 'sonner';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types & Helpers
@@ -55,14 +57,28 @@ const getStatusVariant = (status: string): 'default' | 'secondary' | 'outline' =
   }
 };
 
-const getRiskBadgeClasses = (score: number | null) => {
-  if (score === null) return 'bg-muted text-muted-foreground';
+/**
+ * Returns Tailwind class strings for the risk score badge background,
+ * text, and border based on the numeric score (1–10 scale).
+ */
+const getRiskBadgeClasses = (score: number | null): string => {
+  if (score === null) return 'bg-muted text-muted-foreground border-transparent';
   if (score <= 4) return 'bg-success/15 text-success border-success/25';
   if (score <= 6) return 'bg-warning/15 text-warning border-warning/25';
   return 'bg-error/15 text-error border-error/25';
 };
 
-const formatStatus = (status: string) => {
+/**
+ * Returns a semantic label and dot color for the risk score range.
+ */
+const getRiskMeta = (score: number | null): { label: string; dotClass: string } => {
+  if (score === null) return { label: 'No score', dotClass: 'bg-muted-foreground' };
+  if (score <= 4) return { label: 'Low', dotClass: 'bg-success' };
+  if (score <= 6) return { label: 'Moderate', dotClass: 'bg-warning' };
+  return { label: 'High', dotClass: 'bg-error' };
+};
+
+const formatStatus = (status: string): string => {
   switch (status) {
     case 'in_progress':
       return 'In Progress';
@@ -75,12 +91,11 @@ const formatStatus = (status: string) => {
   }
 };
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
+const formatDate = (dateString: string): string =>
+  new Date(dateString).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
   });
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
@@ -133,7 +148,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
   };
 
   // ─────────────────────────────────────────────────────────────────────────
-  // CRUD handlers
+  // CRUD Handlers
   // ─────────────────────────────────────────────────────────────────────────
 
   const handleStartEdit = (e: React.MouseEvent, project: Project) => {
@@ -165,11 +180,11 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
         setEditingId(null);
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to update project name');
+        toast.error(data.error || 'Failed to update project name');
       }
     } catch (error) {
       console.error('Error updating project:', error);
-      alert('Failed to update project name');
+      toast.error('Failed to update project name');
     } finally {
       setIsSaving(false);
     }
@@ -187,7 +202,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
 
   const handleDeleteProject = async (e: React.MouseEvent, projectId: string) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this project?')) return;
+    if (!window.confirm('Are you sure you want to delete this project?')) return;
 
     try {
       const response = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
@@ -195,26 +210,38 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
         setProjects(projects.filter((p) => p.id !== projectId));
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to delete project');
+        toast.error(data.error || 'Failed to delete project');
       }
     } catch (error) {
       console.error('Error deleting project:', error);
-      alert('Failed to delete project');
+      toast.error('Failed to delete project');
     }
   };
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Sortable column header
+  // Sortable column header sub-component
   // ─────────────────────────────────────────────────────────────────────────
 
-  const SortableHead = ({ label, sortKeyName, className = '' }: { label: string; sortKeyName: SortKey; className?: string }) => (
+  const SortableHead = ({
+    label,
+    sortKeyName,
+    className = '',
+  }: {
+    label: string;
+    sortKeyName: SortKey;
+    className?: string;
+  }) => (
     <TableHead className={className}>
       <button
         onClick={() => toggleSort(sortKeyName)}
-        className="flex items-center gap-1 hover:text-foreground transition-colors text-xs uppercase tracking-widest font-medium"
+        className="flex items-center gap-1 hover:text-foreground transition-colors text-[11px] uppercase tracking-[0.10em] font-medium"
       >
         {label}
-        <ArrowUpDown className={`h-3 w-3 ${sortKey === sortKeyName ? 'text-foreground' : 'text-muted-foreground/50'}`} />
+        <ArrowUpDown
+          className={`h-3 w-3 transition-colors ${
+            sortKey === sortKeyName ? 'text-foreground' : 'text-muted-foreground/40'
+          }`}
+        />
       </button>
     </TableHead>
   );
@@ -225,15 +252,16 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8">
-      {/* Header */}
+
+      {/* ── Page Header ────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Projects</h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Projects</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
             Manage your financial analysis projects
           </p>
         </div>
-        <Button asChild className="gap-2">
+        <Button asChild className="gap-2 shrink-0">
           <Link href="/dashboard/new">
             <Plus className="h-4 w-4" />
             New Analysis
@@ -241,10 +269,10 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
         </Button>
       </div>
 
-      {/* Search */}
+      {/* ── Search ─────────────────────────────────────────────────────────── */}
       <div className="mb-6">
         <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search projects..."
             className="pl-10"
@@ -254,147 +282,194 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
         </div>
       </div>
 
-      {/* Data Table */}
+      {/* ── Data Table ─────────────────────────────────────────────────────── */}
       {filteredProjects.length > 0 ? (
-        <div className="border border-border rounded-lg">
+        <div className="rounded-lg border border-border overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <SortableHead label="Project" sortKeyName="name" className="w-[40%]" />
+              <TableRow className="hover:bg-transparent bg-muted/40">
+                <SortableHead label="Project" sortKeyName="name" className="w-[42%] pl-4" />
                 <SortableHead label="Status" sortKeyName="status" />
-                <SortableHead label="Risk" sortKeyName="risk_score" className="text-right" />
+                <SortableHead label="Risk Score" sortKeyName="risk_score" className="text-right" />
                 <SortableHead label="Updated" sortKeyName="updated_at" className="text-right" />
                 <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProjects.map((project) => (
-                <TableRow
-                  key={project.id}
-                  className="cursor-pointer"
-                  onClick={() => {
-                    if (editingId !== project.id) router.push(`/dashboard/${project.id}`);
-                  }}
-                >
-                  <TableCell>
-                    {editingId === project.id ? (
-                      <div
-                        className="flex items-center gap-1.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Input
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          onKeyDown={(e) => handleEditKeyDown(e, project.id)}
-                          className="h-7 text-sm max-w-xs"
-                          disabled={isSaving}
-                          autoFocus
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-success hover:text-success hover:bg-success/10 shrink-0"
-                          onClick={(e) => { e.stopPropagation(); persistEdit(project.id); }}
-                          disabled={isSaving}
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
-                          onClick={(e) => { e.stopPropagation(); setEditingId(null); setEditingName(''); }}
-                          disabled={isSaving}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="min-w-0">
-                        <p className="font-medium tracking-tight truncate">
-                          {project.name}
-                        </p>
-                        {(project.company_name || project.description) && (
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {project.company_name || project.description}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(project.status)}>
-                      {formatStatus(project.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {project.risk_score !== null ? (
-                      <Badge
-                        variant="outline"
-                        className={getRiskBadgeClasses(project.risk_score)}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
-                        <span className="tabular-nums">{project.risk_score.toFixed(1)}</span>
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">--</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {formatDate(project.updated_at)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              {filteredProjects.map((project) => {
+                const riskMeta = getRiskMeta(project.risk_score);
+                return (
+                  <TableRow
+                    key={project.id}
+                    className="cursor-pointer group transition-colors"
+                    onClick={() => {
+                      if (editingId !== project.id) router.push(`/dashboard/${project.id}`);
+                    }}
+                  >
+                    {/* Project name / company */}
+                    <TableCell className="pl-4 py-3.5">
+                      {editingId === project.id ? (
+                        <div
+                          className="flex items-center gap-1.5"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem onClick={(e) => handleStartEdit(e, project)}>
-                          <Pencil className="h-4 w-4" />
-                          Rename
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={(e) => handleDeleteProject(e, project.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                          <Input
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => handleEditKeyDown(e, project.id)}
+                            className="h-7 text-sm max-w-xs"
+                            disabled={isSaving}
+                            autoFocus
+                          />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-success hover:text-success hover:bg-success/10 shrink-0"
+                            onClick={(e) => { e.stopPropagation(); persistEdit(project.id); }}
+                            disabled={isSaving}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingId(null);
+                              setEditingName('');
+                            }}
+                            disabled={isSaving}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="min-w-0 flex items-center gap-3">
+                          {/* Color-coded left accent */}
+                          <div
+                            className={[
+                              'h-8 w-0.5 rounded-full shrink-0 transition-opacity',
+                              project.risk_score === null
+                                ? 'bg-border opacity-0 group-hover:opacity-100'
+                                : project.risk_score <= 4
+                                ? 'bg-success opacity-60 group-hover:opacity-100'
+                                : project.risk_score <= 6
+                                ? 'bg-warning opacity-60 group-hover:opacity-100'
+                                : 'bg-error opacity-60 group-hover:opacity-100',
+                            ].join(' ')}
+                          />
+                          <div className="min-w-0">
+                            <p className="font-medium tracking-tight truncate text-sm">
+                              {project.name}
+                            </p>
+                            {(project.company_name || project.description) && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                {project.company_name || project.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </TableCell>
+
+                    {/* Status */}
+                    <TableCell className="py-3.5">
+                      <Badge variant={getStatusVariant(project.status)} className="text-[11px]">
+                        {formatStatus(project.status)}
+                      </Badge>
+                    </TableCell>
+
+                    {/* Risk score — enhanced badge with label */}
+                    <TableCell className="text-right py-3.5">
+                      {project.risk_score !== null ? (
+                        <div className="inline-flex items-center justify-end gap-2">
+                          {/* Mini bar indicator */}
+                          <div className="hidden sm:flex flex-col gap-0.5 items-end">
+                            <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
+                              {riskMeta.label}
+                            </span>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`${getRiskBadgeClasses(project.risk_score)} gap-1.5 font-mono text-xs tabular-nums`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${riskMeta.dotClass} shrink-0`}
+                            />
+                            {project.risk_score.toFixed(1)}
+                          </Badge>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <TrendingUp className="h-3 w-3 text-muted-foreground/40" />
+                          <span className="text-xs text-muted-foreground/60">Pending</span>
+                        </div>
+                      )}
+                    </TableCell>
+
+                    {/* Updated date */}
+                    <TableCell className="text-right py-3.5">
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {formatDate(project.updated_at)}
+                      </span>
+                    </TableCell>
+
+                    {/* Row actions */}
+                    <TableCell className="py-3.5">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground/0 group-hover:text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onClick={(e) => handleStartEdit(e, project)}>
+                            <Pencil className="h-4 w-4" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => handleDeleteProject(e, project.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
       ) : (
-        <div className="border border-dashed border-border rounded-lg p-12 text-center">
+        // ── Empty state ─────────────────────────────────────────────────────
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 p-16 text-center">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-              <FolderOpen className="h-6 w-6 text-muted-foreground" />
+            <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
+              <FolderOpen className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
             </div>
-            <div>
-              <h3 className="font-semibold tracking-tight text-foreground">No projects found</h3>
-              <p className="text-sm text-muted-foreground mt-1">
+            <div className="space-y-1">
+              <h3 className="font-semibold tracking-tight text-foreground">
+                {searchQuery ? 'No results found' : 'No projects yet'}
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
                 {searchQuery
-                  ? 'Try adjusting your search'
-                  : 'Upload a financial document to get started'}
+                  ? `No projects matching "${searchQuery}". Try a different search term.`
+                  : 'Upload a financial document to create your first analysis.'}
               </p>
             </div>
             {!searchQuery && (
-              <Button asChild className="mt-2">
+              <Button asChild className="mt-2 gap-2">
                 <Link href="/dashboard/new">
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4" />
                   New Analysis
                 </Link>
               </Button>
@@ -403,9 +478,9 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
         </div>
       )}
 
-      {/* Count */}
+      {/* ── Row count ──────────────────────────────────────────────────────── */}
       {filteredProjects.length > 0 && (
-        <p className="text-[11px] text-muted-foreground mt-3 tabular-nums">
+        <p className="text-[11px] text-muted-foreground/60 mt-3 tabular-nums">
           {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''}
           {searchQuery && ` matching "${searchQuery}"`}
         </p>

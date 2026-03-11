@@ -32,41 +32,41 @@ function getRiskBandColors(band: string): {
 
   if (normalized.includes('low') && !normalized.includes('moderate')) {
     return {
-      container: 'bg-green-50 border-green-200',
-      badge: 'bg-green-100 text-green-800',
-      text: 'text-green-700',
+      container: 'bg-success/8 border-success/25',
+      badge: 'bg-success/15 text-success',
+      text: 'text-success',
     };
   }
 
   if (normalized === 'moderate-low' || normalized === 'moderate low') {
     return {
-      container: 'bg-lime-50 border-lime-200',
-      badge: 'bg-lime-100 text-lime-800',
-      text: 'text-lime-700',
+      container: 'bg-success/5 border-success/20',
+      badge: 'bg-success/10 text-success',
+      text: 'text-success',
     };
   }
 
   if (normalized === 'moderate') {
     return {
-      container: 'bg-yellow-50 border-yellow-200',
-      badge: 'bg-yellow-100 text-yellow-800',
-      text: 'text-yellow-700',
+      container: 'bg-warning/8 border-warning/25',
+      badge: 'bg-warning/15 text-warning',
+      text: 'text-warning',
     };
   }
 
   if (normalized === 'moderate-high' || normalized === 'moderate high') {
     return {
-      container: 'bg-orange-50 border-orange-200',
-      badge: 'bg-orange-100 text-orange-800',
-      text: 'text-orange-700',
+      container: 'bg-error/6 border-error/20',
+      badge: 'bg-error/12 text-error',
+      text: 'text-error',
     };
   }
 
   // High risk — default for unrecognized bands as well (conservative)
   return {
-    container: 'bg-red-50 border-red-200',
-    badge: 'bg-red-100 text-red-800',
-    text: 'text-red-700',
+    container: 'bg-error/8 border-error/25',
+    badge: 'bg-error/15 text-error',
+    text: 'text-error',
   };
 }
 
@@ -111,11 +111,11 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
       {/* Pillar breakdown table */}
       <table className="w-full text-sm border-collapse">
         <thead>
-          <tr className="bg-gray-200">
-            <th className="border p-1 text-left">Pillar</th>
-            <th className="border p-1 text-left">Observations</th>
-            <th className="border p-1 text-center">Impact</th>
-            <th className="border p-1 text-center">Score (1–10)</th>
+          <tr className="bg-muted">
+            <th className="border border-border px-3 py-2 text-left text-foreground">Pillar</th>
+            <th className="border border-border px-3 py-2 text-left text-foreground">Observations</th>
+            <th className="border border-border px-3 py-2 text-center text-foreground">Impact</th>
+            <th className="border border-border px-3 py-2 text-center text-foreground">Score (1–10)</th>
           </tr>
         </thead>
         <tbody>
@@ -138,11 +138,11 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
                 : '—';
             const label = LABEL_MAP[key] ?? key.replace(/_/g, ' ');
             return (
-              <tr key={key}>
-                <td className="border p-1 capitalize">{label}</td>
-                <td className="border p-1">{obs}</td>
-                <td className="border p-1 text-center">{impact}</td>
-                <td className="border p-1 text-center">{score}</td>
+              <tr key={key} className="even:bg-muted/40 hover:bg-muted/60 transition-colors duration-150">
+                <td className="border border-border px-3 py-2 capitalize text-foreground">{label}</td>
+                <td className="border border-border px-3 py-2 text-muted-foreground">{obs}</td>
+                <td className="border border-border px-3 py-2 text-center text-muted-foreground">{impact}</td>
+                <td className="border border-border px-3 py-2 text-center text-foreground">{score}</td>
               </tr>
             );
           })}
@@ -154,7 +154,7 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
         {/* Score and band row */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
               Overall Risk Band
             </p>
             <span className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${bandColors.badge}`}>
@@ -162,7 +162,7 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
             </span>
           </div>
           <div className="flex-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
               Weighted Score
             </p>
             <p className={`text-2xl font-bold ${bandColors.text}`}>
@@ -176,10 +176,10 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
         {/* Lending recommendation */}
         {data.lending_recommendation && (
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
               Lending Recommendation
             </p>
-            <p className="text-sm leading-relaxed text-gray-800">
+            <p className="text-sm leading-relaxed text-foreground">
               {data.lending_recommendation}
             </p>
           </div>

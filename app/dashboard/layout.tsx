@@ -17,13 +17,13 @@ export default function DashboardLayout({
       <CommandPalette />
       <AppSidebar />
       <SidebarInset>
-        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/95 backdrop-blur-sm px-4">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/90 backdrop-blur-md px-4">
           <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1" />
+            <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground" />
           </div>
           <div className="flex items-center gap-3">
             {/* Keyboard hint — visible on md+ screens only */}
-            <kbd className="hidden md:inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground font-mono select-none">
+            <kbd className="hidden md:inline-flex items-center gap-1 rounded border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground font-mono select-none">
               <span>⌘</span>K
             </kbd>
             <UserButton afterSignOutUrl="/" />

@@ -156,12 +156,12 @@ const ComparePage = () => {
           {results && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
               {results.extracted && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="bg-info/10 text-info px-2 py-1 rounded">
                   Extracted: {Object.keys(results.extracted.metrics_by_year ?? {}).length} year(s)
                 </span>
               )}
               {results.extracted_error && (
-                <span className="bg-red-100 text-red-800 px-2 py-1 rounded dark:bg-red-900/30 dark:text-red-400">
+                <span className="bg-error/10 text-error px-2 py-1 rounded">
                   Error: {results.extracted_error}
                 </span>
               )}

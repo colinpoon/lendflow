@@ -52,8 +52,9 @@ function SidebarWordmark() {
   const { state } = useSidebar();
 
   return (
-    <Link href="/dashboard" className="flex items-center gap-2.5 px-1">
-      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold shrink-0">
+    <Link href="/dashboard" className="flex items-center gap-2.5 px-1 group">
+      {/* Emerald logomark */}
+      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-[11px] font-bold tracking-tight shrink-0 group-hover:opacity-90 transition-opacity">
         LF
       </div>
       {state === 'expanded' && (

@@ -14,6 +14,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import type { QuantitativeRiskAssessment, MetricScore } from '@/lib/quantitative-risk';
 
 interface QuantitativeRiskCardProps {
@@ -114,7 +120,7 @@ const ScoreGauge: React.FC<{ score: number; maxScore?: number }> = ({
           <path
             d="M 20 90 A 80 80 0 0 1 180 90"
             fill="none"
-            stroke="#e5e7eb"
+            stroke="var(--border)"
             strokeWidth="16"
             strokeLinecap="round"
           />
@@ -136,11 +142,11 @@ const ScoreGauge: React.FC<{ score: number; maxScore?: number }> = ({
               y1="90"
               x2="100"
               y2="30"
-              stroke="#374151"
+              stroke="var(--foreground)"
               strokeWidth="3"
               strokeLinecap="round"
             />
-            <circle cx="100" cy="90" r="6" fill="#374151" />
+            <circle cx="100" cy="90" r="6" fill="var(--foreground)" />
           </g>
         </svg>
       </div>
@@ -160,20 +166,15 @@ const ScoreGauge: React.FC<{ score: number; maxScore?: number }> = ({
 };
 
 const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => {
-  console.log('🎯 QuantitativeRiskCard received data:', data);
-
   if (!data) {
-    console.log('🎯 QuantitativeRiskCard: data is null/undefined, showing fallback');
     return (
       <div className="flex flex-col items-center gap-2 text-muted-foreground p-4 bg-muted rounded-lg border-2 border-dashed border-border">
         <AlertCircle className="h-5 w-5" />
         <span className="font-medium">Quantitative Risk Scorecard</span>
-        <span className="text-sm">Data not available - check browser console for debug logs</span>
+        <span className="text-sm">Data not available</span>
       </div>
     );
   }
-
-  console.log('🎯 QuantitativeRiskCard: rendering with score', data.normalized_score);
 
   return (
     <TooltipProvider>
@@ -325,11 +326,13 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
 
         {/* Year-over-Year Detail (expandable) */}
         {data.metrics.some(m => Object.keys(m.values_by_year).length > 1) && (
-          <details className="bg-muted rounded-lg p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-foreground hover:text-foreground/80">
-              View Year-over-Year Values
-            </summary>
-            <div className="mt-4 overflow-x-auto">
+          <Accordion type="single" collapsible className="bg-muted rounded-lg">
+            <AccordionItem value="yoy" className="border-0 px-4">
+              <AccordionTrigger className="text-sm font-semibold text-foreground hover:no-underline py-4">
+                View Year-over-Year Values
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="overflow-x-auto pb-2">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border">
@@ -369,8 +372,10 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
                   ))}
                 </tbody>
               </table>
-            </div>
-          </details>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         )}
       </div>
     </TooltipProvider>

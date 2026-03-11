@@ -126,7 +126,7 @@ const AdjustmentCategory: React.FC<AdjustmentCategoryProps> = ({
     <div className="mb-4">
       {/* Category header — ledger label + pill total */}
       <div className="flex justify-between items-center py-2 border-b border-border/60">
-        <h5 className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+        <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
           {title}
         </h5>
         <span
@@ -305,7 +305,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
         >
           <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
           <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-white/[0.07] blur-2xl" />
-          <p className="relative text-[10px] uppercase tracking-[0.15em] font-medium text-white/50">
+          <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-white/50">
             Reported EBITDA
           </p>
           <div className="relative mt-auto">
@@ -322,7 +322,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
         >
           <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
           <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-white/[0.07] blur-2xl" />
-          <p className="relative text-[10px] uppercase tracking-[0.15em] font-medium text-white/50">
+          <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-white/50">
             Adjusted EBITDA {usesReportedValue && '(Reported)'}
           </p>
           <div className="relative mt-auto">
@@ -360,14 +360,14 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
             return (
               <div
                 key={yr}
-                className="bg-gray-50 border border-gray-200 rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1"
+                className="bg-muted/50 border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1"
               >
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">
                   {yr}
                 </div>
                 <div>
-                  <span className="text-gray-500">Adj. EBITDA</span>
-                  <span className="text-gray-400"> = </span>
+                  <span className="text-muted-foreground">Adj. EBITDA</span>
+                  <span className="text-muted-foreground/70"> = </span>
                   <span>
                     {eqLine(ab.reported_ebitda, [
                       { v: ab.non_cash_adjustments, op: '+' },
@@ -379,8 +379,8 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                       { v: ab.pro_forma_adjustments, op: '+' },
                     ])}
                   </span>
-                  <span className="text-gray-400"> = </span>
-                  <span className="font-bold text-blue-700">
+                  <span className="text-muted-foreground/70"> = </span>
+                  <span className="font-bold text-success">
                     {fmtEq(
                       m.calculated_adjusted_ebitda ??
                         m.adjusted_ebitda ??
@@ -389,7 +389,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                   </span>
                 </div>
                 {ab.uses_reported_value && m.adjusted_ebitda != null && (
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-xs text-muted-foreground mt-1">
                     Using reported value: {fmtEq(m.adjusted_ebitda)}
                   </div>
                 )}
@@ -621,7 +621,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                 breakdown.interest_income_excluded > 0 && (
                   <div className="mb-4">
                     <div className="flex justify-between items-center py-2 border-b border-border/60">
-                      <h5 className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                      <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
                         Interest Income (Excluded)
                       </h5>
                       <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-error/8 text-error">
@@ -688,7 +688,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               {/* ── Final Total Row — statement-level result ── */}
               <div className="flex justify-between items-end mt-5 pt-4 border-t-2 border-foreground/10">
                 <div>
-                  <span className="text-[10px] uppercase tracking-[0.15em] font-semibold text-muted-foreground block mb-0.5">
+                  <span className="text-[11px] uppercase tracking-[0.15em] font-semibold text-muted-foreground block mb-0.5">
                     Result
                   </span>
                   <span className="font-bold text-foreground text-base tracking-tight">
