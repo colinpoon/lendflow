@@ -25,6 +25,14 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { RiskData } from '@/components/RiskAssessment';
+import type { RiskConfig } from '@/types';
+import {
+  getFCCRRiskScore,
+  getDebtEBITDARiskScore,
+  getDebtCapitalRiskScore,
+  calculateWeightedRiskScore,
+  getRiskConfig as getBaseRiskConfig,
+} from '@/lib/risk-scoring';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 import {
@@ -68,101 +76,42 @@ interface WeightedRiskGaugeProps {
   customFccrAdjustment?: number;
 }
 
+// ─── UI-only Risk Config Extension ────────────────────────────────────────────
+// The base RiskConfig from lib/risk-scoring covers level/label/color/bgColor/textColor.
+// UIRiskConfig adds scoreTextClass and scoreBgClass, which are Tailwind classes only
+// used inside this component for the gauge score display and the historical table badge.
+
 type RiskLevel = 'very-low' | 'low' | 'moderate' | 'elevated' | 'high';
 
-interface RiskConfig {
-  level: RiskLevel;
-  label: string;
-  color: string;
-  bgColor: string;
-  textColor: string;
+interface UIRiskConfig extends RiskConfig {
   scoreTextClass: string;
   scoreBgClass: string;
 }
 
-// ─── Business Logic — Risk Scoring ────────────────────────────────────────────
+/** Extend the base getRiskConfig with UI-only Tailwind classes for score display */
+const getRiskConfig = (score: number): UIRiskConfig => {
+  const base = getBaseRiskConfig(score);
 
-/** Convert FCCR to risk score (0–10, higher = worse) */
-const getFCCRRiskScore = (value: number | null): number => {
-  if (value == null) return 5;
-  if (value >= 2.0) return 1;
-  if (value >= 1.5) return 3;
-  if (value >= 1.2) return 5;
-  if (value >= 1.0) return 7;
-  if (value >= 0) return 9;
-  return 10;
-};
+  const uiFields: Record<RiskLevel, Pick<UIRiskConfig, 'scoreTextClass' | 'scoreBgClass'>> = {
+    'very-low': { scoreTextClass: 'text-success',  scoreBgClass: 'bg-success' },
+    'low':      { scoreTextClass: 'text-success',  scoreBgClass: 'bg-success/70' },
+    'moderate': { scoreTextClass: 'text-warning',  scoreBgClass: 'bg-warning' },
+    'elevated': { scoreTextClass: 'text-error',    scoreBgClass: 'bg-error/80' },
+    'high':     { scoreTextClass: 'text-error',    scoreBgClass: 'bg-error' },
+  };
 
-/** Convert Senior Debt/EBITDA to risk score (0–10, higher = worse) */
-const getDebtEBITDARiskScore = (value: number | null): number => {
-  if (value == null) return 5;
-  if (value <= 1.5) return 1;
-  if (value <= 2.5) return 3;
-  if (value <= 3.0) return 5;
-  if (value <= 4.0) return 7;
-  return 9;
-};
+  const semanticOverrides: Record<RiskLevel, Pick<UIRiskConfig, 'color' | 'bgColor' | 'textColor'>> = {
+    'very-low': { color: '#22c55e', bgColor: 'bg-success/10',  textColor: 'text-success' },
+    'low':      { color: '#84cc16', bgColor: 'bg-success/10',  textColor: 'text-success' },
+    'moderate': { color: '#eab308', bgColor: 'bg-warning/10',  textColor: 'text-warning' },
+    'elevated': { color: '#f97316', bgColor: 'bg-error/10',    textColor: 'text-error' },
+    'high':     { color: '#ef4444', bgColor: 'bg-error/15',    textColor: 'text-error' },
+  };
 
-/** Convert Total Debt/Capital to risk score (0–10, higher = worse) */
-const getDebtCapitalRiskScore = (value: number | null): number => {
-  if (value == null) return 5;
-  if (value < 0.3) return 1;
-  if (value <= 0.5) return 3;
-  if (value <= 0.6) return 5;
-  if (value <= 0.7) return 7;
-  return 9;
-};
-
-/** Map a weighted score to a full risk configuration using semantic token classes */
-const getRiskConfig = (score: number): RiskConfig => {
-  if (score <= 2)
-    return {
-      level: 'very-low',
-      label: 'Very Low Risk',
-      color: '#22c55e',
-      bgColor: 'bg-success/10',
-      textColor: 'text-success',
-      scoreTextClass: 'text-success',
-      scoreBgClass: 'bg-success',
-    };
-  if (score <= 4)
-    return {
-      level: 'low',
-      label: 'Low Risk',
-      color: '#84cc16',
-      bgColor: 'bg-success/10',
-      textColor: 'text-success',
-      scoreTextClass: 'text-success',
-      scoreBgClass: 'bg-success/70',
-    };
-  if (score <= 6)
-    return {
-      level: 'moderate',
-      label: 'Moderate Risk',
-      color: '#eab308',
-      bgColor: 'bg-warning/10',
-      textColor: 'text-warning',
-      scoreTextClass: 'text-warning',
-      scoreBgClass: 'bg-warning',
-    };
-  if (score <= 8)
-    return {
-      level: 'elevated',
-      label: 'Elevated Risk',
-      color: '#f97316',
-      bgColor: 'bg-error/10',
-      textColor: 'text-error',
-      scoreTextClass: 'text-error',
-      scoreBgClass: 'bg-error/80',
-    };
   return {
-    level: 'high',
-    label: 'High Risk',
-    color: '#ef4444',
-    bgColor: 'bg-error/15',
-    textColor: 'text-error',
-    scoreTextClass: 'text-error',
-    scoreBgClass: 'bg-error',
+    ...base,
+    ...semanticOverrides[base.level],
+    ...uiFields[base.level],
   };
 };
 
@@ -331,11 +280,11 @@ const MetricBadge: React.FC<MetricBadgeProps> = ({ label, value, score, format, 
       />
       <div className="pl-3">
         <div className="flex justify-between items-start mb-2">
-          <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground leading-tight">
+          <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground leading-tight">
             {label.replace(/\s*\(\d+%\)\s*\*?/, '')}
           </span>
           {weight != null && (
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+            <span className="text-[11px] text-muted-foreground/60 tabular-nums">
               {weight}%
             </span>
           )}
@@ -394,7 +343,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
       {/* FCCR */}
       <div>
         <h5 className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground mb-3">
-          FCCR (Target: &gt; 1.2x)
+          Covenant FCCR (Target: &gt; 1.2x)
         </h5>
         <ChartContainer config={historicalChartConfig} className="h-[120px] w-full">
           <BarChart
@@ -415,7 +364,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  formatter={(v) => [`${Number(v).toFixed(2)}x`, 'FCCR']}
+                  formatter={(v) => [`${Number(v).toFixed(2)}x`, 'Covenant FCCR']}
                 />
               }
             />
@@ -555,9 +504,8 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   const debtEbitdaScore = getDebtEBITDARiskScore(metrics.senior_debt_to_ebitda);
   const debtCapitalScore = getDebtCapitalRiskScore(metrics.total_debt_to_capital);
 
-  // Weighted composite score (weights: FCCR 50%, Debt/EBITDA 35%, Debt/Cap 15%)
-  const weightedScore =
-    fccrScore * 0.5 + debtEbitdaScore * 0.35 + debtCapitalScore * 0.15;
+  // Weighted composite score — delegates to lib so weights stay in sync with constants.ts
+  const weightedScore = calculateWeightedRiskScore(adjustedFccr, metrics.senior_debt_to_ebitda, metrics.total_debt_to_capital);
 
   const riskConfig = getRiskConfig(weightedScore);
 
@@ -611,7 +559,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             className={`w-full mt-4 rounded-xl border px-5 py-3.5 text-center ${decisionStyle.bg}`}
             style={{ borderColor: `color-mix(in oklch, currentColor, transparent 70%)` }}
           >
-            <p className="text-[10px] uppercase tracking-[0.15em] font-semibold text-muted-foreground mb-0.5">
+            <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-muted-foreground mb-0.5">
               Lending Decision
             </p>
             <p className={`text-lg font-bold tracking-tight ${decisionStyle.text}`}>
@@ -623,7 +571,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         {/* Component score badges */}
         <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
           <MetricBadge
-            label={customFccrAdjustment !== 0 ? 'FCCR (50%) *' : 'FCCR (50%)'}
+            label={customFccrAdjustment !== 0 ? 'Covenant FCCR (50%) *' : 'Covenant FCCR (50%)'}
             value={adjustedFccr}
             score={fccrScore}
             format={(v) => `${v.toFixed(2)}x`}
@@ -646,7 +594,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           {customFccrAdjustment !== 0 && (
             <div className="rounded-xl border border-surface-border-1 bg-surface-2 p-3 text-center">
               <span className="font-mono text-[11px] text-muted-foreground">
-                * FCCR includes custom adjustments ($
+                * Covenant FCCR includes custom adjustments ($
                 {customFccrAdjustment > 0 ? '+' : ''}
                 {customFccrAdjustment.toLocaleString()}K)
               </span>
@@ -681,7 +629,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
 
           {assessment.suggested_loan_structure && (
             <div className="px-5 py-3.5 border-t border-surface-border-1 bg-surface-3">
-              <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground mb-1">
+              <p className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground mb-1">
                 Suggested Structure
               </p>
               <p className="text-sm text-foreground">
@@ -775,19 +723,19 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
           <Table className="table-financial">
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                <TableHead className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
                   Year
                 </TableHead>
-                <TableHead className="text-right text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
-                  FCCR Score
+                <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  Covenant FCCR Score
                 </TableHead>
-                <TableHead className="text-right text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
                   Debt/EBITDA Score
                 </TableHead>
-                <TableHead className="text-right text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
                   Debt/Cap Score
                 </TableHead>
-                <TableHead className="text-right text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
                   Weighted Score
                 </TableHead>
               </TableRow>
@@ -798,7 +746,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
                 const yFccr = getFCCRRiskScore(ym.fccr);
                 const yDebtEbitda = getDebtEBITDARiskScore(ym.senior_debt_to_ebitda);
                 const yDebtCap = getDebtCapitalRiskScore(ym.total_debt_to_capital);
-                const yWeighted = yFccr * 0.5 + yDebtEbitda * 0.35 + yDebtCap * 0.15;
+                const yWeighted = calculateWeightedRiskScore(ym.fccr, ym.senior_debt_to_ebitda, ym.total_debt_to_capital);
                 const yConfig = getRiskConfig(yWeighted);
 
                 return (

@@ -202,6 +202,9 @@ export interface FCCRBreakdown {
     interest_value: number | null;
     lease_source: string;
     lease_value: number | null;
+    /** Lease interest stripped from the interest component to prevent double-counting.
+     *  Non-null only when a P&L-based interest source was used and leases > 0. */
+    lease_interest_deducted?: number | null;
   };
 }
 

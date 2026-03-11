@@ -5,6 +5,48 @@ import {
   SignInButton,
   UserButton,
 } from '@clerk/nextjs';
+import { ArrowRight, BarChart3, FileText, ShieldCheck, Zap } from 'lucide-react';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Static data
+// ─────────────────────────────────────────────────────────────────────────────
+
+const stats = [
+  { label: 'Accuracy Rate', value: '94%', sub: 'vs. manual review' },
+  { label: 'Time Saved', value: '10x', sub: 'per document cycle' },
+  { label: 'Metrics Tracked', value: '20+', sub: 'per fiscal year' },
+];
+
+const features = [
+  {
+    icon: FileText,
+    title: 'Document Intelligence',
+    description:
+      'Upload PDF, Excel, or Word financials. The AI extracts every relevant metric automatically — revenue, EBITDA, debt service, and more.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Real-Time Ratio Engine',
+    description:
+      'Computes DSCR, Senior Debt/EBITDA, Total Debt/Capital, and Covenant FCCR the moment extraction is complete — no spreadsheet formulas required.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Credit-Risk Snapshot',
+    description:
+      'Seven-pillar risk assessment modeled after institutional lending rubrics. Each pillar is scored and weighted into a composite risk score.',
+  },
+  {
+    icon: Zap,
+    title: 'Lending Recommendation',
+    description:
+      'Receive a structured approve/decline recommendation with supporting rationale, ready to share with your credit committee.',
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const videos = [
@@ -16,82 +58,191 @@ export default function HomePage() {
     '/backgrounds/STG_vSnap (2).mp4',
   ];
 
-  const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+  // Deterministic pick — avoids SSR/CSR mismatch without needing 'use client'
+  const randomVideo = videos[0];
 
   return (
-    <div className="min-h-screen bg-white flex flex-col relative">
-      {/* Video Background */}
+    <div className="min-h-screen bg-[oklch(0.08_0_0)] text-[oklch(0.97_0_0)] flex flex-col relative overflow-x-hidden">
+
+      {/* ── Video layer (darkened) ──────────────────────────────────────────── */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover z-0"
+        className="absolute inset-0 w-full h-full object-cover z-0 opacity-[0.07]"
       >
         <source src={randomVideo} type="video/mp4" />
       </video>
 
-      {/* Minimal nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-8 py-[2%] flex items-center justify-between bg-white">
+      {/* ── Emerald aurora glow overlay ────────────────────────────────────── */}
+      <div className="absolute inset-0 z-[1] aurora-glow pointer-events-none" />
+
+      {/* ── Navigation ─────────────────────────────────────────────────────── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 px-6 md:px-10 h-16 flex items-center justify-between border-b border-[oklch(0.97_0_0/0.06)] bg-[oklch(0.08_0_0/0.80)] backdrop-blur-md">
         <Link
           href="/"
-          className="text-sm font-medium text-neutral-900 hover:text-neutral-600 transition-colors"
+          className="flex items-center gap-2.5 group"
         >
-          Lendflow
+          <div className="h-7 w-7 rounded-md bg-[oklch(0.68_0.19_155)] flex items-center justify-center text-[oklch(0.08_0_0)] text-[11px] font-bold tracking-tight shrink-0">
+            LF
+          </div>
+          <span className="text-sm font-semibold tracking-tight text-[oklch(0.97_0_0)]">
+            Lendflow
+          </span>
         </Link>
-        <div className="flex items-center gap-4">
+
+        <div className="flex items-center gap-3">
           <SignedOut>
-            <Link
-              href="/sign-up"
-              className="px-4 py-2 bg-neutral-900 text-white text-sm font-medium rounded-full hover:bg-neutral-800 transition-colors"
-            >
-              Get Started
-            </Link>
             <SignInButton mode="modal" forceRedirectUrl="/dashboard">
-              <button className="text-sm font-medium text-neutral-900 hover:text-neutral-600 transition-colors">
+              <button className="text-sm font-medium text-[oklch(0.65_0_0)] hover:text-[oklch(0.97_0_0)] transition-colors">
                 Sign in
               </button>
             </SignInButton>
+            <Link
+              href="/sign-up"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[oklch(0.68_0.19_155)] text-[oklch(0.08_0_0)] text-sm font-semibold hover:bg-[oklch(0.72_0.19_155)] transition-colors"
+            >
+              Get Started
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </SignedOut>
           <SignedIn>
             <Link
               href="/dashboard"
-              className="px-4 py-2 bg-neutral-900 text-white text-sm font-medium rounded-full hover:bg-neutral-800 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[oklch(0.68_0.19_155)] text-[oklch(0.08_0_0)] text-sm font-semibold hover:bg-[oklch(0.72_0.19_155)] transition-colors"
             >
               Dashboard
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <UserButton
               afterSignOutUrl="/"
               appearance={{
-                elements: {
-                  avatarBox: 'w-8 h-8',
-                },
+                elements: { avatarBox: 'w-8 h-8' },
               }}
             />
           </SignedIn>
         </div>
       </nav>
 
-      {/* Hero - Swiss design with cropped typography */}
-      <main className="flex-1 flex items-center justify-center overflow-hidden relative z-10">
-        <div className="relative h-screen flex flex-col items-center justify-center">
-          {/* Oversized cropped text */}
-          {/* <h1 className="text-[20vw] md:text-[18vw] lg:text-[16vw] font-bold tracking-tighter text-neutral-900 select-none leading-[0.85] whitespace-nowrap">
-            Lendflow
-          </h1> */}
+      {/* ── Hero ───────────────────────────────────────────────────────────── */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-16 text-center">
 
-          {/* Tagline below, left aligned flush with L */}
-          {/* <div className="mt-6 md:mt-8 self-start">
-            <p className="text-sm md:text-base font-medium text-neutral-600 mb-1">
-              AI-Powered Risk Analysis
-            </p>
-            <p className="text-sm md:text-base text-neutral-400">
-              Transform financial documents into actionable lending
-              insights.
-            </p>
-          </div> */}
+        {/* Eyebrow pill */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[oklch(0.68_0.19_155/0.30)] bg-[oklch(0.68_0.19_155/0.08)] mb-8">
+          <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.68_0.19_155)]" />
+          <span className="text-[11px] uppercase tracking-[0.12em] font-medium text-[oklch(0.68_0.19_155)]">
+            AI-Powered Credit Analysis
+          </span>
+        </div>
+
+        {/* Headline */}
+        <h1 className="max-w-3xl text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] text-[oklch(0.97_0_0)]">
+          Lending Intelligence{' '}
+          <span className="text-[oklch(0.68_0.19_155)]">Accelerated</span>
+        </h1>
+
+        {/* Sub-headline */}
+        <p className="mt-6 max-w-xl text-base md:text-lg text-[oklch(0.60_0_0)] leading-relaxed">
+          Upload a financial document. Receive a complete risk analysis — EBITDA,
+          debt ratios, DSCR, and an institutional-grade lending recommendation —
+          in minutes, not days.
+        </p>
+
+        {/* CTAs */}
+        <div className="mt-10 flex flex-col sm:flex-row items-center gap-3">
+          <SignedOut>
+            <Link
+              href="/sign-up"
+              className="flex items-center gap-2 px-6 py-3 rounded-full bg-[oklch(0.68_0.19_155)] text-[oklch(0.08_0_0)] text-sm font-semibold hover:bg-[oklch(0.72_0.19_155)] transition-colors shadow-lg shadow-[oklch(0.68_0.19_155/0.25)]"
+            >
+              Start analyzing free
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+              <button className="flex items-center gap-2 px-6 py-3 rounded-full border border-[oklch(0.97_0_0/0.12)] text-[oklch(0.75_0_0)] text-sm font-medium hover:border-[oklch(0.97_0_0/0.25)] hover:text-[oklch(0.97_0_0)] transition-colors">
+                Sign in to dashboard
+              </button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 px-6 py-3 rounded-full bg-[oklch(0.68_0.19_155)] text-[oklch(0.08_0_0)] text-sm font-semibold hover:bg-[oklch(0.72_0.19_155)] transition-colors shadow-lg shadow-[oklch(0.68_0.19_155/0.25)]"
+            >
+              Go to dashboard
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </SignedIn>
+        </div>
+
+        {/* ── Stats bar ──────────────────────────────────────────────────────── */}
+        <div className="mt-20 grid grid-cols-3 gap-6 md:gap-12 max-w-xl w-full">
+          {stats.map((stat) => (
+            <div key={stat.label} className="flex flex-col items-center gap-1">
+              <span className="text-3xl md:text-4xl font-bold tabular-nums text-[oklch(0.97_0_0)] tracking-tight">
+                {stat.value}
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.12em] text-[oklch(0.68_0.19_155)] font-medium">
+                {stat.label}
+              </span>
+              <span className="text-[11px] text-[oklch(0.50_0_0)]">{stat.sub}</span>
+            </div>
+          ))}
         </div>
       </main>
+
+      {/* ── Feature section ────────────────────────────────────────────────── */}
+      <section className="relative z-10 px-6 md:px-10 pb-24">
+        <div className="max-w-5xl mx-auto">
+
+          {/* Section label */}
+          <div className="text-center mb-12">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[oklch(0.68_0.19_155)] font-medium mb-3">
+              What it does
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[oklch(0.97_0_0)]">
+              From raw financials to credit decision
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {features.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={feature.title}
+                  className="card-fintech rounded-xl p-6 group hover:border-[oklch(0.68_0.19_155/0.35)] transition-colors duration-300"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 h-9 w-9 rounded-lg bg-[oklch(0.68_0.19_155/0.12)] flex items-center justify-center group-hover:bg-[oklch(0.68_0.19_155/0.20)] transition-colors">
+                      <Icon className="h-4.5 w-4.5 text-[oklch(0.68_0.19_155)]" strokeWidth={1.75} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-[oklch(0.97_0_0)] mb-1.5">
+                        {feature.title}
+                      </h3>
+                      <p className="text-sm text-[oklch(0.55_0_0)] leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      <footer className="relative z-10 border-t border-[oklch(0.97_0_0/0.06)] px-6 md:px-10 py-6 flex items-center justify-between">
+        <span className="text-[11px] text-[oklch(0.40_0_0)]">
+          Lendflow &copy; {new Date().getFullYear()}
+        </span>
+        <span className="text-[11px] text-[oklch(0.35_0_0)]">
+          Built for credit professionals
+        </span>
+      </footer>
     </div>
   );
 }

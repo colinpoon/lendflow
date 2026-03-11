@@ -19,7 +19,7 @@ const COMPARISON_METRICS: { key: keyof ComputedMetrics; label: string; format: '
   { key: 'total_debt', label: 'Total Debt', format: 'currency' },
   { key: 'senior_debt', label: 'Senior Debt', format: 'currency' },
   { key: 'dscr', label: 'DSCR', format: 'ratio' },
-  { key: 'fccr', label: 'FCCR', format: 'ratio' },
+  { key: 'fccr', label: 'Covenant FCCR', format: 'ratio' },
   { key: 'total_debt_to_capital', label: 'Total Debt/Capital', format: 'percent' },
   { key: 'senior_debt_to_ebitda', label: 'Senior Debt/EBITDA', format: 'ratio' },
 ];

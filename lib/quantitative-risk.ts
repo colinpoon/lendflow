@@ -3,7 +3,7 @@
  *
  * Implements a 5-metric weighted risk assessment with trend modifiers:
  * - EBITDA Trend (22%)
- * - FCCR (28%)
+ * - Covenant FCCR (28%)
  * - Senior Leverage (22%)
  * - Debt/Capital (14%)
  * - Current Ratio (14%)
@@ -60,7 +60,7 @@ const METRIC_CONFIG = {
     higher_is_better: true,
   },
   fccr: {
-    name: 'FCCR',
+    name: 'Covenant FCCR',
     weight: 0.28,
     bands: [
       { min: 2.0, max: Infinity, score: 1 },  // >=2.00x
@@ -317,7 +317,7 @@ export function calculateQuantitativeRisk(
     base_score: fccrBaseScore,
     trend_modifier: fccrTrend.modifier,
     adjusted_score: fccrAdjustedScore,
-    rationale: generateRationale('FCCR', latestMetrics.fccr, fccrBaseScore, fccrAvgChange, fccrTrend.direction),
+    rationale: generateRationale('Covenant FCCR', latestMetrics.fccr, fccrBaseScore, fccrAvgChange, fccrTrend.direction),
   });
 
   // 3. Senior Leverage (Senior Debt / EBITDA)

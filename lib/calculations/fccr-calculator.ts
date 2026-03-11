@@ -1,6 +1,12 @@
 /**
- * FCCR (Fixed Charge Coverage Ratio) calculation utilities
+ * Covenant FCCR (Fixed Charge Coverage Ratio) calculation utilities
  * Lender-defined formula for debt servicing capacity
+ *
+ * NOTE: This is the lender/covenant-style FCCR, NOT the Moody's/S&P rating-agency
+ * definition. The standard rating-agency FCCR uses EBITDA(R) / (Interest + Debt
+ * Repayments + Leases + Preferred Dividends). Our formula deducts CapEx, cash taxes,
+ * and distributions from the numerator to represent true cash available for debt service,
+ * which matches the covenant test structure in most commercial loan agreements.
  *
  * Supports configurable CapEx treatment:
  * - 'unfunded': Deduct only unfunded CapEx (CapEx - Proceeds from LT Debt) - DEFAULT
@@ -8,7 +14,7 @@
  * - 'none': Exclude CapEx entirely from calculation
  * - 'custom': Deduct a custom percentage of CapEx
  *
- * FCCR Formula:
+ * Covenant FCCR Formula:
  * Numerator = Adjusted EBITDA - Unfunded CapEx - Cash Taxes - Distributions
  * Denominator = Principal Payments + Interest Expense + Lease Payments
  * FCCR = Numerator / Denominator
@@ -199,6 +205,7 @@ export function calculateFCCR(
         interest_value: debtService.sources.interest_value,
         lease_source: debtService.sources.lease_source,
         lease_value: debtService.sources.lease_value,
+        lease_interest_deducted: debtService.sources.lease_interest_deducted,
       },
     },
   };

@@ -34,9 +34,13 @@ export interface ResolvedDebtService {
     principal_source: DebtServiceSource;
     principal_value: number | null;
     interest_source: DebtServiceSource;
+    /** Final resolved interest after any lease interest deduction. Not the raw extracted value. */
     interest_value: number | null;
     lease_source: DebtServiceSource;
     lease_value: number | null;
+    /** Amount of lease interest deducted from the interest component to prevent
+     *  double-counting when leases are added separately. Null when no deduction applied. */
+    lease_interest_deducted: number | null;
   };
 }
 
@@ -152,6 +156,39 @@ export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtServi
     leaseSource = 'payment_of_lease_liability';
   }
 
+  // ── Lease Interest Double-Count Prevention ────────────────────────────
+  // When the interest source is a P&L/accrual-based figure (total_interest_expense,
+  // ttm_interest_expense, or interest_accrual), it includes IFRS 16 "Interest on
+  // lease liabilities" as a P&L finance cost. Since lease payments are also added
+  // separately above (and their payments include both principal AND interest on the
+  // lease), the lease interest would be counted twice in the denominator:
+  //   1. Inside the `interest` component (from the P&L total that includes lease interest)
+  //   2. Inside the `leases` component (full lease payment which includes lease interest)
+  //
+  // Fix: when leases > 0 and the interest source is P&L-based, subtract
+  // fc.lease_interest from interest. Floor at 0 to prevent negative interest.
+  //
+  // cash_interest_paid is excluded from this deduction — it is a cash-basis figure
+  // representing actual bank interest outflows and typically does not include
+  // the IFRS 16 lease interest accrual.
+  const PL_BASED_SOURCES: DebtServiceSource[] = [
+    'total_interest_expense',
+    'ttm_interest_expense',
+    'interest_accrual',
+  ];
+
+  let leaseInterestDeducted: number | null = null;
+
+  if (
+    leases > 0 &&
+    PL_BASED_SOURCES.includes(interestSource) &&
+    fc.lease_interest != null &&
+    fc.lease_interest > 0
+  ) {
+    leaseInterestDeducted = fc.lease_interest;
+    interest = Math.max(0, interest - fc.lease_interest);
+  }
+
   return {
     principal,
     interest,
@@ -164,6 +201,7 @@ export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtServi
       interest_value: interest || null,
       lease_source: leaseSource,
       lease_value: leases || null,
+      lease_interest_deducted: leaseInterestDeducted,
     },
   };
 }

@@ -14,6 +14,13 @@ import {
   X,
   Trash2,
   Loader2,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldQuestion,
+  AlertTriangle,
+  ThumbsUp,
+  ListChecks,
+  Building2,
 } from 'lucide-react';
 
 import FileUpload from '@/components/FileUpload';
@@ -28,6 +35,7 @@ import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 import type { ComputedMetrics } from '@/types';
 import { Project } from '@/lib/supabase/types';
 import { MergedExtraction } from '@/lib/extraction-utils';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -56,15 +64,7 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface DebtHealthAssessment {
-  weighted_score: number;
-  risk_band: string;
-  lending_decision: string;
-  key_risk_factors: string[];
-  positive_factors: string[];
-  recommendations: string[];
-  suggested_loan_structure: string;
-}
+import type { DebtHealthAssessment } from '@/types/risk';
 
 interface DocumentCoverage {
   document_id: string;
@@ -164,7 +164,7 @@ function MetricCard({
       {/* Subtle top-left highlight */}
       <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-white/[0.07] blur-2xl" />
 
-      <p className="relative text-[10px] uppercase tracking-[0.15em] text-white/50 font-medium">
+      <p className="relative text-[11px] uppercase tracking-[0.15em] text-white/50 font-medium">
         {label}
       </p>
       <div className="relative mt-auto">
@@ -286,12 +286,12 @@ export default function ProjectDetail({
         window.location.reload();
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to update project name');
+        toast.error(data.error || 'Failed to update project name');
         setProjectName(project.name);
       }
     } catch (error) {
       console.error('Error updating project name:', error);
-      alert('Failed to update project name');
+      toast.error('Failed to update project name');
       setProjectName(project.name);
     } finally {
       setIsSaving(false);
@@ -326,11 +326,11 @@ export default function ProjectDetail({
         window.location.reload();
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to delete document');
+        toast.error(data.error || 'Failed to delete document');
       }
     } catch (error) {
       console.error('Error deleting document:', error);
-      alert('Failed to delete document');
+      toast.error('Failed to delete document');
     } finally {
       setDeletingDocId(null);
     }
@@ -474,7 +474,7 @@ export default function ProjectDetail({
             colorClass={riskScore !== null ? getRiskBand(riskScore).color : undefined}
           />
           <MetricCard
-            label="FCCR"
+            label="Covenant FCCR"
             value={formatRatio(fccr)}
             subtitle={fccr !== null ? (fccr >= 1.2 ? 'Adequate' : 'Below threshold') : undefined}
             colorClass={getRatioStatus(fccr, { good: 1.2, fair: 1.0, direction: 'above' })}
@@ -629,7 +629,7 @@ export default function ProjectDetail({
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold tracking-tight">Financial Summary</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <FinancialTable data={financialData as unknown as Parameters<typeof FinancialTable>[0]['data']} />
             </CardContent>
           </Card>
@@ -707,10 +707,107 @@ export default function ProjectDetail({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground text-xs">
-              Coming soon — this panel will surface a consolidated lending
-              recommendation, suggested loan structure, and key conditions.
-            </p>
+            {debtHealthAssessment ? (
+              <div className="space-y-5">
+                {/* Verdict Banner */}
+                <div className={`flex items-center gap-4 rounded-xl border px-5 py-4 ${
+                  debtHealthAssessment.lending_decision.toLowerCase().includes('approve') &&
+                  !debtHealthAssessment.lending_decision.toLowerCase().includes('conditional')
+                    ? 'bg-success/15 border-success/30 text-success'
+                    : debtHealthAssessment.lending_decision.toLowerCase().includes('conditional')
+                      ? 'bg-warning/15 border-warning/30 text-warning'
+                      : 'bg-error/15 border-error/30 text-error'
+                }`}>
+                  {debtHealthAssessment.lending_decision.toLowerCase().includes('approve') &&
+                  !debtHealthAssessment.lending_decision.toLowerCase().includes('conditional') ? (
+                    <ShieldCheck className="h-8 w-8 shrink-0" />
+                  ) : debtHealthAssessment.lending_decision.toLowerCase().includes('conditional') ? (
+                    <ShieldAlert className="h-8 w-8 shrink-0" />
+                  ) : (
+                    <ShieldQuestion className="h-8 w-8 shrink-0" />
+                  )}
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">Lending Decision</p>
+                    <p className="text-xl font-bold tracking-tight">{debtHealthAssessment.lending_decision}</p>
+                  </div>
+                  <div className="ml-auto text-right">
+                    <p className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">Risk Band</p>
+                    <p className="text-sm font-semibold">{debtHealthAssessment.risk_band}</p>
+                  </div>
+                </div>
+
+                {/* Risk Factors + Positive Factors */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {debtHealthAssessment.key_risk_factors.length > 0 && (
+                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <AlertTriangle className="h-4 w-4 text-warning" />
+                        Key Risk Factors
+                      </div>
+                      <ul className="space-y-1.5">
+                        {debtHealthAssessment.key_risk_factors.map((factor, i) => (
+                          <li key={i} className="text-xs text-muted-foreground leading-relaxed flex items-start gap-2">
+                            <span className="mt-1 h-1 w-1 rounded-full bg-warning shrink-0" />
+                            {factor}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {debtHealthAssessment.positive_factors.length > 0 && (
+                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <ThumbsUp className="h-4 w-4 text-success" />
+                        Positive Factors
+                      </div>
+                      <ul className="space-y-1.5">
+                        {debtHealthAssessment.positive_factors.map((factor, i) => (
+                          <li key={i} className="text-xs text-muted-foreground leading-relaxed flex items-start gap-2">
+                            <span className="mt-1 h-1 w-1 rounded-full bg-success shrink-0" />
+                            {factor}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Recommendations */}
+                {debtHealthAssessment.recommendations.length > 0 && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <ListChecks className="h-4 w-4 text-primary" />
+                      Recommendations
+                    </div>
+                    <ul className="space-y-1.5">
+                      {debtHealthAssessment.recommendations.map((rec, i) => (
+                        <li key={i} className="text-xs text-muted-foreground leading-relaxed flex items-start gap-2">
+                          <span className="mt-1 h-1 w-1 rounded-full bg-primary shrink-0" />
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Suggested Loan Structure */}
+                {debtHealthAssessment.suggested_loan_structure && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      Suggested Loan Structure
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                      {debtHealthAssessment.suggested_loan_structure}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Upload financial documents to generate a lending recommendation.
+              </p>
+            )}
           </CardContent>
         </Card>
       </section>

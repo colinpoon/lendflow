@@ -506,7 +506,7 @@ const sections: SectionConfig[] = [
       },
       {
         key: 'cash_flow_for_debt_servicing',
-        label: '= CFADS (FCCR Numerator)',
+        label: '= CFADS (Covenant FCCR Numerator)',
         variant: 'total',
       },
     ],
@@ -605,7 +605,7 @@ const sections: SectionConfig[] = [
     rows: [
       {
         key: 'fccr',
-        label: 'FCCR',
+        label: 'Covenant FCCR',
         format: 'ratio',
         variant: 'total',
       },
@@ -1168,7 +1168,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
           >
             <div className="flex items-center gap-2">
               {section.collapsible && (
-                <span className="text-primary-foreground/60 text-[10px]">
+                <span className="text-primary-foreground/60 text-[11px]">
                   {isCollapsed ? '▶' : '▼'}
                 </span>
               )}
@@ -1192,7 +1192,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         >
           <div className="flex items-center gap-2">
             {section.collapsible && (
-              <span className="text-muted-foreground/60 text-[10px]">
+              <span className="text-muted-foreground/60 text-[11px]">
                 {isCollapsed ? '▶' : '▼'}
               </span>
             )}
@@ -1304,7 +1304,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                 : metrics.reported_adjusted_ebitda == null;
             badge = (
               <span
-                className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${
                   isCalc
                     ? 'bg-amber-100 text-amber-800 border border-amber-200'
                     : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
@@ -1369,7 +1369,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
       },
       {
         key: 'numerator',
-        label: '= CFADS (= FCCR Numerator)',
+        label: '= CFADS (= Covenant FCCR Numerator)',
         variant: 'total',
       },
     ];
@@ -1543,7 +1543,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                       </span>
                     </div>
                     <div className="border-t border-border pt-2 mt-1">
-                      <span className="text-muted-foreground">FCCR</span>
+                      <span className="text-muted-foreground">Covenant FCCR</span>
                       <span className="text-muted-foreground/60"> = </span>
                       <span className="text-foreground">
                         {fmtEq(fb.numerator)} / {fmtEq(fb.denominator)}

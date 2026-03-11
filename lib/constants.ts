@@ -74,8 +74,13 @@ export const MERGE_CONFIG = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * FCCR (Fixed Charge Coverage Ratio) thresholds
- * Higher is better - measures ability to cover fixed charges
+ * Covenant FCCR thresholds (lender-defined cash flow coverage ratio)
+ * Higher is better — measures ability to cover fixed charges
+ *
+ * NOTE: This is NOT the Moody's/S&P rating-agency FCCR. The Lendflow "Covenant FCCR"
+ * uses: Numerator = Adj EBITDA − Unfunded CapEx − Cash Taxes − Distributions
+ *       Denominator = Principal + Interest + Lease Payments
+ * This matches the covenant test structure in most commercial loan agreements.
  */
 export const FCCR_THRESHOLDS = {
   EXCELLENT: 2.0,

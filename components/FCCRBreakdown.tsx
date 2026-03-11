@@ -44,6 +44,7 @@ interface FCCRBreakdownData {
     interest_value: number | null;
     lease_source: string;
     lease_value: number | null;
+    lease_interest_deducted?: number | null;
   };
 }
 
@@ -166,10 +167,6 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
   const fccrBreakdown = metrics.fccr_breakdown;
   const dscrBreakdown = metrics.dscr_breakdown;
 
-  // Debug: log the fccr_breakdown to verify sources
-  console.log('🔍 FCCR Breakdown:', fccrBreakdown);
-  console.log('🔍 FCCR Sources:', fccrBreakdown?.sources);
-
   // Calculate total custom adjustments
   const totalCustomAdjustments = customAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
 
@@ -217,11 +214,11 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* FCCR Card */}
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 text-center border border-blue-200">
-          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">FCCR</p>
+          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Covenant FCCR</p>
           <p className={`text-2xl font-bold ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })}`}>
             {formatRatio(adjustedFCCR)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Fixed Charge Coverage</p>
+          <p className="text-xs text-gray-500 mt-1">Cash Flow Coverage (Lender)</p>
           {totalCustomAdjustments !== 0 && (
             <p className="text-xs text-blue-500 mt-1">(adjusted)</p>
           )}
@@ -261,7 +258,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           <div className="flex items-center justify-between mb-3">
             <div>
               <h4 className="font-semibold text-gray-800">CapEx Treatment</h4>
-              <p className="text-xs text-gray-500">How should capital expenditures affect FCCR?</p>
+              <p className="text-xs text-gray-500">How should capital expenditures affect Covenant FCCR?</p>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -333,7 +330,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           <AccordionItem value="fccr" className="border rounded-lg px-4 mb-4">
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-gray-800">FCCR Calculation Breakdown</span>
+                <span className="font-semibold text-gray-800">Covenant FCCR Calculation Breakdown</span>
                 <span className={`text-sm px-2 py-0.5 rounded ${getRatioColor(metrics.fccr ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })} bg-opacity-20`}>
                   {formatRatio(metrics.fccr)}
                 </span>
@@ -341,6 +338,13 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
             </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4 text-sm">
+                {/* Methodology Disclosure */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700 text-xs">
+                  <strong>Covenant FCCR — Lendflow Methodology:</strong> This ratio uses a lender-defined cash flow formula, not the rating-agency (Moody&apos;s/S&amp;P) FCCR.
+                  The numerator deducts unfunded CapEx, cash taxes, and distributions from Adjusted EBITDA to represent true cash available for debt service.
+                  This matches the covenant test structure used in most commercial loan agreements.
+                </div>
+
                 {/* Numerator Section */}
                 <div className="bg-green-50 rounded-lg p-4">
                   <h5 className="font-semibold text-green-800 mb-3">
@@ -528,6 +532,12 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                         <span>{formatCurrency(fccrBreakdown.lease_payments)}</span>
                       </div>
                     )}
+                    {fccrBreakdown.sources?.lease_interest_deducted != null && fccrBreakdown.sources.lease_interest_deducted > 0 && (
+                      <div className="flex justify-between text-gray-500 text-xs italic">
+                        <span>Lease interest deducted from interest to avoid double-count</span>
+                        <span>- {formatCurrency(fccrBreakdown.sources.lease_interest_deducted)}</span>
+                      </div>
+                    )}
                     {/* Denominator Total */}
                     <div className="flex justify-between font-bold border-t-2 border-blue-400 pt-2 mt-2 bg-blue-100 -mx-4 px-4 py-2 rounded-b">
                       <span>= Total Debt Service</span>
@@ -538,7 +548,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
 
                 {/* Final Calculation */}
                 <div className="bg-gray-100 rounded-lg p-4">
-                  <h5 className="font-semibold text-gray-700 mb-3 text-center">FCCR Calculation</h5>
+                  <h5 className="font-semibold text-gray-700 mb-3 text-center">Covenant FCCR Calculation</h5>
                   <div className="space-y-2 font-mono text-xs text-gray-600">
                     <div>
                       <span className="text-gray-500">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()} - {fccrBreakdown.distributions_paid.toLocaleString()} = <span className="font-semibold text-green-700">{fccrBreakdown.numerator.toLocaleString()}</span>
@@ -547,12 +557,12 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <span className="text-gray-500">Denominator =</span> {fccrBreakdown.ttm_principal_payments.toLocaleString()} + {fccrBreakdown.ttm_interest_expense.toLocaleString()}{fccrBreakdown.lease_payments > 0 ? ` + ${fccrBreakdown.lease_payments.toLocaleString()}` : ''} = <span className="font-semibold text-blue-700">{fccrBreakdown.denominator.toLocaleString()}</span>
                     </div>
                     <div className="pt-2 border-t border-gray-300 text-center">
-                      <span className="text-gray-500">FCCR =</span> {(adjustedNumerator ?? fccrBreakdown.numerator).toLocaleString()} / {fccrBreakdown.denominator.toLocaleString()} = <span className={`font-bold text-lg ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })}`}>{formatRatio(adjustedFCCR)}</span>
+                      <span className="text-gray-500">Covenant FCCR =</span> {(adjustedNumerator ?? fccrBreakdown.numerator).toLocaleString()} / {fccrBreakdown.denominator.toLocaleString()} = <span className={`font-bold text-lg ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })}`}>{formatRatio(adjustedFCCR)}</span>
                     </div>
                   </div>
                   {totalCustomAdjustments !== 0 && (
                     <div className="text-xs text-gray-500 mt-2 text-center">
-                      Base FCCR: {formatRatio(metrics.fccr)} | Adjustments: {formatCurrency(totalCustomAdjustments)}
+                      Base Covenant FCCR: {formatRatio(metrics.fccr)} | Adjustments: {formatCurrency(totalCustomAdjustments)}
                     </div>
                   )}
                 </div>
@@ -655,7 +665,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           <AccordionContent>
             <div className="space-y-4 text-sm">
               <div>
-                <h5 className="font-semibold text-gray-700 mb-2">FCCR vs DSCR</h5>
+                <h5 className="font-semibold text-gray-700 mb-2">Covenant FCCR vs DSCR</h5>
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b">
@@ -666,7 +676,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                   </thead>
                   <tbody>
                     <tr className="border-b">
-                      <td className="py-1 font-medium">FCCR</td>
+                      <td className="py-1 font-medium">Covenant FCCR</td>
                       <td className="py-1">Conservative analysis</td>
                       <td className="py-1">Deducts unfunded CapEx</td>
                     </tr>
@@ -683,7 +693,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 <h5 className="font-semibold text-gray-700 mb-2">Typical Covenant Thresholds</h5>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-gray-500 mb-1">DSCR / FCCR</div>
+                    <div className="text-xs text-gray-500 mb-1">DSCR / Covenant FCCR</div>
                     <div className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full bg-green-500"></span>
                       <span>&ge; 2.0x Excellent</span>
