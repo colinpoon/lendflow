@@ -9,9 +9,10 @@
  * - Logs all resolution decisions for debugging
  */
 
-import { MERGE_CONFIG, SCALE_VALIDATION, CURRENCY_METRICS } from './constants';
+import { MERGE_CONFIG, SCALE_VALIDATION, CURRENCY_METRICS, CANONICAL_STATEMENT_MAP } from './constants';
 import { isTableSource } from './validation';
 import type { ExtractionMetadata } from './chunk-processor';
+import type { SourceStatementType } from '@/types/extraction';
 
 // Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
 const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
@@ -119,6 +120,8 @@ export interface ValueCandidate {
   sourceDescription: string;
   /** The confidence level from AI extraction (high/medium/low) */
   confidenceLevel: 'high' | 'medium' | 'low' | '';
+  /** Which financial statement this value was extracted from */
+  sourceStatement: SourceStatementType;
 }
 
 /**
@@ -129,7 +132,7 @@ export interface MetricConflict {
   metric: string;
   candidates: ValueCandidate[];
   resolvedValue: number;
-  resolution: 'single' | 'highest_confidence' | 'weighted_average' | 'consensus' | 'near_consensus' | 'source_dominance';
+  resolution: 'single' | 'highest_confidence' | 'weighted_average' | 'consensus' | 'near_consensus' | 'source_dominance' | 'canonical_statement';
   variancePercent: number;
 }
 
@@ -212,6 +215,7 @@ function collectAllValues(
           confidence,
           sourceDescription: sourceMetadata.sourceDescription,
           confidenceLevel: sourceMetadata.confidenceLevel,
+          sourceStatement: sourceMetadata.sourceStatement,
         });
       }
     }
@@ -227,6 +231,7 @@ interface SourceMetadata {
   sourceType: 'table' | 'primary' | 'overlap' | 'inferred';
   sourceDescription: string;
   confidenceLevel: 'high' | 'medium' | 'low' | '';
+  sourceStatement: SourceStatementType;
 }
 
 /**
@@ -242,9 +247,20 @@ function getSourceMetadata(
   const metricsData = extraction.metrics_by_year as Record<string, Record<string, unknown>> | undefined;
   const sources = metricsData?.[year]?._sources as Record<string, string> | undefined;
   const confidences = metricsData?.[year]?._confidence as Record<string, string> | undefined;
+  const sourceStatements = metricsData?.[year]?._source_statements as Record<string, string> | undefined;
 
   const sourceDescription = sources?.[metric] || '';
   const confidenceLevel = (confidences?.[metric] || '') as 'high' | 'medium' | 'low' | '';
+
+  // Read explicit source statement from AI, or infer from description
+  let sourceStatement: SourceStatementType = 'unknown';
+  const explicitStatement = sourceStatements?.[metric];
+  if (explicitStatement && isValidSourceStatement(explicitStatement)) {
+    sourceStatement = explicitStatement;
+  } else {
+    // Fallback: infer from sourceDescription string
+    sourceStatement = inferSourceStatement(sourceDescription);
+  }
 
   // Determine source type based on description and confidence
   let sourceType: 'table' | 'primary' | 'overlap' | 'inferred' = 'primary';
@@ -266,6 +282,7 @@ function getSourceMetadata(
     sourceType,
     sourceDescription,
     confidenceLevel,
+    sourceStatement,
   };
 }
 
@@ -283,6 +300,41 @@ function isOverlapSource(sourceDescription: string): boolean {
     /truncated/i,
   ];
   return overlapPatterns.some((p) => p.test(sourceDescription));
+}
+
+// Must stay in sync with SourceStatementType in types/extraction.ts
+const VALID_SOURCE_STATEMENTS: Set<string> = new Set([
+  'income_statement', 'cash_flow_statement', 'balance_sheet', 'notes', 'unknown',
+]);
+
+/**
+ * Validate that a string is a valid SourceStatementType
+ */
+function isValidSourceStatement(value: string): value is SourceStatementType {
+  return VALID_SOURCE_STATEMENTS.has(value);
+}
+
+/**
+ * Infer source statement type from the source description string.
+ * Used as fallback when _source_statements is absent.
+ */
+function inferSourceStatement(sourceDescription: string): SourceStatementType {
+  if (!sourceDescription) return 'unknown';
+  const desc = sourceDescription.toLowerCase();
+
+  if (desc.includes('income statement') || desc.includes('profit and loss') || desc.includes('p&l')) {
+    return 'income_statement';
+  }
+  if (desc.includes('cash flow') || desc.includes('cashflow')) {
+    return 'cash_flow_statement';
+  }
+  if (desc.includes('balance sheet') || desc.includes('financial position')) {
+    return 'balance_sheet';
+  }
+  if (desc.includes('note ') || desc.includes('notes ') || desc.includes('footnote') || desc.includes('md&a')) {
+    return 'notes';
+  }
+  return 'unknown';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -337,7 +389,8 @@ function calculateVariance(values: number[]): number {
  * 5. Highest confidence - final fallback with chunk index tiebreaker
  */
 function resolveConflict(
-  candidates: ValueCandidate[]
+  candidates: ValueCandidate[],
+  metricName?: string
 ): { value: number; resolution: MetricConflict['resolution']; variancePercent: number } {
   const values = candidates.map((c) => c.value);
   const variancePercent = calculateVariance(values);
@@ -376,6 +429,22 @@ function resolveConflict(
       resolution: 'near_consensus',
       variancePercent,
     };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 2.5: Canonical Statement Preference
+  // When values disagree and this metric has a canonical statement,
+  // prefer candidates from the canonical source.
+  // ─────────────────────────────────────────────────────────────────────────
+  if (metricName) {
+    const canonicalResult = checkCanonicalStatementPreference(candidates, metricName);
+    if (canonicalResult !== null) {
+      return {
+        value: canonicalResult.value,
+        resolution: 'canonical_statement',
+        variancePercent,
+      };
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -423,6 +492,61 @@ function resolveConflict(
     resolution: 'highest_confidence',
     variancePercent,
   };
+}
+
+/**
+ * Check if candidates from the canonical statement should be preferred.
+ * Returns the best canonical candidate if:
+ * 1. This metric has a canonical statement in CANONICAL_STATEMENT_MAP
+ * 2. At least one candidate is from the canonical statement
+ * 3. Canonical candidates are internally consistent (variance < 5%)
+ * 4. Not all candidates are 'unknown' (backward compat — skip when no tagging)
+ */
+function checkCanonicalStatementPreference(
+  candidates: ValueCandidate[],
+  metricName: string
+): ValueCandidate | null {
+  const canonicalStatement = CANONICAL_STATEMENT_MAP[metricName];
+  if (!canonicalStatement) return null;
+
+  // If all candidates are 'unknown', skip — no statement data to act on
+  const allUnknown = candidates.every((c) => c.sourceStatement === 'unknown');
+  if (allUnknown) return null;
+
+  // Partition into canonical vs non-canonical
+  const canonical = candidates.filter((c) => c.sourceStatement === canonicalStatement);
+  const nonCanonical = candidates.filter((c) => c.sourceStatement !== canonicalStatement);
+
+  if (canonical.length === 0) return null;
+
+  // Check internal consistency of canonical group
+  if (canonical.length > 1) {
+    const canonicalValues = canonical.map((c) => c.value);
+    const canonicalVariance = calculateVariance(canonicalValues);
+    if (canonicalVariance >= MERGE_CONFIG.CONFLICT_THRESHOLD_PERCENT) {
+      // Canonical sources disagree with each other — don't use this step
+      return null;
+    }
+  }
+
+  // Canonical group is consistent — pick highest confidence from canonical
+  const best = canonical.reduce((a, b) => {
+    if (a.confidence !== b.confidence) return a.confidence > b.confidence ? a : b;
+    return a.chunkIndex < b.chunkIndex ? a : b;
+  });
+
+  // Log when non-canonical values are discarded
+  if (nonCanonical.length > 0 && DEBUG_FINANCIALS) {
+    const discarded = nonCanonical.map(
+      (c) => `${c.value} (${c.sourceStatement}, chunk ${c.chunkIndex})`
+    ).join(', ');
+    console.log(
+      `[canonical] ${metricName}: selected ${best.value} from ${canonicalStatement}, ` +
+      `discarded non-canonical: [${discarded}]`
+    );
+  }
+
+  return best;
 }
 
 /**
@@ -525,8 +649,8 @@ export function mergeExtractionsWithConflicts(
       merged[year] = {};
     }
 
-    // Resolve conflict
-    const { value, resolution, variancePercent } = resolveConflict(candidates);
+    // Resolve conflict (pass metric name for canonical statement preference)
+    const { value, resolution, variancePercent } = resolveConflict(candidates, metric);
     merged[year][metric] = value;
 
     // Track conflicts

@@ -64,6 +64,8 @@ interface AdjustedEBITDAComponents {
   management_fees_adjustment: number | null;
   accounting_policy_adjustments: number | null;
   foreign_exchange_adjustments: number | null;
+  unrealized_fx_cash_flow: number | null;
+  realized_fx_pl: number | null;
   pro_forma_cost_savings: number | null;
   pro_forma_synergies: number | null;
 }
@@ -88,6 +90,18 @@ interface DSCRBreakdown {
   total_debt_service: number;
   funded_debt: number;
   funded_debt_to_ebitda: number;
+}
+
+interface AdjustedEBITDABreakdown {
+  reported_ebitda: number;
+  non_cash_adjustments: number;
+  one_time_expenses: number;
+  one_time_gains: number;
+  interest_income_excluded: number;
+  owner_management_adjustments: number;
+  accounting_adjustments: number;
+  pro_forma_adjustments: number;
+  uses_reported_value: boolean;
 }
 
 interface YearMetrics {
@@ -136,6 +150,7 @@ interface YearMetrics {
   // Breakdowns
   fccr_breakdown: FCCRBreakdown | null;
   dscr_breakdown: DSCRBreakdown | null;
+  adjusted_ebitda_breakdown: AdjustedEBITDABreakdown | null;
   // Key Ratios
   fccr: number | null;
   senior_debt_to_ebitda: number | null;
@@ -153,484 +168,711 @@ interface FinancialTableProps {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Row Configuration
+// Row & Section Configuration
 // ─────────────────────────────────────────────────────────────────────────────
+
+type RowFormat =
+  | 'currency'
+  | 'ratio'
+  | 'percent'
+  | 'margin'
+  | 'rate'
+  | 'string';
+
+/**
+ * Visual style variant for a row.
+ * - 'normal'     : standard line item (default)
+ * - 'subtotal'   : double-border above, bold — used for section subtotals
+ * - 'total'      : heavy top border, bold + blue tint — used for key totals
+ * - 'separator'  : thin visual spacer row, no data
+ * - 'addback'    : indented add-back in a bridge (positive = green tint)
+ * - 'deduction'  : indented deduction in a bridge (negative = red tint)
+ */
+type RowVariant =
+  | 'normal'
+  | 'subtotal'
+  | 'total'
+  | 'separator'
+  | 'addback'
+  | 'deduction';
 
 interface RowConfig {
   key: string;
   label: string;
-  format?:
-    | 'currency'
-    | 'ratio'
-    | 'percent'
-    | 'margin'
-    | 'rate'
-    | 'string';
-  highlight?: boolean;
-  indent?: boolean;
-  nested?: string; // path to nested object (e.g., 'debt_components', 'fixed_charges')
+  format?: RowFormat;
+  /**
+   * Visual variant controlling styling and indentation.
+   * Replaces the old `highlight` / `indent` boolean flags.
+   */
+  variant?: RowVariant;
+  /** Path to a nested object on YearMetrics (e.g. 'debt_components') */
+  nested?: string;
 }
 
 interface SectionConfig {
   title: string;
   rows: RowConfig[];
   collapsible?: boolean;
+  /**
+   * When true the section header is styled as a major statement heading
+   * (e.g. "Income Statement", "EBITDA Bridge") rather than a sub-group.
+   */
+  major?: boolean;
 }
 
-// Sections ordered for credit analyst workflow:
-// 1. Key Ratios (the "punchline" — can this company pay us back?)
-// 2. EBITDA (earnings power backing the ratios)
-// 3. Adjusted EBITDA Components (bridge between EBITDA and Adj. EBITDA)
-// 4. Income Statement (revenue quality and trend verification)
-// 5. Depreciation Breakdown
-// 6. Cash Flow (building blocks behind CFADS)
-// 7. Fixed Charges
-// 8. Balance Sheet (reference — confirms leverage levels)
-// 9-11. Debt Components (detail drilldowns)
+// ─────────────────────────────────────────────────────────────────────────────
+// Cash-Flow-Statement Layout
+//
+// Reading order mirrors how a credit analyst works through a CIM / CFS:
+//   1. Income Statement — revenue quality, margins, net income
+//   2. EBITDA Bridge    — net income → EBITDA → Adjusted EBITDA (add-backs)
+//   3. CFADS Waterfall  — Adj EBITDA → cash available for debt service
+//   4. Debt Service     — fixed charges consumed by debt obligations
+//   5. Key Ratios       — the verdict derived from the above
+//   6. Capital Structure — leverage and liquidity context
+//   7. Detail drilldowns — collapsible debt/depreciation schedules
+// ─────────────────────────────────────────────────────────────────────────────
 const sections: SectionConfig[] = [
+  // ── 1. INCOME STATEMENT ──────────────────────────────────────────────────
   {
-    title: 'Key Ratios',
+    title: 'Income Statement',
+    major: true,
+    rows: [
+      { key: 'revenue', label: 'Revenue', variant: 'normal' },
+      {
+        key: 'expenses',
+        label: 'Total Operating Expenses',
+        variant: 'normal',
+      },
+      { key: 'net_income', label: 'Net Income', variant: 'subtotal' },
+      {
+        key: 'profit_margins',
+        label: 'Net Profit Margin',
+        variant: 'normal',
+        format: 'margin',
+      },
+    ],
+  },
+
+  // ── 2. EBITDA BRIDGE ─────────────────────────────────────────────────────
+  {
+    title: 'EBITDA Bridge',
+    major: true,
     rows: [
       {
-        key: 'dscr',
-        label: 'DSCR',
-        format: 'ratio',
-        highlight: true,
+        key: 'net_income',
+        label: 'Net Income (starting point)',
+        variant: 'normal',
       },
+      {
+        key: 'interest',
+        label: '+ Interest Expense',
+        variant: 'addback',
+      },
+      { key: 'taxes', label: '+ Taxes', variant: 'addback' },
+      {
+        key: 'depreciation_amortization',
+        label: '+ Depreciation & Amortization',
+        variant: 'addback',
+      },
+      { key: 'ebitda', label: '= EBITDA', variant: 'subtotal' },
+    ],
+  },
+
+  // ── 3. DEPRECIATION BREAKDOWN (collapsible detail) ───────────────────────
+  {
+    title: 'Depreciation & Amortization Detail',
+    collapsible: true,
+    rows: [
+      {
+        key: 'depreciation_equipment',
+        label: 'Property & Equipment',
+        variant: 'addback',
+      },
+      {
+        key: 'depreciation_rou',
+        label: 'ROU Asset (IFRS 16)',
+        variant: 'addback',
+      },
+      {
+        key: 'depreciation_other',
+        label: 'Other Depreciation',
+        variant: 'addback',
+      },
+      {
+        key: 'amortization_intangibles',
+        label: 'Amortization of Intangibles',
+        variant: 'addback',
+      },
+      {
+        key: 'depreciation_amortization',
+        label: '= Total D&A',
+        variant: 'subtotal',
+      },
+    ],
+  },
+
+  // ── 4. ADJUSTED EBITDA BRIDGE (collapsible) ──────────────────────────────
+  {
+    title: 'Adjusted EBITDA Bridge',
+    collapsible: true,
+    rows: [
+      {
+        key: 'ebitda',
+        label: 'EBITDA (as above)',
+        variant: 'normal',
+      },
+      // Non-cash add-backs
+      {
+        key: 'stock_based_compensation',
+        label: '+ Stock-Based Compensation',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'impairment_charges',
+        label: '+ Impairment Charges',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'goodwill_impairment',
+        label: '+ Goodwill Impairment',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'unrealized_gains_losses',
+        label: '+ Unrealized Gains / Losses',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'deferred_compensation',
+        label: '+ Deferred Compensation',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'loss_on_disposal',
+        label: '+ Loss on Disposal',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'other_non_cash',
+        label: '+ Other Non-Cash Items',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      // One-time expense add-backs
+      {
+        key: 'restructuring_costs',
+        label: '+ Restructuring Costs',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'severance_costs',
+        label: '+ Severance Costs',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'transaction_costs',
+        label: '+ Transaction Costs',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'legal_settlements',
+        label: '+ Legal Settlements',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'other_one_time_expenses',
+        label: '+ Other One-Time Expenses',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'casualty_losses',
+        label: '+ Casualty Losses',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      // One-time gain deductions
+      {
+        key: 'gain_on_disposal',
+        label: '− Gain on Disposal',
+        variant: 'deduction',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'gain_on_asset_sale',
+        label: '− Gain on Asset Sale',
+        variant: 'deduction',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'other_income_non_operating',
+        label: '− Other Non-Operating Income',
+        variant: 'deduction',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'insurance_proceeds',
+        label: '− Insurance Proceeds',
+        variant: 'deduction',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'other_one_time_gains',
+        label: '− Other One-Time Gains',
+        variant: 'deduction',
+        nested: 'adjusted_ebitda_components',
+      },
+      // Owner/management adjustments
+      {
+        key: 'owner_compensation_adjustment',
+        label: '± Owner Comp. Adj.',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'related_party_adjustments',
+        label: '± Related Party Adj.',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'management_fees_adjustment',
+        label: '± Management Fees Adj.',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      // FX
+      {
+        key: 'unrealized_fx_cash_flow',
+        label: '+ Unrealized FX (CF Stmt)',
+        variant: 'addback',
+        nested: 'adjusted_ebitda_components',
+      },
+      {
+        key: 'realized_fx_pl',
+        label: 'Realized FX P&L (info only)',
+        variant: 'normal',
+        nested: 'adjusted_ebitda_components',
+      },
+      // Result
+      {
+        key: 'adjusted_ebitda',
+        label: '= Adjusted EBITDA',
+        variant: 'total',
+      },
+    ],
+  },
+
+  // ── 5. CFADS WATERFALL ───────────────────────────────────────────────────
+  {
+    title: 'Cash Available for Debt Service (CFADS)',
+    major: true,
+    rows: [
+      {
+        key: 'adjusted_ebitda',
+        label: 'Adjusted EBITDA',
+        variant: 'normal',
+      },
+      {
+        key: 'capital_expenditures',
+        label: '− Capital Expenditures',
+        variant: 'deduction',
+      },
+      {
+        key: 'proceeds_from_long_term_debt',
+        label: '+ Proceeds from LT Debt (offsets CapEx)',
+        variant: 'addback',
+      },
+      {
+        key: 'cash_taxes_paid',
+        label: '− Cash Taxes Paid',
+        variant: 'deduction',
+      },
+      {
+        key: 'distributions_paid',
+        label: '− Distributions Paid',
+        variant: 'deduction',
+      },
+      {
+        key: 'cash_flow_for_debt_servicing',
+        label: '= CFADS (FCCR Numerator)',
+        variant: 'total',
+      },
+    ],
+  },
+
+  // ── 6. DEBT SERVICE (FCCR DENOMINATOR) ──────────────────────────────────
+  {
+    title: 'Debt Service (Fixed Charges)',
+    major: true,
+    collapsible: true,
+    rows: [
+      {
+        key: 'ttm_principal_payments',
+        label: 'Principal Payments (TTM)',
+        variant: 'normal',
+      },
+      {
+        key: 'ttm_interest_expense',
+        label: 'Interest Expense (TTM)',
+        variant: 'normal',
+      },
+      {
+        key: 'payment_of_lease_liability',
+        label: 'Lease Payments',
+        variant: 'normal',
+      },
+      // Fixed charges detail
+      {
+        key: 'senior_debt_interest',
+        label: 'Senior Debt Interest',
+        variant: 'normal',
+        nested: 'fixed_charges',
+      },
+      {
+        key: 'subordinated_debt_interest',
+        label: 'Subordinated Debt Interest',
+        variant: 'normal',
+        nested: 'fixed_charges',
+      },
+      {
+        key: 'lease_interest',
+        label: 'Lease Interest',
+        variant: 'normal',
+        nested: 'fixed_charges',
+      },
+      {
+        key: 'total_interest_expense',
+        label: '= Total Interest Expense',
+        variant: 'subtotal',
+        nested: 'fixed_charges',
+      },
+      {
+        key: 'senior_debt_interest_rate',
+        label: 'Senior Debt Rate',
+        variant: 'normal',
+        nested: 'fixed_charges',
+        format: 'string',
+      },
+      {
+        key: 'finance_lease_payments',
+        label: 'Finance Lease Payments',
+        variant: 'normal',
+        nested: 'fixed_charges',
+      },
+      {
+        key: 'operating_lease_payments',
+        label: 'Operating Lease Payments',
+        variant: 'normal',
+        nested: 'fixed_charges',
+      },
+      {
+        key: 'preferred_dividends',
+        label: 'Preferred Dividends',
+        variant: 'normal',
+        nested: 'fixed_charges',
+      },
+      {
+        key: 'principal_payments',
+        label: 'Principal Payments',
+        variant: 'normal',
+        nested: 'fixed_charges',
+      },
+      {
+        key: 'other_fixed_charges',
+        label: 'Other Fixed Charges',
+        variant: 'normal',
+        nested: 'fixed_charges',
+      },
+    ],
+  },
+
+  // ── 7. KEY RATIOS ─────────────────────────────────────────────────────────
+  {
+    title: 'Key Credit Ratios',
+    major: true,
+    rows: [
       {
         key: 'fccr',
         label: 'FCCR',
         format: 'ratio',
-        highlight: true,
+        variant: 'total',
+      },
+      {
+        key: 'dscr',
+        label: 'DSCR',
+        format: 'ratio',
+        variant: 'total',
       },
       {
         key: 'senior_debt_to_ebitda',
         label: 'Senior Debt / Adj. EBITDA',
         format: 'ratio',
-        highlight: true,
+        variant: 'subtotal',
       },
       {
         key: 'funded_debt_to_ebitda',
         label: 'Funded Debt / EBITDA',
         format: 'ratio',
-        highlight: true,
+        variant: 'subtotal',
       },
       {
         key: 'total_debt_to_capital',
         label: 'Total Debt / Capital',
         format: 'percent',
-        highlight: true,
+        variant: 'subtotal',
       },
       {
         key: 'interest_coverage_ratio',
-        label: 'Interest Coverage Ratio',
+        label: 'Interest Coverage',
         format: 'ratio',
-        highlight: true,
+        variant: 'normal',
       },
       {
         key: 'current_ratio',
         label: 'Current Ratio',
         format: 'ratio',
-        highlight: true,
+        variant: 'normal',
       },
       {
         key: 'debt_to_equity_ratio',
-        label: 'Debt to Equity Ratio',
+        label: 'Debt / Equity',
         format: 'ratio',
+        variant: 'normal',
       },
     ],
   },
+
+  // ── 8. CAPITAL STRUCTURE ─────────────────────────────────────────────────
   {
-    title: 'EBITDA',
+    title: 'Capital Structure',
+    major: true,
     rows: [
-      { key: 'ebitda', label: 'EBITDA', highlight: true },
+      { key: 'total_debt', label: 'Total Debt', variant: 'subtotal' },
+      { key: 'senior_debt', label: 'Senior Debt', variant: 'normal' },
+      { key: 'funded_debt', label: 'Funded Debt', variant: 'normal' },
       {
-        key: 'adjusted_ebitda',
-        label: 'Adjusted EBITDA',
-        highlight: true,
+        key: 'shareholders_equity',
+        label: "Shareholders' Equity",
+        variant: 'normal',
       },
       {
-        key: 'cash_flow_for_debt_servicing',
-        label: 'CFADS',
-        highlight: true,
+        key: 'current_assets',
+        label: 'Current Assets',
+        variant: 'normal',
+      },
+      {
+        key: 'current_liabilities',
+        label: 'Current Liabilities',
+        variant: 'normal',
       },
     ],
   },
+
+  // ── 9. ADDITIONAL CASH FLOW ITEMS ────────────────────────────────────────
   {
-    title: 'Adjusted EBITDA Components',
+    title: 'Other Cash Flow Items',
     collapsible: true,
     rows: [
       {
-        key: 'stock_based_compensation',
-        label: 'Stock-Based Compensation',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
+        key: 'cash_interest_paid',
+        label: 'Cash Interest Paid',
+        variant: 'normal',
       },
-      {
-        key: 'impairment_charges',
-        label: 'Impairment Charges',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'goodwill_impairment',
-        label: 'Goodwill Impairment',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'unrealized_gains_losses',
-        label: 'Unrealized Gains/Losses',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'deferred_compensation',
-        label: 'Deferred Compensation',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'loss_on_disposal',
-        label: 'Loss on Disposal',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'gain_on_disposal',
-        label: 'Gain on Disposal',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'other_non_cash',
-        label: 'Other Non-Cash',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'restructuring_costs',
-        label: 'Restructuring Costs',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'severance_costs',
-        label: 'Severance Costs',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'transaction_costs',
-        label: 'Transaction Costs',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'legal_settlements',
-        label: 'Legal Settlements',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'other_income_non_operating',
-        label: 'Other Income (Non-Operating)',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'foreign_exchange_adjustments',
-        label: 'FX Adj. (Deprecated)',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'unrealized_fx_cash_flow',
-        label: 'Unrealized FX (CF)',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'realized_fx_pl',
-        label: 'Realized FX (P&L)',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-      {
-        key: 'owner_compensation_adjustment',
-        label: 'Owner Compensation Adjustment',
-        nested: 'adjusted_ebitda_components',
-        indent: true,
-      },
-    ],
-  },
-  {
-    title: 'Income Statement',
-    rows: [
-      { key: 'revenue', label: 'Revenue' },
-      { key: 'expenses', label: 'Total Expenses' },
-      { key: 'net_income', label: 'Net Income' },
-      {
-        key: 'profit_margins',
-        label: 'Profit Margin',
-        format: 'margin',
-      },
-      { key: 'interest', label: 'Interest Expense' },
-      { key: 'taxes', label: 'Taxes' },
-      {
-        key: 'depreciation_amortization',
-        label: 'Depreciation & Amort.',
-      },
-    ],
-  },
-  {
-    title: 'Depreciation Breakdown',
-    collapsible: true,
-    rows: [
-      {
-        key: 'depreciation_equipment',
-        label: 'Depreciation of Property & Equipment',
-        indent: true,
-      },
-      {
-        key: 'depreciation_rou',
-        label: 'ROU Asset Depreciation (IFRS 16)',
-        indent: true,
-      },
-      {
-        key: 'depreciation_other',
-        label: 'Other Depreciation',
-        indent: true,
-      },
-      {
-        key: 'amortization_intangibles',
-        label: 'Amortization of Intangibles',
-        indent: true,
-      },
-      {
-        key: 'depreciation_amortization',
-        label: 'Total D&A',
-        highlight: true,
-      },
-    ],
-  },
-  {
-    title: 'Cash Flow',
-    rows: [
-      {
-        key: 'capital_expenditures',
-        label: 'Capital Expenditures (CapEx)',
-      },
-      { key: 'cash_interest_paid', label: 'Cash Interest Paid' },
       {
         key: 'non_cash_interest_expense',
         label: 'Non-Cash Interest Expense',
-      },
-      { key: 'cash_taxes_paid', label: 'Cash Taxes Paid' },
-      { key: 'distributions_paid', label: 'Distributions Paid' },
-      { key: 'repayment_of_debt', label: 'Repayment of Debt' },
-      {
-        key: 'payment_of_lease_liability',
-        label: 'Payment of Lease Liability',
+        variant: 'normal',
       },
       {
-        key: 'proceeds_from_long_term_debt',
-        label: 'Proceeds from LT Debt',
+        key: 'repayment_of_debt',
+        label: 'Repayment of Debt',
+        variant: 'normal',
       },
     ],
   },
+
+  // ── 10. DEBT COMPONENTS — SENIOR ─────────────────────────────────────────
   {
-    title: 'Fixed Charges',
-    collapsible: true,
-    rows: [
-      {
-        key: 'senior_debt_interest',
-        label: 'Senior Debt Interest',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-      {
-        key: 'subordinated_debt_interest',
-        label: 'Subordinated Debt Interest',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-      {
-        key: 'lease_interest',
-        label: 'Lease Interest',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-      {
-        key: 'total_interest_expense',
-        label: 'Total Interest Expense',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-      {
-        key: 'senior_debt_interest_rate',
-        label: 'Senior Debt Interest Rate',
-        nested: 'fixed_charges',
-        format: 'string',
-        indent: true,
-      },
-      {
-        key: 'minimum_lease_payments',
-        label: 'Minimum Lease Payments',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-      {
-        key: 'finance_lease_payments',
-        label: 'Finance Lease Payments',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-      {
-        key: 'operating_lease_payments',
-        label: 'Operating Lease Payments',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-      {
-        key: 'principal_payments',
-        label: 'Principal Payments',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-      {
-        key: 'preferred_dividends',
-        label: 'Preferred Dividends',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-      {
-        key: 'other_fixed_charges',
-        label: 'Other Fixed Charges',
-        nested: 'fixed_charges',
-        indent: true,
-      },
-    ],
-  },
-  {
-    title: 'Balance Sheet',
-    rows: [
-      { key: 'total_debt', label: 'Total Debt', highlight: true },
-      { key: 'senior_debt', label: 'Senior Debt', highlight: true },
-      { key: 'shareholders_equity', label: "Shareholders' Equity" },
-      { key: 'current_assets', label: 'Current Assets' },
-      { key: 'current_liabilities', label: 'Current Liabilities' },
-    ],
-  },
-  {
-    title: 'Debt Components - Senior',
+    title: 'Debt Detail — Senior Facilities',
     collapsible: true,
     rows: [
       {
         key: 'bank_debt_current',
         label: 'Bank Debt (Current)',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'bank_debt_long_term',
         label: 'Bank Debt (Long-Term)',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'term_loans',
         label: 'Term Loans',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'revolving_credit_facilities',
         label: 'Revolving Credit Facilities',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'overdraft_facilities',
         label: 'Overdraft Facilities',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'lines_of_credit',
         label: 'Lines of Credit',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
     ],
   },
+
+  // ── 11. DEBT COMPONENTS — LEASES ─────────────────────────────────────────
   {
-    title: 'Debt Components - Leases',
+    title: 'Debt Detail — Lease Liabilities',
     collapsible: true,
     rows: [
       {
         key: 'lease_liabilities_current',
         label: 'Lease Liabilities (Current)',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'lease_liabilities_long_term',
         label: 'Lease Liabilities (Long-Term)',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'finance_lease_liabilities',
         label: 'Finance Lease Liabilities',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'operating_lease_liabilities',
         label: 'Operating Lease Liabilities',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
     ],
   },
+
+  // ── 12. DEBT COMPONENTS — SUBORDINATED ───────────────────────────────────
   {
-    title: 'Debt Components - Subordinated',
+    title: 'Debt Detail — Subordinated & Other',
     collapsible: true,
     rows: [
       {
         key: 'notes_payable',
         label: 'Notes Payable',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'subordinated_debt',
         label: 'Subordinated Debt',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'convertible_debt',
         label: 'Convertible Debt',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'bonds_debentures',
         label: 'Bonds / Debentures',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
       {
         key: 'other_borrowings',
         label: 'Other Borrowings',
+        variant: 'normal',
         nested: 'debt_components',
-        indent: true,
       },
     ],
   },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ratio Formula Components
+//
+// For each key ratio, define the numerator/denominator rows displayed inline
+// under the ratio in the Key Credit Ratios section.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface FormulaRow {
+  label: string;
+  getValue: (metrics: YearMetrics) => number | null;
+  format: RowFormat;
+}
+
+const ratioFormulas: Record<string, FormulaRow[]> = {
+  fccr: [
+    {
+      label: '↳ CFADS (numerator)',
+      getValue: (m) => m.fccr_breakdown?.numerator ?? null,
+      format: 'currency',
+    },
+    {
+      label: '↳ Fixed Charges (denominator)',
+      getValue: (m) => m.fccr_breakdown?.denominator ?? null,
+      format: 'currency',
+    },
+  ],
+  senior_debt_to_ebitda: [
+    {
+      label: '↳ Senior Debt',
+      getValue: (m) => m.senior_debt,
+      format: 'currency',
+    },
+    {
+      label: '↳ Adjusted EBITDA',
+      getValue: (m) => m.adjusted_ebitda ?? m.ebitda,
+      format: 'currency',
+    },
+  ],
+  total_debt_to_capital: [
+    {
+      label: '↳ Total Debt',
+      getValue: (m) => m.total_debt,
+      format: 'currency',
+    },
+    {
+      label: '↳ Total Capital (Debt + Equity)',
+      getValue: (m) => {
+        if (m.total_debt == null || m.shareholders_equity == null)
+          return null;
+        return m.total_debt + m.shareholders_equity;
+      },
+      format: 'currency',
+    },
+  ],
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper Functions
@@ -644,9 +886,7 @@ const getMetricValue = (
   if (nested) {
     const nestedObj = metrics[nested as keyof YearMetrics];
     if (!nestedObj || typeof nestedObj !== 'object') return null;
-    const value = (nestedObj as unknown as Record<string, unknown>)[
-      key
-    ];
+    const value = (nestedObj as unknown as Record<string, unknown>)[key];
     if (value === null || value === undefined) return null;
     return typeof value === 'number' ? value : null;
   }
@@ -659,7 +899,7 @@ const getMetricValue = (
 
 const formatValue = (
   value: number | null,
-  format: RowConfig['format'] = 'currency',
+  format: RowFormat = 'currency',
 ): string => {
   if (value === null || value === undefined) return '—';
 
@@ -669,9 +909,8 @@ const formatValue = (
     case 'percent':
       return `${(value * 100).toFixed(1)}%`;
     case 'margin':
-      if (value <= 1 && value >= -1) {
+      if (value <= 1 && value >= -1)
         return `${(value * 100).toFixed(1)}%`;
-      }
       return `${value.toFixed(1)}%`;
     case 'rate':
       return `${(value * 100).toFixed(2)}%`;
@@ -681,9 +920,26 @@ const formatValue = (
   }
 };
 
-// Ratio color function using semantic tokens.
-// 5-level scale: excellent → success, good → success/70, adequate → warning,
-// weak → warning/80 (via text-warning), poor → error
+/** Format number for equation display (no $ sign, comma-separated) */
+const fmtEq = (n: number): string => Math.round(n).toLocaleString();
+
+/** Build equation terms string: "80,831 + 1,005 − 451" (skips zero-value terms) */
+const eqLine = (
+  start: number,
+  terms: Array<{ v: number; op: string }>,
+): string => {
+  let eq = fmtEq(start);
+  for (const t of terms) {
+    if (t.v === 0) continue;
+    eq += ` ${t.op} ${fmtEq(Math.abs(t.v))}`;
+  }
+  return eq;
+};
+
+/**
+ * Returns a Tailwind color class for ratio cells based on the health of the value.
+ * Uses semantic design tokens from ui-ux-3 (text-success, text-warning, text-error).
+ */
 const getRatioColor = (key: string, value: number | null): string => {
   if (value === null) return '';
 
@@ -726,22 +982,89 @@ const getRatioColor = (key: string, value: number | null): string => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Row Styling by Variant
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Maps a RowVariant to Tailwind classes for the <tr> element.
+ */
+const getRowClasses = (variant: RowVariant): string => {
+  switch (variant) {
+    case 'total':
+      return 'border-t-2 border-border bg-primary/5 hover:bg-primary/10';
+    case 'subtotal':
+      return 'border-t border-border bg-muted/80 hover:bg-muted';
+    case 'addback':
+      return 'border-b border-border hover:bg-muted/30';
+    case 'deduction':
+      return 'border-b border-border hover:bg-muted/20';
+    case 'separator':
+      return 'h-1 bg-transparent';
+    case 'normal':
+    default:
+      return 'border-b border-border hover:bg-muted/50';
+  }
+};
+
+/**
+ * Maps a RowVariant to Tailwind classes for the label <td>.
+ */
+const getLabelClasses = (variant: RowVariant): string => {
+  switch (variant) {
+    case 'total':
+      return 'py-2.5 px-4 font-bold text-foreground pl-4';
+    case 'subtotal':
+      return 'py-2 px-4 font-semibold text-foreground pl-4';
+    case 'addback':
+      return 'py-1.5 px-4 text-muted-foreground pl-10 text-sm';
+    case 'deduction':
+      return 'py-1.5 px-4 text-muted-foreground pl-10 text-sm';
+    case 'normal':
+    default:
+      return 'py-2 px-4 text-foreground pl-4';
+  }
+};
+
+/**
+ * Maps a RowVariant to Tailwind classes for value <td> cells.
+ */
+const getValueClasses = (
+  variant: RowVariant,
+  colorClass?: string,
+): string => {
+  const base = 'py-2 px-4 text-right tabular-nums';
+  switch (variant) {
+    case 'total':
+      return `${base} font-bold text-foreground ${colorClass ?? ''}`.trim();
+    case 'subtotal':
+      return `${base} font-semibold text-foreground ${colorClass ?? ''}`.trim();
+    case 'addback':
+      return `${base} text-sm text-muted-foreground ${colorClass ?? ''}`.trim();
+    case 'deduction':
+      return `${base} text-sm text-muted-foreground ${colorClass ?? ''}`.trim();
+    case 'normal':
+    default:
+      return `${base} text-foreground ${colorClass ?? ''}`.trim();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
 const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
+  // Sections collapsed by default — detail drilldowns kept out of the way
   const [collapsedSections, setCollapsedSections] = React.useState<
     Set<string>
   >(
     new Set([
-      'Depreciation Breakdown',
-      'Debt Components - Senior',
-      'Debt Components - Leases',
-      'Debt Components - Subordinated',
-      'Fixed Charges',
-      'Adjusted EBITDA Components',
-      'CFADS Components',
-      'FCCR Components',
+      'Depreciation & Amortization Detail',
+      'Adjusted EBITDA Bridge',
+      'Debt Service (Fixed Charges)',
+      'Other Cash Flow Items',
+      'Debt Detail — Senior Facilities',
+      'Debt Detail — Lease Liabilities',
+      'Debt Detail — Subordinated & Other',
     ]),
   );
 
@@ -771,27 +1094,10 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
     });
   };
 
-  // Helper to get FCCR breakdown values
-  const getFccrBreakdownValue = (
-    year: string,
-    key: string,
-  ): number | null => {
-    const breakdown = data.metrics_by_year[year]?.fccr_breakdown;
-    if (!breakdown) return null;
-    const value = (breakdown as unknown as Record<string, number>)[
-      key
-    ];
-    return typeof value === 'number' ? value : null;
-  };
+  // ── Data presence checks ─────────────────────────────────────────────────
 
-  // Check if any year has FCCR breakdown data
-  const hasFccrBreakdown = years.some(
-    (y) => data.metrics_by_year[y]?.fccr_breakdown != null,
-  );
-
-  // Check if section has any data
-  const sectionHasData = (section: SectionConfig): boolean => {
-    return section.rows.some((row) =>
+  const sectionHasData = (section: SectionConfig): boolean =>
+    section.rows.some((row) =>
       years.some((y) => {
         if (row.format === 'string') {
           const metrics = data.metrics_by_year[y];
@@ -815,30 +1121,54 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         );
       }),
     );
+
+  const rowHasData = (row: RowConfig): boolean =>
+    years.some(
+      (y) =>
+        getMetricValue(
+          data.metrics_by_year[y],
+          row.key,
+          row.nested,
+        ) !== null,
+    );
+
+  // ── FCCR breakdown helpers ───────────────────────────────────────────────
+
+  const getFccrBreakdownValue = (
+    year: string,
+    key: string,
+  ): number | null => {
+    const breakdown = data.metrics_by_year[year]?.fccr_breakdown;
+    if (!breakdown) return null;
+    const value = (breakdown as unknown as Record<string, number>)[key];
+    return typeof value === 'number' ? value : null;
   };
 
-  // Render a config-driven section
-  const renderSection = (section: SectionConfig) => {
-    if (!sectionHasData(section)) return null;
+  const hasFccrBreakdown = years.some(
+    (y) => data.metrics_by_year[y]?.fccr_breakdown != null,
+  );
 
+  // ── Section header renderer ──────────────────────────────────────────────
+
+  const renderSectionHeader = (section: SectionConfig) => {
     const isCollapsed =
       section.collapsible && collapsedSections.has(section.title);
 
-    return (
-      <React.Fragment key={section.title}>
+    if (section.major) {
+      return (
         <tr
-          className={`bg-muted ${section.collapsible ? 'cursor-pointer hover:bg-muted/80' : ''}`}
+          className={`${section.collapsible ? 'cursor-pointer hover:bg-primary/80' : ''}`}
           onClick={() =>
             section.collapsible && toggleSection(section.title)
           }
         >
           <td
             colSpan={years.length + 1}
-            className="py-2 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide border-t border-border"
+            className="py-3 px-4 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest border-t-2 border-primary"
           >
             <div className="flex items-center gap-2">
               {section.collapsible && (
-                <span className="text-muted-foreground/60">
+                <span className="text-primary-foreground/60 text-[10px]">
                   {isCollapsed ? '▶' : '▼'}
                 </span>
               )}
@@ -846,389 +1176,517 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
             </div>
           </td>
         </tr>
-        {!isCollapsed &&
-          section.rows.map((row) => {
-            const hasValue = years.some(
-              (y) =>
-                getMetricValue(
-                  data.metrics_by_year[y],
-                  row.key,
-                  row.nested,
-                ) !== null,
-            );
+      );
+    }
 
-            if (!hasValue) return null;
+    return (
+      <tr
+        className={`bg-muted ${section.collapsible ? 'cursor-pointer hover:bg-muted/80' : ''}`}
+        onClick={() =>
+          section.collapsible && toggleSection(section.title)
+        }
+      >
+        <td
+          colSpan={years.length + 1}
+          className="py-2 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide border-t border-border"
+        >
+          <div className="flex items-center gap-2">
+            {section.collapsible && (
+              <span className="text-muted-foreground/60 text-[10px]">
+                {isCollapsed ? '▶' : '▼'}
+              </span>
+            )}
+            {section.title}
+          </div>
+        </td>
+      </tr>
+    );
+  };
 
+  // ── Row renderer ─────────────────────────────────────────────────────────
+
+  const renderRow = (row: RowConfig, sectionTitle: string) => {
+    const variant: RowVariant = row.variant ?? 'normal';
+
+    if (variant === 'separator') {
+      return (
+        <tr
+          key={`${sectionTitle}-sep-${row.key}`}
+          className="h-2 bg-transparent"
+        >
+          <td colSpan={years.length + 1} />
+        </tr>
+      );
+    }
+
+    // String-format rows (e.g. interest rate)
+    if (row.format === 'string') {
+      const hasStrVal = years.some((y) => {
+        const metrics = data.metrics_by_year[y];
+        const nestedObj = row.nested
+          ? metrics[row.nested as keyof typeof metrics]
+          : null;
+        const rawVal =
+          nestedObj && typeof nestedObj === 'object'
+            ? (nestedObj as unknown as Record<string, unknown>)[
+                row.key
+              ]
+            : metrics[row.key as keyof typeof metrics];
+        return typeof rawVal === 'string';
+      });
+      if (!hasStrVal) return null;
+
+      return (
+        <tr
+          key={`${sectionTitle}-${row.key}`}
+          className={getRowClasses(variant)}
+        >
+          <td className={getLabelClasses(variant)}>{row.label}</td>
+          {years.map((y) => {
+            const metrics = data.metrics_by_year[y];
+            const nestedObj = row.nested
+              ? metrics[row.nested as keyof typeof metrics]
+              : null;
+            const rawVal =
+              nestedObj && typeof nestedObj === 'object'
+                ? (nestedObj as unknown as Record<string, unknown>)[
+                    row.key
+                  ]
+                : metrics[row.key as keyof typeof metrics];
             return (
-              <tr
-                key={`${section.title}-${row.key}`}
-                className={`border-b border-border hover:bg-muted/50 ${
-                  row.highlight ? 'bg-primary/5' : ''
-                }`}
-              >
-                <td
-                  className={`py-2 px-4 text-foreground ${row.highlight ? 'font-medium' : ''} ${row.indent ? 'pl-8' : ''}`}
-                >
-                  {row.label}
-                </td>
-                {years.map((y) => {
-                  if (row.format === 'string') {
-                    const metrics = data.metrics_by_year[y];
-                    const nestedObj = row.nested
-                      ? metrics[row.nested as keyof typeof metrics]
-                      : null;
-                    const rawVal =
-                      nestedObj && typeof nestedObj === 'object'
-                        ? (
-                            nestedObj as unknown as Record<
-                              string,
-                              unknown
-                            >
-                          )[row.key]
-                        : metrics[row.key as keyof typeof metrics];
-                    return (
-                      <td
-                        key={y}
-                        className="py-2 px-4 text-right text-foreground"
-                      >
-                        {typeof rawVal === 'string' ? rawVal : '—'}
-                      </td>
-                    );
-                  }
-                  const val = getMetricValue(
-                    data.metrics_by_year[y],
-                    row.key,
-                    row.nested,
-                  );
-                  const colorClass =
-                    row.format === 'ratio' || row.format === 'percent'
-                      ? getRatioColor(row.key, val)
-                      : '';
-                  return (
-                    <td
-                      key={y}
-                      className={`py-2 px-4 text-right ${colorClass} ${
-                        row.highlight && !colorClass
-                          ? 'font-medium text-foreground'
-                          : ''
-                      } ${!colorClass && !row.highlight ? 'text-foreground' : ''}`}
-                    >
-                      {formatValue(val, row.format)}
-                    </td>
-                  );
-                })}
-              </tr>
+              <td key={y} className={getValueClasses(variant)}>
+                {typeof rawVal === 'string' ? rawVal : '—'}
+              </td>
             );
           })}
-      </React.Fragment>
-    );
-  };
+        </tr>
+      );
+    }
 
-  // Render FCCR Components (collapsible, injected after Key Ratios)
-  const renderFccrComponents = () => {
-    if (!hasFccrBreakdown) return null;
+    // Numeric rows
+    if (!rowHasData(row)) return null;
 
-    const isCollapsed = collapsedSections.has('FCCR Components');
+    const isRatioRow =
+      row.format === 'ratio' || row.format === 'percent';
+
+    // Show source badge on EBITDA & Adjusted EBITDA total rows
+    const showBadge =
+      (row.key === 'ebitda' &&
+        row.variant === 'subtotal' &&
+        sectionTitle === 'EBITDA Bridge') ||
+      (row.key === 'adjusted_ebitda' &&
+        row.variant === 'total' &&
+        sectionTitle === 'Adjusted EBITDA Bridge');
 
     return (
-      <React.Fragment key="fccr-components">
-        <tr
-          className="bg-muted cursor-pointer hover:bg-muted/80"
-          onClick={() => toggleSection('FCCR Components')}
-        >
-          <td
-            colSpan={years.length + 1}
-            className="py-2 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide border-t border-border"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground/60">
-                {isCollapsed ? '▶' : '▼'}
+      <tr
+        key={`${sectionTitle}-${row.key}`}
+        className={getRowClasses(variant)}
+      >
+        <td className={getLabelClasses(variant)}>{row.label}</td>
+        {years.map((y) => {
+          const val = getMetricValue(
+            data.metrics_by_year[y],
+            row.key,
+            row.nested,
+          );
+          const colorClass = isRatioRow
+            ? getRatioColor(row.key, val)
+            : '';
+
+          // EBITDA source badge — "Reported" (green) vs "Calc" (amber)
+          let badge: React.ReactNode = null;
+          if (showBadge && val !== null) {
+            const metrics = data.metrics_by_year[y];
+            const isCalc =
+              row.key === 'ebitda'
+                ? metrics.ebitda_calculated === true
+                : metrics.reported_adjusted_ebitda == null;
+            badge = (
+              <span
+                className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                  isCalc
+                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                    : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                }`}
+              >
+                {isCalc ? 'Calc' : 'Reported'}
               </span>
-              FCCR Components
-            </div>
-          </td>
-        </tr>
-        {!isCollapsed && (
-          <>
-            <tr className="border-b border-border hover:bg-muted/50">
-              <td className="py-2 px-4 pl-8 text-foreground">
-                FCCR Numerator (Cash Available)
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right text-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(y, 'numerator'),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b border-border hover:bg-muted/50">
-              <td className="py-2 px-4 pl-8 text-muted-foreground">
-                Less: Unfunded CapEx
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right text-muted-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(y, 'unfunded_capex'),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b border-border hover:bg-muted/50">
-              <td className="py-2 px-4 pl-8 text-foreground">
-                FCCR Denominator (Fixed Charges)
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right text-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(y, 'denominator'),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b border-border hover:bg-muted/50">
-              <td className="py-2 px-4 pl-8 text-muted-foreground">
-                TTM Principal Payments
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right text-muted-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(
-                      y,
-                      'ttm_principal_payments',
-                    ),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b border-border hover:bg-muted/50">
-              <td className="py-2 px-4 pl-8 text-muted-foreground">
-                TTM Interest Expense
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right text-muted-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(y, 'ttm_interest_expense'),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-            {years.some(
-              (y) =>
-                getFccrBreakdownValue(y, 'lease_payments') !== null &&
-                getFccrBreakdownValue(y, 'lease_payments') !== 0,
-            ) && (
-              <tr className="border-b border-border hover:bg-muted/50">
-                <td className="py-2 px-4 pl-8 text-muted-foreground">
-                  Lease Payments
-                </td>
-                {years.map((y) => (
-                  <td
-                    key={y}
-                    className="py-2 px-4 text-right text-muted-foreground"
-                  >
-                    {formatValue(
-                      getFccrBreakdownValue(y, 'lease_payments'),
-                      'currency',
-                    )}
-                  </td>
-                ))}
-              </tr>
-            )}
-          </>
-        )}
-      </React.Fragment>
+            );
+          }
+
+          return (
+            <td
+              key={y}
+              className={getValueClasses(variant, colorClass)}
+            >
+              {badge ? (
+                <div className="flex items-center justify-end gap-1">
+                  <span>{formatValue(val, row.format)}</span>
+                  {badge}
+                </div>
+              ) : (
+                formatValue(val, row.format)
+              )}
+            </td>
+          );
+        })}
+      </tr>
     );
   };
 
-  // Render CFADS Components (collapsible, injected after EBITDA group)
-  const renderCfadsComponents = () => {
+  // ── CFADS detail (from fccr_breakdown) ─────────────────────────────────
+  // This is shown inline within the CFADS section only when the breakdown
+  // data exists, giving a transparent build-up from Adj EBITDA to CFADS.
+
+  const renderCfadsDetail = () => {
     if (!hasFccrBreakdown) return null;
 
-    const isCollapsed = collapsedSections.has('CFADS Components');
+    const rows: Array<{
+      key: string;
+      label: string;
+      variant: RowVariant;
+    }> = [
+      {
+        key: 'adjusted_ebitda',
+        label: 'Adjusted EBITDA',
+        variant: 'normal',
+      },
+      {
+        key: 'unfunded_capex',
+        label: '− Unfunded CapEx',
+        variant: 'deduction',
+      },
+      {
+        key: 'cash_taxes_paid',
+        label: '− Cash Taxes Paid',
+        variant: 'deduction',
+      },
+      {
+        key: 'distributions_paid',
+        label: '− Distributions Paid',
+        variant: 'deduction',
+      },
+      {
+        key: 'numerator',
+        label: '= CFADS (= FCCR Numerator)',
+        variant: 'total',
+      },
+    ];
 
-    return (
-      <React.Fragment key="cfads-components">
+    return rows
+      .filter((r) =>
+        years.some((y) => getFccrBreakdownValue(y, r.key) !== null),
+      )
+      .map((r) => (
         <tr
-          className="bg-muted cursor-pointer hover:bg-muted/80"
-          onClick={() => toggleSection('CFADS Components')}
+          key={`cfads-detail-${r.key}`}
+          className={getRowClasses(r.variant)}
         >
-          <td
-            colSpan={years.length + 1}
-            className="py-2 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide border-t border-border"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground/60">
-                {isCollapsed ? '▶' : '▼'}
-              </span>
-              CFADS Components
-            </div>
-          </td>
+          <td className={getLabelClasses(r.variant)}>{r.label}</td>
+          {years.map((y) => (
+            <td key={y} className={getValueClasses(r.variant)}>
+              {formatValue(
+                getFccrBreakdownValue(y, r.key),
+                'currency',
+              )}
+            </td>
+          ))}
         </tr>
-        {!isCollapsed && (
-          <>
-            <tr className="border-b border-border hover:bg-muted/50">
-              <td className="py-2 px-4 pl-8 text-muted-foreground">
-                Adjusted EBITDA
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right text-muted-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(y, 'adjusted_ebitda'),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b border-border hover:bg-muted/50">
-              <td className="py-2 px-4 pl-8 text-muted-foreground">
-                Less: Unfunded CapEx
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right text-muted-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(y, 'unfunded_capex'),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b border-border hover:bg-muted/50">
-              <td className="py-2 px-4 pl-8 text-muted-foreground">
-                Less: Cash Taxes Paid
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right text-muted-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(y, 'cash_taxes_paid'),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b border-border hover:bg-muted/50">
-              <td className="py-2 px-4 pl-8 text-muted-foreground">
-                Less: Distributions Paid
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right text-muted-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(y, 'distributions_paid'),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-b border-border hover:bg-muted/50 bg-primary/5">
-              <td className="py-2 px-4 pl-8 font-medium text-foreground">
-                = CFADS (= FCCR Numerator)
-              </td>
-              {years.map((y) => (
-                <td
-                  key={y}
-                  className="py-2 px-4 text-right font-medium text-foreground"
-                >
-                  {formatValue(
-                    getFccrBreakdownValue(y, 'numerator'),
-                    'currency',
-                  )}
-                </td>
-              ))}
-            </tr>
-          </>
-        )}
-      </React.Fragment>
+      ));
+  };
+
+  // ── FCCR denominator detail ─────────────────────────────────────────────
+
+  const renderFccrDenominatorDetail = () => {
+    if (!hasFccrBreakdown) return null;
+
+    const rows: Array<{
+      key: string;
+      label: string;
+      variant: RowVariant;
+    }> = [
+      {
+        key: 'ttm_principal_payments',
+        label: 'Principal Payments (TTM)',
+        variant: 'normal',
+      },
+      {
+        key: 'ttm_interest_expense',
+        label: 'Interest Expense (TTM)',
+        variant: 'normal',
+      },
+      {
+        key: 'lease_payments',
+        label: 'Lease Payments',
+        variant: 'normal',
+      },
+      {
+        key: 'denominator',
+        label: '= Total Fixed Charges',
+        variant: 'subtotal',
+      },
+    ];
+
+    return rows
+      .filter((r) =>
+        years.some((y) => {
+          const v = getFccrBreakdownValue(y, r.key);
+          return v !== null && v !== 0;
+        }),
+      )
+      .map((r) => (
+        <tr
+          key={`fccr-denom-${r.key}`}
+          className={getRowClasses(r.variant)}
+        >
+          <td className={getLabelClasses(r.variant)}>{r.label}</td>
+          {years.map((y) => (
+            <td key={y} className={getValueClasses(r.variant)}>
+              {formatValue(
+                getFccrBreakdownValue(y, r.key),
+                'currency',
+              )}
+            </td>
+          ))}
+        </tr>
+      ));
+  };
+
+  // ── Ratio formula component rows ─────────────────────────────────────────
+
+  const renderFormulaRows = (ratioKey: string) => {
+    const formulas = ratioFormulas[ratioKey];
+    if (!formulas) return null;
+
+    return formulas
+      .filter((f) =>
+        years.some(
+          (y) => f.getValue(data.metrics_by_year[y]) !== null,
+        ),
+      )
+      .map((f, i) => (
+        <tr
+          key={`formula-${ratioKey}-${i}`}
+          className={getRowClasses('addback')}
+        >
+          <td className={getLabelClasses('addback')}>{f.label}</td>
+          {years.map((y) => (
+            <td key={y} className={getValueClasses('addback')}>
+              {formatValue(
+                f.getValue(data.metrics_by_year[y]),
+                f.format,
+              )}
+            </td>
+          ))}
+        </tr>
+      ));
+  };
+
+  // ── Equation verification cards ────────────────────────────────────────
+
+  const renderEquationCards = () => {
+    return (
+      <div className="mt-8 space-y-6">
+        {years.map((year) => {
+          const m = data.metrics_by_year[year];
+          const fb = m.fccr_breakdown;
+
+          const hasFccr = fb != null && m.fccr != null;
+          const hasSenior =
+            m.senior_debt != null && m.senior_debt_to_ebitda != null;
+          const hasDebtCap =
+            m.total_debt != null && m.total_debt_to_capital != null;
+
+          if (!hasFccr && !hasSenior && !hasDebtCap) return null;
+
+          return (
+            <div key={year} className="space-y-3">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                {year} — Formula Breakdown
+              </h3>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {/* FCCR equation */}
+                {hasFccr && fb && (
+                  <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1">
+                    <div>
+                      <span className="text-muted-foreground">Numerator</span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-foreground">
+                        {eqLine(fb.adjusted_ebitda, [
+                          { v: fb.capex_deduction, op: '−' },
+                          { v: fb.cash_taxes_paid, op: '−' },
+                          { v: fb.distributions_paid, op: '−' },
+                        ])}
+                      </span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="font-bold text-warning">
+                        {fmtEq(fb.numerator)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Denominator</span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-foreground">
+                        {[
+                          fb.ttm_principal_payments,
+                          fb.ttm_interest_expense,
+                          fb.lease_payments,
+                        ]
+                          .filter((v) => v !== 0)
+                          .map((v) => fmtEq(v))
+                          .join(' + ')}
+                      </span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="font-bold text-primary">
+                        {fmtEq(fb.denominator)}
+                      </span>
+                    </div>
+                    <div className="border-t border-border pt-2 mt-1">
+                      <span className="text-muted-foreground">FCCR</span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-foreground">
+                        {fmtEq(fb.numerator)} / {fmtEq(fb.denominator)}
+                      </span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className={getRatioColor('fccr', m.fccr)}>
+                        {m.fccr!.toFixed(2)}x
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Senior Debt / Adj. EBITDA */}
+                {hasSenior && (
+                  <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed">
+                    <div>
+                      <span className="text-muted-foreground">
+                        Senior Debt / Adj. EBITDA
+                      </span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-foreground">
+                        {fmtEq(m.senior_debt!)} /{' '}
+                        {fmtEq(m.adjusted_ebitda ?? m.ebitda ?? 0)}
+                      </span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span
+                        className={getRatioColor(
+                          'senior_debt_to_ebitda',
+                          m.senior_debt_to_ebitda,
+                        )}
+                      >
+                        {m.senior_debt_to_ebitda!.toFixed(2)}x
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Total Debt / Total Capital */}
+                {hasDebtCap && (
+                  <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed">
+                    <div>
+                      <span className="text-muted-foreground">
+                        Total Debt / Total Capital
+                      </span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-foreground">
+                        {fmtEq(m.total_debt!)} /{' '}
+                        {fmtEq(
+                          m.total_debt! + (m.shareholders_equity ?? 0),
+                        )}
+                      </span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span
+                        className={getRatioColor(
+                          'total_debt_to_capital',
+                          m.total_debt_to_capital,
+                        )}
+                      >
+                        {(m.total_debt_to_capital! * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     );
   };
+
+  // ── Main render ──────────────────────────────────────────────────────────
 
   return (
     <div className="w-full overflow-x-auto">
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">
-          Financial Metrics
+          Financial Summary
         </h2>
         <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
           Values in thousands
         </span>
       </div>
+
       <table className="min-w-full text-sm tabular-nums border-collapse">
         <thead>
           <tr className="bg-primary border-b-2 border-primary">
-            <th className="py-3 px-4 text-left font-semibold text-primary-foreground">
-              Metric
+            <th className="py-3 px-4 text-left font-semibold text-primary-foreground w-56">
+              Line Item
             </th>
             {years.map((y) => (
               <th
                 key={y}
-                className="py-3 px-4 text-right font-semibold text-primary-foreground"
+                className="py-3 px-4 text-right font-semibold text-primary-foreground tabular-nums"
               >
                 {y}
               </th>
             ))}
           </tr>
         </thead>
+
         <tbody>
           {sections.map((section) => {
-            const rendered = renderSection(section);
+            if (!sectionHasData(section)) return null;
 
-            // Inject FCCR Components after Key Ratios
-            if (section.title === 'Key Ratios') {
-              if (!rendered && !hasFccrBreakdown) return null;
-              return (
-                <React.Fragment key={`group-${section.title}`}>
-                  {rendered}
-                  {renderFccrComponents()}
-                </React.Fragment>
-              );
-            }
+            const isCollapsed =
+              section.collapsible &&
+              collapsedSections.has(section.title);
 
-            // Inject CFADS Components after Adjusted EBITDA Components
-            if (section.title === 'Adjusted EBITDA Components') {
-              if (!rendered && !hasFccrBreakdown) return null;
-              return (
-                <React.Fragment key={`group-${section.title}`}>
-                  {rendered}
-                  {renderCfadsComponents()}
-                </React.Fragment>
-              );
-            }
+            return (
+              <React.Fragment key={section.title}>
+                {renderSectionHeader(section)}
 
-            return rendered;
+                {!isCollapsed && (
+                  <>
+                    {section.rows.map((row) => (
+                      <React.Fragment
+                        key={`${section.title}-${row.key}-wrap`}
+                      >
+                        {renderRow(row, section.title)}
+                        {renderFormulaRows(row.key)}
+                      </React.Fragment>
+                    ))}
+
+                    {/* Inject CFADS detail rows under "Cash Available for Debt Service" */}
+                    {section.title ===
+                      'Cash Available for Debt Service (CFADS)' &&
+                      renderCfadsDetail()}
+
+                    {/* Inject FCCR denominator breakdown under "Debt Service" */}
+                    {section.title ===
+                      'Debt Service (Fixed Charges)' &&
+                      renderFccrDenominatorDetail()}
+                  </>
+                )}
+              </React.Fragment>
+            );
           })}
         </tbody>
       </table>
+
+      {/* Formula verification cards below the table */}
+      {renderEquationCards()}
     </div>
   );
 };

@@ -186,6 +186,25 @@ const InfoCallout: React.FC<InfoCalloutProps> = ({
   </div>
 );
 
+/** Format number for equation display — no $ sign, comma-separated, rounded */
+const fmtEq = (n: number): string => Math.round(n).toLocaleString();
+
+/**
+ * Build a flat equation string like "80,831 + 1,005 − 451".
+ * Zero-value terms are skipped so the equation stays readable.
+ */
+const eqLine = (
+  start: number,
+  terms: Array<{ v: number; op: string }>,
+): string => {
+  let eq = fmtEq(start);
+  for (const t of terms) {
+    if (t.v === 0) continue;
+    eq += ` ${t.op} ${fmtEq(Math.abs(t.v))}`;
+  }
+  return eq;
+};
+
 // ─── Main Component ────────────────────────────────────────────────────────
 
 const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
@@ -326,6 +345,57 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
           Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time
           Expenses - One-Time Gains - Interest Income
         </p>
+      </div>
+
+      {/* Numeric formula card — one per year, most recent first */}
+      <div className="space-y-3">
+        {Object.keys(data.metrics_by_year)
+          .sort()
+          .reverse()
+          .map((yr) => {
+            const m = data.metrics_by_year[yr];
+            const ab = m.adjusted_ebitda_breakdown;
+            if (!ab) return null;
+
+            return (
+              <div
+                key={yr}
+                className="bg-gray-50 border border-gray-200 rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1"
+              >
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                  {yr}
+                </div>
+                <div>
+                  <span className="text-gray-500">Adj. EBITDA</span>
+                  <span className="text-gray-400"> = </span>
+                  <span>
+                    {eqLine(ab.reported_ebitda, [
+                      { v: ab.non_cash_adjustments, op: '+' },
+                      { v: ab.one_time_expenses, op: '+' },
+                      { v: ab.one_time_gains, op: '−' },
+                      { v: ab.interest_income_excluded, op: '−' },
+                      { v: ab.owner_management_adjustments, op: '+' },
+                      { v: ab.accounting_adjustments, op: '+' },
+                      { v: ab.pro_forma_adjustments, op: '+' },
+                    ])}
+                  </span>
+                  <span className="text-gray-400"> = </span>
+                  <span className="font-bold text-blue-700">
+                    {fmtEq(
+                      m.calculated_adjusted_ebitda ??
+                        m.adjusted_ebitda ??
+                        ab.reported_ebitda,
+                    )}
+                  </span>
+                </div>
+                {ab.uses_reported_value && m.adjusted_ebitda != null && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    Using reported value: {fmtEq(m.adjusted_ebitda)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </div>
 
       {/* ── Accordion Sections ── */}
