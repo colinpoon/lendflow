@@ -30,7 +30,10 @@
       "mcp__shadcn__get_add_command_for_items",
       "mcp__shadcn__get_project_registries",
       "mcp__shadcn__search_items_in_registries",
-      "Bash(ls /Users/colinpoon/Dev/lendflow/app/\\\\\\(dashboard\\\\\\))"
+      "Bash(ls /Users/colinpoon/Dev/lendflow/app/\\\\\\(dashboard\\\\\\))",
+      "Bash(npx tsx:*)",
+      "Bash(grep -c '\"type\":\"assistant\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/a5b7085be00787932.output 2>/dev/null && grep '\"stop_reason\":\"end_turn\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/a5b7085be00787932.output 2>/dev/null | tail -1 | python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\('COMPLETE' if d else 'RUNNING'\\)\" 2>/dev/null || echo \"Still running\")",
+      "Bash(grep -c '\"type\":\"assistant\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/ac1da90e273f49b71.output 2>/dev/null && grep '\"stop_reason\":\"end_turn\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/ac1da90e273f49b71.output 2>/dev/null | tail -1 | python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\('COMPLETE' if d else 'RUNNING'\\)\" 2>/dev/null || echo \"Still running\")"
     ]
   },
   "enabledMcpjsonServers": [

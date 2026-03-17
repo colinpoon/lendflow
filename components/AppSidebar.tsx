@@ -10,6 +10,7 @@ import {
   Eye,
   GitCompareArrows,
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 import {
   Sidebar,
@@ -104,6 +105,9 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-3">
         <SidebarMenu>
+          <SidebarMenuItem>
+            <ThemeToggle />
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SignOutButton>
               <SidebarMenuButton
