@@ -109,7 +109,19 @@ export function calculateEBITDA(metrics: ExtractedMetrics): EBITDAResult | null 
     }
   }
   const taxes = metrics.taxes;
-  // Prefer summing component depreciation fields when available (more reliable than AI's total)
+  // ── D&A Resolution with Completeness Gate ──────────────────────────────
+  // The CF operating-activities add-back (depreciation_amortization) is the canonical
+  // authoritative total — it includes ALL asset classes (equipment, ROU, intangibles,
+  // leasehold improvements, software, etc.). IS sub-components may only capture a
+  // subset disclosed in the notes.
+  //
+  // Strategy:
+  //   1. If the CF aggregate exists, it is the ceiling (canonical source).
+  //   2. If IS sub-components exist AND their sum >= the CF aggregate, prefer the sum
+  //      (sub-components provide better audit trail and the sum is at least as complete).
+  //   3. If IS sub-components exist but sum < CF aggregate, the sub-components are
+  //      incomplete — use the CF aggregate to avoid understating D&A.
+  //   4. If no CF aggregate exists, fall back to whatever sub-components we have.
   const componentDepAmort = [
     metrics.depreciation_equipment,
     metrics.depreciation_rou,
@@ -117,10 +129,32 @@ export function calculateEBITDA(metrics: ExtractedMetrics): EBITDAResult | null 
     metrics.amortization_intangibles,
   ].filter((v): v is number => v != null);
 
-  const depAmort =
-    componentDepAmort.length > 0
-      ? componentDepAmort.reduce((sum, v) => sum + v, 0)
-      : metrics.depreciation_amortization;
+  const componentSum = componentDepAmort.length > 0
+    ? componentDepAmort.reduce((sum, v) => sum + v, 0)
+    : 0;
+
+  const cfAggregate = metrics.depreciation_amortization ?? null;
+
+  let depAmort: number | null;
+  if (cfAggregate != null && componentDepAmort.length > 0) {
+    // Both sources available — use whichever is larger (completeness gate)
+    if (componentSum >= cfAggregate) {
+      depAmort = componentSum;
+    } else {
+      console.warn(
+        `⚠️ D&A COMPLETENESS GATE: Sub-components sum (${componentSum}) < CF aggregate ` +
+        `(${cfAggregate}) by ${(cfAggregate - componentSum).toFixed(0)}. ` +
+        `Sub-components likely incomplete — using CF aggregate as canonical total.`
+      );
+      depAmort = cfAggregate;
+    }
+  } else if (cfAggregate != null) {
+    depAmort = cfAggregate;
+  } else if (componentDepAmort.length > 0) {
+    depAmort = componentSum;
+  } else {
+    depAmort = null;
+  }
 
   // Need at minimum net_income and depreciation to calculate meaningful EBITDA
   if (netIncome != null && depAmort != null) {
@@ -372,23 +406,27 @@ function deduplicateOneTimeGains(
   rawOtherIncomeNonOperating: number | null | undefined,
   rawOtherOneTimeGains: number | null | undefined,
   rawInsuranceProceeds: number | null | undefined,
+  rawGainOnDisposal: number | null | undefined,
   tolerance: number
 ): {
   gainOnAssetSale: number | null;
   otherIncomeNonOperating: number | null;
   otherOneTimeGains: number | null;
   insuranceProceeds: number | null;
+  gainOnDisposal: number | null;
 } {
   const gainOnAssetSale = rawGainOnAssetSale ?? null;
   let otherIncomeNonOperating = rawOtherIncomeNonOperating ?? null;
   let otherOneTimeGains = rawOtherOneTimeGains ?? null;
   let insuranceProceeds = rawInsuranceProceeds ?? null;
+  let gainOnDisposal = rawGainOnDisposal ?? null;
 
   // Normalise to absolute values for comparison (gains are always positive after Math.abs)
   const absGain = gainOnAssetSale != null ? Math.abs(gainOnAssetSale) : null;
   const absOther = otherIncomeNonOperating != null ? Math.abs(otherIncomeNonOperating) : null;
   const absOneTime = otherOneTimeGains != null ? Math.abs(otherOneTimeGains) : null;
   const absInsurance = insuranceProceeds != null ? Math.abs(insuranceProceeds) : null;
+  const absDisposal = gainOnDisposal != null ? Math.abs(gainOnDisposal) : null;
 
   // gain_on_asset_sale vs other_one_time_gains
   if (absGain != null && absOneTime != null && absGain > 0 && absOneTime > 0) {
@@ -411,6 +449,32 @@ function deduplicateOneTimeGains(
         `zeroing other_income_non_operating (lower priority)`
       );
       otherIncomeNonOperating = 0;
+    }
+  }
+
+  // gain_on_disposal vs gain_on_asset_sale (same economic event, different label)
+  if (absDisposal != null && absGain != null && absDisposal > 0 && absGain > 0) {
+    if (valuesOverlapWithinTolerance(absDisposal, absGain, tolerance)) {
+      console.warn(
+        `⚠️ DEDUP [gains]: gain_on_disposal (${gainOnDisposal}) matches ` +
+        `gain_on_asset_sale (${gainOnAssetSale}) within ${tolerance * 100}% — ` +
+        `zeroing gain_on_disposal (lower priority)`
+      );
+      gainOnDisposal = 0;
+    }
+  }
+
+  // gain_on_disposal vs other_one_time_gains
+  const absOneTimeAfterGain = otherOneTimeGains != null ? Math.abs(otherOneTimeGains) : null;
+  const absDisposalAfterSale = gainOnDisposal != null ? Math.abs(gainOnDisposal) : null;
+  if (absDisposalAfterSale != null && absOneTimeAfterGain != null && absDisposalAfterSale > 0 && absOneTimeAfterGain > 0) {
+    if (valuesOverlapWithinTolerance(absDisposalAfterSale, absOneTimeAfterGain, tolerance)) {
+      console.warn(
+        `⚠️ DEDUP [gains]: gain_on_disposal (${gainOnDisposal}) matches ` +
+        `other_one_time_gains (${otherOneTimeGains}) within ${tolerance * 100}% — ` +
+        `zeroing gain_on_disposal (lower priority)`
+      );
+      gainOnDisposal = 0;
     }
   }
 
@@ -440,7 +504,7 @@ function deduplicateOneTimeGains(
     }
   }
 
-  return { gainOnAssetSale, otherIncomeNonOperating, otherOneTimeGains, insuranceProceeds };
+  return { gainOnAssetSale, otherIncomeNonOperating, otherOneTimeGains, insuranceProceeds, gainOnDisposal };
 }
 
 /**
@@ -487,11 +551,13 @@ export function calculateAdjustedEBITDA(
     otherIncomeNonOperating,
     otherOneTimeGains,
     insuranceProceeds,
+    gainOnDisposal,
   } = deduplicateOneTimeGains(
     adj.gain_on_asset_sale,
     adj.other_income_non_operating,
     adj.other_one_time_gains,
     adj.insurance_proceeds,
+    adj.gain_on_disposal,
     DEDUP_TOLERANCE
   );
 
@@ -548,12 +614,6 @@ export function calculateAdjustedEBITDA(
   // ─────────────────────────────────────────────────────────────────────────
   // Non-Cash Adjustments (add back)
   // ─────────────────────────────────────────────────────────────────────────
-  // NOTE: loss_on_disposal is intentionally EXCLUDED. Disposal losses are already reflected in
-  // net income (reducing it) and are NOT added back because:
-  // 1. Most companies dispose of assets as a recurring part of operations
-  // 2. Conservative underwriting treats disposal losses as operational, not one-time
-  // 3. Disposal gains are still subtracted via the one-time gains bucket
-
   // Sign-aware routing for unrealized items (non-FX mark-to-market).
   // Prompt convention: positive = unrealized loss (non-cash expense → add back);
   //                    negative = unrealized gain (non-cash income → subtract from EBITDA).
@@ -574,6 +634,7 @@ export function calculateAdjustedEBITDA(
     unrealizedLossAddback,        // non-FX unrealized losses (positive values only)
     unrealizedFxLossAddback,      // unrealized FX loss from CF statement (positive = add back)
     adj.deferred_compensation,
+    adj.loss_on_disposal,         // non-cash loss on asset disposal (add back)
     deduplicatedOtherNonCash,     // may be zeroed by Guard 1
   ]
     .filter((v): v is number => v != null && v !== 0)
@@ -692,8 +753,6 @@ export function calculateAdjustedEBITDA(
 
   // ─────────────────────────────────────────────────────────────────────────
   // One-Time Gains (subtract)
-  // NOTE: gain_on_disposal is intentionally EXCLUDED — disposal gains/losses are treated as
-  // operational (symmetric with loss_on_disposal exclusion above). Their impact stays in net income.
   //
   // NOTE: Gains/income values should ALWAYS be subtracted from EBITDA.
   // The AI may extract them as negative (due to parentheses in financial statements).
@@ -702,6 +761,7 @@ export function calculateAdjustedEBITDA(
 
   const oneTimeGains = [
     gainOnAssetSale,                  // deduped against other_one_time_gains and other_income_non_operating
+    gainOnDisposal,                   // deduped against gain_on_asset_sale and other_one_time_gains
     dedupedOtherIncomeNonOperating,   // deduped against gain_on_asset_sale, realized_fx_pl, AND interest_income
     insuranceProceeds,                // deduped against other_income_non_operating
     otherOneTimeGains,          // deduped against gain_on_asset_sale and other_income_non_operating

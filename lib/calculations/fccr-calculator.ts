@@ -15,9 +15,12 @@
  * - 'custom': Deduct a custom percentage of CapEx
  *
  * Covenant FCCR Formula:
- * Numerator = Adjusted EBITDA - Unfunded CapEx - Cash Taxes - Distributions
+ * Numerator = Adjusted EBITDA - Unfunded CapEx - Cash Taxes
  * Denominator = Principal Payments + Interest Expense + Lease Payments
  * FCCR = Numerator / Denominator
+ *
+ * Note: Distributions are NOT deducted from the numerator. They are discretionary
+ * and are typically restricted BY the covenant, not included IN the coverage calc.
  *
  * Reference Value (Zedcor FY2024): FCCR >= 1.15x (per covenant compliance)
  */
@@ -82,7 +85,7 @@ export function calculateCapexDeduction(
  *
  * Lender-defined formula:
  * - CapEx Deduction = Based on treatment mode (unfunded, all, none, or custom %)
- * - Numerator = Adjusted EBITDA - CapEx Deduction - Cash Taxes - Distributions
+ * - Numerator = Adjusted EBITDA - CapEx Deduction - Cash Taxes
  * - Denominator = TTM Principal Payments + TTM Interest Expense
  * - FCCR = Numerator / Denominator
  *
@@ -93,7 +96,8 @@ export function calculateCapexDeduction(
 export function calculateFCCR(
   adjustedEbitda: number | null,
   metrics: ExtractedMetrics,
-  capexConfig: CapexTreatmentConfig = DEFAULT_CAPEX_TREATMENT
+  capexConfig: CapexTreatmentConfig = DEFAULT_CAPEX_TREATMENT,
+  year?: string
 ): FCCRCalculationResult {
   // Cannot calculate without EBITDA
   if (adjustedEbitda == null) {
@@ -132,12 +136,17 @@ export function calculateFCCR(
   // ─────────────────────────────────────────────────────────────────────────
   // Denominator Components (Debt Service via shared resolver)
   //
-  // The resolver uses priority chains that prefer balance-sheet scheduled
-  // amounts over gross cash-flow figures, and resolves finance leases
-  // independently to prevent double-counting.
+  // The resolver uses priority chains:
+  //   Principal: repayment_of_debt (all debt classes) > bank_debt_current > ttm_principal_payments
+  //   Interest:  cash_interest_paid (cross-checked vs accrual) > total_interest_expense > ttm > P&L
+  //   Leases:    finance_lease_payments > lease_liabilities_current > payment_of_lease_liability
+  //
+  // Finance leases are resolved independently to prevent double-counting.
+  // Lease interest is only deducted from the interest component when the
+  // lease source is a total cash payment (not a BS current portion).
   // ─────────────────────────────────────────────────────────────────────────
 
-  const debtService = resolveDebtService(metrics);
+  const debtService = resolveDebtService(metrics, year);
   const ttmPrincipalPayments = debtService.principal;
   const ttmInterestExpense = debtService.interest;
   const leasePayments = debtService.leases;
@@ -160,8 +169,9 @@ export function calculateFCCR(
 
   // Numerator: Cash Flow Available for Debt Servicing
   // Uses the configured CapEx deduction (unfunded, all, none, or custom)
+  // Distributions are excluded — they are discretionary and restricted by covenant
   const numerator =
-    adjustedEbitda - capexDeduction - cashTaxesPaid - distributionsPaid;
+    adjustedEbitda - capexDeduction - cashTaxesPaid;
 
   // FCCR = Numerator / Denominator
   const fccr = parseFloat((numerator / totalDebtService).toFixed(2));

@@ -35,7 +35,8 @@ export interface DSCRCalculationResult {
  */
 export function calculateDSCR(
   adjustedEbitda: number | null,
-  metrics: ExtractedMetrics
+  metrics: ExtractedMetrics,
+  year?: string
 ): DSCRCalculationResult {
   // Cannot calculate without EBITDA
   if (adjustedEbitda == null) {
@@ -111,7 +112,7 @@ export function calculateDSCR(
   // resolution across both ratios. See debt-service-resolver.ts for details.
   // ─────────────────────────────────────────────────────────────────────────
 
-  const debtService = resolveDebtService(metrics);
+  const debtService = resolveDebtService(metrics, year);
   const repaymentOfDebt = debtService.principal;
   const cashInterestPaid = debtService.interest;
   const leasePayments = debtService.leases;

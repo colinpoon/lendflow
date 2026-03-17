@@ -1,11 +1,11 @@
 /**
  * Shared debt service resolver for FCCR and DSCR denominators
  *
- * Resolves principal, interest, and lease components using priority chains
- * that prefer balance-sheet scheduled amounts over gross cash-flow figures.
+ * Resolves principal, interest, and lease components using priority chains.
  *
  * Priority chains:
- *   Principal: debt_components.bank_debt_current > repayment_of_debt > ttm_principal_payments
+ *   Principal: repayment_of_debt > debt_components.bank_debt_current > ttm_principal_payments
+ *              (repayment_of_debt captures ALL debt classes retired, not just bank debt)
  *   Interest:  cash_interest_paid (cross-checked vs accrual) > total_interest_expense > ttm_interest_expense > interest (accrual)
  *   Leases:    fixed_charges.finance_lease_payments > debt_components.lease_liabilities_current > payment_of_lease_liability
  */
@@ -47,32 +47,63 @@ export interface ResolvedDebtService {
 /**
  * Resolve debt service components using priority chains.
  *
- * The key fixes vs the previous ad-hoc approach:
- * 1. Principal prefers balance-sheet current portion (scheduled repayments)
- *    over cash-flow repayment_of_debt (which includes gross refinancing flows).
+ * Key design decisions:
+ * 1. Principal prefers repayment_of_debt (actual cash paid, all debt classes) over
+ *    bank_debt_current (forward-looking bank portion only). bank_debt_current misses
+ *    repayments on notes_payable, subordinated debt, and other obligations. For covenant
+ *    compliance testing, actual debt service paid is the correct measure.
  * 2. Leases are resolved independently — no longer bundled inside ttm_principal_payments,
  *    eliminating the double-count that inflated FCCR/DSCR denominators.
  * 3. Finance leases only — operating lease payments are excluded per banking convention.
+ * 4. Lease interest deduction only applies when lease source is a total cash payment
+ *    (includes principal + interest). Balance sheet current portions are principal-only
+ *    and do NOT embed interest — deducting lease interest in that case causes it to
+ *    vanish from the denominator entirely.
  */
-export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtService {
+export function resolveDebtService(metrics: ExtractedMetrics, year?: string): ResolvedDebtService {
+  const yearTag = year ? `[${year}] ` : '';
   const dc = (metrics.debt_components || {}) as DebtComponents;
   const fc = (metrics.fixed_charges || {}) as FixedCharges;
 
   // ── Principal ──────────────────────────────────────────────────────────
-  // Prefer balance-sheet current portion of bank debt (scheduled repayments)
-  // over cash-flow repayment_of_debt (which captures gross refinancing outflows).
+  // Prefer repayment_of_debt (cash flow financing activities) — captures ALL
+  // debt classes retired during the year (bank debt, notes payable, promissory
+  // notes, other borrowings). bank_debt_current is the balance sheet current
+  // portion of bank debt ONLY and systematically understates principal for
+  // companies with non-bank obligations.
+  //
+  // Risk: repayment_of_debt can include gross revolving credit draws/repays
+  // for US GAAP revolvers. For IFRS term borrowers this is rarely an issue.
+  // A sanity-check warning is logged when repayment_of_debt materially exceeds
+  // bank_debt_current to flag potential gross refinancing distortion.
   let principal = 0;
   let principalSource: DebtServiceSource = 'none';
 
-  if (dc.bank_debt_current != null && dc.bank_debt_current > 0) {
-    principal = dc.bank_debt_current;
-    principalSource = 'bank_debt_current';
-  } else if (metrics.repayment_of_debt != null && metrics.repayment_of_debt > 0) {
+  if (metrics.repayment_of_debt != null && metrics.repayment_of_debt > 0) {
     principal = metrics.repayment_of_debt;
     principalSource = 'repayment_of_debt';
+  } else if (dc.bank_debt_current != null && dc.bank_debt_current > 0) {
+    principal = dc.bank_debt_current;
+    principalSource = 'bank_debt_current';
   } else if (metrics.ttm_principal_payments != null && metrics.ttm_principal_payments > 0) {
     principal = metrics.ttm_principal_payments;
     principalSource = 'ttm_principal_payments';
+  }
+
+  // Sanity check: warn when repayment_of_debt materially exceeds bank_debt_current.
+  // A >50% gap suggests either (a) non-bank debt was repaid (legitimate), or
+  // (b) gross revolving credit activity inflated the figure (needs analyst review).
+  if (
+    principalSource === 'repayment_of_debt' &&
+    dc.bank_debt_current != null &&
+    dc.bank_debt_current > 0 &&
+    principal > dc.bank_debt_current * 1.5
+  ) {
+    console.warn(
+      `⚠️ ${yearTag}PRINCIPAL: repayment_of_debt (${principal}) exceeds bank_debt_current ` +
+      `(${dc.bank_debt_current}) by ${((principal / dc.bank_debt_current - 1) * 100).toFixed(0)}%. ` +
+      `Verify this is not a gross revolving credit repayment.`
+    );
   }
 
   // ── Interest ───────────────────────────────────────────────────────────
@@ -98,9 +129,17 @@ export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtServi
     interest = cashInterest;
     interestSource = 'cash_interest_paid';
 
-    // Cross-check: if an accrual total is materially larger (>1.5x), the
+    // Cross-check: if an accrual total is materially larger (>1.15x), the
     // cash figure likely captured only one component (e.g., lease interest
     // but not bank interest). Prefer the larger accrual figure.
+    //
+    // Threshold rationale: cash interest paid and accrual interest expense
+    // should differ only by timing (accrued-but-unpaid at period boundaries,
+    // amortization of issuance costs). A 15% tolerance accommodates those
+    // legitimate timing differences without accepting materially incomplete
+    // cash figures. The previous 1.5x threshold allowed a 33% shortfall —
+    // understating the FCCR/DSCR denominator and overstating coverage,
+    // the most dangerous direction of error for a lender.
     //
     // NOTE: plInterest (P&L finance costs) may include non-cash components
     // (accretion, amortization of financing fees) that slightly inflate the
@@ -122,9 +161,21 @@ export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtServi
       accrualBestSource = 'interest_accrual';
     }
 
-    if (accrualBest > cashInterest * 1.5) {
+    if (accrualBest > cashInterest * 1.15) {
       interest = accrualBest;
       interestSource = accrualBestSource;
+    }
+
+    // Symmetric check: warn when cash materially exceeds accrual.
+    // Common cause: cash_interest_paid includes IFRS 16 lease interest
+    // while P&L finance costs exclude it.
+    if (cashInterest > accrualBest * 1.15 && accrualBest > 0) {
+      console.warn(
+        `⚠️ ${yearTag}INTEREST REVIEW: cash_interest_paid (${cashInterest}) exceeds ` +
+        `best accrual (${accrualBest} via ${accrualBestSource}) by ` +
+        `${((cashInterest / accrualBest - 1) * 100).toFixed(0)}%. ` +
+        `Cash may include IFRS 16 lease interest. Retaining cash basis.`
+      );
     }
   } else if (fcTotalInterest > 0) {
     interest = fcTotalInterest;
@@ -157,24 +208,37 @@ export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtServi
   }
 
   // ── Lease Interest Double-Count Prevention ────────────────────────────
-  // When the interest source is a P&L/accrual-based figure (total_interest_expense,
-  // ttm_interest_expense, or interest_accrual), it includes IFRS 16 "Interest on
-  // lease liabilities" as a P&L finance cost. Since lease payments are also added
-  // separately above (and their payments include both principal AND interest on the
-  // lease), the lease interest would be counted twice in the denominator:
-  //   1. Inside the `interest` component (from the P&L total that includes lease interest)
-  //   2. Inside the `leases` component (full lease payment which includes lease interest)
+  // When the interest source is P&L-based, it includes IFRS 16 "Interest on
+  // lease liabilities." If leases are a TOTAL CASH PAYMENT (finance_lease_payments
+  // or payment_of_lease_liability), that payment includes both principal AND
+  // interest — so lease interest would be counted twice:
+  //   1. Inside `interest` (P&L total includes lease interest)
+  //   2. Inside `leases` (full payment includes lease interest)
   //
-  // Fix: when leases > 0 and the interest source is P&L-based, subtract
-  // fc.lease_interest from interest. Floor at 0 to prevent negative interest.
+  // Fix: deduct fc.lease_interest from interest ONLY when the lease source is
+  // a total cash payment figure.
   //
-  // cash_interest_paid is excluded from this deduction — it is a cash-basis figure
-  // representing actual bank interest outflows and typically does not include
-  // the IFRS 16 lease interest accrual.
+  // CRITICAL: When leases = lease_liabilities_current (balance sheet current
+  // portion), the figure is PRINCIPAL ONLY — it does NOT embed interest.
+  // Deducting lease interest in this case causes it to fall out of the
+  // denominator entirely, understating fixed charges. This was a confirmed bug
+  // that inflated KITs FY2024 FCCR from 1.02x to 1.12x (missing $431K).
+  //
+  // cash_interest_paid is excluded from this deduction — it is a cash-basis
+  // figure representing actual bank interest outflows and typically does not
+  // include the IFRS 16 lease interest accrual.
   const PL_BASED_SOURCES: DebtServiceSource[] = [
     'total_interest_expense',
     'ttm_interest_expense',
     'interest_accrual',
+  ];
+
+  // Only deduct lease interest when the lease figure is a total cash payment
+  // (includes both principal + interest). Balance sheet current portions are
+  // principal-only and have no embedded interest to double-count.
+  const TOTAL_PAYMENT_LEASE_SOURCES: DebtServiceSource[] = [
+    'finance_lease_payments',
+    'payment_of_lease_liability',
   ];
 
   let leaseInterestDeducted: number | null = null;
@@ -182,6 +246,7 @@ export function resolveDebtService(metrics: ExtractedMetrics): ResolvedDebtServi
   if (
     leases > 0 &&
     PL_BASED_SOURCES.includes(interestSource) &&
+    TOTAL_PAYMENT_LEASE_SOURCES.includes(leaseSource) &&
     fc.lease_interest != null &&
     fc.lease_interest > 0
   ) {

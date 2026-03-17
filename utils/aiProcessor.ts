@@ -396,7 +396,7 @@ export const extractFinancialData = async (
 
     const computed: Record<string, ComputedMetrics> = {};
     for (const yr of Object.keys(merged)) {
-      computed[yr] = computeMetrics(merged[yr] as unknown as ExtractedMetrics);
+      computed[yr] = computeMetrics(merged[yr] as unknown as ExtractedMetrics, yr);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -487,7 +487,7 @@ export const extractFinancialData = async (
  * @param m - Extracted metrics for one year
  * @returns Computed metrics including ratios and breakdowns
  */
-function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
+function computeMetrics(m: ExtractedMetrics, year?: string): ComputedMetrics {
   // Deep clone to prevent nested objects (debt_components, fixed_charges,
   // adjusted_ebitda_components, etc.) from sharing references with the caller's
   // copy of `m`. A shallow spread would let mutations on `result` silently mutate
@@ -565,7 +565,7 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
   // FCCR Calculation
   // ─────────────────────────────────────────────────────────────────────────
 
-  const fccrResult = calculateFCCR(result.adjusted_ebitda ?? result.ebitda, m);
+  const fccrResult = calculateFCCR(result.adjusted_ebitda ?? result.ebitda, m, undefined, year);
   result.fccr = fccrResult.fccr;
   result.fccr_numerator = fccrResult.fccr_numerator;
   result.total_fixed_charges = fccrResult.total_fixed_charges;
@@ -608,7 +608,7 @@ function computeMetrics(m: ExtractedMetrics): ComputedMetrics {
   // DSCR Calculation (Banker's Covenant Method)
   // ─────────────────────────────────────────────────────────────────────────
 
-  const dscrResult = calculateDSCR(result.adjusted_ebitda ?? result.ebitda, result);
+  const dscrResult = calculateDSCR(result.adjusted_ebitda ?? result.ebitda, result, year);
   result.dscr = dscrResult.dscr;
   result.funded_debt = dscrResult.funded_debt;
   result.funded_debt_to_ebitda = dscrResult.funded_debt_to_ebitda;
@@ -679,7 +679,7 @@ function logAdjustedEBITDA(
   console.log(`     unrealized_gains_losses:   ${adj.unrealized_gains_losses ?? 0}`);
   console.log(`     deferred_compensation:     ${adj.deferred_compensation ?? 0}`);
   console.log(`     other_non_cash:            ${adj.other_non_cash ?? 0}`);
-  console.log(`     (disposal losses excluded - operational: ${adj.loss_on_disposal ?? 0})`);
+  console.log(`     loss_on_disposal:          ${adj.loss_on_disposal ?? 0}`);
   console.log(`   + One-time Expenses:         ${breakdown.one_time_expenses}`);
   console.log(`   + Owner/Mgmt Adjustments:    ${breakdown.owner_management_adjustments}`);
   console.log(`   + Accounting Adjustments:    ${breakdown.accounting_adjustments}`);
@@ -687,7 +687,7 @@ function logAdjustedEBITDA(
   console.log(`   + Pro Forma Adjustments:     ${breakdown.pro_forma_adjustments}`);
   console.log(`   - One-time Gains:            ${breakdown.one_time_gains}`);
   console.log(`     other_income_non_operating: ${adj.other_income_non_operating ?? 0}`);
-  console.log(`     (disposal gains excluded - operational: ${adj.gain_on_disposal ?? 0})`);
+  console.log(`     gain_on_disposal:           ${adj.gain_on_disposal ?? 0}`);
   console.log(`   - Interest Income Excluded:  ${breakdown.interest_income_excluded}`);
   console.log(`     interest_income:            ${m.interest_income ?? 0}`);
   console.log(`   ─────────────────────────────────────`);
