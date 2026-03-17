@@ -341,8 +341,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 {/* Methodology Disclosure */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700 text-xs">
                   <strong>Covenant FCCR — Lendflow Methodology:</strong> This ratio uses a lender-defined cash flow formula, not the rating-agency (Moody&apos;s/S&amp;P) FCCR.
-                  The numerator deducts unfunded CapEx, cash taxes, and distributions from Adjusted EBITDA to represent true cash available for debt service.
-                  This matches the covenant test structure used in most commercial loan agreements.
+                  The numerator deducts unfunded CapEx and cash taxes from Adjusted EBITDA to represent true cash available for debt service.
+                  Distributions are excluded — they are discretionary and typically restricted by the covenant, not included in the coverage calculation.
                 </div>
 
                 {/* Numerator Section */}
@@ -406,15 +406,6 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                           )}
                         </span>
                         <span className="text-red-600">- {formatCurrency(fccrBreakdown.cash_taxes_paid)}</span>
-                      </div>
-                      <div className="flex justify-between text-gray-600">
-                        <span className="flex items-center flex-wrap">
-                          Distributions Paid
-                          {fccrBreakdown.sources && (
-                            <SourceInfo extracted={fccrBreakdown.sources.distributions_paid_extracted} />
-                          )}
-                        </span>
-                        <span className="text-red-600">- {formatCurrency(fccrBreakdown.distributions_paid)}</span>
                       </div>
                     </div>
 
@@ -551,7 +542,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                   <h5 className="font-semibold text-gray-700 mb-3 text-center">Covenant FCCR Calculation</h5>
                   <div className="space-y-2 font-mono text-xs text-gray-600">
                     <div>
-                      <span className="text-gray-500">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()} - {fccrBreakdown.distributions_paid.toLocaleString()} = <span className="font-semibold text-green-700">{fccrBreakdown.numerator.toLocaleString()}</span>
+                      <span className="text-gray-500">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()} = <span className="font-semibold text-green-700">{fccrBreakdown.numerator.toLocaleString()}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">Denominator =</span> {fccrBreakdown.ttm_principal_payments.toLocaleString()} + {fccrBreakdown.ttm_interest_expense.toLocaleString()}{fccrBreakdown.lease_payments > 0 ? ` + ${fccrBreakdown.lease_payments.toLocaleString()}` : ''} = <span className="font-semibold text-blue-700">{fccrBreakdown.denominator.toLocaleString()}</span>

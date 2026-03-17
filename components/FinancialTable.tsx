@@ -100,7 +100,10 @@ interface AdjustedEBITDABreakdown {
   interest_income_excluded: number;
   owner_management_adjustments: number;
   accounting_adjustments: number;
+  unrealized_fx_adjustment: number;
+  realized_fx_pl: number;
   pro_forma_adjustments: number;
+  capital_expenditures_not_in_calc: number;
   uses_reported_value: boolean;
 }
 
@@ -497,11 +500,6 @@ const sections: SectionConfig[] = [
       {
         key: 'cash_taxes_paid',
         label: '− Cash Taxes Paid',
-        variant: 'deduction',
-      },
-      {
-        key: 'distributions_paid',
-        label: '− Distributions Paid',
         variant: 'deduction',
       },
       {
@@ -1363,11 +1361,6 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         variant: 'deduction',
       },
       {
-        key: 'distributions_paid',
-        label: '− Distributions Paid',
-        variant: 'deduction',
-      },
-      {
         key: 'numerator',
         label: '= CFADS (= Covenant FCCR Numerator)',
         variant: 'total',
@@ -1491,14 +1484,16 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         {years.map((year) => {
           const m = data.metrics_by_year[year];
           const fb = m.fccr_breakdown;
+          const ab = m.adjusted_ebitda_breakdown;
 
+          const hasEbitda = ab != null && m.adjusted_ebitda != null;
           const hasFccr = fb != null && m.fccr != null;
           const hasSenior =
             m.senior_debt != null && m.senior_debt_to_ebitda != null;
           const hasDebtCap =
             m.total_debt != null && m.total_debt_to_capital != null;
 
-          if (!hasFccr && !hasSenior && !hasDebtCap) return null;
+          if (!hasEbitda && !hasFccr && !hasSenior && !hasDebtCap) return null;
 
           return (
             <div key={year} className="space-y-3">
@@ -1506,9 +1501,59 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                 {year} — Formula Breakdown
               </h3>
               <div className="grid gap-3 lg:grid-cols-2">
+                {/* Adjusted EBITDA breakdown */}
+                {hasEbitda && ab && (
+                  <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1">
+                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 font-sans">
+                      Adjusted EBITDA
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Reported EBITDA</span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="font-semibold text-foreground">
+                        {fmtEq(ab.reported_ebitda)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Adj. EBITDA</span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-foreground">
+                        {eqLine(ab.reported_ebitda, [
+                          { v: ab.non_cash_adjustments, op: '+' },
+                          { v: ab.one_time_expenses, op: '+' },
+                          { v: ab.one_time_gains, op: '−' },
+                          { v: ab.interest_income_excluded, op: '−' },
+                          { v: ab.owner_management_adjustments, op: '+' },
+                          { v: ab.accounting_adjustments, op: '+' },
+                          { v: ab.pro_forma_adjustments, op: '+' },
+                        ])}
+                      </span>
+                    </div>
+                    <div className="border-t border-border pt-2 mt-1">
+                      <span className="text-muted-foreground">Adjusted EBITDA</span>
+                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="font-bold text-success">
+                        {fmtEq(
+                          m.calculated_adjusted_ebitda ??
+                            m.adjusted_ebitda ??
+                            ab.reported_ebitda,
+                        )}
+                      </span>
+                      {ab.uses_reported_value && m.adjusted_ebitda != null && (
+                        <span className="text-muted-foreground/60 text-xs ml-2">
+                          (using reported: {fmtEq(m.adjusted_ebitda)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* FCCR equation */}
                 {hasFccr && fb && (
                   <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1">
+                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 font-sans">
+                      Covenant FCCR
+                    </div>
                     <div>
                       <span className="text-muted-foreground">Numerator</span>
                       <span className="text-muted-foreground/60"> = </span>
@@ -1516,7 +1561,6 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                         {eqLine(fb.adjusted_ebitda, [
                           { v: fb.capex_deduction, op: '−' },
                           { v: fb.cash_taxes_paid, op: '−' },
-                          { v: fb.distributions_paid, op: '−' },
                         ])}
                       </span>
                       <span className="text-muted-foreground/60"> = </span>
@@ -1558,7 +1602,10 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
 
                 {/* Senior Debt / Adj. EBITDA */}
                 {hasSenior && (
-                  <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed">
+                  <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1">
+                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 font-sans">
+                      Senior Debt / Adj. EBITDA
+                    </div>
                     <div>
                       <span className="text-muted-foreground">
                         Senior Debt / Adj. EBITDA
@@ -1583,7 +1630,10 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
 
                 {/* Total Debt / Total Capital */}
                 {hasDebtCap && (
-                  <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed">
+                  <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1">
+                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 font-sans">
+                      Total Debt / Total Capital
+                    </div>
                     <div>
                       <span className="text-muted-foreground">
                         Total Debt / Total Capital
