@@ -322,16 +322,36 @@ function inferSourceStatement(sourceDescription: string): SourceStatementType {
   if (!sourceDescription) return 'unknown';
   const desc = sourceDescription.toLowerCase();
 
-  if (desc.includes('income statement') || desc.includes('profit and loss') || desc.includes('p&l')) {
+  if (
+    desc.includes('income statement') ||
+    desc.includes('profit and loss') ||
+    desc.includes('p&l') ||
+    desc.includes('statement of operations') ||
+    desc.includes('statement of earnings') ||
+    desc.includes('statement of comprehensive income')
+  ) {
     return 'income_statement';
   }
-  if (desc.includes('cash flow') || desc.includes('cashflow')) {
+  if (
+    desc.includes('cash flow') ||
+    desc.includes('cashflow') ||
+    desc.includes('operating activities') ||
+    desc.includes('investing activities') ||
+    desc.includes('financing activities')
+  ) {
     return 'cash_flow_statement';
   }
-  if (desc.includes('balance sheet') || desc.includes('financial position')) {
+  if (desc.includes('balance sheet') || desc.includes('financial position') || desc.includes('changes in equity')) {
     return 'balance_sheet';
   }
-  if (desc.includes('note ') || desc.includes('notes ') || desc.includes('footnote') || desc.includes('md&a')) {
+  if (
+    desc.includes('note ') ||
+    desc.includes('notes ') ||
+    desc.includes('footnote') ||
+    desc.includes('md&a') ||
+    desc.includes("management's discussion") ||
+    desc.includes('management discussion')
+  ) {
     return 'notes';
   }
   return 'unknown';
@@ -996,6 +1016,46 @@ export function validateArithmeticConsistency(
             `Review recommended — extracted total_debt may include non-financial liabilities.`
           );
         }
+      }
+    }
+
+    // Enforce mutual exclusivity: aggregate bank debt fields vs granular.
+    // When both are populated, zero the granular fields (prompt convention).
+    if (debtComponents) {
+      const aggBank = ((debtComponents.bank_debt_current as number) ?? 0) +
+        ((debtComponents.bank_debt_long_term as number) ?? 0);
+      const granBank = ((debtComponents.term_loans as number) ?? 0) +
+        ((debtComponents.revolving_credit_facilities as number) ?? 0) +
+        ((debtComponents.overdraft_facilities as number) ?? 0) +
+        ((debtComponents.lines_of_credit as number) ?? 0);
+
+      if (aggBank > 0 && granBank > 0) {
+        const granularFields = ['term_loans', 'revolving_credit_facilities',
+          'overdraft_facilities', 'lines_of_credit'];
+        for (const f of granularFields) {
+          (debtComponents as Record<string, number | null>)[f] = null;
+        }
+        corrections.push(
+          `${year}: Dedup — aggregate bank debt (${aggBank}) and granular (${granBank}) ` +
+          `both populated. Zeroed granular fields per prompt convention.`
+        );
+      }
+
+      // Same pattern for lease liabilities: aggregate vs granular
+      const aggLease = ((debtComponents.lease_liabilities_current as number) ?? 0) +
+        ((debtComponents.lease_liabilities_long_term as number) ?? 0);
+      const granLease = ((debtComponents.finance_lease_liabilities as number) ?? 0) +
+        ((debtComponents.operating_lease_liabilities as number) ?? 0);
+
+      if (aggLease > 0 && granLease > 0) {
+        const granularLeaseFields = ['finance_lease_liabilities', 'operating_lease_liabilities'];
+        for (const f of granularLeaseFields) {
+          (debtComponents as Record<string, number | null>)[f] = null;
+        }
+        corrections.push(
+          `${year}: Dedup — aggregate lease liabilities (${aggLease}) and granular (${granLease}) ` +
+          `both populated. Zeroed granular fields per prompt convention.`
+        );
       }
     }
 

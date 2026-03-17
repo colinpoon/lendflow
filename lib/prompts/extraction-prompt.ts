@@ -149,18 +149,20 @@ Example _sources, _confidence, and _source_statements:
 {
   "_sources": {
     "revenue": "Income Statement, line 1",
-    "ebitda": "Cash Flow Statement, EBITDA reconciliation",
+    "depreciation_amortization": "Cash Flow Statement, Operating Activities adjustments",
     "total_debt": "Note 8: Credit Facilities, summary table"
   },
   "_confidence": {
     "revenue": "high",
-    "ebitda": "medium",
+    "depreciation_amortization": "high",
     "total_debt": "high"
   },
   "_source_statements": {
     "revenue": "income_statement",
-    "ebitda": "cash_flow_statement",
-    "total_debt": "notes"
+    "depreciation_amortization": "cash_flow_statement",
+    "total_debt": "balance_sheet",
+    "cash_taxes_paid": "cash_flow_statement",
+    "reported_adjusted_ebitda": "notes"
   }
 }
 
@@ -169,11 +171,43 @@ For each metric you extract, tag which primary financial statement you found it 
 
 Valid values: "income_statement", "cash_flow_statement", "balance_sheet", "notes", "unknown"
 
+RESTATEMENT RULE (CRITICAL FOR ACCURATE TAGGING):
+Many figures appear in multiple financial statements because one statement carries forward
+values from another. Always tag a metric with its ORIGINATING statement:
+
+• Net income: tag "income_statement" even when found as the starting line of the cash flow statement
+• Depreciation and amortization (aggregate): tag "cash_flow_statement" when found as the
+  operating-activities non-cash add-back; tag "income_statement" if presented as an explicit
+  standalone line on the income statement face. The CF add-back is the authoritative aggregate total.
+• D&A sub-components (depreciation_equipment, depreciation_rou, etc.): tag "income_statement" —
+  they originate as cost line items on the income statement
+• Interest/finance costs: tag "income_statement" even when cross-referenced in CF supplementary
+• Cash taxes paid: tag "cash_flow_statement" (cash basis; differs from accrual income tax expense)
+• Income tax expense: tag "income_statement" (accrual basis)
+
+If uncertain, ask: "Does this figure quantify an accrual-basis P&L event (income_statement),
+a cash movement (cash_flow_statement), or a balance at a point in time (balance_sheet)?"
+
+IFRS STATEMENT NAMING: Map IFRS statement names to canonical tags:
+• "Statement of Comprehensive Income" / "Statement of Operations" / "Statement of Earnings" → income_statement
+• "Statement of Cash Flows" → cash_flow_statement
+• "Statement of Financial Position" → balance_sheet
+• "Statement of Changes in Equity" → balance_sheet (closing equity ties to the balance sheet)
+
 Canonical statement guidance (where each metric is TYPICALLY most authoritative):
-• Income Statement: revenue, net_income, expenses, profit_margins, interest, interest_income, taxes, depreciation_amortization, depreciation_equipment, depreciation_rou, depreciation_other, amortization_intangibles, ebitda
-• Cash Flow Statement: capital_expenditures, proceeds_from_long_term_debt, cash_taxes_paid, distributions_paid, repayment_of_debt, payment_of_lease_liability, cash_interest_paid, non_cash_interest_expense, ttm_principal_payments, ttm_interest_expense, reported_adjusted_ebitda
+• Income Statement: revenue, net_income, expenses, profit_margins, interest, interest_income,
+  taxes, depreciation_equipment, depreciation_rou, depreciation_other, amortization_intangibles,
+  ttm_interest_expense (equals top-level interest for annual reports)
+• Cash Flow Statement: depreciation_amortization (the operating-activities add-back is the most
+  complete total), capital_expenditures, proceeds_from_long_term_debt, cash_taxes_paid,
+  distributions_paid, repayment_of_debt, payment_of_lease_liability, cash_interest_paid,
+  non_cash_interest_expense, ttm_principal_payments
+• Notes / MD&A: reported_adjusted_ebitda (company-disclosed Adjusted EBITDA, typically in
+  MD&A, earnings releases, or capital management sections)
 • Balance Sheet: shareholders_equity, total_debt, senior_debt, current_assets, current_liabilities, debt_components.*
-• Fixed Charges: fixed_charges interest fields (senior_debt_interest, subordinated_debt_interest, lease_interest, total_interest_expense) → income_statement; payment fields (minimum_lease_payments, finance_lease_payments, operating_lease_payments, principal_payments) → cash_flow_statement
+• Fixed Charges: fixed_charges interest fields (senior_debt_interest, subordinated_debt_interest,
+  lease_interest, total_interest_expense) → income_statement; payment fields (minimum_lease_payments,
+  finance_lease_payments, operating_lease_payments, principal_payments, preferred_dividends) → cash_flow_statement
 
 IMPORTANT: If you extract a value from a NON-canonical statement (e.g., interest from Cash Flow reconciliation instead of Income Statement), tag it honestly with the actual source. Do NOT lie about where you found it. The system uses honest tags to prefer canonical sources during conflict resolution — mislabeling defeats this mechanism.
 
@@ -545,6 +579,18 @@ Extract depreciation by category from INCOME STATEMENT and/or CASH FLOW STATEMEN
   - Do NOT include goodwill impairment here — use goodwill_impairment in adjusted_ebitda_components
   - Extract as POSITIVE number. If the company has no intangible assets, extract null.
 • depreciation_amortization: MUST equal the SUM of ALL depreciation and amortization lines across ALL sections of the income statement AND cash flow statement. CRITICAL: Depreciation may appear in MULTIPLE sections (e.g., "Direct expenses" AND "Operating expenses" AND "Other expenses"). You MUST sum them ALL. Also check the cash flow statement operating activities section for total depreciation figures which may be more reliable than summing income statement lines. Cross-check: depreciation_amortization should equal depreciation_equipment + depreciation_rou + depreciation_other + amortization_intangibles. If it doesn't, recalculate.
+
+SOURCE TAGGING FOR DEPRECIATION:
+• When you find D&A figures in the Cash Flow Statement operating activities as a reconciling
+  add-back (e.g., "Depreciation and amortization: 850" under non-cash adjustments), tag
+  depreciation_amortization as "cash_flow_statement".
+• When you find individual sub-components (depreciation_equipment, depreciation_rou, etc.)
+  itemized on the income statement cost lines, tag those as "income_statement".
+• If the document has no cash flow statement in the chunk being processed, tag
+  depreciation_amortization as "income_statement" — do not default to "unknown" simply
+  because the CF statement is absent.
+• The D&A add-back in cash flow is a RESTATEMENT of the same economic figure — both should match.
+  If they differ, prefer the cash flow total (more reliable aggregate) and flag the discrepancy in _sources.
 
 CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
 

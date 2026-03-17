@@ -296,7 +296,7 @@ export const CANONICAL_STATEMENT_MAP: Record<string, SourceStatementType> = {
   interest: 'income_statement',
   interest_income: 'income_statement',
   taxes: 'income_statement',
-  depreciation_amortization: 'income_statement',
+  depreciation_amortization: 'cash_flow_statement', // CF operating-activities add-back is the authoritative aggregate total
   depreciation_equipment: 'income_statement',
   depreciation_rou: 'income_statement',
   depreciation_other: 'income_statement',
@@ -313,8 +313,8 @@ export const CANONICAL_STATEMENT_MAP: Record<string, SourceStatementType> = {
   cash_interest_paid: 'cash_flow_statement',
   non_cash_interest_expense: 'cash_flow_statement',
   ttm_principal_payments: 'cash_flow_statement',
-  ttm_interest_expense: 'cash_flow_statement',
-  reported_adjusted_ebitda: 'cash_flow_statement',
+  ttm_interest_expense: 'income_statement', // equals top-level "interest" for annual reports
+  reported_adjusted_ebitda: 'notes', // MD&A reconciliation tables, earnings releases, capital management sections
 
   // Balance Sheet metrics
   shareholders_equity: 'balance_sheet',
@@ -347,6 +347,6 @@ export const CANONICAL_STATEMENT_MAP: Record<string, SourceStatementType> = {
   'fixed_charges.finance_lease_payments': 'cash_flow_statement',
   'fixed_charges.operating_lease_payments': 'cash_flow_statement',
   'fixed_charges.principal_payments': 'cash_flow_statement',
-  'fixed_charges.preferred_dividends': 'income_statement',
+  'fixed_charges.preferred_dividends': 'cash_flow_statement', // financing cash outflow, not an IS expense
   'fixed_charges.other_fixed_charges': 'income_statement',
 };

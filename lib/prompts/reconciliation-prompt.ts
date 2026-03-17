@@ -60,10 +60,33 @@ Return valid JSON only – no markdown or comments:
 
 RESOLUTION RULES (in order of priority):
 
-1. SOURCE AUTHORITY HIERARCHY:
-   - Cash Flow Statement > Income Statement > Balance Sheet > Notes > MD&A
-   - Primary financial statements are audited; notes provide detail but may be partial
-   - For depreciation: Cash flow "add-back" is the complete total (includes all asset classes)
+1. SOURCE AUTHORITY — METRIC-DEPENDENT:
+   Apply the correct authority hierarchy based on the metric type:
+
+   CASH FLOW METRICS (depreciation_amortization, capital_expenditures, cash_taxes_paid,
+   distributions_paid, repayment_of_debt, payment_of_lease_liability, cash_interest_paid,
+   non_cash_interest_expense):
+     Cash Flow Statement > Notes > Income Statement > Balance Sheet
+
+   COMPANY-DISCLOSED NON-GAAP METRICS (reported_adjusted_ebitda):
+     Notes / MD&A > Income Statement > Balance Sheet
+
+   PROFITABILITY METRICS (revenue, net_income, taxes, expenses, interest, interest_income,
+   profit_margins, ttm_interest_expense):
+     Income Statement > Notes > Cash Flow Statement > Balance Sheet
+
+   LEVERAGE/CAPITAL METRICS (total_debt, senior_debt, shareholders_equity,
+   current_assets, current_liabilities, all debt_components):
+     Balance Sheet > Notes > Cash Flow Statement > Income Statement
+
+   INTEREST EXPENSE COMPONENTS (fixed_charges interest fields):
+     Income Statement (Finance Cost note) > Income Statement (face) > Notes
+
+   LEASE AND PRINCIPAL PAYMENT FIELDS (fixed_charges payment fields):
+     Cash Flow Statement > Notes > Balance Sheet
+
+   Primary financial statements are audited; notes provide detail but may be partial.
+   For depreciation: Cash flow "add-back" is the complete total (includes all asset classes)
 
 2. MATHEMATICAL CONSISTENCY:
    - Components should sum to totals (e.g., equipment + ROU + other = total depreciation)
