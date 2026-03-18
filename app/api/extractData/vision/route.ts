@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { extractVisionData } from '@/utils/visionProcessor';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { detectYearConflicts, type ExtractionWithDocument } from '@/lib/extraction-utils';
+import { checkRateLimit } from '@/lib/rate-limiter';
 
 // SSE progress type for complete message with data
 interface SSECompleteProgress {
@@ -25,6 +26,17 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     console.error('❗ Unauthorized request');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { allowed, retryAfterSeconds } = checkRateLimit(userId);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Please wait before submitting another extraction.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(retryAfterSeconds) },
+      }
+    );
   }
 
   const supabase = await createClient();
