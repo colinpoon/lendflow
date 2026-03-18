@@ -673,3 +673,26 @@ Two more sub-items completed:
 Task 15 is now fully complete (8 of 8 sub-items).
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 4: Polish Frontend UI/UX — visual consistency audit (commit c72c42d)
+Completed 2 of 7 sub-items:
+
+1. **Visual consistency audit** — audited all components for hardcoded Tailwind colors. Fixed:
+   - `EBITDA.tsx` — replaced `text-gray-500 dark:text-gray-400`, `text-gray-700 dark:text-gray-300`
+     with `text-muted-foreground`, `text-foreground`
+   - `ExtractedData.tsx` — replaced `text-gray-500 dark:text-gray-400`, `text-green-600`, bare
+     `border` with `text-muted-foreground`, `text-success`, `border-border bg-card`
+   - `VisionFileUpload.tsx` — full rewrite: replaced ~15 hardcoded color classes (`text-blue-600`,
+     `bg-blue-50`, `bg-red-50`, `border-red-200`, `text-red-500`, `bg-green-50`, `text-gray-600`,
+     `bg-gray-200`, `text-gray-400`, `bg-blue-500`) with semantic tokens (`text-primary`,
+     `bg-primary/10`, `bg-destructive/10`, `text-success`, `text-muted-foreground`, `bg-muted`,
+     `bg-primary`, `text-primary-foreground`)
+   - `AdjustedEBITDA.tsx` — replaced `bg-white border-gray-200` and `text-gray-400/900` in hero
+     cards with `bg-card border-border` and `text-muted-foreground`/`text-foreground`
+
+2. **Dark mode support** — above changes ensure all modified components render correctly in both
+   light and dark modes via semantic tokens. Combined with FCCRBreakdown fix from Task 15.
+
+Also fixed framer-motion `ease` type error in `ProjectDetail.tsx` (added `as const`).
+
+- TypeScript: clean (npm run build passes, 0 errors)

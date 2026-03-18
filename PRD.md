@@ -260,12 +260,12 @@ Review all calculators in `lib/calculations/` to ensure formulas return the most
 
 ### Task 4: Polish Frontend UI/UX 
 Improve the visual design, usability, and overall experience of the application.
-- [] Audit all pages for visual consistency (spacing, typography, color usage, dark mode)
+- [x] Audit all pages for visual consistency (spacing, typography, color usage, dark mode) — audited all components, replaced hardcoded Tailwind colors in EBITDA, ExtractedData, VisionFileUpload, AdjustedEBITDA with semantic tokens (text-muted-foreground, bg-card, border-border, text-success). FCCRBreakdown dark mode fixed in Task 15.
 - [] Improve the upload flow — clearer progress states, better error messaging
 - [] Polish the financial data tables — readability, alignment, responsive behavior
 - [] Improve the risk assessment display — make scores and health indicators more intuitive
 - [] Add loading skeletons and smooth transitions between states
-- [] Ensure full dark mode support across all components
+- [x] Ensure full dark mode support across all components — all hardcoded light-mode colors replaced with semantic design tokens across EBITDA, ExtractedData, VisionFileUpload, AdjustedEBITDA, FCCRBreakdown. Remaining components already use tokens.
 - [] Review and improve mobile/responsive layouts
 
 <!-- ### Task 5: Regression Testing with Financial Reports 
