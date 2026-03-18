@@ -38,6 +38,19 @@ Improved extraction accuracy via targeted prompt engineering and merger validati
 
 - TypeScript: clean (tsc --noEmit passes, 0 errors)
 
+### Task 2: Cross-Reference Validation Checks (Completed)
+Added 3 new checks to `validateArithmeticConsistency` in `lib/extraction-merger.ts`:
+
+1. **Interest expense cross-reference** — Compares P&L `interest` field against `fixed_charges.total_interest_expense`. Flags >10% variance with a note that one value may be net of interest income, prompting analyst review before FCCR computation.
+
+2. **Income statement identity** — Validates that `revenue - expenses - interest - taxes ≈ net_income` (per extraction prompt, `expenses` = total operating costs, excl. interest & taxes). Variance normalised by revenue (not net_income) to avoid false positives on near-zero net income. Flags >5% variance.
+
+3. **Reported adjusted EBITDA plausibility** — If the document includes `reported_adjusted_ebitda` (company's own published figure), compares it against calculated EBITDA base (NI + I + T + D&A). Flags >40% gap as an `Info` warning recommending review of `adjusted_ebitda_components`.
+
+All warnings surface in `extraction_warnings` for analyst review; none alter extracted values (non-corrective).
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase

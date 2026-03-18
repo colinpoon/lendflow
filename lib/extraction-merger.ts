@@ -1120,6 +1120,79 @@ export function validateArithmeticConsistency(
         `${year}: Warning - Senior debt (${seniorDebt}) exceeds total debt (${totalDebt}). Data may be inconsistent.`
       );
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Interest expense cross-reference
+    // P&L `interest` and fixed_charges.total_interest_expense should agree
+    // within 10%. Divergence usually means one value is net of interest income.
+    // ─────────────────────────────────────────────────────────────────────────
+    const fixedChargesData = metrics.fixed_charges as Record<string, number | null> | null;
+    const interestFromFixedCharges = fixedChargesData?.total_interest_expense ?? null;
+
+    if (interest != null && interest > 0 && interestFromFixedCharges != null && interestFromFixedCharges > 0) {
+      const interestVariance = Math.abs(interest - interestFromFixedCharges) / Math.abs(interest);
+      if (interestVariance > 0.10) {
+        corrections.push(
+          `${year}: Warning — interest (P&L: ${interest}) diverges from ` +
+          `fixed_charges.total_interest_expense (${interestFromFixedCharges}) by ` +
+          `${(interestVariance * 100).toFixed(1)}%. ` +
+          `One may be net of interest income; verify the correct figure for FCCR.`
+        );
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Income statement identity check
+    // net_income ≈ revenue - expenses - interest - taxes
+    // per extraction prompt: expenses = total operating costs (excl. interest & taxes)
+    // Variance normalised by revenue to avoid false positives on near-zero net income.
+    // ─────────────────────────────────────────────────────────────────────────
+    const revenue = metrics.revenue as number | null;
+    const expenses = metrics.expenses as number | null;
+
+    if (
+      revenue != null && revenue > 0 &&
+      expenses != null && expenses > 0 &&
+      interest != null && interest > 0 &&
+      taxes != null && taxes > 0 &&
+      netIncome != null
+    ) {
+      const impliedNetIncome = revenue - expenses - interest - taxes;
+      const niVariance = Math.abs(netIncome - impliedNetIncome) / Math.abs(revenue);
+      if (niVariance > 0.05) {
+        corrections.push(
+          `${year}: Warning — income statement identity: ` +
+          `revenue (${revenue}) - expenses (${expenses}) - interest (${interest}) - taxes (${taxes}) ` +
+          `= ${impliedNetIncome.toFixed(0)}, extracted net_income = ${netIncome}. ` +
+          `Variance: ${(niVariance * 100).toFixed(1)}% of revenue. ` +
+          `May be expected if expenses include/exclude non-recurring items or D&A.`
+        );
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Reported adjusted EBITDA plausibility check
+    // If the company publishes its own adj EBITDA, compare against our EBITDA
+    // base (NI + I + T + D&A). Divergence > 40% warrants a review of the
+    // adjustment components captured in adjusted_ebitda_components.
+    // ─────────────────────────────────────────────────────────────────────────
+    const reportedAdjEbitda = metrics.reported_adjusted_ebitda as number | null;
+    const calculatedEbitdaBase =
+      netIncome != null && interest != null && taxes != null && da != null
+        ? netIncome + interest + taxes + da
+        : ebitda ?? null;
+
+    if (reportedAdjEbitda != null && calculatedEbitdaBase != null && Math.abs(calculatedEbitdaBase) > 0) {
+      const adjEbitdaVariance = Math.abs(reportedAdjEbitda - calculatedEbitdaBase) / Math.abs(calculatedEbitdaBase);
+      if (adjEbitdaVariance > 0.40) {
+        corrections.push(
+          `${year}: Info — reported adjusted EBITDA (${reportedAdjEbitda}) differs from ` +
+          `calculated EBITDA base (${calculatedEbitdaBase.toFixed(0)}) by ` +
+          `${(adjEbitdaVariance * 100).toFixed(1)}%. ` +
+          `Large gap may indicate significant non-recurring adjustments; review adjusted_ebitda_components.`
+        );
+      }
+    }
   }
 
   return { metrics: corrected, corrections };

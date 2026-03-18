@@ -247,7 +247,7 @@ Improve the accuracy of AI-extracted financial data across all supported documen
 - [ ] Identify the most common extraction errors (missed line items, misclassified values, scale mismatches)
 - [x] Improve prompt engineering in the extraction pipeline to reduce errors — added multi-year column pinning, D&A arithmetic self-verification, expanded IFRS synonyms for `cash_taxes_paid`/`distributions_paid`, and `payment_of_lease_liability` principal-only clarification
 - [x] Strengthen conflict detection and merge logic for multi-chunk documents — implemented D&A component identity check in `validateArithmeticConsistency`, year-column awareness in reconciliation prompt
-- [ ] Add validation checks that cross-reference extracted totals against reported totals
+- [x] Add validation checks that cross-reference extracted totals against reported totals — added 3 new checks to `validateArithmeticConsistency`: (1) interest P&L vs fixed_charges.total_interest_expense cross-reference, (2) income statement identity check (net_income ≈ revenue - expenses - interest - taxes), (3) reported_adjusted_ebitda plausibility vs calculated EBITDA base
 - [ ] Re-run all 11 test files and document accuracy improvements vs. baseline
 
 ### Task 3: Audit & Fix Calculation Engine ✅
