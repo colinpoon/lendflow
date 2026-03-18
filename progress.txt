@@ -288,3 +288,13 @@ Two issues fixed together:
 
 File: `lib/risk-generator.ts`
 - TypeScript: clean (tsc --noEmit, 0 errors)
+
+### Task 12: Surface negative FCCR as validation issue (COMPLETED — commit c4b2629)
+Negative FCCR (numerator < 0) was returned silently as a negative number with no analyst alert.
+Now pushes a descriptive warning through the existing `extraction_warnings` pipeline when the
+FCCR numerator goes negative. Warning includes the full numerator breakdown (Adjusted EBITDA,
+CapEx deduction, cash taxes, distributions) so analysts can immediately see which component
+drove cash flow negative and assess whether the borrower can service any fixed charges.
+
+File: `lib/calculations/fccr-calculator.ts`
+- TypeScript: clean (npm run build passes, 0 errors)
