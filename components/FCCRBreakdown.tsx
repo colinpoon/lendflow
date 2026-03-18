@@ -59,7 +59,7 @@ interface DSCRBreakdownData {
   total_debt_service: number;
   dscr: number;
   funded_debt: number;
-  funded_debt_to_ebitda: number;
+  funded_debt_to_ebitda: number | null;
 }
 
 interface YearMetrics {

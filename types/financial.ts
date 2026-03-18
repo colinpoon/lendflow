@@ -244,7 +244,7 @@ export interface DSCRBreakdown {
   dscr: number;
   // Funded debt calculation
   funded_debt: number;
-  funded_debt_to_ebitda: number;
+  funded_debt_to_ebitda: number | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

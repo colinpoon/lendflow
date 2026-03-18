@@ -167,7 +167,7 @@ export function calculateDSCR(
       // funded_debt = senior bank debt + finance lease liabilities
       // (excludes sub debt, convertible debt, bonds, notes payable)
       funded_debt: fundedDebt,
-      funded_debt_to_ebitda: fundedDebtToEbitda ?? 0,
+      funded_debt_to_ebitda: fundedDebtToEbitda,
     },
     warnings: debtService.warnings,
   };

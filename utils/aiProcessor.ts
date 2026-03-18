@@ -918,5 +918,5 @@ function logDSCR(
   console.log(`   DSCR = ${adjustedEbitda} / ${breakdown.total_debt_service} = ${result.dscr}x`);
   console.log(`   FUNDED DEBT METRICS:`);
   console.log(`     Funded Debt (Bank + Leases): ${breakdown.funded_debt}`);
-  console.log(`     Funded Debt / EBITDA:      ${breakdown.funded_debt_to_ebitda}x\n`);
+  console.log(`     Funded Debt / EBITDA:      ${breakdown.funded_debt_to_ebitda != null ? `${breakdown.funded_debt_to_ebitda}x` : 'N/A'}\n`);
 }
