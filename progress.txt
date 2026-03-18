@@ -415,3 +415,19 @@ Task 13: 4 of 5 sub-items complete. Remaining: Replace in-memory rate limiter wi
 (requires npm install + infrastructure provisioning — skipped).
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 18: Add project ownership check on file upload routes (COMPLETED — commit 05dfda2)
+Both `/api/extractData` and `/api/extractData/vision` accepted a client-provided `projectId`
+without verifying the authenticated user owns that project. An attacker who knew a project UUID
+could upload documents into another user's project.
+
+Fix: Added `.eq('id', projectId).eq('user_id', userId)` ownership verification immediately after
+UUID format validation, before any file processing begins. Returns 404 (not 403) to avoid leaking
+project existence. Also hardened update operations in all three routes (extractData, vision,
+resolve-conflict) with `.eq('user_id', userId)` for defense-in-depth.
+
+Task 18 sub-item 1 (RLS policies) BLOCKED: Clerk user IDs are strings like `user_xxx`, not UUIDs.
+`auth.uid()::text` won't match. Requires verifying Clerk JWT template claims structure — likely
+needs `auth.jwt() ->> 'sub' = user_id` instead. Needs DB migration + live auth session testing.
+
+- TypeScript: clean (npm run build passes, 0 errors)
