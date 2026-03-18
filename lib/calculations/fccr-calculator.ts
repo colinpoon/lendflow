@@ -265,12 +265,26 @@ export function calculateFCCR(
   // FCCR = Numerator / Denominator
   const fccr = parseFloat((numerator / totalDebtService).toFixed(2));
 
+  // Surface negative FCCR as a validation issue — a negative numerator means
+  // operating cash flow (after CapEx, taxes, distributions) is insufficient to
+  // cover ANY fixed charges. This is a critical signal for lenders.
+  const negativeFccrWarnings: string[] = [];
+  if (numerator < 0) {
+    negativeFccrWarnings.push(
+      `FCCR numerator is negative (${numerator.toLocaleString()}): Adjusted EBITDA ` +
+      `(${adjustedEbitda.toLocaleString()}) minus CapEx (${capexDeduction.toLocaleString()}), ` +
+      `cash taxes (${cashTaxesPaid.toLocaleString()}), and distributions ` +
+      `(${distributionsPaid.toLocaleString()}) leaves no cash available for debt service. ` +
+      `FCCR of ${fccr}x indicates the borrower cannot service fixed charges from operations.`
+    );
+  }
+
   return {
     fccr,
     fccr_numerator: parseFloat(numerator.toFixed(2)),
     total_fixed_charges: parseFloat(totalDebtService.toFixed(2)),
     cash_flow_for_debt_servicing: parseFloat(numerator.toFixed(2)),
-    warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings],
+    warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings, ...negativeFccrWarnings],
     fccr_breakdown: {
       calculation_type: 'lender_defined',
       // CapEx treatment info
