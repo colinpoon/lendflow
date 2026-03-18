@@ -578,3 +578,16 @@ All 4 sub-items implemented:
 Task 15½ is now fully complete.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 19: Prompt Injection Defense (In Progress — commit 2ab7f3e)
+Sub-item 1 of 4 completed:
+
+1. **Anti-injection system prompt preambles** — Added explicit security blocks to all three
+   AI system prompts (`FINANCIAL_EXTRACTION_PROMPT`, `RECONCILIATION_PROMPT`, vision
+   `EXTRACTION_PROMPT`). Each preamble:
+   - Declares user message as RAW untrusted document text, not operator instructions
+   - Instructs Claude to ignore meta-instructions, role overrides, prompt leak attempts
+   - Directs injection attempt flagging to `extraction_notes` field
+   - Prohibits code execution, URL visits, or action requests from document text
+
+- TypeScript: clean (npm run build passes, 0 errors)
