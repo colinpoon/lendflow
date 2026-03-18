@@ -399,3 +399,19 @@ Fix: Added optional `userId` parameter to `generateRiskAssessment`, threaded thr
 `${userId}:${metricsHash}-risk`. Both API routes now pass the authenticated userId.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 13: Add server-side magic-byte file type validation (COMPLETED — commit cbc34c4)
+Browser-supplied `Content-Type` is trivially spoofable. Added magic-byte validation that checks
+the first 4 bytes of uploaded files against known signatures:
+- PDF: `%PDF` (0x25504446)
+- XLSX/DOCX: `PK\x03\x04` (ZIP archive header)
+- XLS/DOC: OLE compound document (0xD0CF11E0)
+
+No new dependencies — uses Node.js Buffer byte comparison. Both `extractData/route.ts` and
+`extractData/vision/route.ts` now reject files whose content doesn't match their MIME type
+before any processing begins. Document status set to `failed` with clear error message.
+
+Task 13: 4 of 5 sub-items complete. Remaining: Replace in-memory rate limiter with Redis/Upstash
+(requires npm install + infrastructure provisioning — skipped).
+
+- TypeScript: clean (npm run build passes, 0 errors)
