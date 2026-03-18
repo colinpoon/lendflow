@@ -23,6 +23,34 @@ function sseMessage(data: Record<string, unknown> | SSECompleteProgress): string
 }
 
 /**
+ * Validate file content against magic bytes to prevent MIME type spoofing.
+ * Browser-supplied Content-Type is trivially spoofable — check actual file content.
+ */
+function validateMagicBytes(buffer: Buffer, claimedMimeType: string): boolean {
+  if (buffer.length < 4) return false;
+
+  // PDF: starts with %PDF
+  if (claimedMimeType === 'application/pdf') {
+    return buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46;
+  }
+
+  // XLSX/DOCX: ZIP archive starting with PK\x03\x04
+  if (
+    claimedMimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    claimedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) {
+    return buffer[0] === 0x50 && buffer[1] === 0x4b && buffer[2] === 0x03 && buffer[3] === 0x04;
+  }
+
+  // XLS: OLE compound document starting with D0 CF 11 E0
+  if (claimedMimeType === 'application/vnd.ms-excel' || claimedMimeType === 'application/msword') {
+    return buffer[0] === 0xd0 && buffer[1] === 0xcf && buffer[2] === 0x11 && buffer[3] === 0xe0;
+  }
+
+  return false;
+}
+
+/**
  * Mark any document for this project that has been stuck in 'processing' status
  * for more than 15 minutes as 'failed'. Prevents orphaned records from blocking
  * the project view indefinitely.
@@ -291,6 +319,20 @@ export async function POST(req: NextRequest) {
       const tempDir = os.tmpdir();
       const tempPath = path.join(tempDir, `${documentId}-${sanitizedFileName}`);
       const buffer = Buffer.from(await fileData.arrayBuffer());
+
+      // Validate magic bytes — reject files whose content doesn't match their claimed type
+      if (!validateMagicBytes(buffer, file.type)) {
+        console.error(`❗ Magic byte validation failed: claimed ${file.type}, content mismatch`);
+        await updateDocumentStatus(supabase, documentId, 'failed', 'File content does not match declared type');
+        await sendProgress({
+          stage: 'error',
+          progress: 0,
+          message: 'File validation failed. The uploaded file does not appear to be a valid document.',
+        });
+        await closeWriter();
+        return;
+      }
+
       fs.writeFileSync(tempPath, buffer);
 
       console.log(`📂 Temp file created: ${tempPath}`);
