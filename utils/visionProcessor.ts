@@ -290,7 +290,7 @@ const VISION_MODEL_ID = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514
  * @returns Extracted metrics, computed ratios, and risk assessments
  * @throws Error if API key is missing, no pages are processed, or no financial data is found
  */
-export const extractVisionData = async (pdfBuffer: Buffer): Promise<ExtractionResult> => {
+export const extractVisionData = async (pdfBuffer: Buffer, userId?: string): Promise<ExtractionResult> => {
   // ── Step 1: Validate API key ───────────────────────────────────────────────
   validateApiKey();
 
@@ -337,7 +337,7 @@ export const extractVisionData = async (pdfBuffer: Buffer): Promise<ExtractionRe
   const validationIssues = validateVisionMetrics(computed);
 
   // ── Step 7: Generate risk assessments ─────────────────────────────────────
-  const riskAssessment = await generateRiskAssessment(computed);
+  const riskAssessment = await generateRiskAssessment(computed, userId);
   const debtHealthAssessment = await generateDebtHealthAssessment(computed);
   const quantitativeRiskAssessment = calculateQuantitativeRisk(computed);
 

@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
 
       try {
         // Run AI extraction with progress callback
-        const extractedData = await extractFinancialData(tempPath, sendProgress);
+        const extractedData = await extractFinancialData(tempPath, sendProgress, userId);
         const processingTime = Date.now() - startTime;
 
         console.log(`✅ AI extraction completed in ${processingTime}ms`);

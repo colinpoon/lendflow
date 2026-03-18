@@ -39,15 +39,16 @@ const riskCache = new Map<string, unknown>();
  * @returns Risk assessment data or null if generation fails
  */
 export async function generateRiskAssessment(
-  metricsByYear: Record<string, ComputedMetrics>
+  metricsByYear: Record<string, ComputedMetrics>,
+  userId?: string
 ): Promise<RiskData | null> {
-  // Check cache first
+  // Check cache first — scope to userId to prevent cross-user cache sharing
   const canonicalJson = JSON.stringify(
     metricsByYear,
     Object.keys(metricsByYear).sort()
   );
   const metricsHash = crypto.createHash('sha256').update(canonicalJson).digest('hex');
-  const cacheKey = `${metricsHash}-risk`;
+  const cacheKey = userId ? `${userId}:${metricsHash}-risk` : `${metricsHash}-risk`;
 
   if (riskCache.has(cacheKey)) {
     console.log('♻️ Reusing cached risk assessment');

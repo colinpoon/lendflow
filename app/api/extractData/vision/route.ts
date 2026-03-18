@@ -245,7 +245,7 @@ export async function POST(req: NextRequest) {
 
       try {
         // Run vision extraction — progress is handled internally (per-page console logging)
-        const extractedData = await extractVisionData(pdfBuffer);
+        const extractedData = await extractVisionData(pdfBuffer, userId);
         const processingTime = Date.now() - startTime;
 
         console.log(`✅ Vision extraction completed in ${processingTime}ms`);

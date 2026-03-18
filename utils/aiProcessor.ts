@@ -111,7 +111,8 @@ export type { ProgressCallback };
  */
 export const extractFinancialData = async (
   filePath: string,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  userId?: string
 ): Promise<ExtractionResult> => {
   try {
     // Validate environment - now using Anthropic Claude for text extraction
@@ -462,7 +463,7 @@ export const extractFinancialData = async (
     // debtHealthAssessment) are still returned to the caller.
     let riskSnapshot: Awaited<ReturnType<typeof generateRiskAssessment>> = null;
     try {
-      riskSnapshot = await generateRiskAssessment(computed);
+      riskSnapshot = await generateRiskAssessment(computed, userId);
     } catch (riskErr) {
       console.warn('⚠️ generateRiskAssessment failed — returning null:', riskErr);
     }
