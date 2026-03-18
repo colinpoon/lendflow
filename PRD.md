@@ -241,7 +241,7 @@ This is where the real sophistication lives:
 ### Task 2: Increase Extraction Accuracy
 Improve the accuracy of AI-extracted financial data across all supported document types.
 <!-- - [ ] Run extraction against all 11 test files in `public/financialReports/` and log current accuracy baselines -->
-- [ ] Identify the most common extraction errors (missed line items, misclassified values, scale mismatches)
+- [] Identify the most common extraction errors (missed line items, misclassified values, scale mismatches) — documented 15 error patterns in `tasks/extraction-error-analysis.md` across 5 categories: null defaults inflating covenant ratios (P0), mixed-scale within documents (P0), missing cross-field validators (P1), lease/facility classification ambiguity (P2), deduplication false positives (P3). Key findings: FCCR can be inflated 2x when debt service fields are null; uniform scale correction can corrupt mixed-scale documents; no balance sheet identity or cash flow reconciliation checks exist; drawn vs undrawn credit facility amounts not distinguished in prompt
 - [] Improve prompt engineering in the extraction pipeline to reduce errors — added multi-year column pinning, D&A arithmetic self-verification, expanded IFRS synonyms for `cash_taxes_paid`/`distributions_paid`, and `payment_of_lease_liability` principal-only clarification
 - [] Strengthen conflict detection and merge logic for multi-chunk documents — implemented D&A component identity check in `validateArithmeticConsistency`, year-column awareness in reconciliation prompt
 - [] Add validation checks that cross-reference extracted totals against reported totals — added 3 new checks to `validateArithmeticConsistency`: (1) interest P&L vs fixed_charges.total_interest_expense cross-reference, (2) income statement identity check (net_income ≈ revenue - expenses - interest - taxes), (3) reported_adjusted_ebitda plausibility vs calculated EBITDA base
@@ -291,8 +291,8 @@ Ensure all accepted file types can actually be processed.
 
 ### Task 8: High — Error Handling & Resilience 
 Make the pipeline gracefully handle failures instead of losing all progress.
-- [] Wrap `generateRiskAssessment()`, `generateDebtHealthAssessment()`, `calculateQuantitativeRisk()` in individual try/catch blocks — allow partial success (return metrics with `riskSnapshot: null`)
-- [] Implement exponential backoff with jitter for all Claude API calls (enable Anthropic SDK's built-in retry support)
+- [x] Wrap `generateRiskAssessment()`, `generateDebtHealthAssessment()`, `calculateQuantitativeRisk()` in individual try/catch blocks — allow partial success (return metrics with `riskSnapshot: null`) — aiProcessor.ts already had this; added matching try/catch pattern to visionProcessor.ts, plus partial document status marking and analyst-facing risk error warnings in the vision route
+- [x] Implement exponential backoff with jitter for all Claude API calls (enable Anthropic SDK's built-in retry support) — already implemented: all 4 Anthropic client instances use `maxRetries: 3` via `AI_CONFIG.MAX_RETRIES` (SDK v0.74.0 built-in exponential backoff with jitter). Fixed one inconsistency: `claude-client.ts` was hardcoding `3` instead of using the shared constant.
 - [] Guard all division operations in `lib/calculations/` — handle negative EBITDA, negative equity, zero denominators with `null` returns and explanatory warnings
 - [] Align file-size limits: frontend (`FileUpload.tsx` 10MB) vs API (`route.ts` 50MB) vs error message (30MB) — use a single shared constant
 

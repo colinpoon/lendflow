@@ -87,7 +87,7 @@ export function validateApiKey(): void {
  */
 export function createVisionClient(): Anthropic {
   validateApiKey();
-  return new Anthropic({ maxRetries: 3 });
+  return new Anthropic({ maxRetries: AI_CONFIG.MAX_RETRIES });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
