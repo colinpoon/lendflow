@@ -3,14 +3,7 @@
 import React from 'react';
 import { fmtCurrency, sanitizeObservationText } from '@/utils/format';
 import type { PillarScore, RiskData } from '@/types/risk';
-
-const PILLAR_KEYS = [
-  'debt_service_capacity',
-  'leverage',
-  'profitability',
-  'cash_flow',
-  'financial_trajectory',
-] as const;
+import { PILLAR_KEYS } from '@/lib/constants';
 
 const LABEL_MAP: Record<string, string> = {
   debt_service_capacity: 'Debt Service Capacity',
