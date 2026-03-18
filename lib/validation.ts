@@ -70,7 +70,7 @@ const debtComponentsSchema = z.object({
   convertible_debt: numericValue.optional(),
   bonds_debentures: numericValue.optional(),
   other_borrowings: numericValue.optional(),
-}).passthrough();
+}).strip();
 
 const fixedChargesSchema = z.object({
   senior_debt_interest: numericValue.optional(),
@@ -84,7 +84,7 @@ const fixedChargesSchema = z.object({
   principal_payments: numericValue.optional(),
   preferred_dividends: numericValue.optional(),
   other_fixed_charges: numericValue.optional(),
-}).passthrough();
+}).strip();
 
 const adjustedEbitdaComponentsSchema = z.object({
   stock_based_compensation: numericValue.optional(),
@@ -115,7 +115,7 @@ const adjustedEbitdaComponentsSchema = z.object({
   realized_fx_pl: numericValue.optional(),
   pro_forma_cost_savings: numericValue.optional(),
   pro_forma_synergies: numericValue.optional(),
-}).passthrough();
+}).strip();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Year Metrics Schema
@@ -162,11 +162,22 @@ const yearMetricsSchema = z.object({
   debt_components: debtComponentsSchema.optional().nullable(),
   fixed_charges: fixedChargesSchema.optional().nullable(),
   adjusted_ebitda_components: adjustedEbitdaComponentsSchema.optional().nullable(),
-}).passthrough();
+
+  // Source tracking (populated by AI for conflict resolution)
+  _sources: z.record(z.string(), z.string()).optional(),
+  _confidence: z.record(z.string(), z.string()).optional(),
+  _source_statements: z.record(z.string(), z.string()).optional(),
+}).strip();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AI Extraction Response Schema
 // ─────────────────────────────────────────────────────────────────────────────
+
+const extractionMetadataSchema = z.object({
+  detected_scale: z.enum(['thousands', 'millions', 'billions', 'raw_dollars', 'unknown']),
+  scale_indicator_found: z.string().nullable(),
+  scale_confidence: z.enum(['high', 'medium', 'low']),
+}).strip();
 
 export const aiExtractionResponseSchema = z.object({
   metrics_by_year: z.record(z.string(), yearMetricsSchema).optional(),
@@ -176,7 +187,11 @@ export const aiExtractionResponseSchema = z.object({
    * title or the latest year with full financial statements.
    */
   primary_fiscal_year: z.string().nullable().optional(),
-}).passthrough();
+  /** Scale detection metadata from AI extraction */
+  extraction_metadata: extractionMetadataSchema.optional().nullable(),
+  /** Injection attempt or anomaly notes from AI (per anti-injection preamble) */
+  extraction_notes: z.record(z.string(), z.string()).optional(),
+}).strip();
 
 export type ValidatedAIResponse = z.infer<typeof aiExtractionResponseSchema>;
 export type ValidatedYearMetrics = z.infer<typeof yearMetricsSchema>;
@@ -502,7 +517,7 @@ const pillarScoreSchema = z.object({
   impact: z.string(),
   weight: z.number().optional(),
   score: z.number().nullable().optional(),
-}).passthrough();
+}).strip();
 
 export const riskDataSchema = z.object({
   header: z.string(),
@@ -510,7 +525,7 @@ export const riskDataSchema = z.object({
   weighted_score: z.number().nullable(),
   band: z.string(),
   lending_recommendation: z.string(),
-}).passthrough();
+}).strip();
 
 export const debtHealthAssessmentSchema = z.object({
   weighted_score: z.number(),
@@ -520,7 +535,7 @@ export const debtHealthAssessmentSchema = z.object({
   positive_factors: z.array(z.string()),
   recommendations: z.array(z.string()),
   suggested_loan_structure: z.string(),
-}).passthrough();
+}).strip();
 
 /**
  * Check if a value looks like it came from a table or primary financial statement
