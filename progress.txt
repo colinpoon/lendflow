@@ -327,3 +327,15 @@ missing, compute the disaggregated total and take the larger value (conservative
 Applied to both `debt-calculator.ts` and `dscr-calculator.ts` which shared the same logic.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 12: Add reported vs. calculated Adjusted EBITDA reconciliation (COMPLETED — commit f7738b8)
+When a company discloses its own Adjusted EBITDA (e.g., in MD&A or press releases), it was used
+as-is without comparison to the lender's calculation. Companies may include aggressive add-backs
+(excessive SBC, pro forma revenue, non-standard adjustments) that a bank wouldn't accept.
+
+Added a reconciliation check in `computeMetrics` (utils/aiProcessor.ts) that compares
+`reported_adjusted_ebitda` against `calculated_adjusted_ebitda` when both are available. If
+they diverge by >5%, an analyst-facing warning surfaces through `extraction_warnings` prompting
+review of the adjustment components.
+
+- TypeScript: clean (npm run build passes, 0 errors)
