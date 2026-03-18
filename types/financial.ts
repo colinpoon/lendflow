@@ -169,6 +169,17 @@ export interface LeaseDebtTreatmentConfig {
   mode: LeaseDebtTreatment;
 }
 
+/**
+ * Operating lease treatment for FCCR denominator
+ * - 'exclude': Exclude operating lease payments from FCCR denominator (DEFAULT — standard banking convention)
+ * - 'include': Include operating lease payments in FCCR denominator (conservative, pre-IFRS 16 style)
+ */
+export type OperatingLeaseTreatment = 'exclude' | 'include';
+
+export interface OperatingLeaseConfig {
+  mode: OperatingLeaseTreatment;
+}
+
 export interface FCCRBreakdown {
   calculation_type: 'lender_defined';
   // CapEx treatment used
@@ -187,6 +198,8 @@ export interface FCCRBreakdown {
   ttm_principal_payments: number;
   ttm_interest_expense: number;
   lease_payments: number;
+  operating_lease_payments?: number;
+  operating_lease_treatment?: OperatingLeaseTreatment;
   denominator: number;
   // Source values for transparency (what was extracted vs fallback)
   sources?: {

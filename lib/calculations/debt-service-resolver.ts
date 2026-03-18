@@ -23,12 +23,16 @@ export type DebtServiceSource =
   | 'finance_lease_payments'
   | 'lease_liabilities_current'
   | 'payment_of_lease_liability'
+  | 'operating_lease_payments'
   | 'none';
 
 export interface ResolvedDebtService {
   principal: number;
   interest: number;
   leases: number;
+  /** Operating lease payments resolved separately — NOT included in `total`.
+   *  Only added to FCCR denominator when operatingLeaseConfig.mode === 'include'. */
+  operatingLeases: number;
   total: number;
   sources: {
     principal_source: DebtServiceSource;
@@ -41,6 +45,8 @@ export interface ResolvedDebtService {
     /** Amount of lease interest deducted from the interest component to prevent
      *  double-counting when leases are added separately. Null when no deduction applied. */
     lease_interest_deducted: number | null;
+    operating_lease_source: 'operating_lease_payments' | 'none';
+    operating_lease_value: number | null;
   };
 }
 
@@ -254,10 +260,21 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
     interest = Math.max(0, interest - fc.lease_interest);
   }
 
+  // ── Operating Leases (resolved separately, NOT in total) ────────────
+  // Only used when FCCR operatingLeaseConfig.mode === 'include'.
+  let operatingLeases = 0;
+  let operatingLeaseSource: 'operating_lease_payments' | 'none' = 'none';
+
+  if (fc.operating_lease_payments != null && fc.operating_lease_payments > 0) {
+    operatingLeases = fc.operating_lease_payments;
+    operatingLeaseSource = 'operating_lease_payments';
+  }
+
   return {
     principal,
     interest,
     leases,
+    operatingLeases,
     total: principal + interest + leases,
     sources: {
       principal_source: principalSource,
@@ -267,6 +284,8 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
       lease_source: leaseSource,
       lease_value: leases || null,
       lease_interest_deducted: leaseInterestDeducted,
+      operating_lease_source: operatingLeaseSource,
+      operating_lease_value: operatingLeases || null,
     },
   };
 }

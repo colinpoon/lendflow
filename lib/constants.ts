@@ -242,6 +242,20 @@ export const SCALE_VALIDATION = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Materiality Thresholds
+// Percentage-of-EBITDA thresholds for analyst review warnings
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const MATERIALITY_THRESHOLDS = {
+  /** Insurance proceeds flagged when > 5% of base EBITDA */
+  INSURANCE_PROCEEDS_PCT: 0.05,
+  /** Gain on asset sale flagged when > 10% of base EBITDA */
+  GAIN_ON_ASSET_SALE_PCT: 0.10,
+  /** D&A component excess flagged when > 10% above CF aggregate */
+  DA_EXCESS_PCT: 0.10,
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Currency Metrics
 // Metrics that should be in thousands (used for scale normalization)
 // ─────────────────────────────────────────────────────────────────────────────

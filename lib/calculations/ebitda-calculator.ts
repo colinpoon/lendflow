@@ -29,6 +29,7 @@ import type {
   AdjustedEBITDABreakdown,
   AdjustedEBITDAComponents,
 } from '@/types';
+import { MATERIALITY_THRESHOLDS } from '@/lib/constants';
 
 export interface EBITDACalculationResult {
   ebitda: number;
@@ -139,7 +140,36 @@ export function calculateEBITDA(metrics: ExtractedMetrics): EBITDAResult | null 
   if (cfAggregate != null && componentDepAmort.length > 0) {
     // Both sources available — use whichever is larger (completeness gate)
     if (componentSum >= cfAggregate) {
-      depAmort = componentSum;
+      // Check for impairment overlap when excess > 10%
+      const excessRatio = cfAggregate > 0 ? (componentSum - cfAggregate) / cfAggregate : 0;
+      if (excessRatio > MATERIALITY_THRESHOLDS.DA_EXCESS_PCT) {
+        const impairmentCharges = metrics.adjusted_ebitda_components?.impairment_charges ?? 0;
+        const goodwillImpairment = metrics.adjusted_ebitda_components?.goodwill_impairment ?? 0;
+
+        if (impairmentCharges > 0 || goodwillImpairment > 0) {
+          // Cap D&A at CF aggregate — excess is impairment embedded in IS sub-components
+          // that will also be added back in Adjusted EBITDA. Capping prevents double-count.
+          console.warn(
+            `⚠️ D&A IMPAIRMENT CAP: Sub-components sum (${componentSum}) exceeds CF aggregate ` +
+            `(${cfAggregate}) by ${(excessRatio * 100).toFixed(0)}%. Impairment detected ` +
+            `(impairment_charges: ${impairmentCharges}, goodwill_impairment: ${goodwillImpairment}). ` +
+            `Capping D&A at CF aggregate to prevent double-count with Adjusted EBITDA add-back.`
+          );
+          depAmort = cfAggregate;
+        } else {
+          // No impairment — excess may be legitimate intangible amortization
+          console.warn(
+            `⚠️ D&A EXCESS REVIEW: Sub-components sum (${componentSum}) exceeds CF aggregate ` +
+            `(${cfAggregate}) by ${(excessRatio * 100).toFixed(0)}% with no impairment detected. ` +
+            `Retaining component sum — excess may be intangible amortization not in CF reconciliation. ` +
+            `Verify manually.`
+          );
+          depAmort = componentSum;
+        }
+      } else {
+        // Within tolerance — use component sum silently
+        depAmort = componentSum;
+      }
     } else {
       console.warn(
         `⚠️ D&A COMPLETENESS GATE: Sub-components sum (${componentSum}) < CF aggregate ` +
@@ -314,6 +344,24 @@ function deduplicateFinanceCostExpenses(
     return rawOtherOneTimeExpenses;
   }
 
+  // ── Tier 1: Identity match (high-precision trigger) ──────────────────
+  // Zero when other_one_time_expenses ≈ (interest - nonCashInterest) within tolerance.
+  // The cash interest residual is the portion of finance costs that ISN'T non-cash.
+  // When expenses match this residual exactly, the AI likely extracted the same
+  // cash interest sub-components (e.g., bank interest, lease interest) as "expenses".
+  const cashInterestResidual = interestExpense - nonCashInterestExpense;
+  if (cashInterestResidual > 0 &&
+      valuesOverlapWithinTolerance(rawOtherOneTimeExpenses, cashInterestResidual, tolerance)) {
+    console.warn(
+      `⚠️ DEDUP [Guard 7 — identity match]: other_one_time_expenses (${rawOtherOneTimeExpenses}) ` +
+      `matches cash interest residual (${cashInterestResidual} = interest ${interestExpense} - ` +
+      `non_cash ${nonCashInterestExpense}) within ${tolerance * 100}%. ` +
+      `These are finance cost sub-components. Zeroing other_one_time_expenses.`
+    );
+    return 0;
+  }
+
+  // ── Tier 2: Envelope test (existing, unchanged at 25%) ───────────────
   // Materiality gate: non_cash_interest_expense must be >= 25% of total interest.
   // This proves the AI found a material non-cash component from the finance cost note,
   // not just a small amortization item. Without this, the envelope test could
@@ -327,15 +375,12 @@ function deduplicateFinanceCostExpenses(
   // The finance cost envelope includes both cash and non-cash components.
   // If the non-cash portion + the suspected expenses fit within total interest,
   // these expenses are likely sub-line-items from the finance cost note.
-  // LIMITATION: This is an arithmetic proxy, not an identity check. The prompt's
-  // FINANCE COST SUB-COMPONENT CHECK is the primary prevention; this guard
-  // catches cases where the AI ignores that instruction.
   const financeCostSubtotal = nonCashInterestExpense + rawOtherOneTimeExpenses;
   const envelopeMax = interestExpense * (1 + tolerance);
 
   if (financeCostSubtotal <= envelopeMax) {
     console.warn(
-      `⚠️ DEDUP [finance_cost_expenses]: other_one_time_expenses (${rawOtherOneTimeExpenses}) + ` +
+      `⚠️ DEDUP [Guard 7 — envelope]: other_one_time_expenses (${rawOtherOneTimeExpenses}) + ` +
       `non_cash_interest_expense (${nonCashInterestExpense}) = ${financeCostSubtotal} ` +
       `fits within interest envelope (${interestExpense}), and non_cash_interest is ` +
       `${(nonCashRatio * 100).toFixed(0)}% of interest (>25% materiality gate). ` +
@@ -602,12 +647,30 @@ export function calculateAdjustedEBITDA(
   // insurance proceeds for analyst review rather than silently excluding them.
   // ─────────────────────────────────────────────────────────────────────────
   const insuranceProceedsDeduped = insuranceProceeds ?? 0;
-  if (insuranceProceedsDeduped > 0 && ebitda > 0 && insuranceProceedsDeduped / ebitda > 0.05) {
+  if (insuranceProceedsDeduped > 0 && ebitda > 0 &&
+      insuranceProceedsDeduped / ebitda > MATERIALITY_THRESHOLDS.INSURANCE_PROCEEDS_PCT) {
     console.warn(
       `⚠️ INSURANCE PROCEEDS: ${insuranceProceedsDeduped} is ` +
-      `>${((insuranceProceedsDeduped / ebitda) * 100).toFixed(1)}% of EBITDA. ` +
+      `${((insuranceProceedsDeduped / ebitda) * 100).toFixed(1)}% of base EBITDA (${ebitda}). ` +
       `Review whether this is business interruption (should remain in EBITDA) ` +
       `or property damage (correctly excluded).`
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Gain on Asset Sale materiality check
+  //
+  // Large asset disposal gains may indicate non-recurring capital activity.
+  // Flag for analyst review when material relative to base EBITDA.
+  // Uses post-dedup value from Guard 4.
+  // ─────────────────────────────────────────────────────────────────────────
+  const gainOnAssetSaleDeduped = gainOnAssetSale ?? 0;
+  if (gainOnAssetSaleDeduped !== 0 && ebitda > 0 &&
+      Math.abs(gainOnAssetSaleDeduped) / ebitda > MATERIALITY_THRESHOLDS.GAIN_ON_ASSET_SALE_PCT) {
+    const pct = ((Math.abs(gainOnAssetSaleDeduped) / ebitda) * 100).toFixed(1);
+    console.warn(
+      `⚠️ GAIN ON ASSET SALE: ${gainOnAssetSaleDeduped} is ${pct}% of base EBITDA (${ebitda}). ` +
+      `Verify whether asset disposals represent recurring operational activity.`
     );
   }
 
@@ -813,7 +876,8 @@ export function calculateAdjustedEBITDA(
   if (rawProFormaAdjustments > proFormaCap && ebitda !== 0) {
     console.warn(
       `⚠️ PRO FORMA CAP: Raw pro forma adjustments (${rawProFormaAdjustments}) exceed ` +
-      `${PRO_FORMA_CAP_PCT * 100}% of EBITDA (${ebitda}). Capped at ${proFormaCap.toFixed(2)}.`
+      `${PRO_FORMA_CAP_PCT * 100}% of base EBITDA (${ebitda}). Capped at ${proFormaCap.toFixed(2)}. ` +
+      `Cap is applied against base EBITDA (not Adjusted EBITDA) to prevent compounding of speculative adjustments.`
     );
   }
 

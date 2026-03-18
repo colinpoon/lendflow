@@ -31,6 +31,8 @@ interface FCCRBreakdownData {
   ttm_principal_payments: number;
   ttm_interest_expense: number;
   lease_payments: number;
+  operating_lease_payments?: number;
+  operating_lease_treatment?: 'exclude' | 'include';
   denominator: number;
   // Source values for transparency
   sources?: {
@@ -513,7 +515,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                     {fccrBreakdown.lease_payments > 0 && (
                       <div className="flex justify-between text-gray-600">
                         <span className="flex items-center flex-wrap">
-                          Lease Payments
+                          Finance Lease Payments
                           {fccrBreakdown.sources && (
                             <span className="text-xs text-gray-400 ml-1">
                               (via {fccrBreakdown.sources.lease_source})
@@ -521,6 +523,15 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                           )}
                         </span>
                         <span>{formatCurrency(fccrBreakdown.lease_payments)}</span>
+                      </div>
+                    )}
+                    {fccrBreakdown.operating_lease_payments != null && fccrBreakdown.operating_lease_payments > 0 && (
+                      <div className="flex justify-between text-gray-600">
+                        <span className="flex items-center flex-wrap">
+                          Operating Lease Payments
+                          <span className="text-xs text-blue-500 ml-1">(included per config)</span>
+                        </span>
+                        <span>{formatCurrency(fccrBreakdown.operating_lease_payments)}</span>
                       </div>
                     )}
                     {fccrBreakdown.sources?.lease_interest_deducted != null && fccrBreakdown.sources.lease_interest_deducted > 0 && (
