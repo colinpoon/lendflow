@@ -176,3 +176,16 @@ All 3 items implemented across `lib/extraction-merger.ts` and `utils/aiProcessor
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase
+
+### Task 11: Type Safety & Developer Experience (Partial — 3 of 5 items)
+3 items implemented across `lib/constants.ts`, `lib/vision/claude-client.ts`, `utils/visionProcessor.ts`, `components/ProjectDetail.tsx`, and new `.env.example`:
+
+1. **`ANTHROPIC_MODEL` env var** — `lib/constants.ts` `AI_CONFIG.MODEL` now reads `process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514'`. All 5 existing uses of `AI_CONFIG.MODEL` (chunk-processor, reconciler, risk-generator) automatically pick up the override. `lib/vision/claude-client.ts` now imports `AI_CONFIG` and uses `AI_CONFIG.MODEL` instead of its own local constant. `utils/visionProcessor.ts` also reads from env var. Deployers can now swap models without code changes.
+
+2. **ErrorBoundary wrappers** — `components/ProjectDetail.tsx` now wraps 5 display components with `CompactErrorBoundary`: `FinancialTable` (Financial Summary card), `QuantitativeRiskCard` (Risk Scorecard card), `WeightedRiskGauge` (Risk Assessment card), `AdjustedEBITDA` (Adjusted EBITDA card), `DebtHealthMeters` (Debt Health Indicators card). A rendering crash in any one component no longer takes down the entire project page.
+
+3. **`.env.example`** — New file at root documenting all required environment variables with placeholder values and inline comments. Covers: `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (optional), Supabase keys (4 vars), Clerk keys (4 vars), and `DEBUG_FINANCIALS` (optional debug flag).
+
+Remaining in Task 11: Zod AI response schemas, typed interfaces to replace `as unknown as X` casts.
+
+- TypeScript: clean (tsc --noEmit, 0 errors)

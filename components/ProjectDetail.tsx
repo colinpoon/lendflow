@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import CovenantParametersPanel from '@/components/CovenantParametersPanel';
+import { CompactErrorBoundary } from '@/components/ErrorBoundary';
 import FileUpload from '@/components/FileUpload';
 import FinancialTable from '@/components/FinancialTable';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
@@ -674,7 +675,9 @@ export default function ProjectDetail({
               <CardTitle className="text-lg font-semibold tracking-tight">Financial Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <FinancialTable data={displayData as unknown as Parameters<typeof FinancialTable>[0]['data']} />
+              <CompactErrorBoundary errorTitle="Failed to render financial table">
+                <FinancialTable data={displayData as unknown as Parameters<typeof FinancialTable>[0]['data']} />
+              </CompactErrorBoundary>
             </CardContent>
           </Card>
         </section>
@@ -698,7 +701,9 @@ export default function ProjectDetail({
               <CardTitle className="text-lg font-semibold tracking-tight">Quantitative Risk Scorecard</CardTitle>
             </CardHeader>
             <CardContent>
-              <QuantitativeRiskCard data={quantitativeRiskAssessment} />
+              <CompactErrorBoundary errorTitle="Failed to render risk scorecard">
+                <QuantitativeRiskCard data={quantitativeRiskAssessment} />
+              </CompactErrorBoundary>
             </CardContent>
           </Card>
 
@@ -708,11 +713,13 @@ export default function ProjectDetail({
                 <CardTitle className="text-lg font-semibold tracking-tight">Risk Assessment</CardTitle>
               </CardHeader>
               <CardContent>
-                <WeightedRiskGauge
-                  data={displayData}
-                  debtHealthAssessment={debtHealthAssessment}
-                  riskData={riskData}
-                />
+                <CompactErrorBoundary errorTitle="Failed to render risk assessment">
+                  <WeightedRiskGauge
+                    data={displayData}
+                    debtHealthAssessment={debtHealthAssessment}
+                    riskData={riskData}
+                  />
+                </CompactErrorBoundary>
               </CardContent>
             </Card>
           )}
@@ -723,7 +730,9 @@ export default function ProjectDetail({
                 <CardTitle className="text-lg font-semibold tracking-tight">Adjusted EBITDA</CardTitle>
               </CardHeader>
               <CardContent>
-                <AdjustedEBITDA data={displayData} />
+                <CompactErrorBoundary errorTitle="Failed to render EBITDA breakdown">
+                  <AdjustedEBITDA data={displayData} />
+                </CompactErrorBoundary>
               </CardContent>
             </Card>
           )}
@@ -734,7 +743,9 @@ export default function ProjectDetail({
                 <CardTitle className="text-lg font-semibold tracking-tight">Debt Health Indicators</CardTitle>
               </CardHeader>
               <CardContent>
-                <DebtHealthMeters data={displayData} />
+                <CompactErrorBoundary errorTitle="Failed to render debt health meters">
+                  <DebtHealthMeters data={displayData} />
+                </CompactErrorBoundary>
               </CardContent>
             </Card>
           )}

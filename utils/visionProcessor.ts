@@ -278,7 +278,7 @@ function buildExtractionWarnings(
 // Main Export
 // ─────────────────────────────────────────────────────────────────────────────
 
-const VISION_MODEL_ID = 'claude-sonnet-4-20250514';
+const VISION_MODEL_ID = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514';
 
 /**
  * Extract financial data from a PDF buffer using Claude Vision.

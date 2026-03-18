@@ -238,88 +238,88 @@ This is where the real sophistication lives:
 
 ## Tasks
 
-### Task 1: Covenant Parameters UI ✅
+### Task 1: Covenant Parameters UI 
 Completed — see progress.txt (commit d44245f)
 
 ### Task 2: Increase Extraction Accuracy
 Improve the accuracy of AI-extracted financial data across all supported document types.
 - [ ] Run extraction against all 11 test files in `public/financialReports/` and log current accuracy baselines
 - [ ] Identify the most common extraction errors (missed line items, misclassified values, scale mismatches)
-- [x] Improve prompt engineering in the extraction pipeline to reduce errors — added multi-year column pinning, D&A arithmetic self-verification, expanded IFRS synonyms for `cash_taxes_paid`/`distributions_paid`, and `payment_of_lease_liability` principal-only clarification
-- [x] Strengthen conflict detection and merge logic for multi-chunk documents — implemented D&A component identity check in `validateArithmeticConsistency`, year-column awareness in reconciliation prompt
-- [x] Add validation checks that cross-reference extracted totals against reported totals — added 3 new checks to `validateArithmeticConsistency`: (1) interest P&L vs fixed_charges.total_interest_expense cross-reference, (2) income statement identity check (net_income ≈ revenue - expenses - interest - taxes), (3) reported_adjusted_ebitda plausibility vs calculated EBITDA base
+- [] Improve prompt engineering in the extraction pipeline to reduce errors — added multi-year column pinning, D&A arithmetic self-verification, expanded IFRS synonyms for `cash_taxes_paid`/`distributions_paid`, and `payment_of_lease_liability` principal-only clarification
+- [] Strengthen conflict detection and merge logic for multi-chunk documents — implemented D&A component identity check in `validateArithmeticConsistency`, year-column awareness in reconciliation prompt
+- [] Add validation checks that cross-reference extracted totals against reported totals — added 3 new checks to `validateArithmeticConsistency`: (1) interest P&L vs fixed_charges.total_interest_expense cross-reference, (2) income statement identity check (net_income ≈ revenue - expenses - interest - taxes), (3) reported_adjusted_ebitda plausibility vs calculated EBITDA base
 - [ ] Re-run all 11 test files and document accuracy improvements vs. baseline
 
-### Task 3: Audit & Fix Calculation Engine ✅
+### Task 3: Audit & Fix Calculation Engine 
 Review all calculators in `lib/calculations/` to ensure formulas return the most accurate results.
-- [x] Audit `ebitda-calculator.ts` — fixed `usedGrossFallback` flag incorrectly staying `false` when P&L interest field was absent (caused interest income double-deduction in Adjusted EBITDA)
-- [x] Audit `fccr-calculator.ts` — fixed distributions_paid never being deducted from FCCR numerator (was systematically overstating coverage for owner-operated businesses)
-- [x] Audit `dscr-calculator.ts` — verified debt service inputs; noted `repayment_of_debt` gross revolving inflation is a known limitation
-- [x] Audit `debt-calculator.ts` — verified senior/funded/total debt classification; noted bank debt fallback edge case
-- [x] Audit `debt-service-resolver.ts` — verified resolver logic; 1.15x cross-check threshold documented
-- [x] Audit `ratio-calculator.ts` — fixed three distress conditions (negative equity, negative EBITDA) that returned `null` instead of the actual ratio, hiding critical signals from analysts
-- [x] Fix any formula errors or edge cases found — also fixed DSCR not being recalculated in `recalculate.ts` when covenant config changes
+- [] Audit `ebitda-calculator.ts` — fixed `usedGrossFallback` flag incorrectly staying `false` when P&L interest field was absent (caused interest income double-deduction in Adjusted EBITDA)
+- [] Audit `fccr-calculator.ts` — fixed distributions_paid never being deducted from FCCR numerator (was systematically overstating coverage for owner-operated businesses)
+- [] Audit `dscr-calculator.ts` — verified debt service inputs; noted `repayment_of_debt` gross revolving inflation is a known limitation
+- [] Audit `debt-calculator.ts` — verified senior/funded/total debt classification; noted bank debt fallback edge case
+- [] Audit `debt-service-resolver.ts` — verified resolver logic; 1.15x cross-check threshold documented
+- [] Audit `ratio-calculator.ts` — fixed three distress conditions (negative equity, negative EBITDA) that returned `null` instead of the actual ratio, hiding critical signals from analysts
+- [] Fix any formula errors or edge cases found — also fixed DSCR not being recalculated in `recalculate.ts` when covenant config changes
 - [ ] Test calculated outputs by running extraction against all files in `public/financialReports/` multiple times. Compare outputs across runs to identify inconsistencies and non-deterministic results. For each file, reason through the financial statements like a corporate finance analyst at a bank — read the income statement, balance sheet, and cash flow statement yourself, form your own conclusions about what the correct values should be, then compare against what the engine produced. Where outputs differ from what a banker would expect, diagnose why and fix the underlying extraction or calculation logic.
 
-### Task 4: Polish Frontend UI/UX ✅
+### Task 4: Polish Frontend UI/UX 
 Improve the visual design, usability, and overall experience of the application.
-- [x] Audit all pages for visual consistency (spacing, typography, color usage, dark mode)
-- [x] Improve the upload flow — clearer progress states, better error messaging
-- [x] Polish the financial data tables — readability, alignment, responsive behavior
-- [x] Improve the risk assessment display — make scores and health indicators more intuitive
-- [x] Add loading skeletons and smooth transitions between states
-- [x] Ensure full dark mode support across all components
-- [x] Review and improve mobile/responsive layouts
+- [] Audit all pages for visual consistency (spacing, typography, color usage, dark mode)
+- [] Improve the upload flow — clearer progress states, better error messaging
+- [] Polish the financial data tables — readability, alignment, responsive behavior
+- [] Improve the risk assessment display — make scores and health indicators more intuitive
+- [] Add loading skeletons and smooth transitions between states
+- [] Ensure full dark mode support across all components
+- [] Review and improve mobile/responsive layouts
 
-### Task 5: Regression Testing with Financial Reports ✅
+### Task 5: Regression Testing with Financial Reports 
 Validate extraction integrity using the real financial reports in `public/financialReports/`.
-- [x] Create a test harness that runs extraction on each file and captures structured output — `scripts/test-extraction.ts`
-- [x] Build expected-value baselines for key metrics (EBITDA, total debt, senior debt, revenue) per file — snapshot system persists first-run output; ground truth from `lib/benchmarks/ground-truth.ts` used where verified
-- [x] Automate comparison of extraction output vs. baselines with pass/fail reporting — ✓/⚠/✗ at 5%/20% variance thresholds; exits with code 1 on any failure
-- [x] Document known edge cases per file (e.g., unusual line items, non-standard formatting) — `KNOWN_EDGE_CASES` map covers 8 files inline in the script
-- [x] Integrate regression checks into CI or a runnable script (`npm run test:extraction`) — added to `package.json`
+- [] Create a test harness that runs extraction on each file and captures structured output — `scripts/test-extraction.ts`
+- [] Build expected-value baselines for key metrics (EBITDA, total debt, senior debt, revenue) per file — snapshot system persists first-run output; ground truth from `lib/benchmarks/ground-truth.ts` used where verified
+- [] Automate comparison of extraction output vs. baselines with pass/fail reporting — ✓/⚠/✗ at 5%/20% variance thresholds; exits with code 1 on any failure
+- [] Document known edge cases per file (e.g., unusual line items, non-standard formatting) — `KNOWN_EDGE_CASES` map covers 8 files inline in the script
+- [] Integrate regression checks into CI or a runnable script (`npm run test:extraction`) — added to `package.json`
 
 
 
-### Task 6: Critical — Database & Data Integrity Fixes ✅
+### Task 6: Critical — Database & Data Integrity Fixes 
 Prevent data corruption and silent failures in the extraction pipeline.
-- [x] Wrap extraction insert + project risk-score update in a Supabase RPC transaction (or validate every `.error` response) — validated every `.error` response on extraction insert and project update; non-fatal project update failure is now logged rather than silently swallowed
-- [x] Fix year-conflict detection running after insertion — detect conflicts before insert, or clean up orphaned records on cancel — moved conflict detection to run on a phantom extraction object BEFORE the DB insert; extraction is only inserted after conflict status is known
-- [x] Audit all Supabase calls in `route.ts` — check `{ data, error }` on every operation, log failures, update document status to `'failed'` — all Supabase operations now check `.error`; `updateDocumentStatus` logs failures; project update failure in `resolve-conflict/route.ts` also now logged
-- [x] Add cleanup mechanism for stale `processing` records (background job or cron marking stuck documents as `failed` after 15 min) — `cleanupStaleProcessingRecords()` runs at the start of each extraction, marking any document for that project stuck in `processing` for >15 min as `failed`
+- [] Wrap extraction insert + project risk-score update in a Supabase RPC transaction (or validate every `.error` response) — validated every `.error` response on extraction insert and project update; non-fatal project update failure is now logged rather than silently swallowed
+- [] Fix year-conflict detection running after insertion — detect conflicts before insert, or clean up orphaned records on cancel — moved conflict detection to run on a phantom extraction object BEFORE the DB insert; extraction is only inserted after conflict status is known
+- [] Audit all Supabase calls in `route.ts` — check `{ data, error }` on every operation, log failures, update document status to `'failed'` — all Supabase operations now check `.error`; `updateDocumentStatus` logs failures; project update failure in `resolve-conflict/route.ts` also now logged
+- [] Add cleanup mechanism for stale `processing` records (background job or cron marking stuck documents as `failed` after 15 min) — `cleanupStaleProcessingRecords()` runs at the start of each extraction, marking any document for that project stuck in `processing` for >15 min as `failed`
 
-### Task 7: Critical — Document Parsing Completeness ✅
+### Task 7: Critical — Document Parsing Completeness 
 Ensure all accepted file types can actually be processed.
-- [x] Implement Excel parsing (`.xlsx`/`.xls` via existing `xlsx` dependency) in `document-parser.ts` — pipe-delimited sheet output with sheet headers, 2000-row cap per sheet
-- [x] Implement Word parsing (`.docx`) in `document-parser.ts` — using `mammoth` (added to dependencies); `.doc` throws a clear user-facing error directing them to save as `.docx`
-- [x] Add scanned PDF detection — checks text density (chars/page); if < 100 chars/page, prepends warning directing user to `/vision` upload
+- [] Implement Excel parsing (`.xlsx`/`.xls` via existing `xlsx` dependency) in `document-parser.ts` — pipe-delimited sheet output with sheet headers, 2000-row cap per sheet
+- [] Implement Word parsing (`.docx`) in `document-parser.ts` — using `mammoth` (added to dependencies); `.doc` throws a clear user-facing error directing them to save as `.docx`
+- [] Add scanned PDF detection — checks text density (chars/page); if < 100 chars/page, prepends warning directing user to `/vision` upload
 
-### Task 8: High — Error Handling & Resilience ✅
+### Task 8: High — Error Handling & Resilience 
 Make the pipeline gracefully handle failures instead of losing all progress.
-- [x] Wrap `generateRiskAssessment()`, `generateDebtHealthAssessment()`, `calculateQuantitativeRisk()` in individual try/catch blocks — allow partial success (return metrics with `riskSnapshot: null`)
-- [x] Implement exponential backoff with jitter for all Claude API calls (enable Anthropic SDK's built-in retry support)
-- [x] Guard all division operations in `lib/calculations/` — handle negative EBITDA, negative equity, zero denominators with `null` returns and explanatory warnings
-- [x] Align file-size limits: frontend (`FileUpload.tsx` 10MB) vs API (`route.ts` 50MB) vs error message (30MB) — use a single shared constant
+- [] Wrap `generateRiskAssessment()`, `generateDebtHealthAssessment()`, `calculateQuantitativeRisk()` in individual try/catch blocks — allow partial success (return metrics with `riskSnapshot: null`)
+- [] Implement exponential backoff with jitter for all Claude API calls (enable Anthropic SDK's built-in retry support)
+- [] Guard all division operations in `lib/calculations/` — handle negative EBITDA, negative equity, zero denominators with `null` returns and explanatory warnings
+- [] Align file-size limits: frontend (`FileUpload.tsx` 10MB) vs API (`route.ts` 50MB) vs error message (30MB) — use a single shared constant
 
-### Task 9: High — Security Hardening ✅
+### Task 9: High — Security Hardening 
 Protect against abuse and data leaks.
-- [x] Add per-user rate limiting on `/api/extractData` — in-memory sliding-window limiter (5 req/10 min per user, map capped at 10k entries); returns 429 with `Retry-After` header
-- [x] Implement structured logging with sensitive data redaction — FCCR/Debt/Capital values in `risk-generator.ts` now gated behind `DEBUG_FINANCIALS` env flag (same pattern as chunk-processor and extraction-merger)
-- [x] Replace synchronous file I/O in `risk-generator.ts` cache — disk cache removed entirely; replaced with in-memory Map (100-entry LRU-style, oldest evicted when full)
+- [] Add per-user rate limiting on `/api/extractData` — in-memory sliding-window limiter (5 req/10 min per user, map capped at 10k entries); returns 429 with `Retry-After` header
+- [] Implement structured logging with sensitive data redaction — FCCR/Debt/Capital values in `risk-generator.ts` now gated behind `DEBUG_FINANCIALS` env flag (same pattern as chunk-processor and extraction-merger)
+- [] Replace synchronous file I/O in `risk-generator.ts` cache — disk cache removed entirely; replaced with in-memory Map (100-entry LRU-style, oldest evicted when full)
 
-### Task 10: Medium — Extraction Pipeline Robustness ✅
+### Task 10: Medium — Extraction Pipeline Robustness 
 Improve accuracy and consistency of the extraction pipeline.
-- [x] Add `scale_correction_applied` flag per metric to prevent over-correction across the 3 normalization passes (detected scale → cross-metric → cross-year)
-- [x] Validate and normalize fiscal year format immediately after extraction — reject unrecognizable formats with warning
-- [x] Cap warnings array at ~50 entries; summarize overflow as "...and N more warnings"
+- [] Add `scale_correction_applied` flag per metric to prevent over-correction across the 3 normalization passes (detected scale → cross-metric → cross-year)
+- [] Validate and normalize fiscal year format immediately after extraction — reject unrecognizable formats with warning
+- [] Cap warnings array at ~50 entries; summarize overflow as "...and N more warnings"
 
 ### Task 11: Low — Type Safety & Developer Experience
 Reduce technical debt and improve maintainability.
 - [ ] Add Zod schemas for AI response validation at the boundary; generate TypeScript types from schemas
 - [ ] Replace `as unknown as X` casts and `Record<string, unknown>` types with proper typed interfaces
-- [ ] Wrap `FinancialTable`, `RiskAssessment`, and `EBITDA` components with `<ErrorBoundary>`
-- [ ] Move AI model version to `ANTHROPIC_MODEL` env var with current value as default
-- [ ] Add `.env.example` with all required environment variables and placeholder values
+- [x] Wrap `FinancialTable`, `RiskAssessment`, and `EBITDA` components with `<ErrorBoundary>` — wrapped FinancialTable, AdjustedEBITDA, QuantitativeRiskCard, WeightedRiskGauge, DebtHealthMeters in `ProjectDetail.tsx` with `CompactErrorBoundary`
+- [x] Move AI model version to `ANTHROPIC_MODEL` env var with current value as default — `lib/constants.ts` reads `process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514'`; vision files updated
+- [x] Add `.env.example` with all required environment variables and placeholder values
 
 ---
 

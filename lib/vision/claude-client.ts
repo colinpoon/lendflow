@@ -11,9 +11,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { EXTRACTION_TOOL, EXTRACTION_PROMPT } from './extraction-tool';
 import type { ExtractedMetrics } from '@/types/financial';
+import { AI_CONFIG } from '@/lib/constants';
 
-// Model identifier — update here when upgrading
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+// Model identifier — falls back to default if ANTHROPIC_MODEL env var is not set
+const CLAUDE_MODEL = AI_CONFIG.MODEL;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public Types

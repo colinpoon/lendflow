@@ -21,7 +21,7 @@ export const MAX_FILE_SIZE_LABEL = '50 MB';
 
 // Anthropic Claude configuration for text extraction
 export const AI_CONFIG = {
-  MODEL: 'claude-sonnet-4-20250514',
+  MODEL: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514',
   TEMPERATURE: 0,
   MAX_TOKENS: 8192, // Claude supports higher output limits for detailed extraction
   CHUNK_SIZE: 15000, // Larger chunks - Claude has 200k context window
