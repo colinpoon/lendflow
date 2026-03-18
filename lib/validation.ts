@@ -420,6 +420,80 @@ export function validateExtractionResponse(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Plausibility Validation (prompt injection artifact detection)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Flags suspiciously round large numbers (potential injection artifacts)
+ * and unusual year keys. Called after Zod schema validation.
+ * Non-blocking — returns warnings only, never rejects data.
+ */
+export function validateExtractionPlausibility(
+  data: ValidatedAIResponse
+): string[] {
+  const warnings: string[] = [];
+
+  if (!data.metrics_by_year) return warnings;
+
+  // Check year keys for plausibility
+  for (const year of Object.keys(data.metrics_by_year)) {
+    const numYear = parseInt(year, 10);
+    if (isNaN(numYear) || numYear < 1900 || numYear > 2099) {
+      warnings.push(
+        `Suspicious year key "${year}" — outside valid range (1900–2099). ` +
+        `May indicate injection artifact or malformed extraction.`
+      );
+    }
+  }
+
+  // Check for suspiciously round large numbers (injection artifacts like $999,000,000)
+  const suspiciousFields = [
+    'revenue', 'net_income', 'ebitda', 'total_debt', 'senior_debt',
+    'shareholders_equity', 'expenses',
+  ] as const;
+
+  for (const [year, metrics] of Object.entries(data.metrics_by_year)) {
+    for (const field of suspiciousFields) {
+      const value = metrics[field];
+      if (value == null) continue;
+
+      const absVal = Math.abs(value);
+      // Flag values >= 1 billion that are perfectly round (no remainder when dividing by 1M)
+      // Legitimate financials at this scale almost always have non-zero trailing digits
+      if (absVal >= 1_000_000_000 && absVal % 1_000_000 === 0) {
+        warnings.push(
+          `${year}.${field}: Suspiciously round value (${value.toLocaleString()}). ` +
+          `Perfectly round values at this scale may indicate an injection artifact. Verify against source document.`
+        );
+      }
+    }
+
+    // Check for duplicate identical values across many fields (another injection pattern)
+    const numericValues = Object.entries(metrics)
+      .filter(([, v]) => typeof v === 'number' && v !== 0 && v !== null)
+      .map(([k, v]) => ({ key: k, value: v as number }));
+
+    const valueCounts = new Map<number, string[]>();
+    for (const { key, value } of numericValues) {
+      const existing = valueCounts.get(value) ?? [];
+      existing.push(key);
+      valueCounts.set(value, existing);
+    }
+
+    for (const [value, fields] of valueCounts) {
+      if (fields.length >= 4) {
+        warnings.push(
+          `${year}: ${fields.length} fields share identical value (${value.toLocaleString()}): ` +
+          `${fields.join(', ')}. This pattern is unusual and may indicate data injection.`
+        );
+      }
+    }
+  }
+
+  return warnings;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Risk Assessment Schemas
 // ─────────────────────────────────────────────────────────────────────────────
 

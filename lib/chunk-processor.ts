@@ -12,7 +12,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
 import { AI_CONFIG, CHUNKING_CONFIG } from './constants';
 import { FINANCIAL_EXTRACTION_PROMPT } from './prompts/extraction-prompt';
-import { validateExtractionResponse } from './validation';
+import { validateExtractionResponse, validateExtractionPlausibility } from './validation';
 import type { ExtractedMetrics } from '@/types';
 
 // Anthropic Claude client for text extraction.
@@ -477,6 +477,16 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
 
       // Extract validation warnings (business logic issues)
       const warnings = validation.errors?.map((e) => `${e.path}: ${e.message}`) || [];
+
+      // Plausibility check — flags potential injection artifacts (non-blocking)
+      const plausibilityWarnings = validateExtractionPlausibility(validation.data!);
+      if (plausibilityWarnings.length > 0) {
+        console.warn(
+          `⚠️ Plausibility warnings for chunk ${chunk.index}:`,
+          plausibilityWarnings.join('; ')
+        );
+        warnings.push(...plausibilityWarnings);
+      }
 
       return {
         index: chunk.index,
