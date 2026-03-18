@@ -46,20 +46,6 @@ export interface PageExtractionResult {
   };
 }
 
-/**
- * @deprecated Use PageExtractionResult.
- * Kept for backward compatibility with any callers that still import
- * ExtractionResult from this module.
- */
-export interface ExtractionResult {
-  fiscalYear: string;
-  metrics: ExtractedMetrics;
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-  };
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Raw tool output types (mirrors extractionToolSchema in extraction-tool.ts)
 // ─────────────────────────────────────────────────────────────────────────────

@@ -24,8 +24,6 @@ export {
   validateApiKey,
   type PageExtractionResult,
   type YearExtraction,
-  // Deprecated — retained for any callers that still import ExtractionResult
-  type ExtractionResult,
 } from './claude-client';
 
 // Tool definitions

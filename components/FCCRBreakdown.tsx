@@ -7,59 +7,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import type { FCCRBreakdown as FCCRBreakdownData, DSCRBreakdown as DSCRBreakdownData } from '@/types/financial';
 
 interface CustomAdjustment {
   id: string;
   amount: number;
   description: string;
-}
-
-type CapexTreatmentMode = 'unfunded' | 'all' | 'none' | 'custom';
-
-interface FCCRBreakdownData {
-  calculation_type: string;
-  capex_treatment: CapexTreatmentMode;
-  capex_custom_percentage?: number;
-  adjusted_ebitda: number;
-  capital_expenditures: number;
-  proceeds_from_lt_debt: number;
-  unfunded_capex: number;
-  capex_deduction: number;
-  cash_taxes_paid: number;
-  distributions_paid: number;
-  numerator: number;
-  ttm_principal_payments: number;
-  ttm_interest_expense: number;
-  lease_payments: number;
-  operating_lease_payments?: number;
-  operating_lease_treatment?: 'exclude' | 'include';
-  denominator: number;
-  // Source values for transparency
-  sources?: {
-    capital_expenditures_extracted: number | null;
-    proceeds_from_lt_debt_extracted: number | null;
-    cash_taxes_paid_extracted: number | null;
-    distributions_paid_extracted: number | null;
-    principal_source: string;
-    principal_value: number | null;
-    interest_source: string;
-    interest_value: number | null;
-    lease_source: string;
-    lease_value: number | null;
-    lease_interest_deducted?: number | null;
-  };
-}
-
-interface DSCRBreakdownData {
-  calculation_type: string;
-  adjusted_ebitda: number;
-  bank_principal_payments: number;
-  bank_interest_expense: number;
-  lease_payments: number;
-  total_debt_service: number;
-  dscr: number;
-  funded_debt: number;
-  funded_debt_to_ebitda: number | null;
 }
 
 interface YearMetrics {
