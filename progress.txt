@@ -174,18 +174,15 @@ All 3 items implemented across `lib/extraction-merger.ts` and `utils/aiProcessor
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
 ### Remaining PRD Gaps:
-- Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase
 
-### Task 11: Type Safety & Developer Experience (Partial — 3 of 5 items)
-3 items implemented across `lib/constants.ts`, `lib/vision/claude-client.ts`, `utils/visionProcessor.ts`, `components/ProjectDetail.tsx`, and new `.env.example`:
+### Task 11: Type Safety & Developer Experience (Partial — 4 of 5 items, commit 4188ec1)
+Previously 3 items were done. This iteration added:
 
-1. **`ANTHROPIC_MODEL` env var** — `lib/constants.ts` `AI_CONFIG.MODEL` now reads `process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514'`. All 5 existing uses of `AI_CONFIG.MODEL` (chunk-processor, reconciler, risk-generator) automatically pick up the override. `lib/vision/claude-client.ts` now imports `AI_CONFIG` and uses `AI_CONFIG.MODEL` instead of its own local constant. `utils/visionProcessor.ts` also reads from env var. Deployers can now swap models without code changes.
+4. **Zod schemas for risk AI responses** — `lib/validation.ts`: Added `riskDataSchema` and `debtHealthAssessmentSchema` Zod schemas matching `RiskData` and `DebtHealthAssessment` types. `lib/risk-generator.ts`: Both `generateRiskAssessment()` and `generateDebtHealthAssessment()` now `.safeParse()` the JSON after parsing — logs a warning with field errors on mismatch, falls back to raw parsed data. Catches malformed AI responses at the boundary without breaking resilience.
 
-2. **ErrorBoundary wrappers** — `components/ProjectDetail.tsx` now wraps 5 display components with `CompactErrorBoundary`: `FinancialTable` (Financial Summary card), `QuantitativeRiskCard` (Risk Scorecard card), `WeightedRiskGauge` (Risk Assessment card), `AdjustedEBITDA` (Adjusted EBITDA card), `DebtHealthMeters` (Debt Health Indicators card). A rendering crash in any one component no longer takes down the entire project page.
+5. **`/instruments` page fix** — Replaced the stub page that crashed by querying a non-existent Supabase `instruments` table with a proper "under development" placeholder using `Card` + `Construction` icon. No more runtime Supabase errors on that route.
 
-3. **`.env.example`** — New file at root documenting all required environment variables with placeholder values and inline comments. Covers: `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (optional), Supabase keys (4 vars), Clerk keys (4 vars), and `DEBUG_FINANCIALS` (optional debug flag).
-
-Remaining in Task 11: Zod AI response schemas, typed interfaces to replace `as unknown as X` casts.
+Remaining in Task 11: Typed interfaces to replace `as unknown as X` casts (requires aligning local FinancialTable FCCRBreakdown field names with global types — `ttm_principal_payments` vs `principal_payments` mismatch).
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
