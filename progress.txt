@@ -604,3 +604,22 @@ All 4 sub-items implemented (three-layer defense):
 Task 19 is now fully complete.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 20: API Route Input Validation (COMPLETED — commits dc46c98, 185a830, eabaf35)
+All 3 sub-items implemented:
+
+1. **resolve-conflict Zod validation** — POST body validated with `extractionId` (uuid),
+   `projectId` (uuid), `resolutions` (record of `'keep'|'overwrite'`). DELETE body validated
+   with optional `extractionId`/`documentId` (both uuid).
+
+2. **projects routes Zod validation** — POST: `name` (1-255, required), `description` (max 2000),
+   `company_name` (max 255). PATCH: all fields optional, `status` restricted to enum
+   (`'draft'|'in_progress'|'completed'|'archived'`). Invalid inputs return 400 with field-level details.
+
+3. **Clerk middleware API route matcher** — Added all API routes (`extractData`, `projects`,
+   `documents`, `resolve-conflict`, `compare`) to Clerk middleware `isProtectedRoute` matcher.
+   Defense-in-depth alongside per-route `auth()` checks.
+
+Task 20 is now fully complete.
+
+- TypeScript: clean (npm run build passes, 0 errors)

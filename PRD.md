@@ -402,9 +402,9 @@ Security audit (2026-03-18). User-uploaded document text flows unsanitized into 
 
 ### Task 20: High — API Route Input Validation & Error Sanitization
 Security audit (2026-03-18). API routes accept JSON request bodies without schema validation. Error responses leak internal details.
-- [ ] **HIGH — Add Zod schema validation to resolve-conflict route** — `resolve-conflict/route.ts` parses `req.json()` without validation. Add schema: `extractionId: uuid`, `projectId: uuid`, `resolutions: record(string, enum(['keep_existing','use_new']))`. Reject invalid inputs with 400. File: `app/api/resolve-conflict/route.ts`
-- [ ] **HIGH — Add Zod schema validation to projects routes** — POST: `name: string.min(1).max(255)`, optional `description.max(2000)`, `company_name.max(255)`. PATCH: add `status: enum(['draft','in_progress','completed','archived'])` — currently accepts arbitrary status values. Files: `app/api/projects/route.ts`, `app/api/projects/[id]/route.ts`
-- [ ] **MEDIUM — Add API routes to Clerk middleware matcher** — Current middleware only protects `/dashboard` and `/upload`. Add `/api/extractData(.*)`, `/api/projects(.*)`, `/api/documents(.*)`, `/api/resolve-conflict(.*)`, `/api/compare(.*)` as defense-in-depth. File: `middleware.ts`
+- [x] **HIGH — Add Zod schema validation to resolve-conflict route** — `resolve-conflict/route.ts` parses `req.json()` without validation. Add schema: `extractionId: uuid`, `projectId: uuid`, `resolutions: record(string, enum(['keep_existing','use_new']))`. Reject invalid inputs with 400. File: `app/api/resolve-conflict/route.ts`
+- [x] **HIGH — Add Zod schema validation to projects routes** — POST: `name: string.min(1).max(255)`, optional `description.max(2000)`, `company_name.max(255)`. PATCH: add `status: enum(['draft','in_progress','completed','archived'])` — currently accepts arbitrary status values. Files: `app/api/projects/route.ts`, `app/api/projects/[id]/route.ts`
+- [x] **MEDIUM — Add API routes to Clerk middleware matcher** — Current middleware only protects `/dashboard` and `/upload`. Add `/api/extractData(.*)`, `/api/projects(.*)`, `/api/documents(.*)`, `/api/resolve-conflict(.*)`, `/api/compare(.*)` as defense-in-depth. File: `middleware.ts`
 
 ### Task 21: Medium — File Validation & Rate Limiter Hardening
 Security audit (2026-03-18). File validation happens after storage upload. Rate limiter uses FIFO eviction and doesn't differentiate expensive operations.
