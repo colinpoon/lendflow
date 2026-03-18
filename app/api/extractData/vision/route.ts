@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import path from 'path';
 import { extractVisionData } from '@/utils/visionProcessor';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { detectYearConflicts, type ExtractionWithDocument } from '@/lib/extraction-utils';
@@ -77,8 +78,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Sanitize file name to prevent path traversal — file.name is user-controlled
+  const sanitizedFileName = path.basename(file.name).replace(/[^\w.\-() ]/g, '_');
+
   console.log(
-    `📁 File received: ${file.name}, size: ${file.size}, type: ${file.type}`
+    `📁 File received: ${sanitizedFileName}, size: ${file.size}, type: ${file.type}`
   );
 
   // Create a TransformStream for SSE
@@ -122,7 +126,7 @@ export async function POST(req: NextRequest) {
           .from('projects')
           .insert({
             user_id: userId,
-            name: file.name.replace(/\.[^/.]+$/, ''),
+            name: sanitizedFileName.replace(/\.[^/.]+$/, ''),
             status: 'in_progress',
           })
           .select()
@@ -144,7 +148,7 @@ export async function POST(req: NextRequest) {
 
       // Generate document ID and storage path
       const documentId = crypto.randomUUID();
-      const storagePath = `${userId}/${projectId}/${documentId}/${file.name}`;
+      const storagePath = `${userId}/${projectId}/${documentId}/${sanitizedFileName}`;
 
       console.log(`📤 Uploading to Supabase Storage: ${storagePath}`);
 
@@ -181,8 +185,8 @@ export async function POST(req: NextRequest) {
         id: documentId,
         project_id: projectId,
         user_id: userId,
-        file_name: file.name,
-        original_file_name: file.name,
+        file_name: sanitizedFileName,
+        original_file_name: sanitizedFileName,
         file_type: file.type,
         file_size: file.size,
         storage_path: storagePath,
@@ -312,7 +316,7 @@ export async function POST(req: NextRequest) {
             // Build the new extraction object for conflict detection
             const newExtractionForConflict: ExtractionWithDocument = {
               ...extraction,
-              documents: { id: documentId, file_name: file.name },
+              documents: { id: documentId, file_name: sanitizedFileName },
             };
 
             const conflictResult = detectYearConflicts(
@@ -369,7 +373,7 @@ export async function POST(req: NextRequest) {
             message: 'Complete',
             data: {
               message: 'File processed successfully',
-              filename: file.name,
+              filename: sanitizedFileName,
               projectId,
               documentId,
               extractionId: extraction?.id,
