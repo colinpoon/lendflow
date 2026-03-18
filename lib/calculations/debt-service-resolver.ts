@@ -55,6 +55,13 @@ export interface ResolvedDebtService {
     operating_lease_source: 'operating_lease_payments' | 'none';
     operating_lease_value: number | null;
     preferred_dividends_value: number | null;
+    /**
+     * Set to true when repayment_of_debt was capped at the funded debt balance
+     * because it exceeded funded_debt * 1.5 — indicating gross revolving credit
+     * activity was inflating the DSCR/FCCR denominator.
+     * The uncapped value is recorded in warnings for analyst review.
+     */
+    principal_capped_at_funded_debt?: boolean;
   };
   /**
    * Analyst-facing warnings that should be surfaced in the UI.
@@ -154,6 +161,69 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
     // Only push if not already warned (avoid duplicate messages when both conditions fire)
     if (!warnings.some(w => w.includes('revolving_credit_facilities'))) {
       warnings.push(revolvingWarnMsg);
+    }
+  }
+
+  // ── Revolver Cap: correct inflated repayment_of_debt ─────────────────
+  // When repayment_of_debt exceeds funded debt * 1.5, gross revolving credit
+  // activity is almost certainly inflating the figure. Cap principal at the
+  // funded debt balance — you cannot retire more debt than is outstanding.
+  //
+  // Funded debt for cap purposes:
+  //   bank debt (current + long-term) OR disaggregated bank components
+  //   + finance lease liabilities (current + long-term or aggregate)
+  //
+  // This is the same funded_debt definition used in dscr-calculator.ts so that
+  // both the debt balance and debt service columns are internally consistent.
+  let principalCapped = false;
+  if (principalSource === 'repayment_of_debt') {
+    // Mirror the funded_debt calculation from dscr-calculator.ts exactly
+    const bankDebtCurrent = dc.bank_debt_current ?? 0;
+    const bankDebtLongTerm = dc.bank_debt_long_term ?? 0;
+    const termLoans = dc.term_loans ?? 0;
+    const revolvingCredit = dc.revolving_credit_facilities ?? 0;
+    const overdraft = dc.overdraft_facilities ?? 0;
+    const linesOfCredit = dc.lines_of_credit ?? 0;
+
+    let totalBankDebt = bankDebtCurrent + bankDebtLongTerm;
+    if (totalBankDebt === 0) {
+      totalBankDebt = termLoans + revolvingCredit + overdraft + linesOfCredit;
+    }
+
+    // Finance lease component (prefer split over aggregate)
+    const leaseCurrentDirect = dc.lease_liabilities_current ?? 0;
+    const leaseLongTermDirect = dc.lease_liabilities_long_term ?? 0;
+    const financeLeaseAgg = dc.finance_lease_liabilities ?? 0;
+    const financeLeaseDebt =
+      dc.lease_liabilities_current != null || dc.lease_liabilities_long_term != null
+        ? leaseCurrentDirect + leaseLongTermDirect
+        : financeLeaseAgg;
+
+    const fundedDebt = totalBankDebt + financeLeaseDebt;
+
+    if (fundedDebt > 0 && principal > fundedDebt * 1.5) {
+      const uncappedPrincipal = principal;
+      principal = fundedDebt;
+      principalCapped = true;
+      const capWarnMsg =
+        `${yearTag}DSCR/FCCR: repayment_of_debt (${uncappedPrincipal.toLocaleString()}) exceeds ` +
+        `funded debt balance (${fundedDebt.toLocaleString()}) by more than 1.5x. ` +
+        `Gross revolving credit draws/repayments likely inflate this line item. ` +
+        `Principal capped at funded debt balance (${fundedDebt.toLocaleString()}) to prevent ` +
+        `denominator distortion. Verify against financing activities note.`;
+      console.warn(`⚠️ ${capWarnMsg}`);
+      // The cap message supersedes the earlier diagnostic-only warnings — remove them to
+      // avoid analyst confusion when multiple revolving credit messages appear together.
+      // Match on phrases specific to the earlier checks (not present in the cap message itself).
+      for (let i = warnings.length - 1; i >= 0; i--) {
+        if (
+          warnings[i].includes('inflating the denominator and understating coverage') ||
+          warnings[i].includes('revolving_credit_facilities')
+        ) {
+          warnings.splice(i, 1);
+        }
+      }
+      warnings.push(capWarnMsg);
     }
   }
 
@@ -345,6 +415,7 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
       operating_lease_source: operatingLeaseSource,
       operating_lease_value: operatingLeases || null,
       preferred_dividends_value: preferredDividends || null,
+      ...(principalCapped && { principal_capped_at_funded_debt: true }),
     },
     warnings,
   };
