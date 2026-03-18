@@ -288,11 +288,11 @@ Prevent data corruption and silent failures in the extraction pipeline.
 - [x] Audit all Supabase calls in `route.ts` — check `{ data, error }` on every operation, log failures, update document status to `'failed'` — all Supabase operations now check `.error`; `updateDocumentStatus` logs failures; project update failure in `resolve-conflict/route.ts` also now logged
 - [x] Add cleanup mechanism for stale `processing` records (background job or cron marking stuck documents as `failed` after 15 min) — `cleanupStaleProcessingRecords()` runs at the start of each extraction, marking any document for that project stuck in `processing` for >15 min as `failed`
 
-### Task 7: Critical — Document Parsing Completeness
+### Task 7: Critical — Document Parsing Completeness ✅
 Ensure all accepted file types can actually be processed.
-- [ ] Either implement Excel parsing (`.xlsx` via existing `xlsx` dependency) and Word parsing (`.docx`) in `document-parser.ts`
-- [ ] Or remove Excel/Word MIME types from `ALLOWED_MIME_TYPES` in `route.ts` until support is built
-- [ ] Add file content validation — detect scanned/image-only PDFs and warn the user before processing
+- [x] Implement Excel parsing (`.xlsx`/`.xls` via existing `xlsx` dependency) in `document-parser.ts` — pipe-delimited sheet output with sheet headers, 2000-row cap per sheet
+- [x] Implement Word parsing (`.docx`) in `document-parser.ts` — using `mammoth` (added to dependencies); `.doc` throws a clear user-facing error directing them to save as `.docx`
+- [x] Add scanned PDF detection — checks text density (chars/page); if < 100 chars/page, prepends warning directing user to `/vision` upload
 
 ### Task 8: High — Error Handling & Resilience
 Make the pipeline gracefully handle failures instead of losing all progress.

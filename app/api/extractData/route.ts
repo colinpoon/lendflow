@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
     console.error(`❗ Unsupported file type: ${file.type}`);
     return NextResponse.json(
-      { error: `Unsupported file type "${file.type}". Accepted formats: PDF, Excel, Word.` },
+      { error: `Unsupported file type "${file.type}". Accepted formats: PDF (.pdf), Excel (.xlsx, .xls), Word (.docx).` },
       { status: 415 }
     );
   }

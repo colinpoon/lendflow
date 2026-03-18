@@ -126,6 +126,18 @@ All 4 items implemented across `app/api/extractData/route.ts` and `app/api/resol
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
+### Task 7: Critical — Document Parsing Completeness (COMPLETED)
+All 3 items implemented in `lib/document-parser.ts`:
+
+1. **Excel parsing** — `parseExcel()` uses the existing `xlsx` package (already in dependencies). Each sheet is output with a `=== Sheet: <name> ===` header, rows are pipe-delimited for AI readability, blank rows are skipped, capped at 2000 rows/sheet to prevent context overflow. `raw: false` serializes dates/numbers as human-readable strings.
+
+2. **Word parsing** — `parseDocx()` uses `mammoth` (added to dependencies as v1.9.0). Extracts raw text with paragraph structure preserved. mammoth warnings are logged but non-fatal. `.doc` (legacy binary format) throws a clear error telling the user to save as `.docx`. A minimal `MammothModule` interface avoids needing `@types/mammoth` to compile.
+
+3. **Scanned PDF detection** — After extraction, text density is computed as `text.length / numpages`. If < 100 chars/page, a `[WARNING: ...]` comment is prepended to the returned text directing the user to the `/vision` upload for better accuracy.
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+- `npm install` required once to install `mammoth` at runtime (package.json already updated)
+
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase
