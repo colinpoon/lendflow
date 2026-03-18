@@ -135,7 +135,7 @@ export const neutral = {
 // Risk Level Colors - Financial Risk Assessment
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type RiskLevel = 'excellent' | 'good' | 'adequate' | 'weak' | 'poor';
+export type RiskLevel = 'excellent' | 'good' | 'adequate' | 'weak' | 'poor' | 'unknown';
 
 export interface RiskColorConfig {
   bg: string;
@@ -190,6 +190,14 @@ export const riskColors: Record<RiskLevel, RiskColorConfig> = {
     textDark: 'text-red-800',
     border: 'border-red-300',
     hex: '#dc2626',
+  },
+  unknown: {
+    bg: 'bg-gray-100',
+    bgSubtle: 'bg-gray-50',
+    text: 'text-gray-500',
+    textDark: 'text-gray-600',
+    border: 'border-gray-300',
+    hex: '#6b7280',
   },
 } as const;
 
@@ -315,7 +323,7 @@ export function getRiskColor(level: RiskLevel): RiskColorConfig {
  * Higher is better
  */
 export function getFCCRRiskLevel(value: number | null | undefined): RiskLevel {
-  if (value == null) return 'adequate';
+  if (value == null) return 'unknown';
   if (value >= 2.0) return 'excellent';
   if (value >= 1.5) return 'good';
   if (value >= 1.25) return 'adequate';
@@ -328,7 +336,7 @@ export function getFCCRRiskLevel(value: number | null | undefined): RiskLevel {
  * Higher is better
  */
 export function getDSCRRiskLevel(value: number | null | undefined): RiskLevel {
-  if (value == null) return 'adequate';
+  if (value == null) return 'unknown';
   if (value >= 2.0) return 'excellent';
   if (value >= 1.5) return 'good';
   if (value >= 1.25) return 'adequate';
@@ -341,7 +349,7 @@ export function getDSCRRiskLevel(value: number | null | undefined): RiskLevel {
  * Lower is better
  */
 export function getDebtEBITDARiskLevel(value: number | null | undefined): RiskLevel {
-  if (value == null) return 'adequate';
+  if (value == null) return 'unknown';
   if (value <= 1.5) return 'excellent';
   if (value <= 2.5) return 'good';
   if (value <= 3.0) return 'adequate';
@@ -354,7 +362,7 @@ export function getDebtEBITDARiskLevel(value: number | null | undefined): RiskLe
  * Lower is better (value expected as decimal, e.g., 0.5 for 50%)
  */
 export function getDebtCapitalRiskLevel(value: number | null | undefined): RiskLevel {
-  if (value == null) return 'adequate';
+  if (value == null) return 'unknown';
   if (value < 0.3) return 'excellent';
   if (value <= 0.5) return 'good';
   if (value <= 0.6) return 'adequate';
