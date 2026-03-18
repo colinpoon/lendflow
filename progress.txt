@@ -511,3 +511,24 @@ All 4 sub-items implemented:
 Task 17 is now fully complete (all 4 sub-items checked off).
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 18: Database Security & RLS Hardening (Partial — commits 3f1f912, 93e8250)
+Completed 3 of 6 sub-items (2 this session + 1 prior):
+
+1. **Project ownership check** — (prior commit 05dfda2) — added `.eq('user_id', userId)`
+   ownership verification on file upload routes.
+
+2. **Supabase error redaction** — replaced 8 instances of `error.message` in API responses
+   (projects, projects/[id], documents/[id]) with generic user-facing messages. Detailed
+   errors now logged server-side via `console.error()`. `resolve-conflict` already handled
+   this properly.
+
+3. **Drop unused profiles table** — removed `profiles` type definition and unused `Profile`
+   type export from `lib/supabase/types.ts`.
+
+Remaining 3 sub-items BLOCKED by Clerk JWT UUID mismatch:
+- RLS policies (Clerk `user_xxx` vs Supabase `auth.uid()` UUID)
+- Admin client elimination (depends on RLS fix)
+- Storage bucket RLS policies (depends on RLS fix)
+
+- TypeScript: clean (npm run build passes, 0 errors)
