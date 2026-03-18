@@ -323,7 +323,7 @@ Reduce technical debt and improve maintainability.
 
 ### Task 12: Critical — Financial Calculation Accuracy Fixes
 All three reviewers (senior-engineer, code-approver, financial-director) agree these affect lending decision accuracy.
-- [ ] Fix revolver gross-draw distortion in DSCR denominator — `repayment_of_debt` can include gross revolving credit draws/repays, severely inflating the denominator. Extract `net_repayment_of_revolving_credit` separately and prefer it, or cap at funded debt total. Surface warnings to UI, not just server logs.
+- [x] Fix revolver gross-draw distortion in DSCR denominator — `repayment_of_debt` can include gross revolving credit draws/repays, severely inflating the denominator. Extract `net_repayment_of_revolving_credit` separately and prefer it, or cap at funded debt total. Surface warnings to UI, not just server logs.
 - [ ] Add preferred dividends to FCCR denominator — `preferred_dividends` is extracted in fixed charges but excluded from the FCCR denominator. Preferred dividends are a fixed charge by definition in commercial lending.
 - [ ] Fix cash taxes fallback to zero in FCCR — when `cash_taxes_paid` is null, the numerator defaults to zero tax deduction, inflating FCCR for profitable companies by 10-20+ bps. Fallback should use income statement tax expense.
 - [ ] Fix ICR to use Adjusted EBITDA — `risk-generator.ts` computes ICR with `m.ebitda` (raw) while DSCR/FCCR use Adjusted EBITDA. Creates inconsistent signals in the AI risk assessment input.

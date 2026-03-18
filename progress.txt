@@ -201,3 +201,24 @@ All 5 items done. Final iteration (this session):
 5. **Centralized type definitions + `Record<string,unknown>` elimination** — Created `types/financial.ts` and `types/risk.ts` as the single source of truth for all financial and risk types. Removed ~150 lines of duplicated local interface definitions from `FinancialTable.tsx`, `RiskAssessment.tsx`, `WeightedRiskGauge.tsx`. Resolved the `ttm_principal_payments` vs `principal_payments` FCCRBreakdown field mismatch by using canonical `FCCRBreakdown` from `types/financial.ts`. Updated `lib/supabase/types.ts`: `riskAssessment` and `debtHealthAssessment` now typed as `RiskData | null` and `DebtHealthAssessment | null` (was `Record<string, unknown>`). Tightened `FileUpload.tsx` and `VisionFileUpload.tsx` `onDataExtracted` callback to `(data: ExtractionResult) => void` (was `Record<string, unknown>`). Zero `as unknown as X` casts remain in production code.
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
+
+### Task 12: Fix Revolver Gross-Draw Distortion in DSCR Denominator (COMPLETED — commit 9d98846)
+Surfaced existing server-side revolving credit warning to analysts in the UI.
+
+Problem: `repayment_of_debt` (US GAAP cash flow financing activities) can include gross revolving
+credit draws AND repayments in the same period. A company drawing and fully repaying a $20M revolver
+inflates this line with gross activity, overstating the DSCR/FCCR denominator and understating
+coverage. The server was already detecting this with `console.warn` — analysts never saw it.
+
+Changes:
+1. **`debt-service-resolver.ts`** — Added `warnings: string[]` to `ResolvedDebtService`. Upgraded
+   the existing console.warn to also push a clear analyst-facing message to warnings. Added a second,
+   stronger check: when `repayment_of_debt > revolving_credit_facilities * 3`, warn that gross
+   revolving activity is almost certainly inflating the denominator.
+2. **`dscr-calculator.ts`** / **`fccr-calculator.ts`** — Added `warnings: string[]` to
+   `DSCRCalculationResult` and `FCCRCalculationResult`. Propagated warnings on all return paths.
+3. **`utils/aiProcessor.ts`** — Changed `computeMetrics` return type to `{ metrics, warnings }`.
+   Deduplicated warnings from FCCR and DSCR paths. Pushed to `extractionWarnings` so they appear
+   in the ExtractionWarnings UI panel.
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
