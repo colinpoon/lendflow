@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
+import { z } from 'zod';
+
+const updateProjectSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  company_name: z.string().max(255).nullable().optional(),
+  status: z.enum(['draft', 'in_progress', 'completed', 'archived']).optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: 'At least one field must be provided',
+});
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -79,46 +89,41 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const supabase = await createClient();
 
+  let rawBody: unknown;
   try {
-    const body = await request.json();
-    const { name, description, company_name, status } = body;
-
-    const updateData: Record<string, unknown> = {};
-    if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
-    if (company_name !== undefined) updateData.company_name = company_name;
-    if (status !== undefined) updateData.status = status;
-
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { error: 'No fields to update' },
-        { status: 400 }
-      );
-    }
-
-    const { data: project, error } = await supabase
-      .from('projects')
-      .update(updateData)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return NextResponse.json(
-          { error: 'Project not found' },
-          { status: 404 }
-        );
-      }
-      console.error('Failed to update project:', error);
-      return NextResponse.json({ error: 'Failed to update project' }, { status: 500 });
-    }
-
-    return NextResponse.json(project);
+    rawBody = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
+
+  const parsed = updateProjectSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
+
+  const { data: project, error } = await supabase
+    .from('projects')
+    .update(parsed.data)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return NextResponse.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      );
+    }
+    console.error('Failed to update project:', error);
+    return NextResponse.json({ error: 'Failed to update project' }, { status: 500 });
+  }
+
+  return NextResponse.json(project);
 }
 
 // DELETE /api/projects/[id] - Delete a project

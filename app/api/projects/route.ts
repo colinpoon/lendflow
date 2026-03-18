@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@/utils/supabase/server';
+import { z } from 'zod';
+
+const createProjectSchema = z.object({
+  name: z.string().min(1, 'Project name is required').max(255),
+  description: z.string().max(2000).optional(),
+  company_name: z.string().max(255).optional(),
+});
 
 // GET /api/projects - List all projects for the current user
 export async function GET() {
@@ -55,36 +62,39 @@ export async function POST(request: Request) {
 
   const supabase = await createClient();
 
+  let rawBody: unknown;
   try {
-    const body = await request.json();
-    const { name, description, company_name } = body;
-
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Project name is required' },
-        { status: 400 }
-      );
-    }
-
-    const { data: project, error } = await supabase
-      .from('projects')
-      .insert({
-        user_id: userId,
-        name,
-        description: description || null,
-        company_name: company_name || null,
-        status: 'draft',
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Failed to create project:', error);
-      return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });
-    }
-
-    return NextResponse.json(project, { status: 201 });
+    rawBody = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
+
+  const parsed = createProjectSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
+
+  const { name, description, company_name } = parsed.data;
+
+  const { data: project, error } = await supabase
+    .from('projects')
+    .insert({
+      user_id: userId,
+      name,
+      description: description ?? null,
+      company_name: company_name ?? null,
+      status: 'draft',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create project:', error);
+    return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });
+  }
+
+  return NextResponse.json(project, { status: 201 });
 }
