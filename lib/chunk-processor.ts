@@ -371,6 +371,8 @@ export interface ChunkResult {
     type: 'billing' | 'auth' | 'invalid_request';
     message: string;
   };
+  /** True when this chunk was never attempted (pipeline aborted before reaching it) */
+  skipped?: boolean;
 }
 
 /**
@@ -575,7 +577,7 @@ export async function processChunksSequentially(
       );
       // Fill remaining chunks as skipped so chunk_stats are accurate
       for (let j = i + 1; j < chunks.length; j++) {
-        results.push({ index: chunks[j].index, result: null });
+        results.push({ index: chunks[j].index, result: null, skipped: true });
       }
       break;
     }

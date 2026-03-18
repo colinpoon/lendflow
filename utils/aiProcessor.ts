@@ -85,6 +85,8 @@ export interface ExtractionResult {
     total: number;
     successful: number;
     failed: number;
+    /** Chunks never attempted because the pipeline aborted early (fatal error) */
+    skipped: number;
     withWarnings: number;
   };
   /** Raw chunk results when no metrics could be extracted */
@@ -174,9 +176,10 @@ export const extractFinancialData = async (
       throw new Error(`API ${fatalError.type} error: ${fatalError.message}`);
     }
 
-    // Calculate chunk stats
+    // Calculate chunk stats — distinguish actual failures from skipped (pipeline aborted)
     const successfulChunks = chunkResults.filter((r) => r.result !== null);
-    const failedChunkCount = chunkResults.length - successfulChunks.length;
+    const skippedChunkCount = chunkResults.filter((r) => r.skipped).length;
+    const failedChunkCount = chunkResults.length - successfulChunks.length - skippedChunkCount;
     const chunksWithWarnings = chunkResults.filter(
       (r) => r.validationWarnings && r.validationWarnings.length > 0
     );
@@ -184,6 +187,7 @@ export const extractFinancialData = async (
       total: chunkResults.length,
       successful: successfulChunks.length,
       failed: failedChunkCount,
+      skipped: skippedChunkCount,
       withWarnings: chunksWithWarnings.length,
     };
 

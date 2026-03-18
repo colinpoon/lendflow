@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 interface ExtractionWarningsProps {
   validationIssues?: Record<string, string[]>;
   extractionWarnings?: string[];
-  chunkStats?: { total: number; successful: number; failed: number };
+  chunkStats?: { total: number; successful: number; failed: number; skipped?: number };
 }
 
 export default function ExtractionWarnings({
@@ -18,7 +18,7 @@ export default function ExtractionWarnings({
 }: ExtractionWarningsProps) {
   const [showDetails, setShowDetails] = useState(false);
 
-  const hasPartialExtraction = chunkStats && chunkStats.failed > 0;
+  const hasPartialExtraction = chunkStats && (chunkStats.failed > 0 || (chunkStats.skipped ?? 0) > 0);
   const hasValidationIssues =
     validationIssues && Object.keys(validationIssues).length > 0;
 
@@ -35,9 +35,9 @@ export default function ExtractionWarnings({
           <AlertTriangle className="h-4 w-4 text-warning" />
           <AlertTitle className="text-foreground">Partial Extraction</AlertTitle>
           <AlertDescription className="text-muted-foreground">
-            {chunkStats.failed} of {chunkStats.total} document sections could not
-            be fully processed. The analysis below is based on successfully
-            extracted data.
+            {chunkStats.failed > 0 && `${chunkStats.failed} of ${chunkStats.total} document sections failed to process.`}
+            {(chunkStats.skipped ?? 0) > 0 && `${chunkStats.failed > 0 ? ' ' : ''}${chunkStats.skipped} sections were skipped due to an earlier fatal error.`}
+            {' '}The analysis below is based on successfully extracted data.
           </AlertDescription>
         </Alert>
       )}

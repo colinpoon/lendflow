@@ -223,7 +223,7 @@ export default function ProjectDetail({
   const [mostRecentYearSource, setMostRecentYearSource] = useState<MergedExtraction['most_recent_year_source']>();
   const [validationIssues, setValidationIssues] = useState<Record<string, string[]> | undefined>();
   const [extractionWarnings, setExtractionWarnings] = useState<string[] | undefined>();
-  const [chunkStats, setChunkStats] = useState<{ total: number; successful: number; failed: number } | undefined>();
+  const [chunkStats, setChunkStats] = useState<{ total: number; successful: number; failed: number; skipped?: number } | undefined>();
   const [tokenUsage, setTokenUsage] = useState<{ input_tokens: number; output_tokens: number; model: string; cost_usd?: number } | undefined>();
 
   // Scrollspy
