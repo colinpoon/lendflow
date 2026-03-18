@@ -43,7 +43,7 @@ export default function ExtractionWarnings({
       )}
 
       {/* Extraction Warnings */}
-      {extractionWarnings && extractionWarnings.length > 0 && !hasPartialExtraction && (
+      {extractionWarnings && extractionWarnings.length > 0 && (
         <Alert className="bg-card border-border">
           <AlertTriangle className="h-4 w-4 text-warning" />
           <AlertTitle className="text-foreground">Extraction Notice</AlertTitle>
