@@ -1329,6 +1329,173 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'CapEx = 364.8M (significant growth investment: new facilities, equipment). ' +
       'Scale normalization is critical for this document — AI must detect millions not thousands.',
   },
+  {
+    document: 'Parkland-FY2024',
+    filename: 'Parkland_Q4_2024_FinancialStatements.pdf',
+    fiscal_year: '2024',
+    values: {
+      // Income Statement ($ MILLIONS CAD — stored as thousands by multiplying × 1000)
+      // Parkland Corporation — major Canadian fuel and convenience retailer (~28B revenue)
+      // CRITICAL: Original document is in millions; all values converted to thousands here
+      // Revenue: 28,303M = 28,303,000 thousands
+      revenue: 28303000,
+      // Net earnings: 127M = 127,000 thousands
+      net_income: 127000,
+      expenses: 0,
+      profit_margins: 0,
+      // Finance costs: 378M = 378,000 (includes non-cash accretion ~49M; cash interest = 329M)
+      interest: 378000,
+      // Income taxes: 0M net (current 55M exactly offset by deferred recovery 55M)
+      taxes: 0,
+      // D&A: 825M = 825,000 (includes PP&E, intangibles, ROU assets — very large fleet+infrastructure)
+      depreciation_amortization: 825000,
+      depreciation_equipment: 0,
+      depreciation_rou: 0,
+      depreciation_other: 0,
+      amortization_intangibles: 0,
+      // ebitda = NI + Finance + Tax + D&A = 127 + 378 + 0 + 825 = 1,330M = 1,330,000
+      ebitda: 1330000,
+      reported_adjusted_ebitda: 0,
+
+      // Balance Sheet (thousands CAD, converted from millions)
+      // Shareholders' equity: 3,166M = 3,166,000
+      shareholders_equity: 3166000,
+      // LT debt (current 261 + non-current 6,380): likely includes IFRS 16 lease liabilities
+      // CF shows lease principal payments (280) separate from LT debt → leases may be combined
+      total_debt: 6641000,
+      senior_debt: 6641000,
+      // Current assets: 4,478M = 4,478,000 (includes 842M assets held for sale)
+      current_assets: 4478000,
+      // Current liabilities: 3,382M = 3,382,000 (includes 292M held-for-sale liabilities)
+      current_liabilities: 3382000,
+
+      // Cash Flow (thousands, converted from millions)
+      // CapEx: 575M = 575,000 (additions to PP&E and intangible assets)
+      capital_expenditures: 575000,
+      // New LT debt proceeds: 677M = 677,000 (excl. Credit Facility and non-recourse)
+      proceeds_from_long_term_debt: 677000,
+      // Cash income taxes paid (net): 60M = 60,000
+      cash_taxes_paid: 60000,
+      // Dividends paid to shareholders: 243M = 243,000
+      distributions_paid: 243000,
+      ttm_principal_payments: 0,
+      ttm_interest_expense: 0,
+      // Credit Facility net repayments: 778M = 778,000 (revolving — inflates FCCR denominator if included)
+      repayment_of_debt: 778000,
+      // Lease principal payments: 280M = 280,000
+      payment_of_lease_liability: 280000,
+      // Cash interest paid on LT debt and leases: 329M = 329,000 (from supplemental CF)
+      cash_interest_paid: 329000,
+      // Non-cash finance costs: 378 - 329 = 49M = 49,000 (accretion + financing cost amortization)
+      non_cash_interest_expense: 49000,
+
+      // Debt Components (thousands, converted from millions)
+      // LT debt: likely includes bonds, term loans, revolving credit facility, and lease liabilities
+      // Cannot precisely split without note details — using total LT debt as bank debt proxy
+      'debt_components.bank_debt_current': 261000,
+      'debt_components.bank_debt_long_term': 6380000,
+      'debt_components.term_loans': 0,
+      'debt_components.revolving_credit_facilities': 0,
+      'debt_components.overdraft_facilities': 0,
+      'debt_components.lines_of_credit': 0,
+      // Lease liabilities not separately broken out on Parkland balance sheet (combined in LT debt)
+      'debt_components.lease_liabilities_current': 0,
+      'debt_components.lease_liabilities_long_term': 0,
+      'debt_components.finance_lease_liabilities': 0,
+      'debt_components.operating_lease_liabilities': 0,
+      'debt_components.notes_payable': 0,
+      'debt_components.subordinated_debt': 0,
+      'debt_components.convertible_debt': 0,
+      'debt_components.bonds_debentures': 0,
+      'debt_components.other_borrowings': 0,
+
+      // Fixed Charges
+      // Finance costs (total P&L): 378,000
+      'fixed_charges.senior_debt_interest': 0,
+      'fixed_charges.subordinated_debt_interest': 0,
+      'fixed_charges.lease_interest': 0,
+      'fixed_charges.total_interest_expense': 378000,
+      // Lease principal paid: 280,000
+      'fixed_charges.minimum_lease_payments': 280000,
+      'fixed_charges.finance_lease_payments': 0,
+      'fixed_charges.operating_lease_payments': 0,
+      // Non-revolving LT debt repaid: 1M = 1,000 (very small; revolving credit is 778M but revolving)
+      'fixed_charges.principal_payments': 1000,
+      'fixed_charges.preferred_dividends': 0,
+      'fixed_charges.other_fixed_charges': 0,
+
+      // Adjusted EBITDA Components
+      // Acquisition, integration and other: 218M = 218,000 (non-recurring deal costs)
+      'adjusted_ebitda_components.stock_based_compensation': 0,
+      'adjusted_ebitda_components.impairment_charges': 0,
+      'adjusted_ebitda_components.goodwill_impairment': 0,
+      'adjusted_ebitda_components.unrealized_gains_losses': 0,
+      'adjusted_ebitda_components.deferred_compensation': 0,
+      'adjusted_ebitda_components.loss_on_disposal': 0,
+      'adjusted_ebitda_components.other_non_cash': 0,
+      // Acquisition, integration, and other costs (non-recurring)
+      'adjusted_ebitda_components.restructuring_costs': 218000,
+      'adjusted_ebitda_components.severance_costs': 0,
+      'adjusted_ebitda_components.transaction_costs': 0,
+      'adjusted_ebitda_components.legal_settlements': 0,
+      'adjusted_ebitda_components.professional_fees_one_time': 0,
+      'adjusted_ebitda_components.casualty_losses': 0,
+      'adjusted_ebitda_components.other_one_time_expenses': 0,
+      'adjusted_ebitda_components.gain_on_disposal': 0,
+      'adjusted_ebitda_components.gain_on_asset_sale': 0,
+      'adjusted_ebitda_components.other_income_non_operating': 0,
+      'adjusted_ebitda_components.insurance_proceeds': 0,
+      'adjusted_ebitda_components.other_one_time_gains': 0,
+      'adjusted_ebitda_components.owner_compensation_adjustment': 0,
+      'adjusted_ebitda_components.related_party_adjustments': 0,
+      'adjusted_ebitda_components.management_fees_adjustment': 0,
+      'adjusted_ebitda_components.accounting_policy_adjustments': 0,
+      'adjusted_ebitda_components.foreign_exchange_adjustments': 0,
+      'adjusted_ebitda_components.unrealized_fx_cash_flow': 0,
+      'adjusted_ebitda_components.realized_fx_pl': 0,
+      'adjusted_ebitda_components.pro_forma_cost_savings': 0,
+      'adjusted_ebitda_components.pro_forma_synergies': 0,
+
+      // Computed Ratios
+      // adjusted_ebitda = EBITDA (1,330,000) + acquisition/integration (218,000) = 1,548,000
+      adjusted_ebitda: 1548000,
+      calculated_adjusted_ebitda: 0,
+      // fccr = (Adj EBITDA - net CapEx - cash_taxes - distributions) / (LT principal + cash_interest + lease_principal)
+      //      = (1,548,000 - 518,000 - 60,000 - 243,000) / (1,000 + 329,000 + 280,000)
+      //      = 727,000 / 610,000 = 1.19
+      // Note: net CapEx = 575,000 - 57,000 (disposals) = 518,000
+      // Note: excludes revolving Credit Facility repayments (778,000) — revolving, not term
+      fccr: 1.19,
+      // dscr = Adj EBITDA / (cash_interest + lease_principal + LT principal) = 1,548,000 / 610,000 = 2.54
+      dscr: 2.54,
+      funded_debt: 0,
+      funded_debt_to_ebitda: 0,
+      // senior_debt_to_ebitda = 6,641,000 / 1,330,000 = 4.99
+      senior_debt_to_ebitda: 4.99,
+      // total_debt_to_capital = 6,641,000 / (6,641,000 + 3,166,000) = 0.68
+      total_debt_to_capital: 0.68,
+      // interest_coverage_ratio = EBITDA / finance costs = 1,330,000 / 378,000 = 3.52
+      interest_coverage_ratio: 3.52,
+      // debt_to_equity_ratio = 6,641,000 / 3,166,000 = 2.10
+      debt_to_equity_ratio: 2.10,
+      // current_ratio = 4,478,000 / 3,382,000 = 1.32
+      current_ratio: 1.32,
+    },
+    source_notes:
+      'Verified from source PDF (Parkland_Q4_2024_FinancialStatements.pdf — Parkland Corporation). ' +
+      'CRITICAL: Original document in MILLIONS of CAD; all values multiplied ×1000 for thousands consistency. ' +
+      'IFRS reporting. Fiscal year ended December 31, 2024. ' +
+      'Parkland Corporation (TSX: PKI) — major Canadian integrated fuel and convenience retailer. ' +
+      'Net income affected by tax offset: current tax expense (55M) = deferred tax recovery (55M) → net 0M taxes. ' +
+      'Finance costs (378M) includes non-cash accretion (~49M); cash interest paid = 329M per CF supplemental. ' +
+      'D&A = 825M (very large — extensive physical infrastructure: refineries, terminals, convenience stores). ' +
+      'Lease liabilities not separately shown on balance sheet — combined in LT debt figures. ' +
+      'LT debt CF shows: revolving Credit Facility (778M repaid, 677M borrowed net), term debt (1M). ' +
+      'FCCR = 1.19 calculated excluding revolving Credit Facility repayments. ' +
+      'Assets and liabilities held for sale (842M / 292M) reflect active divestiture program. ' +
+      'Acquisition, integration and other costs (218M) added back to Adj EBITDA as non-recurring. ' +
+      'Scale normalization critical — document uses $ millions, not thousands.',
+  },
 ];
 
 /**
