@@ -171,7 +171,7 @@ export function detectYearConflicts(
     file_name: string;
     fiscal_year_end_date: string | null;
     extracted_at: string;
-    metrics: Record<string, unknown>;
+    metrics: ComputedMetrics;
     /** The primary fiscal year of the extraction that contributed this entry. */
     primary_fiscal_year: string | null;
   }>();
@@ -471,11 +471,9 @@ export function mergeExtractions(
     const mostRecentYear = years[years.length - 1];
 
     return {
-      // Cast is safe: ExtractionYearMetrics is structurally compatible with ComputedMetrics
-      // as they share the same fields when stored/retrieved from database
-      metrics_by_year: (data.metrics_by_year || {}) as unknown as Record<string, ComputedMetrics>,
-      riskAssessment: data.riskAssessment as RiskData | null | undefined,
-      debtHealthAssessment: data.debtHealthAssessment as DebtHealthAssessment | null | undefined,
+      metrics_by_year: data.metrics_by_year || {},
+      riskAssessment: data.riskAssessment,
+      debtHealthAssessment: data.debtHealthAssessment,
       quantitativeRiskAssessment: data.quantitativeRiskAssessment as QuantitativeRiskAssessment | null | undefined,
       validation_issues: data.validation_issues,
       extraction_warnings: data.extraction_warnings,
@@ -504,7 +502,7 @@ export function mergeExtractions(
 
   // Track year data with metadata for comparison
   interface YearEntry {
-    metrics: Record<string, unknown>;
+    metrics: ComputedMetrics;
     document_id: string;
     file_name: string;
     extracted_at: string;
@@ -599,12 +597,12 @@ export function mergeExtractions(
 
       const context = `year=${year} winner="${winner.file_name}" loser="${loser.file_name}"`;
       const { merged: mergedMetrics, warnings } = unionMergeMetrics(
-        winner.metrics,
-        loser.metrics,
+        winner.metrics as unknown as Record<string, unknown>,
+        loser.metrics as unknown as Record<string, unknown>,
         context
       );
       unionMergeWarnings.push(...warnings);
-      yearDataMap.set(year, { ...winner, metrics: mergedMetrics });
+      yearDataMap.set(year, { ...winner, metrics: mergedMetrics as unknown as ComputedMetrics });
     } else {
       // No explicit resolution — pick the more recent entry.
       const newestIsMoreRecent = isMoreRecent(
@@ -616,18 +614,18 @@ export function mergeExtractions(
 
       const context = `year=${year} winner="${winner.file_name}" loser="${loser.file_name}"`;
       const { merged: mergedMetrics, warnings } = unionMergeMetrics(
-        winner.metrics,
-        loser.metrics,
+        winner.metrics as unknown as Record<string, unknown>,
+        loser.metrics as unknown as Record<string, unknown>,
         context
       );
       unionMergeWarnings.push(...warnings);
-      yearDataMap.set(year, { ...winner, metrics: mergedMetrics });
+      yearDataMap.set(year, { ...winner, metrics: mergedMetrics as unknown as ComputedMetrics });
     }
   }
 
   // Build merged result from yearDataMap
   for (const [year, entry] of yearDataMap.entries()) {
-    merged.metrics_by_year[year] = entry.metrics as unknown as ComputedMetrics;
+    merged.metrics_by_year[year] = entry.metrics;
     merged.year_sources[year] = {
       document_id: entry.document_id,
       file_name: entry.file_name,
@@ -675,10 +673,10 @@ export function mergeExtractions(
       const data = extraction.extraction_data as ExtractionResult;
 
       if (!merged.riskAssessment && data.riskAssessment) {
-        merged.riskAssessment = data.riskAssessment as unknown as RiskData;
+        merged.riskAssessment = data.riskAssessment;
       }
       if (!merged.debtHealthAssessment && data.debtHealthAssessment) {
-        merged.debtHealthAssessment = data.debtHealthAssessment as unknown as DebtHealthAssessment;
+        merged.debtHealthAssessment = data.debtHealthAssessment;
       }
       // Note: quantitativeRiskAssessment is always recalculated above, no fallback needed
       if (!merged.validation_issues && data.validation_issues) {

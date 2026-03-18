@@ -1,9 +1,9 @@
 import type { RiskData, DebtHealthAssessment } from '@/types/risk';
+import type { ComputedMetrics } from '@/types/financial';
 
 // ExtractionResult type - matches the structure from aiProcessor
-// Note: Using ComputedMetrics for proper typing of year metrics
 export interface ExtractionResult {
-  metrics_by_year: Record<string, ExtractionYearMetrics>;
+  metrics_by_year: Record<string, ComputedMetrics>;
   /**
    * The fiscal year for which this document is the PRIMARY report.
    * For example, a 2024 annual report has primary_fiscal_year = "2024",
@@ -28,12 +28,6 @@ export interface ExtractionResult {
     model: string;
     cost_usd?: number;
   };
-}
-
-// Metrics for a single year in an extraction result
-export interface ExtractionYearMetrics {
-  fiscal_year_end_date?: string | null;
-  [key: string]: unknown;
 }
 
 export type Json =
