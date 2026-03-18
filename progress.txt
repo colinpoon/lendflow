@@ -431,3 +431,23 @@ Task 18 sub-item 1 (RLS policies) BLOCKED: Clerk user IDs are strings like `user
 needs `auth.jwt() ->> 'sub' = user_id` instead. Needs DB migration + live auth session testing.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 16: Rename mislabeled DSCR to EBITDA Coverage Ratio (COMPLETED — commit bcd7055)
+The ratio `Adj EBITDA / Total Debt Service` was labeled "Banker's Covenant DSCR" but true DSCR
+uses net operating cash flow, not raw EBITDA. This created confusion when analysts compared
+against borrower-reported DSCR figures.
+
+Renamed to "EBITDA Coverage Ratio" (Option A from the Financial Director review) across 11 files:
+- `dscr-calculator.ts` — file header, JSDoc, `calculation_type: 'ebitda_coverage'`
+- `types/financial.ts` — `DSCRBreakdown.calculation_type` literal type
+- `FCCRBreakdown.tsx` — all UI labels: card title, accordion title, method description,
+  formula display, interpretation guide table, threshold labels
+- `FinancialTable.tsx` / `ComparisonTable.tsx` — column labels
+- `extraction-prompt.ts` — debt service item header, risk pillar scoring guidance
+- `debt-service-resolver.ts` / `design-tokens.ts` / `risk-generator.ts` /
+  `recalculate.ts` / `aiProcessor.ts` — comments and debug log labels
+
+Internal field names (`dscr`, `dscr_breakdown`, `calculateDSCR`, `getDSCRRiskLevel`) preserved
+as code identifiers — only user-facing display labels and developer comments changed.
+
+- TypeScript: clean (npm run build passes, 0 errors)
