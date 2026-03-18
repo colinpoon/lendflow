@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 
-import type { ExtractionResult } from '@/utils/aiProcessor';
+import type { UploadCompletePayload } from '@/components/FileUpload';
 
 interface VisionFileUploadProps {
-  onDataExtracted: (data: ExtractionResult) => void;
+  onDataExtracted: (data: UploadCompletePayload) => void;
   onUploadStart?: () => void;
   projectId?: string;
 }
@@ -18,7 +18,7 @@ interface SSEProgress {
   stage: string;
   progress: number;
   message: string;
-  data?: ExtractionResult;
+  data?: UploadCompletePayload;
 }
 
 const STAGE_LABELS: Record<string, string> = {

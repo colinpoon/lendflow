@@ -11,8 +11,23 @@ import type { YearConflict, ConflictResolution } from '@/lib/extraction-utils';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
 import type { ExtractionResult } from '@/utils/aiProcessor';
 
+/**
+ * Payload shape returned by the SSE 'complete' message and the
+ * resolve-conflict endpoint. Contains upload metadata alongside the
+ * full extraction result in `financialMetrics`.
+ */
+export interface UploadCompletePayload {
+  message: string;
+  filename?: string;
+  projectId?: string;
+  documentId?: string;
+  extractionId?: string;
+  financialMetrics: ExtractionResult;
+  resolvedYears?: string[];
+}
+
 interface FileUploadProps {
-  onDataExtracted: (data: ExtractionResult) => void;
+  onDataExtracted: (data: UploadCompletePayload) => void;
   onUploadStart?: () => void;
   projectId?: string;
 }
@@ -25,7 +40,7 @@ interface SSEProgress {
   message: string;
   chunk?: number;
   totalChunks?: number;
-  data?: ExtractionResult;
+  data?: UploadCompletePayload;
   conflicts?: YearConflict[];
   extractionId?: string;
   pendingDocumentId?: string;

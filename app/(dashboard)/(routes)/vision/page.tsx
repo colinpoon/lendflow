@@ -17,6 +17,7 @@ import type { RiskData, DebtHealthAssessment } from '@/types/risk';
 import FCCRBreakdown from '@/components/FCCRBreakdown';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
+import type { UploadCompletePayload } from '@/components/FileUpload';
 import type { ExtractionResult } from '@/utils/aiProcessor';
 import type { ComputedMetrics } from '@/types';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -72,54 +73,30 @@ const VisionUploadPage = () => {
   );
 
   /**
-   * Handle extracted data from VisionFileUpload component
-   * Normalizes various response formats and updates state
+   * Handle extracted data from VisionFileUpload component.
+   * The SSE complete payload wraps the extraction in `financialMetrics`.
    */
-  const handleDataUpdate = (data: ExtractionResult & {
-    financialMetrics?: FinancialDataState & {
-      riskAssessment?: RiskData;
-      debtHealthAssessment?: DebtHealthAssessment;
-      quantitativeRiskAssessment?: QuantitativeRiskAssessment;
-    };
-  }) => {
+  const handleDataUpdate = (payload: UploadCompletePayload) => {
+    const data = payload.financialMetrics;
     setExtractedData(data);
 
-    // Accept either data.financialMetrics or a root-level metrics_by_year
-    if (data.financialMetrics) {
-      setFinancialData(data.financialMetrics);
-    } else if (data.metrics_by_year) {
+    if (data.metrics_by_year) {
       setFinancialData({ metrics_by_year: data.metrics_by_year });
     }
 
-    // Risk assessment may appear at root, inside financialMetrics, or alongside metrics_by_year
-    const nestedRisk =
-      data.riskAssessment ??
-      data.financialMetrics?.riskAssessment ??
-      null;
-    if (nestedRisk) {
-      setRiskData(nestedRisk);
+    if (data.riskAssessment) {
+      setRiskData(data.riskAssessment);
     }
 
-    // Debt health assessment from AI
-    const nestedDebtHealth =
-      data.debtHealthAssessment ??
-      data.financialMetrics?.debtHealthAssessment ??
-      null;
-    if (nestedDebtHealth) {
-      setDebtHealthAssessment(nestedDebtHealth);
+    if (data.debtHealthAssessment) {
+      setDebtHealthAssessment(data.debtHealthAssessment);
     }
 
-    // Quantitative risk assessment
-    const nestedQuantRisk =
-      data.quantitativeRiskAssessment ??
-      data.financialMetrics?.quantitativeRiskAssessment ??
-      null;
-    if (nestedQuantRisk) {
-      setQuantitativeRiskAssessment(nestedQuantRisk);
+    if (data.quantitativeRiskAssessment) {
+      setQuantitativeRiskAssessment(data.quantitativeRiskAssessment);
     }
 
-    // Navigate to analysis tab after successful extraction
-    if (data.metrics_by_year || data.financialMetrics) {
+    if (data.metrics_by_year) {
       setActiveTab('analysis');
     } else {
       setActiveTab('upload');

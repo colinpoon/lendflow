@@ -157,36 +157,42 @@ function MetricCard({
   subtitle?: string;
   colorClass?: string;
 }) {
-  // Map semantic text-color classes to gradient tints
-  const gradientMap: Record<string, string> = {
-    'text-success': 'from-emerald-950 via-emerald-900/80 to-black',
-    'text-warning': 'from-amber-950 via-amber-900/80 to-black',
-    'text-error': 'from-red-950 via-red-900/80 to-black',
+  // Dark mode: tinted gradient per status; Light mode: neutral white card
+  const darkGradientMap: Record<string, string> = {
+    'text-success': 'dark:from-emerald-950 dark:via-emerald-900/80 dark:to-zinc-950',
+    'text-warning': 'dark:from-amber-950 dark:via-amber-900/80 dark:to-zinc-950',
+    'text-error': 'dark:from-red-950 dark:via-red-900/80 dark:to-zinc-950',
   };
-  const gradient = (colorClass && gradientMap[colorClass]) || 'from-zinc-800 via-zinc-900 to-black';
+  const darkGradient = (colorClass && darkGradientMap[colorClass]) || 'dark:from-zinc-800 dark:via-zinc-900 dark:to-zinc-950';
 
-  // Map to light foreground tints for the subtitle
-  const subtitleMap: Record<string, string> = {
-    'text-success': 'text-emerald-300',
-    'text-warning': 'text-amber-300',
-    'text-error': 'text-red-300',
+  // Subtitle color: semantic tints for dark, muted gray for light
+  const darkSubtitleMap: Record<string, string> = {
+    'text-success': 'dark:text-emerald-300',
+    'text-warning': 'dark:text-amber-300',
+    'text-error': 'dark:text-red-300',
   };
-  const subtitleColor = (colorClass && subtitleMap[colorClass]) || 'text-zinc-400';
+  const subtitleColor = [
+    'text-gray-500',
+    (colorClass && darkSubtitleMap[colorClass]) || 'dark:text-zinc-400',
+  ].join(' ');
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 flex flex-col justify-between min-h-[140px] shadow-lg`}
+      className={`relative overflow-hidden rounded-2xl p-5 flex flex-col justify-between min-h-[140px] shadow-sm
+        bg-white border border-gray-200
+        dark:bg-gradient-to-br dark:border-zinc-700 dark:shadow-lg
+        ${darkGradient}`}
     >
-      {/* Noise texture overlay */}
-      <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
-      {/* Subtle top-left highlight */}
-      <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-white/[0.07] blur-2xl" />
+      {/* Noise texture overlay — visible only in dark mode where it adds texture without muddying light surfaces */}
+      <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
+      {/* Glow orb — dark mode only */}
+      <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
 
-      <p className="relative text-[11px] uppercase tracking-[0.15em] text-white/50 font-medium">
+      <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-gray-400 dark:text-white/50">
         {label}
       </p>
       <div className="relative mt-auto">
-        <p className="text-3xl font-bold tabular-nums tracking-tight text-white">
+        <p className="text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
           {value}
         </p>
         {subtitle && (
@@ -395,6 +401,10 @@ export default function ProjectDetail({
     }
   }, [mergedData]);
 
+  // The SSE payload contains a single-document extraction, but ProjectDetail
+  // displays merged multi-document data from the server. Use router.refresh()
+  // to re-fetch the authoritative merged view rather than optimistically
+  // patching state from one document's extraction.
   const handleDataUpdate = () => {
     router.refresh();
   };
