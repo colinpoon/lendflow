@@ -369,3 +369,22 @@ immediately after receiving the file:
 All downstream uses (temp path, storage path, DB records, SSE response) use `sanitizedFileName`.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 13: Replace in-memory rate limiter — SKIPPED
+Requires installing `@upstash/ratelimit` + `@upstash/redis` (npm install blocked in this
+environment) and provisioning an Upstash Redis instance (infrastructure). To complete manually:
+1. `npm install @upstash/ratelimit @upstash/redis`
+2. Create Upstash Redis instance at upstash.com
+3. Add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` to `.env`
+4. Rewrite `lib/rate-limiter.ts` to use `@upstash/ratelimit` with sliding window
+
+### Task 13: Fix Zod validation fallback passing unvalidated risk data (COMPLETED — commit fed08e8)
+When `riskDataSchema.safeParse()` or `debtHealthAssessmentSchema.safeParse()` failed in
+`risk-generator.ts`, the raw unvalidated AI output (`parsed`) was used as the risk snapshot and
+stored in Supabase. Malformed fields could corrupt the DB or cause rendering errors.
+
+Fix: Both `generateRiskAssessment` and `generateDebtHealthAssessment` now return `null` on
+validation failure instead of falling back to `parsed`. Callers already handle null gracefully
+(risk assessment displays as unavailable).
+
+- TypeScript: clean (npm run build passes, 0 errors)

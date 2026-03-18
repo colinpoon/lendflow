@@ -324,7 +324,7 @@ All three reviewers (senior-engineer, code-approver, financial-director) agree t
 Consensus across senior-engineer and code-approver; some overlap with financial-director on data correctness.
 - [x] Fix path traversal vulnerability in temp file creation — `file.name` is user-controlled and used directly in `path.join()` for temp path. Sanitize with `path.basename()` and strip special characters.
 - [ ] Replace in-memory rate limiter with persistent solution — module-level `Map` does not survive serverless cold starts or work across instances. Replace with Redis/Upstash before handling real financial data.
-- [ ] Fix Zod validation fallback passing unvalidated risk data — when `riskDataSchema.safeParse()` fails, raw unvalidated AI output is used as `riskSnapshot` and stored in Supabase. Should return `null` (caller already handles it) instead of passing malformed data through.
+- [x] Fix Zod validation fallback passing unvalidated risk data — when `riskDataSchema.safeParse()` fails, raw unvalidated AI output is used as `riskSnapshot` and stored in Supabase. Should return `null` (caller already handles it) instead of passing malformed data through.
 - [ ] Scope risk cache to userId — module-level `riskCache` uses metrics hash as key without user/document scoping. Two companies with identical metrics would share a cached risk assessment. Include `userId` in cache key.
 - [ ] Add server-side magic-byte file type validation — MIME type check uses browser-supplied `Content-Type` which is trivially spoofable. Add `file-type` or similar magic-byte detection for uploaded documents.
 
