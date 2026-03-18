@@ -210,6 +210,11 @@ export interface FCCRBreakdown {
     capital_expenditures_extracted: number | null;
     proceeds_from_lt_debt_extracted: number | null;
     cash_taxes_paid_extracted: number | null;
+    /** Which source was used for the cash taxes deduction in the numerator.
+     *  'cash_flow' = cash_taxes_paid from CF statement (preferred).
+     *  'income_statement_fallback' = taxes from income statement (accrual proxy).
+     *  'zero_fallback' = $0 used; coverage may be overstated. */
+    cash_taxes_source?: 'cash_flow' | 'income_statement_fallback' | 'zero_fallback';
     distributions_paid_extracted: number | null;
     // Denominator sources (from debt service resolver)
     principal_source: string;

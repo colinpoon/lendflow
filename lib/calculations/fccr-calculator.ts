@@ -151,11 +151,36 @@ export function calculateFCCR(
     capexConfig
   ));
 
-  // Cash Taxes — floor at 0 (negative cash taxes = refunds should not inflate numerator)
-  const rawCashTaxesPaid = metrics.cash_taxes_paid ?? 0;
+  // Cash Taxes — fallback chain: CF statement → income statement → $0 (with analyst warning)
+  // Using $0 when cash_taxes_paid is absent would overstate FCCR by 10–20+ bps for
+  // profitable companies. Income statement tax expense (accrual) is a conservative substitute.
+  type CashTaxesSource = 'cash_flow' | 'income_statement_fallback' | 'zero_fallback';
+  let cashTaxesSource: CashTaxesSource = 'cash_flow';
+  let rawCashTaxesPaid: number;
+  const cashTaxesFallbackWarnings: string[] = [];
+
+  if (metrics.cash_taxes_paid != null) {
+    rawCashTaxesPaid = metrics.cash_taxes_paid;
+  } else if (metrics.taxes != null && metrics.taxes > 0) {
+    rawCashTaxesPaid = metrics.taxes;
+    cashTaxesSource = 'income_statement_fallback';
+    cashTaxesFallbackWarnings.push(
+      `Cash taxes paid not found in cash flow statement — using income statement tax expense ` +
+      `(${metrics.taxes.toLocaleString()}) as fallback. FCCR numerator may differ slightly ` +
+      `from actual cash outflow (timing differences between accrual and cash basis).`
+    );
+  } else {
+    rawCashTaxesPaid = 0;
+    cashTaxesSource = 'zero_fallback';
+    cashTaxesFallbackWarnings.push(
+      `Cash taxes paid and income statement taxes both unavailable — FCCR numerator uses $0 ` +
+      `tax deduction. Coverage ratio is likely overstated for profitable borrowers.`
+    );
+  }
+
   if (rawCashTaxesPaid < 0) {
     console.warn(
-      `⚠️ CASH TAX FLOOR: cash_taxes_paid is negative (${rawCashTaxesPaid}), ` +
+      `⚠️ CASH TAX FLOOR: cash taxes are negative (${rawCashTaxesPaid}), ` +
       `likely a tax refund. Flooring at 0 to prevent numerator inflation.`
     );
   }
@@ -223,7 +248,7 @@ export function calculateFCCR(
       total_fixed_charges: null,
       cash_flow_for_debt_servicing: null,
       fccr_breakdown: null,
-      warnings: debtService.warnings,
+      warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings],
     };
   }
 
@@ -245,7 +270,7 @@ export function calculateFCCR(
     fccr_numerator: parseFloat(numerator.toFixed(2)),
     total_fixed_charges: parseFloat(totalDebtService.toFixed(2)),
     cash_flow_for_debt_servicing: parseFloat(numerator.toFixed(2)),
-    warnings: debtService.warnings,
+    warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings],
     fccr_breakdown: {
       calculation_type: 'lender_defined',
       // CapEx treatment info
@@ -281,6 +306,7 @@ export function calculateFCCR(
         capital_expenditures_extracted: metrics.capital_expenditures,
         proceeds_from_lt_debt_extracted: metrics.proceeds_from_long_term_debt,
         cash_taxes_paid_extracted: metrics.cash_taxes_paid,
+        cash_taxes_source: cashTaxesSource,
         distributions_paid_extracted: metrics.distributions_paid,
         // Denominator source tracking from resolver
         principal_source: debtService.sources.principal_source,
