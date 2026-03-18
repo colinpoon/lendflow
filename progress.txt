@@ -1,5 +1,34 @@
 ## Progress Tracker
 
+### Task 8 — Error Handling & Resilience (2026-03-18)
+
+**8.1 — Wrap risk generators in try/catch:** Vision pipeline was missing error handling. Fixed.
+**8.2 — Exponential backoff:** Already implemented — all 4 Anthropic client instances use `maxRetries: 3`. Fixed `claude-client.ts` hardcoding `3` instead of `AI_CONFIG.MAX_RETRIES`.
+**8.3 — Guard division operations:** Audit confirmed all 21 divisions across 7 calculator modules already guarded (100% zero-denominator protection). Done in Tasks 3 and 12.
+**8.4 — Align file-size limits:** `VisionFileUpload.tsx` was hardcoding 10MB; vision API had no size check. Both now use shared `MAX_FILE_SIZE_BYTES` from constants. All 4 enforcement points aligned at 50MB.
+
+### Task 8.1 — Wrap risk generators in individual try/catch (2026-03-18)
+`aiProcessor.ts` already had proper try/catch wrapping around all three risk generators. The gap was in `visionProcessor.ts` where all three calls were unprotected — any failure would abort the entire vision extraction. Applied the same pattern: individual try/catch per function, `riskError` capture, and analyst-facing warnings surfaced through `extraction_warnings`. Also added `isPartial` document status marking to the vision route (was always `'completed'` even when both risk assessments were null). Build passes clean.
+
+### Task 2 — Identify Common Extraction Errors (2026-03-18)
+Completed code-level analysis of the extraction pipeline to catalog the most common error patterns. Full report: `tasks/extraction-error-analysis.md`.
+
+**Method:** Analyzed extraction prompts, Zod validation schemas, merger/conflict logic, scale normalization passes, EBITDA deduplication guards, and document parsing code. Cross-referenced against known edge cases in `scripts/test-extraction.ts`.
+
+**Key findings (15 error patterns across 5 categories):**
+
+1. **Null defaults inflate covenant ratios (P0):** When `ttm_principal_payments` and `ttm_interest_expense` are both null, FCCR denominator shrinks to lease payments only — can inflate FCCR from 1.5x to 3.0x+. Code logs a warning but validation passes silently.
+
+2. **Mixed scale within documents (P0):** `applyDetectedScale()` applies a uniform multiplier to all currency metrics. If AI detected scale from revenue only but debt is in different units, all debt metrics are corrupted. `validateCrossMetricScale()` depends on EBITDA margin test which fails silently when D&A is missing.
+
+3. **Missing cross-field validators (P1):** No `.refine()` or `.superRefine()` validators in Zod schemas. No balance sheet identity check (Assets = L + E), no cash flow reconciliation, no check that debt service > 0 when total_debt > 0. Debt component aggregation check exists in `validateArithmeticConsistency` but only warns.
+
+4. **Classification ambiguity (P1-P2):** Drawn vs undrawn credit facilities not distinguished in prompt (facility size vs actual debt). IFRS 16 lease classification rules not taught to AI. Pro-forma cost savings have no materiality gate. Consolidated vs segment EBITDA not preferenced.
+
+5. **Deduplication false positives (P3):** Guard 1c zeros legitimate non-cash items when <35% of interest (calibrated on single company). Interest income gate for gross fallback companies has edge case where small interest income is incorrectly suppressed.
+
+**Verified claims:** Confirmed `interest_income` IS in CURRENCY_METRICS (agent's initial analysis was wrong about this). Confirmed debt component identity check exists in `validateArithmeticConsistency` at line 993. Confirmed no `.refine()` validators exist in validation.ts. Confirmed profit_margins percentage values are rejected (not NaN'd) by validation.
+
 ### Task 1: Covenant Parameters UI (COMPLETED)
 - Created `lib/calculations/recalculate.ts` — client-safe recalculation utility that re-runs covenant-sensitive calculations (debt metrics, FCCR, leverage ratios) with configurable parameters without re-running AI extraction
 - Created `components/CovenantParametersPanel.tsx` — UI panel with controls for all 3 PRD-specified covenant parameters: CapEx treatment (unfunded/all/none/custom %), lease debt treatment (include/exclude from senior debt), operating lease treatment (include/exclude from FCCR denominator)
