@@ -493,10 +493,12 @@ export const extractFinancialData = async (
     // abort the entire extraction. Partial results (e.g. riskSnapshot without
     // debtHealthAssessment) are still returned to the caller.
     let riskSnapshot: Awaited<ReturnType<typeof generateRiskAssessment>> = null;
+    let riskError: string | null = null;
     try {
       riskSnapshot = await generateRiskAssessment(computed, userId);
     } catch (riskErr) {
       console.warn('⚠️ generateRiskAssessment failed — returning null:', riskErr);
+      riskError = riskErr instanceof Error ? riskErr.message : String(riskErr);
     }
 
     let debtHealthAssessment: Awaited<ReturnType<typeof generateDebtHealthAssessment>> = null;
@@ -504,6 +506,9 @@ export const extractFinancialData = async (
       debtHealthAssessment = await generateDebtHealthAssessment(computed);
     } catch (debtHealthErr) {
       console.warn('⚠️ generateDebtHealthAssessment failed — returning null:', debtHealthErr);
+      if (!riskError) {
+        riskError = debtHealthErr instanceof Error ? debtHealthErr.message : String(debtHealthErr);
+      }
     }
 
     console.log(`📊 Computing quantitative risk for ${Object.keys(computed).length} years:`, Object.keys(computed));
@@ -525,6 +530,25 @@ export const extractFinancialData = async (
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 8: Build Result
     // ─────────────────────────────────────────────────────────────────────────
+
+    // Surface risk assessment failures as analyst-visible warnings
+    if (!riskSnapshot && riskError) {
+      const isBillingError = riskError.includes('credit') || riskError.includes('billing');
+      const isAuthError = riskError.includes('authentication') || riskError.includes('api key') || riskError.includes('invalid x-api-key');
+      if (isBillingError) {
+        extractionWarnings.push(
+          'Risk assessment unavailable — API credit balance issue. Financial metrics were extracted successfully, but the AI risk assessment could not be generated. Add credits at console.anthropic.com and re-run.'
+        );
+      } else if (isAuthError) {
+        extractionWarnings.push(
+          'Risk assessment unavailable — API authentication error. Check your ANTHROPIC_API_KEY configuration.'
+        );
+      } else {
+        extractionWarnings.push(
+          'Risk assessment could not be generated. Financial metrics were extracted successfully but the AI risk analysis is unavailable. Try re-running the extraction.'
+        );
+      }
+    }
 
     // Cap warnings to prevent UI/storage overload — summarize overflow entries
     const MAX_WARNINGS = 50;
