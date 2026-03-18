@@ -1386,17 +1386,20 @@ export function normalizeScaleMismatch(
  * - If EBITDA margin < 0.1%, something is wrong with scale
  * - If net income > corrected revenue, ALL metrics are wrong (not just revenue)
  *
- * TODO: extraction_metadata.detected_scale (reported by the AI per chunk) is currently
- * not consumed here. Incorporating it could improve accuracy by letting the AI's own
- * scale assessment (e.g. "thousands", "millions") act as a first-pass filter before
- * the heuristic magnitude checks below run.
+ * When `metadata` is provided and indicates a non-thousands scale with low confidence
+ * (cases skipped by applyDetectedScale), a warning is surfaced for years that neither
+ * heuristic check corrected. This prevents silent discarding of potentially meaningful
+ * AI scale hints while avoiding the risk of incorrect auto-correction.
  *
  * @param metrics - Metrics by year
+ * @param alreadyCorrectedYears - Years already scaled by applyDetectedScale (skipped here)
+ * @param metadata - AI extraction metadata from the highest-confidence chunk, or null
  * @returns Corrected metrics with corrections log
  */
 export function validateCrossMetricScale(
   metrics: Record<string, YearMetrics>,
-  alreadyCorrectedYears?: Set<string>
+  alreadyCorrectedYears?: Set<string>,
+  metadata?: ExtractionMetadata | null
 ): ScaleNormalizationResult {
   const corrections: string[] = [];
   const corrected = structuredClone(metrics);
@@ -1528,6 +1531,33 @@ export function validateCrossMetricScale(
     ) {
       corrections.push(
         `${year}: Warning - Net Income (${currentNetIncome.toLocaleString()}) > Revenue (${currentRevenue.toLocaleString()}). Data may still be inconsistent.`
+      );
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Post-loop: Surface low-confidence AI scale hints for uncorrected years
+  //
+  // applyDetectedScale (Pass 1) skips low-confidence detections. If the
+  // heuristic checks above also didn't trigger (e.g., all metrics are
+  // consistently in the wrong unit, so ratios look plausible), the scale
+  // issue would be silently lost. We surface it as an analyst warning so
+  // it can be reviewed rather than ignored.
+  // ─────────────────────────────────────────────────────────────────────────
+  if (
+    metadata?.scale_confidence === 'low' &&
+    metadata.detected_scale !== 'thousands' &&
+    metadata.detected_scale !== 'unknown'
+  ) {
+    const uncorrectedYears = Object.keys(metrics).filter(
+      (year) => !alreadyCorrectedYears?.has(year) && !corrections.some((c) => c.startsWith(year + ':'))
+    );
+
+    if (uncorrectedYears.length > 0) {
+      const indicator = metadata.scale_indicator_found ? ` (indicator: "${metadata.scale_indicator_found}")` : '';
+      corrections.push(
+        `Scale warning (low confidence): AI detected "${metadata.detected_scale}"${indicator} ` +
+        `for year(s) [${uncorrectedYears.join(', ')}] — heuristic checks found no issue, but manual review recommended`
       );
     }
   }

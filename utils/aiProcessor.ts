@@ -372,8 +372,10 @@ export const extractFinancialData = async (
 
     // Pass the set of years already scaled in Pass 1 so Passes 2 and 3 skip
     // them — preventing double-correction (e.g., millions→thousands then ÷1000).
+    // Also pass extraction_metadata so low-confidence AI scale hints that were
+    // skipped by applyDetectedScale can still surface as analyst warnings.
     const pass1CorrectedYears = detectedScaleResult.correctedYears;
-    const crossMetricResult = validateCrossMetricScale(rawMerged, pass1CorrectedYears);
+    const crossMetricResult = validateCrossMetricScale(rawMerged, pass1CorrectedYears, extraction_metadata);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 4d: Cross-Year Scale Normalization

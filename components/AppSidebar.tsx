@@ -9,6 +9,7 @@ import {
   LogOut,
   Eye,
   GitCompareArrows,
+  BarChart3,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -46,6 +47,11 @@ const navItems = [
     title: 'Vision',
     href: '/vision',
     icon: Eye,
+  },
+  {
+    title: 'Portfolio',
+    href: '/instruments',
+    icon: BarChart3,
   },
 ];
 
