@@ -57,7 +57,14 @@ export async function generateRiskAssessment(
   // Build ratios for assessment
   const ratiosByYear: Record<string, ComputedMetrics & { interest_coverage_ratio: number | null; debt_to_equity_ratio: number | null }> = {};
   for (const [yr, m] of Object.entries(metricsByYear)) {
-    const icr = m.interest != null && m.interest > 0 ? (m.ebitda ?? 0) / m.interest : null;
+    // Prefer Adjusted EBITDA for ICR to stay consistent with FCCR/DSCR numerators.
+    // Fall back to raw EBITDA only when adjusted_ebitda is unavailable.
+    // Return null (not 0) when both are absent — 0x ICR would mislead the AI assessor.
+    const ebitdaForICR = m.adjusted_ebitda ?? m.ebitda;
+    const icr =
+      m.interest != null && m.interest > 0 && ebitdaForICR != null
+        ? ebitdaForICR / m.interest
+        : null;
     const d2e =
       m.total_debt && m.shareholders_equity && m.shareholders_equity !== 0
         ? m.total_debt / m.shareholders_equity
