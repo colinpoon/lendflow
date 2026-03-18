@@ -708,7 +708,7 @@ export default function ProjectDetail({
             </CardHeader>
             <CardContent>
               <CompactErrorBoundary errorTitle="Failed to render financial table">
-                <FinancialTable data={displayData as unknown as Parameters<typeof FinancialTable>[0]['data']} />
+                <FinancialTable data={displayData} />
               </CompactErrorBoundary>
             </CardContent>
           </Card>
