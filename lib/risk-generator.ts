@@ -19,8 +19,10 @@ import {
 } from './risk-scoring';
 import type { RiskData, DebtHealthAssessment, ComputedMetrics } from '@/types';
 
-// Anthropic Claude client for risk assessment
-const anthropic = new Anthropic();
+// Anthropic Claude client for risk assessment.
+// maxRetries: 3 enables the SDK's built-in exponential backoff with jitter,
+// handling transient 429/5xx errors before surfacing them to the caller.
+const anthropic = new Anthropic({ maxRetries: AI_CONFIG.MAX_RETRIES });
 
 // Cache directory setup
 const CACHE_DIR = path.join(os.tmpdir(), CACHE_CONFIG.DIR_NAME);

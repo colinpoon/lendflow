@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { PDFDocument } from 'pdf-lib';
 import { YearConflictDialog } from '@/components/YearConflictDialog';
 import type { YearConflict, ConflictResolution } from '@/lib/extraction-utils';
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
 
 interface FileUploadProps {
   onDataExtracted: (data: Record<string, unknown>) => void;
@@ -42,8 +43,6 @@ const STAGE_LABELS: Record<string, string> = {
   complete: 'Complete',
   error: 'Error',
 };
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
 
 const ACCEPTED_FORMATS = [
   { ext: 'PDF', mime: 'application/pdf' },
@@ -112,8 +111,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
   const processFile = async (selectedFile: File) => {
     const originalSize = selectedFile.size;
 
-    if (originalSize > MAX_FILE_SIZE * 3) {
-      toast.error('File size exceeds 30MB. Please use a smaller file.');
+    if (originalSize > MAX_FILE_SIZE_BYTES) {
+      toast.error(`File size exceeds ${MAX_FILE_SIZE_LABEL}. Please use a smaller file.`);
       return;
     }
 
@@ -135,9 +134,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
       const compressedFile = await compressPDF(selectedFile);
       const savedPercent = Math.round((1 - compressedFile.size / originalSize) * 100);
 
-      if (compressedFile.size > MAX_FILE_SIZE) {
+      if (compressedFile.size > MAX_FILE_SIZE_BYTES) {
         toast.error(
-          `File is still ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB after compression. Maximum is 10MB.`
+          `File is still ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB after compression. Maximum is ${MAX_FILE_SIZE_LABEL}.`
         );
         setStage('idle');
         setCompressionInfo(null);
@@ -148,8 +147,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
       setFile(compressedFile);
       setStage('idle');
     } else {
-      if (originalSize > MAX_FILE_SIZE) {
-        toast.error('File size exceeds 10MB limit.');
+      if (originalSize > MAX_FILE_SIZE_BYTES) {
+        toast.error(`File size exceeds ${MAX_FILE_SIZE_LABEL} limit.`);
         return;
       }
       setFile(selectedFile);
@@ -526,7 +525,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
                   {fmt.ext}
                 </span>
               ))}
-              <span className="text-[10px] text-muted-foreground/60">· Max 10 MB</span>
+              <span className="text-[10px] text-muted-foreground/60">· Max {MAX_FILE_SIZE_LABEL}</span>
             </div>
           )}
         </label>

@@ -4,6 +4,18 @@
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
+// File Upload Limits
+// Single source of truth for file-size enforcement used by the upload UI,
+// the API route validator, and any user-facing error messages.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Maximum accepted file size in bytes (50 MB). */
+export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+
+/** Human-readable label for the file-size limit (used in UI and error messages). */
+export const MAX_FILE_SIZE_LABEL = '50 MB';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AI Processing Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 

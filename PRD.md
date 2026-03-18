@@ -294,12 +294,12 @@ Ensure all accepted file types can actually be processed.
 - [x] Implement Word parsing (`.docx`) in `document-parser.ts` — using `mammoth` (added to dependencies); `.doc` throws a clear user-facing error directing them to save as `.docx`
 - [x] Add scanned PDF detection — checks text density (chars/page); if < 100 chars/page, prepends warning directing user to `/vision` upload
 
-### Task 8: High — Error Handling & Resilience
+### Task 8: High — Error Handling & Resilience ✅
 Make the pipeline gracefully handle failures instead of losing all progress.
-- [ ] Wrap `generateRiskAssessment()`, `generateDebtHealthAssessment()`, `calculateQuantitativeRisk()` in individual try/catch blocks — allow partial success (return metrics with `riskSnapshot: null`)
-- [ ] Implement exponential backoff with jitter for all Claude API calls (enable Anthropic SDK's built-in retry support)
-- [ ] Guard all division operations in `lib/calculations/` — handle negative EBITDA, negative equity, zero denominators with `null` returns and explanatory warnings
-- [ ] Align file-size limits: frontend (`FileUpload.tsx` 10MB) vs API (`route.ts` 50MB) vs error message (30MB) — use a single shared constant
+- [x] Wrap `generateRiskAssessment()`, `generateDebtHealthAssessment()`, `calculateQuantitativeRisk()` in individual try/catch blocks — allow partial success (return metrics with `riskSnapshot: null`)
+- [x] Implement exponential backoff with jitter for all Claude API calls (enable Anthropic SDK's built-in retry support)
+- [x] Guard all division operations in `lib/calculations/` — handle negative EBITDA, negative equity, zero denominators with `null` returns and explanatory warnings
+- [x] Align file-size limits: frontend (`FileUpload.tsx` 10MB) vs API (`route.ts` 50MB) vs error message (30MB) — use a single shared constant
 
 ### Task 9: High — Security Hardening
 Protect against abuse and data leaks.

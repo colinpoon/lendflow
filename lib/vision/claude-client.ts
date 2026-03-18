@@ -95,10 +95,12 @@ export function validateApiKey(): void {
 /**
  * Create a configured Anthropic client instance.
  * The SDK automatically reads ANTHROPIC_API_KEY from environment.
+ * maxRetries: 3 enables the SDK's built-in exponential backoff with jitter,
+ * handling transient 429/5xx errors before surfacing them to the caller.
  */
 export function createVisionClient(): Anthropic {
   validateApiKey();
-  return new Anthropic();
+  return new Anthropic({ maxRetries: 3 });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

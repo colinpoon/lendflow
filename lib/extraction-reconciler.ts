@@ -24,8 +24,10 @@ import type {
   ReconciliationResult,
 } from '@/types';
 
-// Anthropic Claude client for reconciliation
-const anthropic = new Anthropic();
+// Anthropic Claude client for reconciliation.
+// maxRetries: 3 enables the SDK's built-in exponential backoff with jitter,
+// handling transient 429/5xx errors before surfacing them to the caller.
+const anthropic = new Anthropic({ maxRetries: AI_CONFIG.MAX_RETRIES });
 
 // Timeout for AI reconciliation calls (30 seconds)
 const AI_RECONCILIATION_TIMEOUT_MS = 30_000;

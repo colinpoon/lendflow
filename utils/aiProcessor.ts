@@ -421,11 +421,30 @@ export const extractFinancialData = async (
       message: 'Generating risk assessment...',
     });
 
-    const riskSnapshot = await generateRiskAssessment(computed);
-    const debtHealthAssessment = await generateDebtHealthAssessment(computed);
+    // Each risk generator runs in its own try/catch so a failure in one does not
+    // abort the entire extraction. Partial results (e.g. riskSnapshot without
+    // debtHealthAssessment) are still returned to the caller.
+    let riskSnapshot: Awaited<ReturnType<typeof generateRiskAssessment>> = null;
+    try {
+      riskSnapshot = await generateRiskAssessment(computed);
+    } catch (riskErr) {
+      console.warn('⚠️ generateRiskAssessment failed — returning null:', riskErr);
+    }
+
+    let debtHealthAssessment: Awaited<ReturnType<typeof generateDebtHealthAssessment>> = null;
+    try {
+      debtHealthAssessment = await generateDebtHealthAssessment(computed);
+    } catch (debtHealthErr) {
+      console.warn('⚠️ generateDebtHealthAssessment failed — returning null:', debtHealthErr);
+    }
 
     console.log(`📊 Computing quantitative risk for ${Object.keys(computed).length} years:`, Object.keys(computed));
-    const quantitativeRiskAssessment = calculateQuantitativeRisk(computed);
+    let quantitativeRiskAssessment: ReturnType<typeof calculateQuantitativeRisk> = null;
+    try {
+      quantitativeRiskAssessment = calculateQuantitativeRisk(computed);
+    } catch (quantErr) {
+      console.warn('⚠️ calculateQuantitativeRisk failed — returning null:', quantErr);
+    }
     console.log(`📊 Quantitative risk result:`, quantitativeRiskAssessment ? 'SUCCESS' : 'NULL');
 
     if (quantitativeRiskAssessment) {

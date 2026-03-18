@@ -15,8 +15,10 @@ import { FINANCIAL_EXTRACTION_PROMPT } from './prompts/extraction-prompt';
 import { validateExtractionResponse } from './validation';
 import type { ExtractedMetrics } from '@/types';
 
-// Anthropic Claude client for text extraction
-const anthropic = new Anthropic();
+// Anthropic Claude client for text extraction.
+// maxRetries: 3 enables the SDK's built-in exponential backoff with jitter,
+// handling transient 429/5xx errors before surfacing them to the caller.
+const anthropic = new Anthropic({ maxRetries: AI_CONFIG.MAX_RETRIES });
 
 // Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
 const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';

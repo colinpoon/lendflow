@@ -138,6 +138,19 @@ All 3 items implemented in `lib/document-parser.ts`:
 - TypeScript: clean (tsc --noEmit, 0 errors)
 - `npm install` required once to install `mammoth` at runtime (package.json already updated)
 
+### Task 8: High — Error Handling & Resilience (COMPLETED)
+All 4 items implemented:
+
+1. **Partial success for risk generators** — `utils/aiProcessor.ts`: wrapped `generateRiskAssessment()`, `generateDebtHealthAssessment()`, and `calculateQuantitativeRisk()` in individual try/catch blocks. Each uses `let` with the correct return type so TypeScript is satisfied. If any one fails, it logs a warning and leaves that field as `null`; the other generators still run and the partial result is returned.
+
+2. **SDK-level retry with backoff** — All four `new Anthropic()` instantiation sites (`lib/chunk-processor.ts`, `lib/extraction-reconciler.ts`, `lib/risk-generator.ts`, `lib/vision/claude-client.ts`) now pass `{ maxRetries: 3 }`. The Anthropic SDK's built-in handler provides exponential backoff with jitter on 429/5xx responses automatically.
+
+3. **Division guards already in place** — Full audit of all 7 calculator files confirmed every division site was already guarded against zero/null denominators. No code changes needed.
+
+4. **Shared file-size constants** — Created `lib/constants.ts` with `MAX_FILE_SIZE_BYTES = 50 MB` and `MAX_FILE_SIZE_LABEL = '50 MB'`. Both `app/api/extractData/route.ts` and `components/FileUpload.tsx` now import from this shared location. The previous 10MB client-side gate and "30MB" hardcoded error message are gone — all three locations now agree on 50 MB.
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase
