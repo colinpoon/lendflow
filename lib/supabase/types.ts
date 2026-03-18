@@ -41,31 +41,6 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          id: string;
-          email: string | null;
-          full_name: string | null;
-          company_name: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id: string;
-          email?: string | null;
-          full_name?: string | null;
-          company_name?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          email?: string | null;
-          full_name?: string | null;
-          company_name?: string | null;
-          updated_at?: string;
-        };
-      };
       projects: {
         Row: {
           id: string;
@@ -209,7 +184,6 @@ export interface Database {
 }
 
 // Helper types for use in components
-export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Project = Database['public']['Tables']['projects']['Row'];
 export type Document = Database['public']['Tables']['documents']['Row'];
 export type Extraction = Database['public']['Tables']['extractions']['Row'];
