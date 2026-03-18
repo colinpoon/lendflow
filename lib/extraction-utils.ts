@@ -655,11 +655,27 @@ export function mergeExtractions(
       merged.riskAssessment = sourceData.riskAssessment as RiskData | null | undefined;
       merged.debtHealthAssessment = sourceData.debtHealthAssessment as DebtHealthAssessment | null | undefined;
       merged.validation_issues = sourceData.validation_issues;
-      merged.extraction_warnings = sourceData.extraction_warnings
-        ? [...sourceData.extraction_warnings]
-        : undefined;
       merged.chunk_stats = sourceData.chunk_stats;
     }
+  }
+
+  // Union extraction_warnings from ALL documents — a warning from an older document
+  // (e.g., revolver distortion on 2022 data) is still relevant even when the most
+  // recent year came from a different document.
+  {
+    const allWarnings: string[] = [];
+    for (const extraction of extractions) {
+      const data = extraction.extraction_data as ExtractionResult;
+      if (data.extraction_warnings?.length) {
+        allWarnings.push(...data.extraction_warnings);
+      }
+    }
+    // Include union merge warnings (null-gap fills, conflict resolutions)
+    allWarnings.push(...unionMergeWarnings);
+    // Deduplicate identical warnings
+    merged.extraction_warnings = allWarnings.length > 0
+      ? [...new Set(allWarnings)]
+      : undefined;
   }
 
   // RECALCULATE quantitative risk with ALL merged years
