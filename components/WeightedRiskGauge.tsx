@@ -156,20 +156,24 @@ const itemVariants = {
 
 // ─── SVG Half-Circle Gauge ─────────────────────────────────────────────────────
 
+// Arc circumference for radius 90: Math.PI * 90 ≈ 282.74
+const ARC_LENGTH = Math.PI * 90;
+
 const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
   const config = getRiskConfig(score);
   const fillPct = Math.max(0, Math.min(1, score / 10));
 
   return (
-    <div className="relative flex flex-col items-center">
-      <div className="relative w-[200px] h-[110px] overflow-hidden">
+    <div className="relative flex flex-col items-center w-full max-w-[220px]">
+      {/* Aspect-ratio wrapper: viewBox is 200×120, clipped to upper half */}
+      <div className="relative w-full overflow-hidden" style={{ paddingBottom: '55%' }}>
         <svg
-          width="200"
-          height="120"
           viewBox="0 0 200 120"
+          width="100%"
+          height="100%"
           className="absolute top-0 left-0"
         >
-          {/* Track arc */}
+          {/* Track arc — muted background */}
           <path
             d="M 10 110 A 90 90 0 0 1 190 110"
             fill="none"
@@ -178,27 +182,63 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
             className="text-surface-3"
             strokeLinecap="round"
           />
-          {/* Fill arc */}
+
+          {/* Zone bands — subtle tints showing Low / Moderate / High regions */}
+          {/* Low risk zone: 0–40% of arc (scores 0–4) */}
+          <path
+            d="M 10 110 A 90 90 0 0 1 190 110"
+            fill="none"
+            stroke="#22c55e"
+            strokeWidth="10"
+            strokeLinecap="butt"
+            strokeOpacity="0.22"
+            strokeDasharray={`${ARC_LENGTH * 0.4} ${ARC_LENGTH * 0.6}`}
+          />
+          {/* Moderate zone: 40–65% of arc (scores 4–6.5) */}
+          <path
+            d="M 10 110 A 90 90 0 0 1 190 110"
+            fill="none"
+            stroke="#eab308"
+            strokeWidth="10"
+            strokeLinecap="butt"
+            strokeOpacity="0.22"
+            strokeDasharray={`${ARC_LENGTH * 0.25} ${ARC_LENGTH * 0.75}`}
+            strokeDashoffset={`${-(ARC_LENGTH * 0.4)}`}
+          />
+          {/* High risk zone: 65–100% of arc (scores 6.5–10) */}
+          <path
+            d="M 10 110 A 90 90 0 0 1 190 110"
+            fill="none"
+            stroke="#ef4444"
+            strokeWidth="10"
+            strokeLinecap="butt"
+            strokeOpacity="0.22"
+            strokeDasharray={`${ARC_LENGTH * 0.35} ${ARC_LENGTH * 0.65}`}
+            strokeDashoffset={`${-(ARC_LENGTH * 0.65)}`}
+          />
+
+          {/* Active fill arc — draws on top of zone bands */}
           <path
             d="M 10 110 A 90 90 0 0 1 190 110"
             fill="none"
             stroke={config.color}
             strokeWidth="10"
             strokeLinecap="round"
-            strokeDasharray={`${Math.PI * 90}`}
-            strokeDashoffset={Math.PI * 90 * (1 - fillPct)}
+            strokeDasharray={`${ARC_LENGTH}`}
+            strokeDashoffset={ARC_LENGTH * (1 - fillPct)}
             style={{
               transition: 'stroke-dashoffset 0.8s cubic-bezier(0.25, 1, 0.5, 1)',
               filter: `drop-shadow(0 0 6px ${config.color}60)`,
             }}
           />
+
           {/* Tick markers at 0, 2, 4, 6, 8, 10 */}
           {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map((pct, i) => {
             const angle = Math.PI - pct * Math.PI;
             const x1 = 100 + 90 * Math.cos(angle);
             const y1 = 110 - 90 * Math.sin(angle);
-            const x2 = 100 + 82 * Math.cos(angle);
-            const y2 = 110 - 82 * Math.sin(angle);
+            const x2 = 100 + 80 * Math.cos(angle);
+            const y2 = 110 - 80 * Math.sin(angle);
             return (
               <line
                 key={i}
@@ -212,12 +252,17 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
               />
             );
           })}
+
+          {/* Scale labels at the two endpoints and the apex */}
+          <text x="5"   y="118" textAnchor="middle" fontSize="8" opacity="0.45" fill="currentColor">0</text>
+          <text x="100" y="18"  textAnchor="middle" fontSize="8" opacity="0.45" fill="currentColor">5</text>
+          <text x="195" y="118" textAnchor="middle" fontSize="8" opacity="0.45" fill="currentColor">10</text>
         </svg>
 
         {/* Score overlay at bottom center of arc */}
-        <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center">
+        <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-1">
           <span
-            className={`text-5xl font-bold tabular-nums tracking-tighter leading-none ${config.scoreTextClass}`}
+            className={`text-4xl sm:text-5xl font-bold tabular-nums tracking-tighter leading-none ${config.scoreTextClass}`}
           >
             {score.toFixed(1)}
           </span>
@@ -231,6 +276,22 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
         style={{ boxShadow: `0 0 0 1px ${config.color}30` }}
       >
         {config.label}
+      </div>
+
+      {/* Zone legend — three swatches giving Low / Moderate / High scale context */}
+      <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground/70">
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-1.5 w-3 rounded-full bg-success" />
+          Low
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-1.5 w-3 rounded-full bg-warning" />
+          Moderate
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-1.5 w-3 rounded-full bg-error" />
+          High
+        </span>
       </div>
     </div>
   );
@@ -528,18 +589,20 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         className="flex flex-col md:flex-row items-center justify-center gap-8"
       >
         {/* Half-circle SVG gauge */}
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center w-full md:w-auto">
           <RiskGauge score={displayScore} />
 
-          {/* Lending Decision verdict */}
+          {/* Lending Decision verdict — prominent call-to-action banner */}
           <div
-            className={`w-full mt-4 rounded-xl border px-5 py-3.5 text-center ${decisionStyle.bg}`}
-            style={{ borderColor: `color-mix(in oklch, currentColor, transparent 70%)` }}
+            className={`w-full mt-4 rounded-xl border-2 px-5 py-4 text-center ${decisionStyle.bg}`}
+            style={{
+              borderColor: `color-mix(in oklch, currentColor, transparent 55%)`,
+            }}
           >
-            <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-muted-foreground mb-0.5">
+            <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground mb-1">
               Lending Decision
             </p>
-            <p className={`text-lg font-bold tracking-tight ${decisionStyle.text}`}>
+            <p className={`text-xl font-extrabold tracking-tight leading-tight ${decisionStyle.text}`}>
               {assessment.lending_decision}
             </p>
           </div>
@@ -697,62 +760,64 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             Historical Risk Score Comparison
           </h4>
 
-          <Table className="table-financial">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
-                  Year
-                </TableHead>
-                <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
-                  Covenant FCCR Score
-                </TableHead>
-                <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
-                  Debt/EBITDA Score
-                </TableHead>
-                <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
-                  Debt/Cap Score
-                </TableHead>
-                <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
-                  Weighted Score
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {years.map((year) => {
-                const ym = data.metrics_by_year[year];
-                const yFccr = getFCCRRiskScore(ym.fccr);
-                const yDebtEbitda = getDebtEBITDARiskScore(ym.senior_debt_to_ebitda);
-                const yDebtCap = getDebtCapitalRiskScore(ym.total_debt_to_capital);
-                const yWeighted = calculateWeightedRiskScore(ym.fccr, ym.senior_debt_to_ebitda, ym.total_debt_to_capital);
-                const yConfig = getRiskConfig(yWeighted);
+          <div className="overflow-x-auto">
+            <Table className="table-financial min-w-[340px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                    Year
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                    FCCR Score
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                    Debt/EBITDA
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                    Debt/Cap
+                  </TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                    Weighted Score
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {years.map((year) => {
+                  const ym = data.metrics_by_year[year];
+                  const yFccr = getFCCRRiskScore(ym.fccr);
+                  const yDebtEbitda = getDebtEBITDARiskScore(ym.senior_debt_to_ebitda);
+                  const yDebtCap = getDebtCapitalRiskScore(ym.total_debt_to_capital);
+                  const yWeighted = calculateWeightedRiskScore(ym.fccr, ym.senior_debt_to_ebitda, ym.total_debt_to_capital);
+                  const yConfig = getRiskConfig(yWeighted);
 
-                return (
-                  <TableRow key={year}>
-                    <TableCell className="font-medium text-foreground">
-                      {year}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {yFccr.toFixed(0)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {yDebtEbitda.toFixed(0)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {yDebtCap.toFixed(0)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs text-white font-medium tabular-nums ${yConfig.scoreBgClass}`}
-                        style={{ boxShadow: `0 0 0 1px ${yConfig.color}40` }}
-                      >
-                        {yWeighted.toFixed(1)}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  return (
+                    <TableRow key={year}>
+                      <TableCell className="font-medium text-foreground">
+                        {year}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-right tabular-nums text-muted-foreground">
+                        {yFccr.toFixed(0)}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-right tabular-nums text-muted-foreground">
+                        {yDebtEbitda.toFixed(0)}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-right tabular-nums text-muted-foreground">
+                        {yDebtCap.toFixed(0)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs text-white font-medium tabular-nums ${yConfig.scoreBgClass}`}
+                          style={{ boxShadow: `0 0 0 1px ${yConfig.color}40` }}
+                        >
+                          {yWeighted.toFixed(1)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Historical Metrics Chart */}
           <Accordion

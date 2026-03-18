@@ -23,8 +23,9 @@ import {
   ListChecks,
   Building2,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-import { motion } from 'framer-motion';
+import { motion, type Transition } from 'framer-motion';
 import CovenantParametersPanel from '@/components/CovenantParametersPanel';
 import { CompactErrorBoundary } from '@/components/ErrorBoundary';
 import FileUpload from '@/components/FileUpload';
@@ -115,7 +116,7 @@ const SECTIONS = [
 const SECTION_ENTER = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: (delay = 0) => ({ duration: 0.35, ease: 'easeOut' as const, delay }),
+  transition: (delay = 0): Transition => ({ duration: 0.35, ease: 'easeOut', delay }),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -215,6 +216,212 @@ function MetricCard({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Loading Skeleton Components
+//
+// These are rendered inside the real sections while a router.refresh() is in
+// flight after a new document is uploaded. They mirror the actual content
+// dimensions so the layout does not shift when real data arrives.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Skeleton for the Financial Summary table.
+ * Mirrors: header row + 10 alternating data rows, each with label + 3 year columns.
+ */
+function FinancialTableSkeleton() {
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="flex items-center gap-4 px-4 py-3 border-b border-border bg-muted/30">
+        <Skeleton className="h-3 w-36" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-3 w-14 ml-auto" />
+        ))}
+      </div>
+      {Array.from({ length: 10 }).map((_, i) => (
+        <div
+          key={i}
+          className={`flex items-center gap-4 px-4 py-3 border-b border-border last:border-b-0 ${
+            i % 2 === 0 ? 'bg-transparent' : 'bg-muted/20'
+          }`}
+        >
+          <Skeleton className={`h-3 ${i % 3 === 0 ? 'w-40' : 'w-32'}`} />
+          {Array.from({ length: 3 }).map((_, j) => (
+            <Skeleton key={j} className="h-3 w-14 ml-auto" />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Skeleton for the Quantitative Risk Scorecard.
+ * Mirrors: title, semi-circular gauge, 5-row metrics table, scoring legend.
+ */
+function RiskScorecardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col items-center gap-2">
+        <Skeleton className="h-6 w-56" />
+        <Skeleton className="h-3 w-64" />
+      </div>
+      <div className="flex flex-col items-center gap-3">
+        <Skeleton className="h-24 w-48 rounded-xl" />
+        <Skeleton className="h-9 w-24" />
+        <Skeleton className="h-6 w-24 rounded-full" />
+      </div>
+      <div className="flex justify-center">
+        <Skeleton className="h-3 w-72" />
+      </div>
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="flex items-center gap-4 px-4 py-3 border-b border-border bg-muted/30">
+          {['w-24', 'w-12', 'w-12', 'w-12', 'w-16', 'w-12'].map((w, i) => (
+            <Skeleton key={i} className={`h-3 ${w} ${i > 0 ? 'ml-auto' : ''}`} />
+          ))}
+        </div>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 px-4 py-3 border-b border-border last:border-b-0"
+          >
+            <Skeleton className="h-3 w-28" />
+            {Array.from({ length: 5 }).map((_, j) => (
+              <Skeleton key={j} className={`h-6 ${j === 2 ? 'w-8 rounded-full' : 'w-12'} ml-auto`} />
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="bg-muted rounded-lg p-4 space-y-3">
+        <Skeleton className="h-4 w-24" />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Skeleton className="h-6 w-6 rounded-full shrink-0" />
+              <Skeleton className="h-3 w-12" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for the Risk Assessment pillar cards + overall verdict.
+ * Mirrors: 5 pillar cards with label, score badge, progress bar, and observation text.
+ */
+function RiskAssessmentSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-4 w-48" />
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="rounded-lg border border-border bg-card p-4 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <Skeleton className="h-4 w-40" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <Skeleton className="h-2 w-8" />
+              <Skeleton className="h-2 w-8" />
+            </div>
+            <Skeleton className="h-1 w-full rounded-full" />
+          </div>
+          <div className="space-y-1.5">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-4/5" />
+          </div>
+        </div>
+      ))}
+      <div className="rounded-lg border border-border p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-6 w-28 rounded-full" />
+          </div>
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-3/4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for the Loan Decision card.
+ * Mirrors: verdict banner, risk/positive factor grid, recommendations, loan structure block.
+ */
+function DecisionSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-4 rounded-xl border border-border px-5 py-4">
+        <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+        <div className="space-y-1.5 flex-1">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-6 w-40" />
+        </div>
+        <div className="space-y-1.5 text-right">
+          <Skeleton className="h-3 w-16 ml-auto" />
+          <Skeleton className="h-4 w-24 ml-auto" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {Array.from({ length: 2 }).map((_, col) => (
+          <div key={col} className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+            <div className="space-y-1.5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <Skeleton className="h-1.5 w-1.5 rounded-full mt-1 shrink-0" />
+                  <Skeleton className={`h-3 ${i === 1 ? 'w-4/5' : 'w-full'}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="space-y-1.5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <Skeleton className="h-1.5 w-1.5 rounded-full mt-1 shrink-0" />
+              <Skeleton className={`h-3 ${i % 2 === 0 ? 'w-full' : 'w-3/4'}`} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-4 w-36" />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-5/6" />
+          <Skeleton className="h-3 w-4/5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -256,6 +463,11 @@ export default function ProjectDetail({
 
   // Covenant parameter configuration — drives client-side recalculation
   const [covenantConfig, setCovenantConfig] = useState<CovenantConfig>(DEFAULT_COVENANT_CONFIG);
+
+  // Tracks whether a router.refresh() is in flight after a document upload.
+  // During this window the analysis/risk/decision sections show skeletons
+  // rather than stale or missing data.
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Recalculate covenant-sensitive metrics whenever the user changes
@@ -408,6 +620,10 @@ export default function ProjectDetail({
       if (mergedData.chunk_stats) setChunkStats(mergedData.chunk_stats);
       if (mergedData.token_usage) setTokenUsage(mergedData.token_usage);
     }
+
+    // Clear the refreshing flag whenever the server delivers updated mergedData,
+    // whether it is null (no documents) or populated (new extraction available).
+    setIsRefreshing(false);
   }, [mergedData]);
 
   // The SSE payload contains a single-document extraction, but ProjectDetail
@@ -415,6 +631,7 @@ export default function ProjectDetail({
   // to re-fetch the authoritative merged view rather than optimistically
   // patching state from one document's extraction.
   const handleDataUpdate = () => {
+    setIsRefreshing(true);
     router.refresh();
   };
 
@@ -686,10 +903,10 @@ export default function ProjectDetail({
       </section>
 
       {/* Analysis Section */}
-      {hasData && (
+      {(hasData || isRefreshing) && (
         <section id="analysis" ref={setSectionRef('analysis')} className="scroll-mt-16 space-y-4">
           {/* Year source indicators */}
-          {Object.keys(yearSources).length > 1 && (
+          {!isRefreshing && Object.keys(yearSources).length > 1 && (
             <motion.div
               className="flex flex-wrap gap-1.5 text-[11px]"
               initial={SECTION_ENTER.initial}
@@ -710,17 +927,20 @@ export default function ProjectDetail({
               ))}
             </motion.div>
           )}
+
           {/* Covenant Parameters — controls client-side recalculation */}
-          <motion.div
-            initial={SECTION_ENTER.initial}
-            animate={SECTION_ENTER.animate}
-            transition={SECTION_ENTER.transition(0.05)}
-          >
-            <CovenantParametersPanel
-              config={covenantConfig}
-              onConfigChange={setCovenantConfig}
-            />
-          </motion.div>
+          {!isRefreshing && (
+            <motion.div
+              initial={SECTION_ENTER.initial}
+              animate={SECTION_ENTER.animate}
+              transition={SECTION_ENTER.transition(0.05)}
+            >
+              <CovenantParametersPanel
+                config={covenantConfig}
+                onConfigChange={setCovenantConfig}
+              />
+            </motion.div>
+          )}
 
           <motion.div
             initial={SECTION_ENTER.initial}
@@ -732,9 +952,13 @@ export default function ProjectDetail({
                 <CardTitle className="text-lg font-semibold tracking-tight">Financial Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <CompactErrorBoundary errorTitle="Failed to render financial table">
-                  <FinancialTable data={displayData} />
-                </CompactErrorBoundary>
+                {isRefreshing ? (
+                  <FinancialTableSkeleton />
+                ) : (
+                  <CompactErrorBoundary errorTitle="Failed to render financial table">
+                    <FinancialTable data={displayData} />
+                  </CompactErrorBoundary>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -742,10 +966,10 @@ export default function ProjectDetail({
       )}
 
       {/* Risk Section */}
-      {hasData && (
+      {(hasData || isRefreshing) && (
         <section id="risk" ref={setSectionRef('risk')} className="scroll-mt-16 space-y-5">
           {/* Risk assessment source info */}
-          {mostRecentYear && extractionCount > 1 && (
+          {!isRefreshing && mostRecentYear && extractionCount > 1 && (
             <motion.p
               className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md"
               initial={SECTION_ENTER.initial}
@@ -769,14 +993,18 @@ export default function ProjectDetail({
                 <CardTitle className="text-lg font-semibold tracking-tight">Quantitative Risk Scorecard</CardTitle>
               </CardHeader>
               <CardContent>
-                <CompactErrorBoundary errorTitle="Failed to render risk scorecard">
-                  <QuantitativeRiskCard data={quantitativeRiskAssessment} />
-                </CompactErrorBoundary>
+                {isRefreshing ? (
+                  <RiskScorecardSkeleton />
+                ) : (
+                  <CompactErrorBoundary errorTitle="Failed to render risk scorecard">
+                    <QuantitativeRiskCard data={quantitativeRiskAssessment} />
+                  </CompactErrorBoundary>
+                )}
               </CardContent>
             </Card>
           </motion.div>
 
-          {displayData && (
+          {(displayData || isRefreshing) && (
             <motion.div
               initial={SECTION_ENTER.initial}
               animate={SECTION_ENTER.animate}
@@ -787,18 +1015,22 @@ export default function ProjectDetail({
                   <CardTitle className="text-lg font-semibold tracking-tight">Risk Assessment</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CompactErrorBoundary errorTitle="Failed to render risk assessment">
-                    <WeightedRiskGauge
-                      data={displayData}
-                      debtHealthAssessment={debtHealthAssessment}
-                    />
-                  </CompactErrorBoundary>
+                  {isRefreshing ? (
+                    <RiskAssessmentSkeleton />
+                  ) : (
+                    <CompactErrorBoundary errorTitle="Failed to render risk assessment">
+                      <WeightedRiskGauge
+                        data={displayData!}
+                        debtHealthAssessment={debtHealthAssessment}
+                      />
+                    </CompactErrorBoundary>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
           )}
 
-          {displayData && (
+          {(displayData || isRefreshing) && (
             <motion.div
               initial={SECTION_ENTER.initial}
               animate={SECTION_ENTER.animate}
@@ -809,15 +1041,19 @@ export default function ProjectDetail({
                   <CardTitle className="text-lg font-semibold tracking-tight">Adjusted EBITDA</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CompactErrorBoundary errorTitle="Failed to render EBITDA breakdown">
-                    <AdjustedEBITDA data={displayData} />
-                  </CompactErrorBoundary>
+                  {isRefreshing ? (
+                    <FinancialTableSkeleton />
+                  ) : (
+                    <CompactErrorBoundary errorTitle="Failed to render EBITDA breakdown">
+                      <AdjustedEBITDA data={displayData!} />
+                    </CompactErrorBoundary>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
           )}
 
-          {displayData && (
+          {(displayData || isRefreshing) && (
             <motion.div
               initial={SECTION_ENTER.initial}
               animate={SECTION_ENTER.animate}
@@ -828,9 +1064,13 @@ export default function ProjectDetail({
                   <CardTitle className="text-lg font-semibold tracking-tight">Debt Health Indicators</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CompactErrorBoundary errorTitle="Failed to render debt health meters">
-                    <DebtHealthMeters data={displayData} />
-                  </CompactErrorBoundary>
+                  {isRefreshing ? (
+                    <FinancialTableSkeleton />
+                  ) : (
+                    <CompactErrorBoundary errorTitle="Failed to render debt health meters">
+                      <DebtHealthMeters data={displayData!} />
+                    </CompactErrorBoundary>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -879,103 +1119,120 @@ export default function ProjectDetail({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {debtHealthAssessment ? (
-              <div className="space-y-5">
-                {/* Verdict Banner */}
-                <div className={`flex items-center gap-4 rounded-xl border px-5 py-4 ${
-                  debtHealthAssessment.lending_decision.toLowerCase().includes('approve') &&
-                  !debtHealthAssessment.lending_decision.toLowerCase().includes('conditional')
-                    ? 'bg-success/15 border-success/30 text-success'
-                    : debtHealthAssessment.lending_decision.toLowerCase().includes('conditional')
-                      ? 'bg-warning/15 border-warning/30 text-warning'
-                      : 'bg-error/15 border-error/30 text-error'
-                }`}>
-                  {debtHealthAssessment.lending_decision.toLowerCase().includes('approve') &&
-                  !debtHealthAssessment.lending_decision.toLowerCase().includes('conditional') ? (
-                    <ShieldCheck className="h-8 w-8 shrink-0" />
-                  ) : debtHealthAssessment.lending_decision.toLowerCase().includes('conditional') ? (
-                    <ShieldAlert className="h-8 w-8 shrink-0" />
-                  ) : (
-                    <ShieldX className="h-8 w-8 shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">Lending Decision</p>
-                    <p className="text-xl font-bold tracking-tight">{debtHealthAssessment.lending_decision}</p>
-                  </div>
-                  <div className="ml-auto text-right">
-                    <p className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">Risk Band</p>
-                    <p className="text-sm font-semibold">{debtHealthAssessment.risk_band}</p>
-                  </div>
-                </div>
+            {isRefreshing ? (
+              <DecisionSkeleton />
+            ) : debtHealthAssessment ? (() => {
+              const lowerDecision = debtHealthAssessment.lending_decision.toLowerCase();
+              const isApprove = lowerDecision.includes('approve') && !lowerDecision.includes('conditional');
+              const isConditional = lowerDecision.includes('conditional');
+              const bannerClasses = isApprove
+                ? 'bg-success/15 border-success/40 text-success'
+                : isConditional
+                  ? 'bg-warning/15 border-warning/40 text-warning'
+                  : 'bg-error/15 border-error/40 text-error';
+              const DecisionIcon = isApprove ? ShieldCheck : isConditional ? ShieldAlert : ShieldX;
 
-                {/* Risk Factors + Positive Factors */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {debtHealthAssessment.key_risk_factors.length > 0 && (
-                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <AlertTriangle className="h-4 w-4 text-warning" />
-                        Key Risk Factors
+              return (
+                <div className="space-y-5">
+                  {/* Verdict Banner — largest, most visible element in this section */}
+                  <div className={`flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border-2 px-6 py-5 ${bannerClasses}`}>
+                    <DecisionIcon className="h-12 w-12 shrink-0 opacity-90" aria-hidden="true" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground mb-0.5">
+                        Lending Decision
+                      </p>
+                      <p className="text-2xl font-extrabold tracking-tight leading-tight truncate">
+                        {debtHealthAssessment.lending_decision}
+                      </p>
+                    </div>
+                    <div className="sm:ml-auto sm:text-right shrink-0">
+                      <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground mb-0.5">
+                        Risk Band
+                      </p>
+                      <p className="text-base font-bold">{debtHealthAssessment.risk_band}</p>
+                    </div>
+                  </div>
+
+                  {/* Risk Factors + Positive Factors — distinct semantic panel treatments */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {debtHealthAssessment.key_risk_factors.length > 0 && (
+                      <div className="rounded-lg border border-warning/25 bg-warning/5 p-4 space-y-2.5">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                          Key Risk Factors
+                          <span className="ml-auto text-[11px] font-medium bg-warning/15 text-warning px-2 py-0.5 rounded-full tabular-nums">
+                            {debtHealthAssessment.key_risk_factors.length}
+                          </span>
+                        </div>
+                        <ul className="space-y-2">
+                          {debtHealthAssessment.key_risk_factors.map((factor, i) => (
+                            <li key={i} className="text-xs text-muted-foreground leading-relaxed flex items-start gap-2">
+                              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-warning shrink-0" />
+                              {factor}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                      <ul className="space-y-1.5">
-                        {debtHealthAssessment.key_risk_factors.map((factor, i) => (
-                          <li key={i} className="text-xs text-muted-foreground leading-relaxed flex items-start gap-2">
-                            <span className="mt-1 h-1 w-1 rounded-full bg-warning shrink-0" />
-                            {factor}
+                    )}
+                    {debtHealthAssessment.positive_factors.length > 0 && (
+                      <div className="rounded-lg border border-success/25 bg-success/5 p-4 space-y-2.5">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <ThumbsUp className="h-4 w-4 text-success shrink-0" />
+                          Positive Factors
+                          <span className="ml-auto text-[11px] font-medium bg-success/15 text-success px-2 py-0.5 rounded-full tabular-nums">
+                            {debtHealthAssessment.positive_factors.length}
+                          </span>
+                        </div>
+                        <ul className="space-y-2">
+                          {debtHealthAssessment.positive_factors.map((factor, i) => (
+                            <li key={i} className="text-xs text-muted-foreground leading-relaxed flex items-start gap-2">
+                              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-success shrink-0" />
+                              {factor}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recommendations — numbered list; action-oriented framing */}
+                  {debtHealthAssessment.recommendations.length > 0 && (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2.5">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <ListChecks className="h-4 w-4 text-primary shrink-0" />
+                        Recommendations
+                        <span className="ml-auto text-[11px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full tabular-nums">
+                          {debtHealthAssessment.recommendations.length}
+                        </span>
+                      </div>
+                      <ol className="space-y-2">
+                        {debtHealthAssessment.recommendations.map((rec, i) => (
+                          <li key={i} className="text-xs text-muted-foreground leading-relaxed flex items-start gap-2.5">
+                            <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary font-bold text-[9px]">
+                              {i + 1}
+                            </span>
+                            {rec}
                           </li>
                         ))}
-                      </ul>
+                      </ol>
                     </div>
                   )}
-                  {debtHealthAssessment.positive_factors.length > 0 && (
+
+                  {/* Suggested Loan Structure */}
+                  {debtHealthAssessment.suggested_loan_structure && (
                     <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
                       <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <ThumbsUp className="h-4 w-4 text-success" />
-                        Positive Factors
+                        <Building2 className="h-4 w-4 text-primary shrink-0" />
+                        Suggested Loan Structure
                       </div>
-                      <ul className="space-y-1.5">
-                        {debtHealthAssessment.positive_factors.map((factor, i) => (
-                          <li key={i} className="text-xs text-muted-foreground leading-relaxed flex items-start gap-2">
-                            <span className="mt-1 h-1 w-1 rounded-full bg-success shrink-0" />
-                            {factor}
-                          </li>
-                        ))}
-                      </ul>
+                      <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {debtHealthAssessment.suggested_loan_structure}
+                      </p>
                     </div>
                   )}
                 </div>
-
-                {/* Recommendations */}
-                {debtHealthAssessment.recommendations.length > 0 && (
-                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <ListChecks className="h-4 w-4 text-primary" />
-                      Recommendations
-                    </div>
-                    <ul className="space-y-1.5">
-                      {debtHealthAssessment.recommendations.map((rec, i) => (
-                        <li key={i} className="text-xs text-muted-foreground leading-relaxed flex items-start gap-2">
-                          <span className="mt-1 h-1 w-1 rounded-full bg-primary shrink-0" />
-                          {rec}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Suggested Loan Structure */}
-                {debtHealthAssessment.suggested_loan_structure && (
-                  <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <Building2 className="h-4 w-4 text-primary" />
-                      Suggested Loan Structure
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
-                      {debtHealthAssessment.suggested_loan_structure}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
+              );
+            })() : (
               <p className="text-muted-foreground text-xs">
                 Upload financial documents to generate a lending recommendation.
               </p>

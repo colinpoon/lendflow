@@ -495,15 +495,15 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
             >
               {/* Data-forward accordion header */}
               <AccordionTrigger className="hover:no-underline py-4">
-                <div className="flex items-center justify-between w-full pr-2">
-                  <span className="text-sm font-bold tracking-tight text-foreground">
+                <div className="flex items-center justify-between w-full pr-2 gap-2">
+                  <span className="text-sm font-bold tracking-tight text-foreground shrink-0">
                     FY {year}
                   </span>
-                  <div className="flex items-center gap-4 mr-4">
+                  <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 sm:gap-x-4 mr-2">
                     {metrics.fccr != null && (
                       <div className="text-right">
-                        <p className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-                          Covenant FCCR
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                          FCCR
                         </p>
                         <p
                           className="text-sm font-bold tabular-nums"
@@ -517,8 +517,8 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     )}
                     {metrics.senior_debt_to_ebitda != null && (
                       <div className="text-right">
-                        <p className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-                          Sr.Debt/EBITDA
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                          Debt/EBITDA
                         </p>
                         <p
                           className="text-sm font-bold tabular-nums"
@@ -534,7 +534,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     )}
                     {metrics.total_debt_to_capital != null && (
                       <div className="text-right">
-                        <p className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
                           Debt/Cap
                         </p>
                         <p
@@ -797,8 +797,8 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           <div className="text-[11px] uppercase tracking-widest font-medium text-info mb-2 px-3">
                             Add Adjustment
                           </div>
-                          <div className="flex gap-2 px-3">
-                            <div className="relative">
+                          <div className="flex flex-wrap gap-2 px-3">
+                            <div className="relative shrink-0">
                               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                                 $
                               </span>
@@ -823,7 +823,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 )
                               }
                               placeholder="Description..."
-                              className="flex-1 px-2 py-1.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                              className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter')
                                   handleAddAdjustment();
@@ -835,7 +835,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 !newAdjustmentAmount ||
                                 !newAdjustmentDescription.trim()
                               }
-                              className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+                              className="shrink-0 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
                             >
                               Add
                             </button>

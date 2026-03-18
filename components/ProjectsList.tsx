@@ -297,9 +297,9 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
             <TableHeader>
               <TableRow className="hover:bg-transparent bg-muted/40">
                 <SortableHead label="Project" sortKeyName="name" className="w-[42%] pl-4" />
-                <SortableHead label="Status" sortKeyName="status" />
+                <SortableHead label="Status" sortKeyName="status" className="hidden sm:table-cell" />
                 <SortableHead label="Risk Score" sortKeyName="risk_score" className="text-right" />
-                <SortableHead label="Updated" sortKeyName="updated_at" className="text-right" />
+                <SortableHead label="Updated" sortKeyName="updated_at" className="hidden md:table-cell text-right" />
                 <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
@@ -381,8 +381,8 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
                       )}
                     </TableCell>
 
-                    {/* Status */}
-                    <TableCell className="py-3.5">
+                    {/* Status — hidden on mobile */}
+                    <TableCell className="hidden sm:table-cell py-3.5">
                       <Badge variant={getStatusVariant(project.status)} className="text-[11px]">
                         {formatStatus(project.status)}
                       </Badge>
@@ -416,8 +416,8 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
                       )}
                     </TableCell>
 
-                    {/* Updated date */}
-                    <TableCell className="text-right py-3.5">
+                    {/* Updated date — hidden on mobile and tablet */}
+                    <TableCell className="hidden md:table-cell text-right py-3.5">
                       <span className="text-xs text-muted-foreground tabular-nums">
                         {formatDate(project.updated_at)}
                       </span>
@@ -459,7 +459,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
         </div>
       ) : (
         // ── Empty state ─────────────────────────────────────────────────────
-        <div className="rounded-xl border border-dashed border-border bg-muted/20 p-16 text-center">
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 sm:p-16 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
               <FolderOpen className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
