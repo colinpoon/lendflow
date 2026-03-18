@@ -5,6 +5,7 @@ import { extractVisionData } from '@/utils/visionProcessor';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { detectYearConflicts, type ExtractionWithDocument } from '@/lib/extraction-utils';
 import { checkRateLimit } from '@/lib/rate-limiter';
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
 
 // SSE progress type for complete message with data
 interface SSECompleteProgress {
@@ -89,6 +90,15 @@ export async function POST(req: NextRequest) {
         error:
           'Vision extraction only supports PDF files. For Excel or Word documents, use /api/extractData.',
       },
+      { status: 400 }
+    );
+  }
+
+  // File size check — enforce the same shared limit as text extraction
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    console.error(`❗ File too large: ${file.size} bytes`);
+    return NextResponse.json(
+      { error: `File too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.` },
       { status: 400 }
     );
   }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
 
 import type { UploadCompletePayload } from '@/components/FileUpload';
 
@@ -29,8 +30,6 @@ const STAGE_LABELS: Record<string, string> = {
   complete: 'Complete',
   error: 'Error',
 };
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
 
 const VisionFileUpload: React.FC<VisionFileUploadProps> = ({
   onDataExtracted,
@@ -63,8 +62,8 @@ const VisionFileUpload: React.FC<VisionFileUploadProps> = ({
         return;
       }
 
-      if (selectedFile.size > MAX_FILE_SIZE) {
-        setErrorMessage('File size exceeds 10MB limit.');
+      if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+        setErrorMessage(`File size exceeds ${MAX_FILE_SIZE_LABEL} limit.`);
         return;
       }
 
