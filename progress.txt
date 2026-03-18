@@ -298,3 +298,20 @@ drove cash flow negative and assess whether the borrower can service any fixed c
 
 File: `lib/calculations/fccr-calculator.ts`
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 12: Fix funded_debt_to_ebitda coerced to 0 in DSCR breakdown (COMPLETED — commit 01aaf5c)
+When EBITDA is zero, `funded_debt_to_ebitda` is not computable (division by zero). The DSCR
+calculator correctly returned `null`, but the `dscr_breakdown` object coerced it to `0` via
+`fundedDebtToEbitda ?? 0` because the type was `number` (not nullable). This caused the UI
+to display "0.00x" leverage — misleading analysts into thinking the borrower has zero leverage
+rather than unmeasurable leverage.
+
+Changes:
+- `types/financial.ts` — `DSCRBreakdown.funded_debt_to_ebitda` changed from `number` to `number | null`
+- `dscr-calculator.ts` — removed `?? 0` coercion in `dscr_breakdown`
+- `components/FCCRBreakdown.tsx` — local `DSCRBreakdownData` type updated to `number | null`
+- `utils/aiProcessor.ts` — debug log handles null with `N/A` instead of printing `nullx`
+
+All display paths already handle null correctly: `formatRatio(null)` → `"N/A"`, `FinancialTable` → `"—"`.
+
+- TypeScript: clean (npm run build passes, 0 errors)
