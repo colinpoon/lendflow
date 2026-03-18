@@ -239,3 +239,19 @@ Files changed:
 - `types/financial.ts` — `preferred_dividends?: number` in `FCCRBreakdown`, `preferred_dividends_value` in sources
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
+
+### Task 12: Fix cash taxes fallback to zero in FCCR (COMPLETED — commit e37fb23)
+When `cash_taxes_paid` was null, FCCR numerator used $0, overstating coverage for profitable
+companies by 10–20+ bps.
+
+Fallback chain implemented:
+1. `cash_taxes_paid` (CF statement) — preferred, actual cash basis
+2. `metrics.taxes` (income statement tax expense) — conservative accrual proxy when CF tax absent
+3. $0 with explicit analyst-facing warning pushed to `extraction_warnings`
+
+Source tracked in `fccr_breakdown.sources.cash_taxes_source` for full transparency in UI.
+Both early-return paths (null denominator) also propagate `cashTaxesFallbackWarnings`.
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
