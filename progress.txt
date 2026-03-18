@@ -95,6 +95,24 @@ Additional targeted improvements on top of the first-pass commit:
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
+### Task 5: Regression Testing with Financial Reports (COMPLETED)
+Created `scripts/test-extraction.ts` — a full CLI test harness for regression testing extraction output.
+
+Key design decisions:
+1. **Snapshot testing** — On first run, saves extracted key metrics (revenue, net_income, adjusted_ebitda, fccr, dscr, total_debt, senior_debt, senior_debt_to_ebitda, total_debt_to_capital, current_ratio) to `test-results/snapshots/<filename>.json`. Subsequent runs compare against snapshots and flag >5% changes as regressions.
+
+2. **Ground truth integration** — Uses existing `lib/benchmarks/ground-truth.ts` for verified baselines where available. GT values of `0` are skipped (unverified placeholder). Thresholds: <5% = PASS ✓, 5-20% = WARN ⚠, >20% = FAIL ✗.
+
+3. **CLI flags**: `--update` to refresh snapshots, `--file <pattern>` to filter files, `--dry-run` to list files without calling API.
+
+4. **Edge case documentation** — `KNOWN_EDGE_CASES` map documents 8 known tricky files inline (Parkland large-cap, PBHC banking institution, Taiga Canadian thousands, etc.).
+
+5. **Exit code** — Returns 1 if any GT failure or snapshot regression detected; 0 otherwise. Suitable for CI integration.
+
+6. **npm script** — Added `"test:extraction": "tsx scripts/test-extraction.ts"` to package.json.
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase

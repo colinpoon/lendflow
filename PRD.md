@@ -271,13 +271,13 @@ Improve the visual design, usability, and overall experience of the application.
 - [x] Ensure full dark mode support across all components
 - [x] Review and improve mobile/responsive layouts
 
-### Task 5: Regression Testing with Financial Reports
+### Task 5: Regression Testing with Financial Reports ✅
 Validate extraction integrity using the real financial reports in `public/financialReports/`.
-- [ ] Create a test harness that runs extraction on each file and captures structured output
-- [ ] Build expected-value baselines for key metrics (EBITDA, total debt, senior debt, revenue) per file
-- [ ] Automate comparison of extraction output vs. baselines with pass/fail reporting
-- [ ] Document known edge cases per file (e.g., unusual line items, non-standard formatting)
-- [ ] Integrate regression checks into CI or a runnable script (`npm run test:extraction`)
+- [x] Create a test harness that runs extraction on each file and captures structured output — `scripts/test-extraction.ts`
+- [x] Build expected-value baselines for key metrics (EBITDA, total debt, senior debt, revenue) per file — snapshot system persists first-run output; ground truth from `lib/benchmarks/ground-truth.ts` used where verified
+- [x] Automate comparison of extraction output vs. baselines with pass/fail reporting — ✓/⚠/✗ at 5%/20% variance thresholds; exits with code 1 on any failure
+- [x] Document known edge cases per file (e.g., unusual line items, non-standard formatting) — `KNOWN_EDGE_CASES` map covers 8 files inline in the script
+- [x] Integrate regression checks into CI or a runnable script (`npm run test:extraction`) — added to `package.json`
 
 
 

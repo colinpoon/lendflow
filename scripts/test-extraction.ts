@@ -1,266 +1,551 @@
 /**
- * Test script: Run extraction on KITs PDF 3 times and compare results
- * Usage: npx tsx scripts/test-extraction.ts
+ * Regression Testing Script for Lendflow Extraction Pipeline
+ *
+ * Runs AI extraction on all financial report PDFs, compares results against
+ * ground truth values and saved snapshots, and reports regressions.
+ *
+ * Usage:
+ *   npx tsx scripts/test-extraction.ts
+ *   npx tsx scripts/test-extraction.ts --update
+ *   npx tsx scripts/test-extraction.ts --file Zedcor
+ *   npx tsx scripts/test-extraction.ts --dry-run
  *
  * NOTE: dotenv must be loaded BEFORE any Anthropic SDK imports (they create
  * the client at module level using process.env.ANTHROPIC_API_KEY).
  */
 
 // Step 1: Load env FIRST — before any app imports
-import { config } from 'dotenv';
-config();
+import 'dotenv/config';
 
-// Step 2: Dynamic imports AFTER env is loaded
-async function main() {
-  const { extractFinancialData } = await import('../utils/aiProcessor');
-  const path = await import('path');
-  const fs = await import('fs');
+import * as fs from 'fs';
+import * as path from 'path';
+import type { ComputedMetrics } from '@/types';
+import { getGroundTruth } from '@/lib/benchmarks/ground-truth';
 
-  const PDF_PATH = path.resolve(__dirname, '../public/financialReports/FY24_KITS_ConsolidatedFS_FINAL.pdf');
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
 
-  interface RunSummary {
-    run: number;
-    fy2024: Record<string, unknown> | null;
-    fy2023: Record<string, unknown> | null;
-    warnings: string[];
-    duration_ms: number;
-  }
+const REPORTS_DIR = path.resolve(__dirname, '../public/financialReports');
+const SNAPSHOTS_DIR = path.resolve(__dirname, '../test-results/snapshots');
 
-  async function runExtraction(runNumber: number): Promise<RunSummary> {
-    console.log(`\n${'='.repeat(80)}`);
-    console.log(`  RUN ${runNumber} STARTING`);
-    console.log(`${'='.repeat(80)}\n`);
+/** Metrics that matter most for lending decisions */
+const KEY_METRICS = [
+  'revenue',
+  'net_income',
+  'adjusted_ebitda',
+  'fccr',
+  'dscr',
+  'total_debt',
+  'senior_debt',
+  'senior_debt_to_ebitda',
+  'total_debt_to_capital',
+  'current_ratio',
+] as const;
 
-    const start = Date.now();
-    const result = await extractFinancialData(PDF_PATH);
-    const duration = Date.now() - start;
+type KeyMetric = (typeof KEY_METRICS)[number];
 
-    const fy2024 = result.metrics_by_year?.['2024'] ?? null;
-    const fy2023 = result.metrics_by_year?.['2023'] ?? null;
+/**
+ * Known edge cases per file — documented for analyst awareness during review.
+ * These do not suppress failures but provide context for manual investigation.
+ */
+const KNOWN_EDGE_CASES: Record<string, string[]> = {
+  'Parkland_Q4_2024_FinancialStatements.pdf': [
+    'Large-cap company (~$30B revenue) - values in millions',
+    'Has MDA companion file - FS only is authoritative source',
+    'Complex hedging and risk management disclosures',
+  ],
+  'Parkland_Q4_2024_MDA.pdf': [
+    'Management Discussion & Analysis only - no standalone balance sheet',
+    'Contains segment-level EBITDA breakdowns that may conflict with consolidated',
+    'Skip for primary extraction - use FinancialStatements file instead',
+  ],
+  'PetValu_Q4_2024_FinancialStatements.pdf': [
+    'Franchise business model - revenue includes franchise fees/royalties',
+    'Right-of-use assets and lease liabilities are significant',
+  ],
+  'PBHC.Consolidated.FS.Q4-2024.FINAL.pdf': [
+    'Banking/financial institution - different balance sheet structure',
+    'Loan loss provisions affect net income interpretation',
+    'Interest income is operating revenue (not financing)',
+  ],
+  'ADENAnRpt24 2.pdf': [
+    'Annual report format with narrative sections interspersed',
+    'May contain prior-year restatements',
+  ],
+  'FY2023_Q4_Financial_Statements.pdf': [
+    'Unknown issuer - verify company name from document',
+  ],
+  'FY24_KITS_ConsolidatedFS_FINAL.pdf': [
+    'KITS Eyecare - e-commerce optometry company',
+    'Rapid growth trajectory - YoY comparisons may show large swings',
+  ],
+  'Taiga_-_December_31,_2024_audited_financial_statements.pdf': [
+    'Taiga Building Products - wholesale distribution',
+    'Values in thousands of Canadian dollars',
+    'Revenue ~$1.6B - verify scale normalization works correctly',
+  ],
+};
 
-    const extractFields = (data: Record<string, unknown> | null) => {
-      if (!data) return null;
-      const d = data as Record<string, unknown>;
-      return {
-        ebitda: d.ebitda ?? null,
-        adjusted_ebitda: d.adjusted_ebitda ?? null,
-        calculated_adjusted_ebitda: d.calculated_adjusted_ebitda ?? null,
-        reported_adjusted_ebitda: d.reported_adjusted_ebitda ?? null,
-        fccr: d.fccr ?? null,
-        fccr_numerator: d.fccr_numerator ?? null,
-        total_fixed_charges: d.total_fixed_charges ?? null,
-        dscr: d.dscr ?? null,
-        senior_debt_to_ebitda: d.senior_debt_to_ebitda ?? null,
-        total_debt_to_capital: d.total_debt_to_capital ?? null,
-        net_income: d.net_income ?? null,
-        revenue: d.revenue ?? null,
-        interest: d.interest ?? null,
-        taxes: d.taxes ?? null,
-        depreciation_amortization: d.depreciation_amortization ?? null,
-        depreciation_equipment: d.depreciation_equipment ?? null,
-        depreciation_rou: d.depreciation_rou ?? null,
-        depreciation_other: d.depreciation_other ?? null,
-        amortization_intangibles: d.amortization_intangibles ?? null,
-        capital_expenditures: d.capital_expenditures ?? null,
-        cash_taxes_paid: d.cash_taxes_paid ?? null,
-        distributions_paid: d.distributions_paid ?? null,
-        cash_interest_paid: d.cash_interest_paid ?? null,
-        repayment_of_debt: d.repayment_of_debt ?? null,
-        payment_of_lease_liability: d.payment_of_lease_liability ?? null,
-        total_debt: d.total_debt ?? null,
-        senior_debt: d.senior_debt ?? null,
-        interest_income: d.interest_income ?? null,
-        non_cash_interest_expense: d.non_cash_interest_expense ?? null,
-        ttm_interest_expense: d.ttm_interest_expense ?? null,
-        ttm_principal_payments: d.ttm_principal_payments ?? null,
-        proceeds_from_long_term_debt: d.proceeds_from_long_term_debt ?? null,
-        fccr_breakdown: d.fccr_breakdown ?? null,
-        adjusted_ebitda_breakdown: d.adjusted_ebitda_breakdown ?? null,
-        debt_breakdown: d.debt_breakdown ?? null,
-        dscr_breakdown: d.dscr_breakdown ?? null,
-        debt_components: d.debt_components ?? null,
-        fixed_charges: d.fixed_charges ?? null,
-        adjusted_ebitda_components: d.adjusted_ebitda_components ?? null,
-      };
-    };
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
 
-    return {
-      run: runNumber,
-      fy2024: extractFields(fy2024 as unknown as Record<string, unknown>),
-      fy2023: extractFields(fy2023 as unknown as Record<string, unknown>),
-      warnings: result.extraction_warnings ?? [],
-      duration_ms: duration,
-    };
-  }
-
-  function printComparison(runs: RunSummary[]) {
-    console.log(`\n${'='.repeat(100)}`);
-    console.log(`  COMPARISON ACROSS ${runs.length} RUNS — FY2024 KITs`);
-    console.log(`${'='.repeat(100)}\n`);
-
-    const metrics = [
-      'ebitda', 'adjusted_ebitda', 'calculated_adjusted_ebitda', 'reported_adjusted_ebitda',
-      'fccr', 'fccr_numerator', 'total_fixed_charges',
-      'dscr', 'senior_debt_to_ebitda', 'total_debt_to_capital',
-      'net_income', 'revenue', 'interest', 'taxes',
-      'depreciation_amortization', 'depreciation_equipment', 'depreciation_rou',
-      'depreciation_other', 'amortization_intangibles',
-      'capital_expenditures', 'cash_taxes_paid', 'distributions_paid',
-      'cash_interest_paid', 'repayment_of_debt', 'payment_of_lease_liability',
-      'total_debt', 'senior_debt', 'interest_income',
-      'non_cash_interest_expense', 'ttm_interest_expense', 'ttm_principal_payments',
-      'proceeds_from_long_term_debt',
-    ];
-
-    // Header
-    const header = ['Metric'.padEnd(35), ...runs.map((r) => `Run ${r.run}`.padStart(15))].join(' | ');
-    console.log(header);
-    console.log('-'.repeat(header.length));
-
-    for (const metric of metrics) {
-      const values = runs.map((r) => {
-        const val = (r.fy2024 as Record<string, unknown> | null)?.[metric];
-        if (val == null) return 'null'.padStart(15);
-        if (typeof val === 'number') return val.toLocaleString('en-US', { maximumFractionDigits: 2 }).padStart(15);
-        return String(val).padStart(15);
-      });
-
-      const numValues = runs
-        .map((r) => (r.fy2024 as Record<string, unknown> | null)?.[metric])
-        .filter((v): v is number => typeof v === 'number');
-
-      const allSame = numValues.length > 1 && numValues.every((v) => v === numValues[0]);
-      const flag = allSame ? '  OK' : numValues.length > 1 ? '  DIFF' : '';
-
-      console.log(`${metric.padEnd(35)} | ${values.join(' | ')}${flag}`);
-    }
-
-    // FCCR breakdown comparison
-    console.log(`\n${'─'.repeat(100)}`);
-    console.log(`  FCCR BREAKDOWN DETAIL\n`);
-
-    for (const r of runs) {
-      const bd = (r.fy2024 as Record<string, unknown> | null)?.fccr_breakdown as Record<string, unknown> | null;
-      const sources = bd?.sources as Record<string, unknown> | null;
-      console.log(`  Run ${r.run}:`);
-      if (bd) {
-        console.log(`    Adj EBITDA:         ${bd.adjusted_ebitda}`);
-        console.log(`    - CapEx Deduction:  ${bd.capex_deduction} (capex: ${bd.capital_expenditures}, proceeds: ${bd.proceeds_from_lt_debt})`);
-        console.log(`    - Cash Taxes:       ${bd.cash_taxes_paid}`);
-        console.log(`    - Distributions:    ${bd.distributions_paid}`);
-        console.log(`    = Numerator:        ${bd.numerator}`);
-        console.log(`    Principal:          ${bd.ttm_principal_payments} (source: ${sources?.principal_source}, value: ${sources?.principal_value})`);
-        console.log(`    Interest:           ${bd.ttm_interest_expense} (source: ${sources?.interest_source}, value: ${sources?.interest_value})`);
-        console.log(`    Leases:             ${bd.lease_payments} (source: ${sources?.lease_source}, value: ${sources?.lease_value})`);
-        console.log(`    Lease int deducted: ${sources?.lease_interest_deducted ?? 'none'}`);
-        console.log(`    = Denominator:      ${bd.denominator}`);
-        console.log(`    FCCR:               ${(r.fy2024 as Record<string, unknown>)?.fccr}x`);
-      } else {
-        console.log(`    (no breakdown)`);
-      }
-      console.log('');
-    }
-
-    // Adjusted EBITDA breakdown
-    console.log(`  ADJUSTED EBITDA BREAKDOWN DETAIL\n`);
-
-    for (const r of runs) {
-      const bd = (r.fy2024 as Record<string, unknown> | null)?.adjusted_ebitda_breakdown as Record<string, unknown> | null;
-      const adj = (r.fy2024 as Record<string, unknown> | null)?.adjusted_ebitda_components as Record<string, unknown> | null;
-      console.log(`  Run ${r.run}:`);
-      if (bd) {
-        console.log(`    Base EBITDA:            ${bd.reported_ebitda}`);
-        console.log(`    + Non-cash adj:         ${bd.non_cash_adjustments}`);
-        console.log(`      SBC:                  ${adj?.stock_based_compensation ?? 'null'}`);
-        console.log(`      Impairment:           ${adj?.impairment_charges ?? 'null'}`);
-        console.log(`      Other non-cash:       ${adj?.other_non_cash ?? 'null'}`);
-        console.log(`    + One-time expenses:    ${bd.one_time_expenses}`);
-        console.log(`      Other one-time exp:   ${adj?.other_one_time_expenses ?? 'null'}`);
-        console.log(`    - One-time gains:       ${bd.one_time_gains}`);
-        console.log(`      Gain on asset sale:   ${adj?.gain_on_asset_sale ?? 'null'}`);
-        console.log(`      Gain on disposal:     ${adj?.gain_on_disposal ?? 'null'}`);
-        console.log(`      Other OT gains:       ${adj?.other_one_time_gains ?? 'null'}`);
-        console.log(`      Other inc non-op:     ${adj?.other_income_non_operating ?? 'null'}`);
-        console.log(`    - Interest income excl: ${bd.interest_income_excluded}`);
-        console.log(`    + Unrealized FX:        ${bd.unrealized_fx_adjustment}`);
-        console.log(`      Unrealized FX CF:     ${adj?.unrealized_fx_cash_flow ?? 'null'}`);
-        console.log(`      Realized FX P&L:      ${bd.realized_fx_pl}`);
-        console.log(`    + Owner/mgmt adj:       ${bd.owner_management_adjustments}`);
-        console.log(`    + Accounting adj:       ${bd.accounting_adjustments}`);
-        console.log(`    + Pro forma:            ${bd.pro_forma_adjustments}`);
-        console.log(`    Uses reported:          ${bd.uses_reported_value}`);
-        console.log(`    = Calc'd Adj EBITDA:    ${(r.fy2024 as Record<string, unknown>)?.calculated_adjusted_ebitda}`);
-        console.log(`    = Final Adj EBITDA:     ${(r.fy2024 as Record<string, unknown>)?.adjusted_ebitda}`);
-      } else {
-        console.log(`    (no breakdown)`);
-      }
-      console.log('');
-    }
-
-    // Debt components
-    console.log(`  DEBT COMPONENTS\n`);
-    for (const r of runs) {
-      const dc = (r.fy2024 as Record<string, unknown> | null)?.debt_components as Record<string, unknown> | null;
-      const fc = (r.fy2024 as Record<string, unknown> | null)?.fixed_charges as Record<string, unknown> | null;
-      console.log(`  Run ${r.run}:`);
-      if (dc) {
-        console.log(`    bank_debt_current:         ${dc.bank_debt_current ?? 'null'}`);
-        console.log(`    bank_debt_long_term:       ${dc.bank_debt_long_term ?? 'null'}`);
-        console.log(`    lease_liabilities_current:  ${dc.lease_liabilities_current ?? 'null'}`);
-        console.log(`    lease_liabilities_long_term:${dc.lease_liabilities_long_term ?? 'null'}`);
-        console.log(`    notes_payable:             ${dc.notes_payable ?? 'null'}`);
-        console.log(`    other_borrowings:          ${dc.other_borrowings ?? 'null'}`);
-        console.log(`    term_loans:                ${dc.term_loans ?? 'null'}`);
-        console.log(`    revolving_credit_facilities:${dc.revolving_credit_facilities ?? 'null'}`);
-      }
-      if (fc) {
-        console.log(`    --- Fixed Charges ---`);
-        console.log(`    total_interest_expense:    ${fc.total_interest_expense ?? 'null'}`);
-        console.log(`    senior_debt_interest:      ${fc.senior_debt_interest ?? 'null'}`);
-        console.log(`    lease_interest:            ${fc.lease_interest ?? 'null'}`);
-        console.log(`    finance_lease_payments:    ${fc.finance_lease_payments ?? 'null'}`);
-        console.log(`    operating_lease_payments:  ${fc.operating_lease_payments ?? 'null'}`);
-        console.log(`    principal_payments:        ${fc.principal_payments ?? 'null'}`);
-      }
-      console.log('');
-    }
-
-    // Duration
-    console.log(`\n  TIMING:`);
-    for (const r of runs) {
-      console.log(`    Run ${r.run}: ${(r.duration_ms / 1000).toFixed(1)}s`);
-    }
-
-    // Warnings
-    console.log(`\n  WARNINGS:`);
-    for (const r of runs) {
-      console.log(`\n  Run ${r.run} (${r.warnings.length} warnings):`);
-      for (const w of r.warnings) {
-        console.log(`    - ${w}`);
-      }
-    }
-  }
-
-  console.log(`\nKITs FY2024 Extraction Test — 3 Sequential Runs`);
-  console.log(`PDF: ${PDF_PATH}\n`);
-
-  const runs: RunSummary[] = [];
-
-  for (let i = 1; i <= 3; i++) {
-    const summary = await runExtraction(i);
-    runs.push(summary);
-  }
-
-  printComparison(runs);
-
-  // Write full results to file for analysis
-  const outputPath = path.resolve(__dirname, '../tmp/kits-3run-results.json');
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, JSON.stringify(runs, null, 2));
-  console.log(`\nFull results written to: ${outputPath}`);
+interface SnapshotYear {
+  revenue: number | null;
+  net_income: number | null;
+  adjusted_ebitda: number | null;
+  fccr: number | null;
+  dscr: number | null;
+  total_debt: number | null;
+  senior_debt: number | null;
+  senior_debt_to_ebitda: number | null;
+  total_debt_to_capital: number | null;
+  current_ratio: number | null;
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err);
+interface Snapshot {
+  file: string;
+  timestamp: string;
+  years: Record<string, SnapshotYear>;
+}
+
+type ComparisonStatus = 'pass' | 'warn' | 'fail' | 'missing' | 'skip';
+
+interface MetricComparison {
+  metric: KeyMetric;
+  extracted: number | null;
+  reference: number | null;
+  variance_pct: number | null;
+  status: ComparisonStatus;
+}
+
+interface YearResult {
+  year: string;
+  gtComparisons: MetricComparison[];
+  snapshotComparisons: MetricComparison[];
+}
+
+interface FileResult {
+  filename: string;
+  success: boolean;
+  error?: string;
+  years: YearResult[];
+  edgeCases: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CLI Argument Parsing
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface CliArgs {
+  update: boolean;
+  fileFilter: string | null;
+  dryRun: boolean;
+}
+
+function parseArgs(): CliArgs {
+  const args = process.argv.slice(2);
+  const result: CliArgs = { update: false, fileFilter: null, dryRun: false };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--update' || arg === '-u') {
+      result.update = true;
+    } else if (arg === '--dry-run') {
+      result.dryRun = true;
+    } else if ((arg === '--file' || arg === '-f') && i + 1 < args.length) {
+      result.fileFilter = args[++i];
+    }
+  }
+
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Metric Utilities
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve a top-level metric from ComputedMetrics by key.
+ * All KEY_METRICS are direct properties (no dot-notation nesting needed).
+ */
+function resolveMetric(metrics: ComputedMetrics, key: KeyMetric): number | null {
+  const value = (metrics as unknown as Record<string, unknown>)[key];
+  return typeof value === 'number' ? value : null;
+}
+
+/**
+ * Extract the subset of key metrics from a ComputedMetrics object for snapshot storage.
+ */
+function extractSnapshotYear(metrics: ComputedMetrics): SnapshotYear {
+  const result: Partial<SnapshotYear> = {};
+  for (const key of KEY_METRICS) {
+    result[key] = resolveMetric(metrics, key);
+  }
+  return result as SnapshotYear;
+}
+
+/**
+ * Calculate percentage variance between extracted and reference values.
+ * Returns null if extracted is null/undefined.
+ */
+function calcVariance(extracted: number | null, reference: number): number | null {
+  if (extracted === null || extracted === undefined) return null;
+  if (reference === 0) return extracted === 0 ? 0 : 100;
+  return Math.abs((extracted - reference) / reference) * 100;
+}
+
+/**
+ * Determine comparison status based on variance percentage.
+ * - pass:    <5% variance
+ * - warn:    5–20% variance
+ * - fail:    >20% variance
+ * - missing: extracted value is null/undefined
+ * - skip:    reference value is 0 (unverified placeholder)
+ */
+function getComparisonStatus(
+  variance: number | null,
+  referenceValue: number,
+): ComparisonStatus {
+  if (referenceValue === 0) return 'skip';
+  if (variance === null) return 'missing';
+  if (variance < 5) return 'pass';
+  if (variance <= 20) return 'warn';
+  return 'fail';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Snapshot I/O
+// ─────────────────────────────────────────────────────────────────────────────
+
+function loadSnapshot(filename: string): Snapshot | null {
+  const snapshotPath = path.join(SNAPSHOTS_DIR, `${filename}.json`);
+  if (!fs.existsSync(snapshotPath)) return null;
+  try {
+    const raw = fs.readFileSync(snapshotPath, 'utf-8');
+    return JSON.parse(raw) as Snapshot;
+  } catch {
+    return null;
+  }
+}
+
+function saveSnapshot(filename: string, snapshot: Snapshot): void {
+  fs.mkdirSync(SNAPSHOTS_DIR, { recursive: true });
+  const snapshotPath = path.join(SNAPSHOTS_DIR, `${filename}.json`);
+  fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Comparison Logic
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Compare extracted metrics against ground truth for a single year.
+ * Ground truth values of 0 are treated as unverified placeholders and skipped.
+ */
+function compareAgainstGroundTruth(
+  filename: string,
+  year: string,
+  metrics: ComputedMetrics,
+): MetricComparison[] {
+  const gt = getGroundTruth(filename, year);
+
+  return KEY_METRICS.map((key) => {
+    const extracted = resolveMetric(metrics, key);
+    const gtValues = gt?.values as Record<string, number | undefined> | undefined;
+    const reference = gtValues?.[key] ?? null;
+
+    if (reference === null || reference === undefined) {
+      return { metric: key, extracted, reference: null, variance_pct: null, status: 'skip' as ComparisonStatus };
+    }
+
+    // 0 means unverified placeholder — skip
+    if (reference === 0) {
+      return { metric: key, extracted, reference: 0, variance_pct: null, status: 'skip' as ComparisonStatus };
+    }
+
+    const variance = calcVariance(extracted, reference);
+    const status = getComparisonStatus(variance, reference);
+    return { metric: key, extracted, reference, variance_pct: variance, status };
+  });
+}
+
+/**
+ * Compare extracted metrics against a saved snapshot for regression detection.
+ * Any metric that changed by >5% is flagged as a regression.
+ */
+function compareAgainstSnapshot(
+  snapshotYear: SnapshotYear,
+  metrics: ComputedMetrics,
+): MetricComparison[] {
+  return KEY_METRICS.map((key) => {
+    const extracted = resolveMetric(metrics, key);
+    const reference = snapshotYear[key];
+
+    if (reference === null || reference === undefined) {
+      // Snapshot had no value — not a regression, just missing
+      return { metric: key, extracted, reference: null, variance_pct: null, status: 'skip' as ComparisonStatus };
+    }
+
+    const variance = calcVariance(extracted, reference);
+
+    // For snapshot comparison, >5% change is a regression (fail)
+    let status: ComparisonStatus;
+    if (variance === null) {
+      status = extracted === null && reference === null ? 'skip' : 'missing';
+    } else if (variance <= 5) {
+      status = 'pass';
+    } else {
+      status = 'fail'; // any >5% deviation from snapshot is a regression
+    }
+
+    return { metric: key, extracted, reference, variance_pct: variance, status };
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Formatting Utilities
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STATUS_ICON: Record<ComparisonStatus, string> = {
+  pass: '✓',
+  warn: '⚠',
+  fail: '✗',
+  missing: '?',
+  skip: '–',
+};
+
+/** Format a numeric value for display — currency for large values, ratio for small */
+function formatValue(key: KeyMetric, value: number | null): string {
+  if (value === null || value === undefined) return 'null';
+
+  const ratioMetrics: KeyMetric[] = ['fccr', 'dscr', 'senior_debt_to_ebitda', 'total_debt_to_capital', 'current_ratio'];
+  if (ratioMetrics.includes(key)) {
+    return value.toFixed(2);
+  }
+
+  // Currency — format with $ and thousands separator
+  return `$${Math.round(value).toLocaleString('en-US')}`;
+}
+
+/** Left-pad a string to a minimum width */
+function pad(str: string, width: number): string {
+  return str.length >= width ? str : str + ' '.repeat(width - str.length);
+}
+
+/** Right-pad a string to a minimum width */
+function rpad(str: string, width: number): string {
+  return str.length >= width ? str : ' '.repeat(width - str.length) + str;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Report Printing
+// ─────────────────────────────────────────────────────────────────────────────
+
+function printYearComparisons(
+  label: string,
+  comparisons: MetricComparison[],
+  indent: string = '    ',
+): void {
+  const visible = comparisons.filter((c) => c.status !== 'skip');
+  if (visible.length === 0) return;
+
+  console.log(`${indent}[${label}]`);
+  for (const c of visible) {
+    const icon = STATUS_ICON[c.status];
+    const metricLabel = pad(c.metric, 25);
+    const extractedStr = rpad(formatValue(c.metric as KeyMetric, c.extracted), 14);
+    const refStr = c.reference !== null ? `(ref: ${formatValue(c.metric as KeyMetric, c.reference)}` : '';
+    const varStr = c.variance_pct !== null ? `  |  ${c.variance_pct.toFixed(1)}%` : '';
+    const refBlock = refStr ? `${refStr}${varStr})` : '';
+
+    console.log(`${indent}  ${icon}  ${metricLabel}  ${extractedStr}  ${refBlock}`);
+  }
+}
+
+function printFileResult(result: FileResult, index: number, total: number): void {
+  console.log(`\n[${index}/${total}] ${result.filename}`);
+
+  if (result.edgeCases.length > 0) {
+    console.log(`  Note: ${result.edgeCases[0]}`);
+    if (result.edgeCases.length > 1) {
+      for (let i = 1; i < result.edgeCases.length; i++) {
+        console.log(`        ${result.edgeCases[i]}`);
+      }
+    }
+  }
+
+  if (!result.success) {
+    console.log(`  ERROR: ${result.error}`);
+    return;
+  }
+
+  if (result.years.length === 0) {
+    console.log(`  (no metrics extracted)`);
+    return;
+  }
+
+  for (const yearResult of result.years) {
+    console.log(`  Year ${yearResult.year}:`);
+
+    const gtVisible = yearResult.gtComparisons.filter((c) => c.status !== 'skip');
+    const snapVisible = yearResult.snapshotComparisons.filter((c) => c.status !== 'skip');
+
+    if (gtVisible.length > 0) {
+      printYearComparisons('Ground Truth', yearResult.gtComparisons, '    ');
+    }
+    if (snapVisible.length > 0) {
+      printYearComparisons('Snapshot Delta', yearResult.snapshotComparisons, '    ');
+    }
+    if (gtVisible.length === 0 && snapVisible.length === 0) {
+      console.log(`    (no ground truth or snapshot data for comparison)`);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function main(): Promise<void> {
+  const args = parseArgs();
+
+  // Discover PDFs — exclude test.pdf
+  const allPdfs = fs
+    .readdirSync(REPORTS_DIR)
+    .filter((f) => f.endsWith('.pdf') && f !== 'test.pdf')
+    .sort();
+
+  // Apply --file filter
+  const pdfs = args.fileFilter
+    ? allPdfs.filter((f) => f.toLowerCase().includes(args.fileFilter!.toLowerCase()))
+    : allPdfs;
+
+  const runTimestamp = new Date().toISOString();
+
+  // Print header
+  console.log('\n' + '═'.repeat(54));
+  console.log('  Lendflow Extraction Regression Test');
+  console.log(`  Run: ${runTimestamp}`);
+  console.log('═'.repeat(54));
+
+  if (args.dryRun) {
+    console.log('\n--dry-run mode: no API calls will be made\n');
+    console.log(`Files that would be processed (${pdfs.length}):`);
+    for (const pdf of pdfs) {
+      const edgeCases = KNOWN_EDGE_CASES[pdf] ?? [];
+      const note = edgeCases.length > 0 ? `  [${edgeCases[0]}]` : '';
+      console.log(`  - ${pdf}${note}`);
+    }
+    console.log('');
+    return;
+  }
+
+  // Lazy import extractFinancialData AFTER env is loaded
+  const { extractFinancialData } = await import('../utils/aiProcessor');
+
+  // Tracking counters
+  let gtPass = 0;
+  let gtWarn = 0;
+  let gtFail = 0;
+  let gtSkip = 0;
+  let snapRegressions = 0;
+  let filesProcessed = 0;
+  let hasFailures = false;
+
+  const fileResults: FileResult[] = [];
+
+  // Process each PDF
+  for (let i = 0; i < pdfs.length; i++) {
+    const filename = pdfs[i];
+    const absolutePath = path.resolve(REPORTS_DIR, filename);
+    const snapshotBasename = filename; // e.g., "Zedcor-FY2023.pdf" -> stored as "Zedcor-FY2023.pdf.json"
+    const edgeCases = KNOWN_EDGE_CASES[filename] ?? [];
+
+    process.stdout.write(`\n[${i + 1}/${pdfs.length}] Processing: ${filename}...\n`);
+
+    const fileResult: FileResult = {
+      filename,
+      success: false,
+      years: [],
+      edgeCases,
+    };
+
+    try {
+      const extractionResult = await extractFinancialData(absolutePath);
+      fileResult.success = true;
+      filesProcessed++;
+
+      const metricsByYear = extractionResult.metrics_by_year ?? {};
+      const existingSnapshot = loadSnapshot(snapshotBasename);
+
+      // Build new snapshot years
+      const newSnapshotYears: Record<string, SnapshotYear> = {};
+
+      for (const [year, metrics] of Object.entries(metricsByYear)) {
+        const gtComparisons = compareAgainstGroundTruth(filename, year, metrics);
+        const snapshotYearData = existingSnapshot?.years[year] ?? null;
+
+        let snapshotComparisons: MetricComparison[] = [];
+        if (!args.update && snapshotYearData) {
+          snapshotComparisons = compareAgainstSnapshot(snapshotYearData, metrics);
+        }
+
+        // Accumulate GT counters
+        for (const c of gtComparisons) {
+          if (c.status === 'pass') gtPass++;
+          else if (c.status === 'warn') gtWarn++;
+          else if (c.status === 'fail') { gtFail++; hasFailures = true; }
+          else if (c.status === 'skip') gtSkip++;
+          else if (c.status === 'missing') { /* missing counted as skip for GT */ gtSkip++; }
+        }
+
+        // Accumulate snapshot regression counter
+        const regressionCount = snapshotComparisons.filter((c) => c.status === 'fail').length;
+        snapRegressions += regressionCount;
+        if (regressionCount > 0) hasFailures = true;
+
+        fileResult.years.push({ year, gtComparisons, snapshotComparisons });
+
+        // Collect snapshot data for saving
+        newSnapshotYears[year] = extractSnapshotYear(metrics);
+      }
+
+      // Save / update snapshot
+      const newSnapshot: Snapshot = {
+        file: filename,
+        timestamp: runTimestamp,
+        years: newSnapshotYears,
+      };
+      saveSnapshot(snapshotBasename, newSnapshot);
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      fileResult.success = false;
+      fileResult.error = errorMessage;
+      console.error(`  ERROR processing ${filename}: ${errorMessage}`);
+    }
+
+    fileResults.push(fileResult);
+
+    // Print result inline as we go
+    printFileResult(fileResult, i + 1, pdfs.length);
+  }
+
+  // ─── Summary ───────────────────────────────────────────────────────────────
+  console.log('\n' + '─'.repeat(54));
+  console.log('SUMMARY');
+  console.log(`  Files processed: ${filesProcessed}`);
+  console.log(`  GT comparisons:  ${gtPass} ✓  ${gtWarn} ⚠  ${gtFail} ✗  ${gtSkip} –`);
+  console.log(`  Snapshot diffs:  ${snapRegressions === 0 ? '0 regressions detected' : `${snapRegressions} regression(s) detected`}`);
+  console.log(`  Exit code: ${hasFailures ? '1 (failures found)' : '0 (all pass)'}`);
+  console.log('─'.repeat(54) + '\n');
+
+  process.exit(hasFailures ? 1 : 0);
+}
+
+main().catch((err: unknown) => {
+  console.error('Fatal error:', err instanceof Error ? err.message : String(err));
   process.exit(1);
 });
