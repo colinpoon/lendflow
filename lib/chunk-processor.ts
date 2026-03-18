@@ -523,7 +523,7 @@ function classifyFatalError(
   if (message.includes('credit balance is too low') || message.includes('purchase credits')) {
     return { type: 'billing', message: 'Anthropic API credit balance is too low. Please add credits at console.anthropic.com.' };
   }
-  if (status === 401 || message.includes('invalid x-api-key') || message.includes('authentication')) {
+  if (status === 401 || message.includes('invalid x-api-key') || message.includes('authentication_error')) {
     return { type: 'auth', message: 'Anthropic API key is invalid or expired. Check your ANTHROPIC_API_KEY.' };
   }
   if (status === 400 && message.includes('invalid_request_error') && !message.includes('credit balance')) {
