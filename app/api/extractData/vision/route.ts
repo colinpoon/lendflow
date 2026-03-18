@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { allowed, retryAfterSeconds } = checkRateLimit(userId);
+  const { allowed, retryAfterSeconds } = checkRateLimit(userId, 'vision');
   if (!allowed) {
     return NextResponse.json(
       { error: 'Rate limit exceeded. Please wait before submitting another extraction.' },
