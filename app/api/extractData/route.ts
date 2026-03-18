@@ -496,7 +496,10 @@ export async function POST(req: NextRequest) {
         }
 
         // No conflicts — finalize
-        await updateDocumentStatus(freshSupabase, documentId, 'completed');
+        // Flag as 'partial' when both risk assessment and quantitative risk failed
+        // (e.g., API billing error) so the UI doesn't present it as fully complete
+        const isPartial = !extractedData.riskAssessment && !extractedData.quantitativeRiskAssessment;
+        await updateDocumentStatus(freshSupabase, documentId, isPartial ? 'partial' : 'completed');
 
         // Update project with risk info
         if (extractedData.quantitativeRiskAssessment) {
@@ -584,7 +587,7 @@ export async function POST(req: NextRequest) {
 async function updateDocumentStatus(
   supabase: Awaited<ReturnType<typeof createClient>>,
   documentId: string,
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'pending_conflict',
+  status: 'pending' | 'processing' | 'completed' | 'partial' | 'failed' | 'pending_conflict',
   errorMessage?: string
 ) {
   const updateData: { processing_status: string; error_message?: string } = {
