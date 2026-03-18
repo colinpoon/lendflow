@@ -356,3 +356,16 @@ Updated across 7 files:
 Task 12 is now fully complete (all 9 sub-items checked off).
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 13: Fix path traversal vulnerability in temp file creation (COMPLETED — commit db0da2c)
+`file.name` from the browser File API is user-controlled and was passed directly into
+`path.join()` for temp file paths and Supabase storage paths. A malicious filename like
+`../../etc/passwd` could write outside the temp directory.
+
+Fix: Both `extractData/route.ts` and `extractData/vision/route.ts` now sanitize `file.name`
+immediately after receiving the file:
+1. `path.basename()` strips directory path components
+2. Regex `[^\w.\-() ]` replaces non-safe characters with underscores
+All downstream uses (temp path, storage path, DB records, SSE response) use `sanitizedFileName`.
+
+- TypeScript: clean (npm run build passes, 0 errors)
