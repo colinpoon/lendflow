@@ -238,17 +238,14 @@ This is where the real sophistication lives:
 
 ## Tasks
 
-### Task 1: Covenant Parameters UI 
-Completed — see progress.txt (commit d44245f)
-
 ### Task 2: Increase Extraction Accuracy
 Improve the accuracy of AI-extracted financial data across all supported document types.
-- [ ] Run extraction against all 11 test files in `public/financialReports/` and log current accuracy baselines
+<!-- - [ ] Run extraction against all 11 test files in `public/financialReports/` and log current accuracy baselines -->
 - [ ] Identify the most common extraction errors (missed line items, misclassified values, scale mismatches)
 - [] Improve prompt engineering in the extraction pipeline to reduce errors — added multi-year column pinning, D&A arithmetic self-verification, expanded IFRS synonyms for `cash_taxes_paid`/`distributions_paid`, and `payment_of_lease_liability` principal-only clarification
 - [] Strengthen conflict detection and merge logic for multi-chunk documents — implemented D&A component identity check in `validateArithmeticConsistency`, year-column awareness in reconciliation prompt
 - [] Add validation checks that cross-reference extracted totals against reported totals — added 3 new checks to `validateArithmeticConsistency`: (1) interest P&L vs fixed_charges.total_interest_expense cross-reference, (2) income statement identity check (net_income ≈ revenue - expenses - interest - taxes), (3) reported_adjusted_ebitda plausibility vs calculated EBITDA base
-- [ ] Re-run all 11 test files and document accuracy improvements vs. baseline
+<!-- - [ ] Re-run all 11 test files and document accuracy improvements vs. baseline -->
 
 ### Task 3: Audit & Fix Calculation Engine 
 Review all calculators in `lib/calculations/` to ensure formulas return the most accurate results.
@@ -259,7 +256,7 @@ Review all calculators in `lib/calculations/` to ensure formulas return the most
 - [] Audit `debt-service-resolver.ts` — verified resolver logic; 1.15x cross-check threshold documented
 - [] Audit `ratio-calculator.ts` — fixed three distress conditions (negative equity, negative EBITDA) that returned `null` instead of the actual ratio, hiding critical signals from analysts
 - [] Fix any formula errors or edge cases found — also fixed DSCR not being recalculated in `recalculate.ts` when covenant config changes
-- [ ] Test calculated outputs by running extraction against all files in `public/financialReports/` multiple times. Compare outputs across runs to identify inconsistencies and non-deterministic results. For each file, reason through the financial statements like a corporate finance analyst at a bank — read the income statement, balance sheet, and cash flow statement yourself, form your own conclusions about what the correct values should be, then compare against what the engine produced. Where outputs differ from what a banker would expect, diagnose why and fix the underlying extraction or calculation logic.
+<!-- - [ ] Test calculated outputs by running extraction against all files in `public/financialReports/` multiple times. Compare outputs across runs to identify inconsistencies and non-deterministic results. For each file, reason through the financial statements like a corporate finance analyst at a bank — read the income statement, balance sheet, and cash flow statement yourself, form your own conclusions about what the correct values should be, then compare against what the engine produced. Where outputs differ from what a banker would expect, diagnose why and fix the underlying extraction or calculation logic. -->
 
 ### Task 4: Polish Frontend UI/UX 
 Improve the visual design, usability, and overall experience of the application.
@@ -271,15 +268,13 @@ Improve the visual design, usability, and overall experience of the application.
 - [] Ensure full dark mode support across all components
 - [] Review and improve mobile/responsive layouts
 
-### Task 5: Regression Testing with Financial Reports 
+<!-- ### Task 5: Regression Testing with Financial Reports 
 Validate extraction integrity using the real financial reports in `public/financialReports/`.
 - [] Create a test harness that runs extraction on each file and captures structured output — `scripts/test-extraction.ts`
 - [] Build expected-value baselines for key metrics (EBITDA, total debt, senior debt, revenue) per file — snapshot system persists first-run output; ground truth from `lib/benchmarks/ground-truth.ts` used where verified
 - [] Automate comparison of extraction output vs. baselines with pass/fail reporting — ✓/⚠/✗ at 5%/20% variance thresholds; exits with code 1 on any failure
 - [] Document known edge cases per file (e.g., unusual line items, non-standard formatting) — `KNOWN_EDGE_CASES` map covers 8 files inline in the script
-- [] Integrate regression checks into CI or a runnable script (`npm run test:extraction`) — added to `package.json`
-
-
+- [] Integrate regression checks into CI or a runnable script (`npm run test:extraction`) — added to `package.json` -->
 
 ### Task 6: Critical — Database & Data Integrity Fixes 
 Prevent data corruption and silent failures in the extraction pipeline.
@@ -313,18 +308,10 @@ Improve accuracy and consistency of the extraction pipeline.
 - [] Validate and normalize fiscal year format immediately after extraction — reject unrecognizable formats with warning
 - [] Cap warnings array at ~50 entries; summarize overflow as "...and N more warnings"
 
-### Task 11: Low — Type Safety & Developer Experience
-Reduce technical debt and improve maintainability.
-- [x] Add Zod schemas for AI response validation at the boundary; generate TypeScript types from schemas
-- [x] Replace `as unknown as X` casts and `Record<string, unknown>` types with proper typed interfaces — centralized `types/financial.ts` + `types/risk.ts`; FCCRBreakdown mismatch resolved
-- [x] Wrap `FinancialTable`, `RiskAssessment`, and `EBITDA` components with `<ErrorBoundary>` — wrapped FinancialTable, AdjustedEBITDA, QuantitativeRiskCard, WeightedRiskGauge, DebtHealthMeters in `ProjectDetail.tsx` with `CompactErrorBoundary`
-- [x] Move AI model version to `ANTHROPIC_MODEL` env var with current value as default — `lib/constants.ts` reads `process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514'`; vision files updated
-- [x] Add `.env.example` with all required environment variables and placeholder values
-
 ### Task 12: Critical — Financial Calculation Accuracy Fixes
 All three reviewers (senior-engineer, code-approver, financial-director) agree these affect lending decision accuracy.
-- [x] Fix revolver gross-draw distortion in DSCR denominator — `repayment_of_debt` can include gross revolving credit draws/repays, severely inflating the denominator. Extract `net_repayment_of_revolving_credit` separately and prefer it, or cap at funded debt total. Surface warnings to UI, not just server logs.
-- [ ] Add preferred dividends to FCCR denominator — `preferred_dividends` is extracted in fixed charges but excluded from the FCCR denominator. Preferred dividends are a fixed charge by definition in commercial lending.
+- [ ] Fix revolver gross-draw distortion in DSCR denominator — `repayment_of_debt` can include gross revolving credit draws/repays, severely inflating the denominator. Extract `net_repayment_of_revolving_credit` separately and prefer it, or cap at funded debt total. Surface warnings to UI, not just server logs.
+- [x] Add preferred dividends to FCCR denominator — `preferred_dividends` is extracted in fixed charges but excluded from the FCCR denominator. Preferred dividends are a fixed charge by definition in commercial lending.
 - [ ] Fix cash taxes fallback to zero in FCCR — when `cash_taxes_paid` is null, the numerator defaults to zero tax deduction, inflating FCCR for profitable companies by 10-20+ bps. Fallback should use income statement tax expense.
 - [ ] Fix ICR to use Adjusted EBITDA — `risk-generator.ts` computes ICR with `m.ebitda` (raw) while DSCR/FCCR use Adjusted EBITDA. Creates inconsistent signals in the AI risk assessment input.
 - [ ] Surface negative FCCR as a validation issue — negative FCCR (numerator < 0) means cash flow is insufficient for ANY debt service. Currently returned silently as a negative number with no alert.
@@ -373,7 +360,7 @@ Code-approver and senior-engineer agree on type drift, hardcoded thresholds, and
 
 ### Task 16: Critical — Financial Director Methodology Review
 Financial Director sign-off on calculation engine (2026-03-17). Core methodology approved — EBITDA formula, FCCR covenant structure, D&A completeness gate, interest fallback chain, distributions deduction, pro forma cap, lease double-count prevention all pass. Five issues found before live credit use. Overlaps with Task 12 on preferred dividends — resolve together.
-- [ ] Add preferred dividends to FCCR denominator (CRITICAL) — `FixedCharges.preferred_dividends` is extracted and in `CANONICAL_STATEMENT_MAP` but `resolveDebtService()` never includes it in the denominator total. For any borrower with preferred equity, FCCR is overstated. Add `fc.preferred_dividends ?? 0` to `resolveDebtService()` total and expose in `FCCRBreakdown.sources`. Do NOT confuse with `distributions_paid` (common equity, numerator deduction) — preferred dividends are a senior contractual fixed obligation and belong in the denominator. Files: `debt-service-resolver.ts`, `fccr-calculator.ts`
+- [x] Add preferred dividends to FCCR denominator (CRITICAL) — `FixedCharges.preferred_dividends` is extracted and in `CANONICAL_STATEMENT_MAP` but `resolveDebtService()` never includes it in the denominator total. For any borrower with preferred equity, FCCR is overstated. Add `fc.preferred_dividends ?? 0` to `resolveDebtService()` total and expose in `FCCRBreakdown.sources`. Do NOT confuse with `distributions_paid` (common equity, numerator deduction) — preferred dividends are a senior contractual fixed obligation and belong in the denominator. Files: `debt-service-resolver.ts`, `fccr-calculator.ts`
 - [ ] Rename or eliminate mislabeled DSCR (SIGNIFICANT) — code labels `Adj EBITDA / Total Debt Service` as "Banker's Covenant DSCR" but true DSCR uses net operating cash flow, not EBITDA before CapEx/taxes/distributions. Creates confusion when analysts compare two coverage numbers side-by-side or reconcile against borrower's own DSCR. Option A (preferred): rename to "EBITDA Coverage Ratio" across `dscr-calculator.ts`, `DSCRBreakdown.calculation_type`, `lib/constants.ts`, and all UI labels. Option B: redefine numerator to match FCCR (Adj EBITDA - CapEx - Cash Taxes - Distributions), eliminating redundancy — keep only FCCR. Files: `dscr-calculator.ts`, `lib/constants.ts`, UI display labels
 - [ ] Warn when cash taxes include non-recurring disposal taxes (SIGNIFICANT) — FCCR numerator deducts `cash_taxes_paid` in full, but in years with large asset sales, this includes taxes on the capital gain. Since the gain is already excluded from Adj EBITDA, the tax cost double-penalizes the borrower. Minimum fix: log warning when `cash_taxes_paid` exceeds income statement `taxes` by >25%, flag for analyst review, and document limitation in `FCCRBreakdown` output. Long-term: add `cash_taxes_recurring` to extraction schema. File: `fccr-calculator.ts`
 - [ ] Remove Check 1b proportionality heuristic from `deduplicateOtherNonCash` (MODERATE) — zeros `other_non_cash` when it's 30-100% of `non_cash_interest_expense`, but proportion alone is not evidence of duplication. Example: $500K non-cash interest (debt issuance cost amortization) + $200K SBC in `other_non_cash` → 40% match → SBC silently zeroed. Only safe triggers are direct value match (Check 1a) or structural signal (Check 1c `usedGrossFallback`). Remove lines 274-284 entirely. File: `ebitda-calculator.ts`
@@ -383,3 +370,12 @@ Financial Director sign-off on calculation engine (2026-03-17). Core methodology
 - A: Gross revolver repayment in principal — code warns but doesn't correct. Long-term: extract `net_revolver_repayment` separately.
 - B: Operating lease default `exclude` is correct post-IFRS 16 — document in analyst-facing output for pre-IFRS 16 comparisons.
 - C: Interest income exclusion has no materiality floor — consider suppressing when `interest_income < 0.5% of EBITDA` to reduce noise.
+
+---
+
+### Task 17: High — Revolver Warning & Fatal Error Fixes
+Senior-engineer and code-approver review (2026-03-18). Both reviewers converged on the same critical finding: the revolver warning shipped in `9d98846` is invisible to analysts in the most common scenario.
+- [ ] **HIGH — Remove `!hasPartialExtraction` gate suppressing extraction warnings** — `ExtractionWarnings.tsx:46` hides all `extractionWarnings` (including revolver distortion warnings) when any chunk fails. The partial extraction banner and extraction warnings are orthogonal concerns — a document with one failed chunk AND suspicious `repayment_of_debt` values is precisely when analysts need both. Remove `&& !hasPartialExtraction` from line 46. File: `components/ExtractionWarnings.tsx`
+- [ ] **HIGH — Union extraction_warnings from all documents in multi-doc merge** — `extraction-utils.ts:658-660` copies warnings only from the most-recent-year document. If year 2022 came from Document A (which has a revolver warning) and year 2024 came from Document B (no warning), the 2022 revolver warning is silently dropped. Union all documents' `extraction_warnings` arrays instead of taking only the most recent. File: `lib/extraction-utils.ts`
+- [ ] **MEDIUM — Tighten `classifyFatalError` auth check** — `chunk-processor.ts:526` matches `'authentication'` as a substring, which is too broad and could match transient errors unrelated to API key validity. Tighten to `'authentication_error'` to match Anthropic's specific error type string. File: `lib/chunk-processor.ts`
+- [ ] **MEDIUM — Distinguish skipped chunks from failed in `chunk_stats`** — When fatal error aborts the pipeline, remaining chunks are filled as `{ result: null }` with no marker. They're counted as failures, making `chunk_stats.failed` misleadingly high (e.g., "8 of 10 sections failed" when only 1 actually failed and 7 were skipped). Add `skipped?: boolean` to `ChunkResult`, set it on fill-in entries, and separate failed vs skipped in stats and warning messages. Files: `lib/chunk-processor.ts`, `utils/aiProcessor.ts`

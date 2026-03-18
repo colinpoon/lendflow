@@ -33,6 +33,13 @@ export interface ResolvedDebtService {
   /** Operating lease payments resolved separately — NOT included in `total`.
    *  Only added to FCCR denominator when operatingLeaseConfig.mode === 'include'. */
   operatingLeases: number;
+  /**
+   * Preferred dividends from fixed_charges.preferred_dividends.
+   * NOT included in `total` — excluded from DSCR (banker's ratio) but added to
+   * FCCR denominator by fccr-calculator.ts, where preferred dividends are a
+   * contractual senior fixed obligation per commercial lending convention.
+   */
+  preferredDividends: number;
   total: number;
   sources: {
     principal_source: DebtServiceSource;
@@ -47,6 +54,7 @@ export interface ResolvedDebtService {
     lease_interest_deducted: number | null;
     operating_lease_source: 'operating_lease_payments' | 'none';
     operating_lease_value: number | null;
+    preferred_dividends_value: number | null;
   };
   /**
    * Analyst-facing warnings that should be surfaced in the UI.
@@ -307,11 +315,24 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
     operatingLeaseSource = 'operating_lease_payments';
   }
 
+  // ── Preferred Dividends (resolved separately, NOT in total) ──────────
+  // Preferred dividends are a senior contractual fixed obligation in commercial
+  // lending and belong in the FCCR denominator. They are NOT added to `total`
+  // here because the DSCR (banker's ratio) excludes them — each calculator adds
+  // this value to its own denominator as appropriate.
+  //
+  // Do NOT confuse with distributions_paid (common equity draws) which is a
+  // FCCR numerator deduction. Preferred dividends are a separate senior claim.
+  const preferredDividends = fc.preferred_dividends != null && fc.preferred_dividends > 0
+    ? fc.preferred_dividends
+    : 0;
+
   return {
     principal,
     interest,
     leases,
     operatingLeases,
+    preferredDividends,
     total: principal + interest + leases,
     sources: {
       principal_source: principalSource,
@@ -323,6 +344,7 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
       lease_interest_deducted: leaseInterestDeducted,
       operating_lease_source: operatingLeaseSource,
       operating_lease_value: operatingLeases || null,
+      preferred_dividends_value: preferredDividends || null,
     },
     warnings,
   };

@@ -200,6 +200,9 @@ export interface FCCRBreakdown {
   lease_payments: number;
   operating_lease_payments?: number;
   operating_lease_treatment?: OperatingLeaseTreatment;
+  /** Preferred dividends included in the denominator as a senior contractual fixed charge.
+   *  Only present when extracted from FixedCharges.preferred_dividends and non-zero. */
+  preferred_dividends?: number;
   denominator: number;
   // Source values for transparency (what was extracted vs fallback)
   sources?: {
@@ -218,6 +221,8 @@ export interface FCCRBreakdown {
     /** Lease interest stripped from the interest component to prevent double-counting.
      *  Non-null only when a P&L-based interest source was used and leases > 0. */
     lease_interest_deducted?: number | null;
+    /** Preferred dividends added to denominator. Null when none extracted. */
+    preferred_dividends_value?: number | null;
   };
 }
 

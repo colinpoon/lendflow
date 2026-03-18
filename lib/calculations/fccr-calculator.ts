@@ -180,7 +180,10 @@ export function calculateFCCR(
   let ttmInterestExpense = debtService.interest;
   const leasePayments = debtService.leases;
   const operatingLeasePayments = debtService.operatingLeases;
-  let totalDebtService = debtService.total;
+  // Preferred dividends are a senior contractual fixed obligation — included in the FCCR
+  // denominator per commercial lending convention. Excluded from DSCR (banker's ratio).
+  const preferredDividends = debtService.preferredDividends;
+  let totalDebtService = debtService.total + preferredDividends;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Operating Lease Inclusion (optional)
@@ -207,8 +210,8 @@ export function calculateFCCR(
     ) {
       operatingLeaseInterestDeducted = fc.lease_interest;
       ttmInterestExpense = Math.max(0, ttmInterestExpense - fc.lease_interest);
-      // Recalculate total after interest adjustment
-      totalDebtService = ttmPrincipalPayments + ttmInterestExpense + leasePayments + operatingLeasePayments;
+      // Recalculate total after interest adjustment — include preferred dividends in recomputed total
+      totalDebtService = ttmPrincipalPayments + ttmInterestExpense + leasePayments + operatingLeasePayments + preferredDividends;
     }
   }
 
@@ -268,6 +271,10 @@ export function calculateFCCR(
         operating_lease_payments: operatingLeasePayments,
         operating_lease_treatment: operatingLeaseConfig.mode,
       }),
+      // Preferred dividends (only populated when non-zero — many borrowers have none)
+      ...(preferredDividends > 0 && {
+        preferred_dividends: preferredDividends,
+      }),
       denominator: totalDebtService,
       // Source values for transparency
       sources: {
@@ -283,6 +290,7 @@ export function calculateFCCR(
         lease_source: debtService.sources.lease_source,
         lease_value: debtService.sources.lease_value,
         lease_interest_deducted: debtService.sources.lease_interest_deducted ?? (operatingLeaseInterestDeducted > 0 ? operatingLeaseInterestDeducted : null),
+        preferred_dividends_value: debtService.sources.preferred_dividends_value,
       },
     },
   };
