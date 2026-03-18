@@ -495,7 +495,7 @@ export default function ProjectDetail({
 
       {/* Hero Metric Cards */}
       {hasData && (
-        <section aria-label="Key metrics" className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <section aria-label="Key metrics" className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
           <MetricCard
             label="Risk Score"
             value={riskScore !== null ? `${riskScore.toFixed(0)}/100` : '--'}
@@ -617,7 +617,7 @@ export default function ProjectDetail({
        * ───────────────────────────────────────────────────────────────────── */}
 
       {/* Upload Section */}
-      <section id="upload" ref={setSectionRef('upload')} className="scroll-mt-16 space-y-4">
+      <section id="upload" ref={setSectionRef('upload')} className="scroll-mt-28 space-y-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-semibold tracking-tight">Upload Financial Document</CardTitle>
@@ -636,7 +636,7 @@ export default function ProjectDetail({
 
       {/* Analysis Section */}
       {hasData && (
-        <section id="analysis" ref={setSectionRef('analysis')} className="scroll-mt-16 space-y-4">
+        <section id="analysis" ref={setSectionRef('analysis')} className="scroll-mt-28 space-y-4">
           {/* Year source indicators */}
           {Object.keys(yearSources).length > 1 && (
             <div className="flex flex-wrap gap-1.5 text-[11px]">
@@ -664,7 +664,7 @@ export default function ProjectDetail({
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold tracking-tight">Financial Summary</CardTitle>
             </CardHeader>
-            <CardContent className="overflow-x-auto">
+            <CardContent>
               <FinancialTable data={displayData as unknown as Parameters<typeof FinancialTable>[0]['data']} />
             </CardContent>
           </Card>
@@ -673,7 +673,7 @@ export default function ProjectDetail({
 
       {/* Risk Section */}
       {hasData && (
-        <section id="risk" ref={setSectionRef('risk')} className="scroll-mt-16 space-y-5">
+        <section id="risk" ref={setSectionRef('risk')} className="scroll-mt-28 space-y-5">
           {/* Risk assessment source info */}
           {mostRecentYear && extractionCount > 1 && (
             <p className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md">
@@ -733,7 +733,7 @@ export default function ProjectDetail({
       )}
 
       {/* Decision Section */}
-      <section id="decision" ref={setSectionRef('decision')} className="scroll-mt-16">
+      <section id="decision" ref={setSectionRef('decision')} className="scroll-mt-28">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-semibold tracking-tight">Loan Decision</CardTitle>

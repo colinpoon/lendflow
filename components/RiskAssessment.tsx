@@ -70,6 +70,22 @@ function getRiskBandColors(band: string): {
   };
 }
 
+/** Maps a numeric score (1–10) to Tailwind badge styling. */
+function getScoreBadgeClass(score: number): string {
+  if (score <= 3) return 'bg-success/15 text-success border border-success/25';
+  if (score <= 5) return 'bg-warning/10 text-warning border border-warning/25';
+  if (score <= 7) return 'bg-error/10 text-error border border-error/25';
+  return 'bg-error/20 text-error border border-error/35';
+}
+
+/** Maps an impact string to a color class for the pill. */
+function getImpactClass(impact: string): string {
+  const lower = impact.toLowerCase();
+  if (lower === 'positive') return 'bg-success/12 text-success';
+  if (lower === 'negative') return 'bg-error/12 text-error';
+  return 'bg-muted text-muted-foreground';
+}
+
 export interface PillarScore {
   observations: string;
   impact: string; // "Positive" | "Negative" | "Manageable" | …
@@ -105,49 +121,87 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
   const bandColors = getRiskBandColors(data.band ?? '');
 
   return (
-    <section className="mt-6 space-y-6">
-      <h2 className="text-lg font-semibold">{data.header}</h2>
+    <section className="mt-6 space-y-4">
+      <h2 className="text-base font-semibold text-foreground">{data.header}</h2>
 
-      {/* Pillar breakdown table */}
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="bg-muted">
-            <th className="border border-border px-3 py-2 text-left text-foreground">Pillar</th>
-            <th className="border border-border px-3 py-2 text-left text-foreground">Observations</th>
-            <th className="border border-border px-3 py-2 text-center text-foreground">Impact</th>
-            <th className="border border-border px-3 py-2 text-center text-foreground">Score (1–10)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {PILLAR_KEYS.map((key) => {
-            const p = data.pillars[key] as PillarScore | undefined;
-            const obs =
-              typeof p?.observations === 'string'
-                ? sanitizeObservationText(p.observations)
-                : typeof p?.observations === 'number'
-                ? fmtCurrency(p.observations)
-                : '—';
-            const impact = typeof p?.impact === 'string' ? p.impact : '—';
-            const score =
-              typeof p?.score === 'number'
-                ? p.score > 100
-                  ? (p.score / 100).toFixed(1)
-                  : p.score > 10
-                  ? (p.score / 10).toFixed(1)
-                  : p.score.toFixed(1)
-                : '—';
-            const label = LABEL_MAP[key] ?? key.replace(/_/g, ' ');
-            return (
-              <tr key={key} className="even:bg-muted/40 hover:bg-muted/60 transition-colors duration-150">
-                <td className="border border-border px-3 py-2 capitalize text-foreground">{label}</td>
-                <td className="border border-border px-3 py-2 text-muted-foreground">{obs}</td>
-                <td className="border border-border px-3 py-2 text-center text-muted-foreground">{impact}</td>
-                <td className="border border-border px-3 py-2 text-center text-foreground">{score}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {/* Pillar breakdown — card-per-row for readability and mobile-friendliness */}
+      <div className="space-y-3">
+        {PILLAR_KEYS.map((key) => {
+          const p = data.pillars[key] as PillarScore | undefined;
+          const obs =
+            typeof p?.observations === 'string'
+              ? sanitizeObservationText(p.observations)
+              : typeof p?.observations === 'number'
+              ? fmtCurrency(p.observations)
+              : '—';
+          const impact = typeof p?.impact === 'string' ? p.impact : '—';
+          const rawScore = typeof p?.score === 'number' ? p.score : null;
+          const normalizedScore =
+            rawScore !== null
+              ? rawScore > 100
+                ? rawScore / 100
+                : rawScore > 10
+                ? rawScore / 10
+                : rawScore
+              : null;
+          const label = LABEL_MAP[key] ?? key.replace(/_/g, ' ');
+
+          return (
+            <div
+              key={key}
+              className="rounded-lg border border-border bg-card p-4 space-y-2"
+            >
+              {/* Header row: pillar name + score badge + impact pill */}
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h3 className="text-sm font-semibold text-foreground capitalize">
+                  {label}
+                </h3>
+                <div className="flex items-center gap-2 shrink-0">
+                  {impact !== '—' && (
+                    <span
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${getImpactClass(impact)}`}
+                    >
+                      {impact}
+                    </span>
+                  )}
+                  {normalizedScore !== null && (
+                    <span
+                      className={`text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-full ${getScoreBadgeClass(normalizedScore)}`}
+                    >
+                      {normalizedScore.toFixed(1)} / 10
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Score progress bar */}
+              {normalizedScore !== null && (
+                <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${(normalizedScore / 10) * 100}%`,
+                      backgroundColor:
+                        normalizedScore <= 3
+                          ? 'var(--success)'
+                          : normalizedScore <= 5
+                          ? 'var(--warning)'
+                          : 'var(--error)',
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Observations */}
+              {obs !== '—' && (
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {obs}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       {/* Overall verdict — weighted score, risk band, and lending recommendation */}
       <div className={`rounded-lg border-2 p-5 space-y-4 ${bandColors.container}`}>

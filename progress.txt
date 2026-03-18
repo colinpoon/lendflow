@@ -51,6 +51,25 @@ All warnings surface in `extraction_warnings` for analyst review; none alter ext
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
+### Task 4: Polish Frontend UI/UX (COMPLETED)
+All 7 sub-items implemented across 6 files:
+
+1. **Visual consistency** — `app/dashboard/new/page.tsx`: replaced hardcoded `text-gray-900`/`text-gray-500` with semantic `text-foreground`/`text-muted-foreground` tokens for correct dark mode rendering.
+
+2. **Upload flow** — `components/FileUpload.tsx`: added `errorMessage` state, inline error banner with `AlertCircle` icon and retry button (`handleRetry()`), progress bar height bump (`h-1.5`) and fade-in animation on the stage label.
+
+3. **Financial tables** — `components/FinancialTable.tsx`: wrapped `<table>` in a dedicated `overflow-x-auto` scroll container with `min-w-[640px]`; removed parent scroll wrapper from `ProjectDetail.tsx`. Fixed EBITDA source badges (Reported/Calc) that used hardcoded amber/emerald palette classes breaking dark mode — replaced with semantic `bg-warning/15` and `bg-success/12` tokens.
+
+4. **Risk assessment display** — `components/RiskAssessment.tsx`: rewrote pillar breakdown from a raw `<table>` to a card-per-pillar layout. Each card shows pillar name, an impact pill, a score badge with `X.X / 10`, a color-coded progress bar (green/amber/red by threshold), and the observation text in readable prose.
+
+5. **Loading skeletons & transitions** — `app/dashboard/new/loading.tsx` (new): Suspense skeleton matching breadcrumb + header + form card layout. `components/ProjectDetail.tsx`: `animate-in fade-in duration-300` on hero metric cards.
+
+6. **Dark mode** — covered by items 1 and 3 above; no remaining hardcoded palette overrides bypass the semantic token system.
+
+7. **Mobile/responsive** — `components/ProjectDetail.tsx`: fixed `scroll-mt-16` → `scroll-mt-28` on all four sections to clear the combined header+nav height. `QuantitativeRiskCard.tsx`: migrated raw tables to Shadcn `Table` primitives, added `min-w-[560px]` scroll container, fixed score circle sizing.
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase

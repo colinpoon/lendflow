@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, CloudUpload, Loader2, FileText, Sparkles } from 'lucide-react';
+import { CheckCircle, CloudUpload, Loader2, FileText, Sparkles, AlertCircle, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { PDFDocument } from 'pdf-lib';
 import { YearConflictDialog } from '@/components/YearConflictDialog';
@@ -90,6 +90,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
   const [stageMessage, setStageMessage] = useState<string>('');
   const [extractedFileName, setExtractedFileName] = useState<string | null>(null);
   const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -121,6 +122,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
       setProgress(0);
       setExtractedFileName(null);
       setCompressionInfo(null);
+      setErrorMessage(null);
     }
 
     if (
@@ -258,7 +260,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
 
               if (data.stage === 'error') {
                 setStage('error');
-                toast.error(data.message || 'Processing failed');
+                const msg = data.message || 'Processing failed. Please try again.';
+                setErrorMessage(msg);
+                toast.error(msg);
               }
             } catch {
               // Ignore parse errors on SSE messages
@@ -268,8 +272,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
       }
     } catch (error: unknown) {
       if (error instanceof Error && error.name !== 'AbortError') {
+        const msg = error.message || 'An unexpected error occurred. Please try again.';
         setStage('error');
-        toast.error(error.message);
+        setErrorMessage(msg);
+        toast.error(msg);
       }
     }
   };
@@ -343,6 +349,18 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
   };
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Retry from error state
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const handleRetry = () => {
+    setStage('idle');
+    setProgress(0);
+    setCurrentStage('');
+    setStageMessage('');
+    setErrorMessage(null);
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Derived state
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -386,6 +404,25 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
                 <span className="text-muted-foreground ml-1 truncate"> — {extractedFileName}</span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── Error banner ─────────────────────────────────────────────────── */}
+        {stage === 'error' && errorMessage && (
+          <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-error/8 border border-error/25">
+            <AlertCircle className="h-4 w-4 text-error shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-error">Extraction failed</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{errorMessage}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="flex items-center gap-1 text-xs text-error hover:text-error/80 transition-colors shrink-0 font-medium"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Retry
+            </button>
           </div>
         )}
 
@@ -510,17 +547,23 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
 
         {/* ── Processing progress ─────────────────────────────────────────── */}
         {isProcessing && (
-          <div className="space-y-2.5 pt-1">
+          <div className="space-y-3 pt-1 animate-in fade-in duration-200">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span className="font-medium">{STAGE_LABELS[currentStage] || currentStage}</span>
+                <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                <span className="font-medium text-foreground">
+                  {STAGE_LABELS[currentStage] || currentStage}
+                </span>
               </div>
-              <span className="tabular-nums font-mono">{progress}%</span>
+              <span className="tabular-nums font-mono font-medium text-foreground">
+                {progress}%
+              </span>
             </div>
-            <Progress value={progress} className="h-1" />
+            <Progress value={progress} className="h-1.5" />
             {stageMessage && (
-              <p className="text-[11px] text-muted-foreground/70 text-center">{stageMessage}</p>
+              <p className="text-[11px] text-muted-foreground/70 text-center leading-relaxed">
+                {stageMessage}
+              </p>
             )}
           </div>
         )}

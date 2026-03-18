@@ -259,17 +259,17 @@ Review all calculators in `lib/calculations/` to ensure formulas return the most
 - [x] Audit `debt-service-resolver.ts` — verified resolver logic; 1.15x cross-check threshold documented
 - [x] Audit `ratio-calculator.ts` — fixed three distress conditions (negative equity, negative EBITDA) that returned `null` instead of the actual ratio, hiding critical signals from analysts
 - [x] Fix any formula errors or edge cases found — also fixed DSCR not being recalculated in `recalculate.ts` when covenant config changes
-- [ ] Cross-check calculated outputs against manually verified values from the test files in `public/financialReports/`
+- [ ] Test calculated outputs by running extraction against all files in `public/financialReports/` multiple times. Compare outputs across runs to identify inconsistencies and non-deterministic results. For each file, reason through the financial statements like a corporate finance analyst at a bank — read the income statement, balance sheet, and cash flow statement yourself, form your own conclusions about what the correct values should be, then compare against what the engine produced. Where outputs differ from what a banker would expect, diagnose why and fix the underlying extraction or calculation logic.
 
-### Task 4: Polish Frontend UI/UX
+### Task 4: Polish Frontend UI/UX ✅
 Improve the visual design, usability, and overall experience of the application.
-- [ ] Audit all pages for visual consistency (spacing, typography, color usage, dark mode)
-- [ ] Improve the upload flow — clearer progress states, better error messaging
-- [ ] Polish the financial data tables — readability, alignment, responsive behavior
-- [ ] Improve the risk assessment display — make scores and health indicators more intuitive
-- [ ] Add loading skeletons and smooth transitions between states
-- [ ] Ensure full dark mode support across all components
-- [ ] Review and improve mobile/responsive layouts
+- [x] Audit all pages for visual consistency (spacing, typography, color usage, dark mode)
+- [x] Improve the upload flow — clearer progress states, better error messaging
+- [x] Polish the financial data tables — readability, alignment, responsive behavior
+- [x] Improve the risk assessment display — make scores and health indicators more intuitive
+- [x] Add loading skeletons and smooth transitions between states
+- [x] Ensure full dark mode support across all components
+- [x] Review and improve mobile/responsive layouts
 
 ### Task 5: Regression Testing with Financial Reports
 Validate extraction integrity using the real financial reports in `public/financialReports/`.

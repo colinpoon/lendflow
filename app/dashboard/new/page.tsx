@@ -107,8 +107,8 @@ export default function NewProjectPage() {
           <FolderPlus className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create New Project</h1>
-          <p className="text-gray-500 text-sm">Set up a new financial analysis project</p>
+          <h1 className="text-2xl font-bold text-foreground">Create New Project</h1>
+          <p className="text-muted-foreground text-sm">Set up a new financial analysis project</p>
         </div>
       </div>
 

@@ -20,6 +20,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { QuantitativeRiskAssessment, MetricScore } from '@/lib/quantitative-risk';
 
 interface QuantitativeRiskCardProps {
@@ -200,55 +208,52 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
         </div>
 
         {/* Metrics Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-border">
-                <th className="text-left py-3 px-2 font-semibold text-foreground">Metric</th>
-                <th className="text-center py-3 px-2 font-semibold text-foreground">Weight</th>
-                <th className="text-center py-3 px-2 font-semibold text-foreground">Value</th>
-                <th className="text-center py-3 px-2 font-semibold text-foreground">Score</th>
-                <th className="text-center py-3 px-2 font-semibold text-foreground">Avg Change</th>
-                <th className="text-center py-3 px-2 font-semibold text-foreground">Trend</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.metrics.map((metric, idx) => (
-                <tr
-                  key={metric.name}
-                  className={`border-b border-border ${idx % 2 === 0 ? 'bg-muted/50' : 'bg-background'}`}
-                >
-                  <td className="py-3 px-2">
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <Table className="table-financial min-w-[560px]">
+            <TableHeader>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableHead className="text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Metric</TableHead>
+                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Weight</TableHead>
+                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Value</TableHead>
+                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Score</TableHead>
+                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Avg Change</TableHead>
+                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Trend</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.metrics.map((metric) => (
+                <TableRow key={metric.name}>
+                  <TableCell className="py-3">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground">{metric.name}</span>
                       <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
                         </TooltipTrigger>
                         <TooltipContent side="right" className="max-w-xs">
                           <p className="text-xs">{metric.rationale}</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    <span className="text-muted-foreground">{(metric.weight * 100).toFixed(0)}%</span>
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    <span className="font-mono text-foreground">{formatValue(metric)}</span>
-                  </td>
-                  <td className="py-3 px-2 text-center">
+                  </TableCell>
+                  <TableCell className="text-center py-3">
+                    <span className="text-muted-foreground tabular-nums">{(metric.weight * 100).toFixed(0)}%</span>
+                  </TableCell>
+                  <TableCell className="text-center py-3">
+                    <span className="font-mono text-foreground tabular-nums">{formatValue(metric)}</span>
+                  </TableCell>
+                  <TableCell className="text-center py-3">
                     <span
-                      className={`inline-block w-8 h-8 leading-8 rounded-full text-sm font-bold ${getScoreStyle(
+                      className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-full text-sm font-bold ${getScoreStyle(
                         metric.adjusted_score
                       )}`}
                     >
                       {metric.adjusted_score.toFixed(0)}
                     </span>
-                  </td>
-                  <td className="py-3 px-2 text-center">
+                  </TableCell>
+                  <TableCell className="text-center py-3">
                     <span
-                      className={`font-mono ${
+                      className={`font-mono tabular-nums ${
                         metric.avg_annual_change_pct == null
                           ? 'text-muted-foreground'
                           : metric.trend_direction === 'improving'
@@ -260,8 +265,8 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
                     >
                       {formatChange(metric.avg_annual_change_pct)}
                     </span>
-                  </td>
-                  <td className="py-3 px-2 text-center">
+                  </TableCell>
+                  <TableCell className="text-center py-3">
                     <div className="flex items-center justify-center gap-1">
                       <TrendIndicator metric={metric} />
                       <span
@@ -276,11 +281,11 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
                         {metric.trend_direction ?? '—'}
                       </span>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Scoring Legend */}
@@ -332,46 +337,46 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
                 View Year-over-Year Values
               </AccordionTrigger>
               <AccordionContent>
-                <div className="overflow-x-auto pb-2">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 px-2 text-foreground">Metric</th>
-                    {Object.keys(data.metrics[0]?.values_by_year || {})
-                      .sort()
-                      .map(year => (
-                        <th key={year} className="text-center py-2 px-2 text-foreground">{year}</th>
+                <div className="overflow-x-auto pb-2 rounded-lg border border-border">
+                  <Table className="table-financial min-w-[400px] text-xs">
+                    <TableHeader>
+                      <TableRow className="bg-muted/40 hover:bg-muted/40">
+                        <TableHead className="text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Metric</TableHead>
+                        {Object.keys(data.metrics[0]?.values_by_year || {})
+                          .sort()
+                          .map(year => (
+                            <TableHead key={year} className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">{year}</TableHead>
+                          ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.metrics.map((metric) => (
+                        <TableRow key={metric.name}>
+                          <TableCell className="py-2 font-medium text-foreground">{metric.name}</TableCell>
+                          {Object.keys(metric.values_by_year)
+                            .sort()
+                            .map(year => {
+                              const val = metric.values_by_year[year];
+                              let display = '—';
+                              if (val != null) {
+                                if (metric.name === 'Debt / Capital') {
+                                  display = `${(val * 100).toFixed(1)}%`;
+                                } else if (metric.name === 'EBITDA Trend') {
+                                  display = val.toLocaleString();
+                                } else {
+                                  display = `${val.toFixed(2)}x`;
+                                }
+                              }
+                              return (
+                                <TableCell key={year} className="text-center py-2 font-mono tabular-nums text-muted-foreground">
+                                  {display}
+                                </TableCell>
+                              );
+                            })}
+                        </TableRow>
                       ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.metrics.map((metric) => (
-                    <tr key={metric.name} className="border-b border-border">
-                      <td className="py-2 px-2 font-medium text-foreground">{metric.name}</td>
-                      {Object.keys(metric.values_by_year)
-                        .sort()
-                        .map(year => {
-                          const val = metric.values_by_year[year];
-                          let display = '—';
-                          if (val != null) {
-                            if (metric.name === 'Debt / Capital') {
-                              display = `${(val * 100).toFixed(1)}%`;
-                            } else if (metric.name === 'EBITDA Trend') {
-                              display = val.toLocaleString();
-                            } else {
-                              display = `${val.toFixed(2)}x`;
-                            }
-                          }
-                          return (
-                            <td key={year} className="text-center py-2 px-2 font-mono text-muted-foreground">
-                              {display}
-                            </td>
-                          );
-                        })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </AccordionContent>
             </AccordionItem>

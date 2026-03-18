@@ -1304,8 +1304,8 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               <span
                 className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${
                   isCalc
-                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                    : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    ? 'bg-warning/15 text-warning border border-warning/25'
+                    : 'bg-success/12 text-success border border-success/20'
                 }`}
               >
                 {isCalc ? 'Calc' : 'Reported'}
@@ -1668,7 +1668,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   // ── Main render ──────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">
           Financial Summary
@@ -1678,7 +1678,8 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         </span>
       </div>
 
-      <table className="min-w-full text-sm tabular-nums border-collapse">
+      <div className="overflow-x-auto rounded-md border border-border">
+      <table className="min-w-[640px] w-full text-sm tabular-nums border-collapse">
         <thead>
           <tr className="bg-primary border-b-2 border-primary">
             <th className="py-3 px-4 text-left font-semibold text-primary-foreground w-56">
@@ -1734,6 +1735,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
           })}
         </tbody>
       </table>
+      </div>
 
       {/* Formula verification cards below the table */}
       {renderEquationCards()}
