@@ -222,3 +222,20 @@ Changes:
    in the ExtractionWarnings UI panel.
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
+
+### Task 12 + Task 16: Add preferred dividends to FCCR denominator (COMPLETED — commit 0b2d7be)
+`FixedCharges.preferred_dividends` was extracted by the AI but never included in the FCCR denominator,
+causing FCCR to be overstated for any borrower with preferred equity.
+
+Design decision: `preferredDividends` added as a separate named field in `ResolvedDebtService` (NOT
+folded into `total`) so that DSCR (banker's ratio) is unaffected. FCCR explicitly adds it to its
+denominator, which is correct per commercial lending convention. The critical distinction is preserved:
+- `distributions_paid` (common equity draws) = FCCR **numerator** deduction
+- `preferred_dividends` (contractual senior obligation) = FCCR **denominator** addition
+
+Files changed:
+- `lib/calculations/debt-service-resolver.ts` — `preferredDividends` field + `preferred_dividends_value` in sources
+- `lib/calculations/fccr-calculator.ts` — added to `totalDebtService`, exposed in `fccr_breakdown`
+- `types/financial.ts` — `preferred_dividends?: number` in `FCCRBreakdown`, `preferred_dividends_value` in sources
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
