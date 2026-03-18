@@ -61,7 +61,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     if (error.code === 'PGRST116') {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Failed to fetch project:', error);
+    return NextResponse.json({ error: 'Failed to load project' }, { status: 500 });
   }
 
   return NextResponse.json(project);
@@ -110,7 +111,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           { status: 404 }
         );
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('Failed to update project:', error);
+      return NextResponse.json({ error: 'Failed to update project' }, { status: 500 });
     }
 
     return NextResponse.json(project);
@@ -142,7 +144,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     if (fetchError.code === 'PGRST116') {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
-    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    console.error('Failed to fetch project for deletion:', fetchError);
+    return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 });
   }
 
   // Delete files from storage
@@ -161,7 +164,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     .eq('user_id', userId);
 
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    console.error('Failed to delete project:', deleteError);
+    return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 });
   }
 
   return NextResponse.json({ message: 'Project deleted successfully' });

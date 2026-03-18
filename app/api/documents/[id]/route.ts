@@ -29,7 +29,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     if (fetchError.code === 'PGRST116') {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
-    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    console.error('Failed to fetch document for deletion:', fetchError);
+    return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 });
   }
 
   // Delete file from storage
@@ -52,7 +53,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     .eq('user_id', userId);
 
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    console.error('Failed to delete document:', deleteError);
+    return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 });
   }
 
   return NextResponse.json({
