@@ -179,6 +179,22 @@ Gap closed: token usage was captured in extraction but not surfaced in the UI.
 - `lib/extraction-utils.ts`: added `token_usage` to `MergedExtraction`; multi-document projects now aggregate token counts and costs via `mergeExtractions`
 - `components/ProjectDetail.tsx`: renders a compact token usage line below ExtractionWarnings showing model name, total tokens (in/out), and estimated cost (when available)
 
+### Ground Truth Population (COMPLETED — commits a8e0653, c5ab002, 8e3dd76, b31ae47)
+All 11 financial reports in `public/financialReports/` now have verified ground truth entries in `lib/benchmarks/ground-truth.ts`:
+
+1. **Zedcor FY2023** — fully verified from source PDF; FCCR 0.45 (corrected from prior 0.57).
+2. **Zedcor FY2024** — balance sheet + ratios verified; FCCR/DSCR left unset (ATB refinancing distortion).
+3. **Taiga FY2024** — fully verified; no bank debt, leases only, FCCR 8.10.
+4. **Taiga FY2023** (FY2023_Q4_Financial_Statements.pdf) — fully verified; FCCR 4.11.
+5. **KITS FY2024** — fully verified; FCCR 1.06 (tight BDC loan + promissory note), Note 21 supplemental CF.
+6. **PetValu FY2024** — fully verified; franchise model with large IFRS 16 leases offset by receivables.
+7. **ADEN FY2024** (ADENAnRpt24 2.pdf) — key metrics verified in USD thousands; FCCR/DSCR unset.
+8. **PBHC FY2024** — Premium Brands Holdings, values in millions × 1000; FCCR unset (revolving credit distortion).
+9. **Parkland FY2024** — values in millions × 1000; FCCR 1.19; Revenue 28.3B; large-cap fuel/convenience.
+10. Fixed `KNOWN_EDGE_CASES` in test-extraction.ts: PBHC was mislabelled "banking institution" — corrected to Premium Brands Holdings (food company).
+
+NOTE: The two "run extraction against all 11 files" items in Tasks 2 and 3 remain BLOCKED by esbuild platform mismatch (darwin-arm64 native modules cannot run on linux-arm64 in the Docker sandbox). Run `npm run test:extraction` locally to validate extraction accuracy against the newly populated ground truth.
+
 ### Task 11: Type Safety & Developer Experience (COMPLETED — commit 561e386)
 All 5 items done. Final iteration (this session):
 
