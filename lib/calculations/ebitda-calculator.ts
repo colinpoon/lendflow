@@ -102,8 +102,15 @@ export function calculateEBITDA(metrics: ExtractedMetrics): EBITDAResult | null 
             `⚠️ INTEREST CORRECTION: Rejected negative interest (${rawInterest}), ` +
             `using fallback ${candidate.label}: ${candidate.value}`
           );
-          usedGrossFallback = true;
+        } else if (rawInterest == null) {
+          console.warn(
+            `⚠️ INTEREST CORRECTION: P&L interest field absent (null), ` +
+            `using fallback ${candidate.label}: ${candidate.value}`
+          );
         }
+        // Mark fallback used whenever P&L interest was absent or negative,
+        // so interest_income is not double-deducted downstream.
+        usedGrossFallback = true;
         interest = candidate.value;
         break;
       }

@@ -15,12 +15,12 @@
  * - 'custom': Deduct a custom percentage of CapEx
  *
  * Covenant FCCR Formula:
- * Numerator = Adjusted EBITDA - Unfunded CapEx - Cash Taxes
+ * Numerator = Adjusted EBITDA - Unfunded CapEx - Cash Taxes - Distributions Paid
  * Denominator = Principal Payments + Interest Expense + Lease Payments
  * FCCR = Numerator / Denominator
  *
- * Note: Distributions are NOT deducted from the numerator. They are discretionary
- * and are typically restricted BY the covenant, not included IN the coverage calc.
+ * Note: Distributions are deducted from the numerator because they reduce cash
+ * available to service debt — consistent with commercial banking FCCR methodology.
  *
  * Reference Value (Zedcor FY2024): FCCR >= 1.15x (per covenant compliance)
  */
@@ -96,7 +96,7 @@ export function calculateCapexDeduction(
  *
  * Lender-defined formula:
  * - CapEx Deduction = Based on treatment mode (unfunded, all, none, or custom %)
- * - Numerator = Adjusted EBITDA - CapEx Deduction - Cash Taxes
+ * - Numerator = Adjusted EBITDA - CapEx Deduction - Cash Taxes - Distributions Paid
  * - Denominator = TTM Principal Payments + TTM Interest Expense
  * - FCCR = Numerator / Denominator
  *
@@ -226,9 +226,9 @@ export function calculateFCCR(
 
   // Numerator: Cash Flow Available for Debt Servicing
   // Uses the configured CapEx deduction (unfunded, all, none, or custom)
-  // Distributions are excluded — they are discretionary and restricted by covenant
+  // Distributions reduce cash available to service debt (same treatment as cash taxes)
   const numerator =
-    adjustedEbitda - capexDeduction - cashTaxesPaid;
+    adjustedEbitda - capexDeduction - cashTaxesPaid - distributionsPaid;
 
   // FCCR = Numerator / Denominator
   const fccr = parseFloat((numerator / totalDebtService).toFixed(2));

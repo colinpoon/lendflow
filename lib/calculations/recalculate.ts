@@ -14,10 +14,11 @@
  *   2. Ratio updates — senior_debt_to_ebitda, total_debt_to_capital
  *   3. FCCR          — fccr, fccr_numerator, total_fixed_charges,
  *                       cash_flow_for_debt_servicing, fccr_breakdown
+ *   4. DSCR          — dscr, funded_debt, funded_debt_to_ebitda, dscr_breakdown
  *
- * Everything else (adjusted_ebitda, dscr, funded_debt, interest_coverage_ratio,
- * current_ratio, debt_to_equity_ratio, all extraction fields) is preserved
- * unchanged from the original server-computed data.
+ * Everything else (adjusted_ebitda, interest_coverage_ratio, current_ratio,
+ * debt_to_equity_ratio, all extraction fields) is preserved unchanged from
+ * the original server-computed data.
  */
 
 import type {
@@ -28,6 +29,7 @@ import type {
 } from '@/types';
 import {
   calculateDebtMetrics,
+  calculateDSCR,
   calculateFCCR,
   calculateSeniorDebtToEBITDA,
   calculateTotalDebtToCapital,
@@ -108,6 +110,14 @@ export function recalculateWithCovenantConfig(
     m.total_fixed_charges = fccrResult.total_fixed_charges;
     m.cash_flow_for_debt_servicing = fccrResult.cash_flow_for_debt_servicing;
     m.fccr_breakdown = fccrResult.fccr_breakdown;
+
+    // ── 4. DSCR (depends on debt service, which can change with covenant params) ─
+    const dscrResult = calculateDSCR(adjustedEbitda, m, year);
+
+    m.dscr = dscrResult.dscr;
+    m.funded_debt = dscrResult.funded_debt;
+    m.funded_debt_to_ebitda = dscrResult.funded_debt_to_ebitda;
+    m.dscr_breakdown = dscrResult.dscr_breakdown;
   }
 
   return result;

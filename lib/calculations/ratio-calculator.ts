@@ -14,13 +14,12 @@ export function calculateTotalDebtToCapital(
 ): number | null {
   if (totalDebt == null || shareholdersEquity == null) return null;
 
-  // Negative equity produces a mathematically correct but analytically meaningless
-  // ratio (e.g. 1000%+). Return null so callers display N/A rather than mislead analysts.
-  if (shareholdersEquity < 0) return null;
-
   const totalCapital = totalDebt + shareholdersEquity;
+  // When total capital is zero (equity exactly offsets debt), ratio is undefined.
   if (totalCapital === 0) return null;
 
+  // Negative equity produces a ratio > 100%, which is a critical distress signal.
+  // Return the actual value so analysts can see the severity rather than N/A.
   return parseFloat((totalDebt / totalCapital).toFixed(4));
 }
 
@@ -35,10 +34,8 @@ export function calculateSeniorDebtToEBITDA(
 ): number | null {
   if (seniorDebt == null || ebitda == null || ebitda === 0) return null;
 
-  // Negative EBITDA produces a meaningless negative leverage ratio that can be
-  // mistaken for a low-leverage result. Return null to force an explicit N/A display.
-  if (ebitda < 0) return null;
-
+  // Negative EBITDA produces a negative leverage ratio (e.g. -3x) that is a
+  // critical distress signal — return the actual value so analysts can quantify it.
   return parseFloat((seniorDebt / ebitda).toFixed(2));
 }
 
@@ -69,11 +66,8 @@ export function calculateDebtToEquityRatio(
     return null;
   }
 
-  // Negative equity flips the sign of D/E, producing a ratio like -2.5x that signals
-  // solvency risk but misleads automated scoring. Return null; surface the negative equity
-  // condition directly to analysts rather than through a distorted ratio.
-  if (shareholdersEquity < 0) return null;
-
+  // Negative equity produces a negative D/E ratio (e.g. -2.5x), which is a
+  // critical solvency signal — return the actual value so analysts can see it.
   return parseFloat((totalDebt / shareholdersEquity).toFixed(2));
 }
 
