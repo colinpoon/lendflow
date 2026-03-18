@@ -2,16 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { SignOutButton } from '@clerk/nextjs';
 import {
   LayoutDashboard,
   Upload,
-  LogOut,
   Eye,
   GitCompareArrows,
   BarChart3,
+  PanelLeft,
 } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
 
 import {
   Sidebar,
@@ -59,7 +57,12 @@ function SidebarWordmark() {
   const { state } = useSidebar();
 
   return (
-    <Link href="/dashboard" className="flex items-center gap-2.5 px-1 group">
+    <Link
+      href="/dashboard"
+      className={`flex items-center group transition-all ${
+        state === 'collapsed' ? 'justify-center px-0' : 'gap-2.5 px-1'
+      }`}
+    >
       {/* Emerald logomark */}
       <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-[11px] font-bold tracking-tight shrink-0 group-hover:opacity-90 transition-opacity">
         LF
@@ -73,12 +76,40 @@ function SidebarWordmark() {
   );
 }
 
-export function AppSidebar() {
-  const pathname = usePathname();
+function SidebarToggleButton() {
+  const { toggleSidebar } = useSidebar();
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="px-3 py-4">
+    <SidebarMenuButton
+      className="w-full cursor-pointer"
+      tooltip="Toggle sidebar"
+      onClick={toggleSidebar}
+    >
+      <PanelLeft className="h-4 w-4" />
+      <span>Collapse</span>
+    </SidebarMenuButton>
+  );
+}
+
+export function AppSidebar() {
+  const pathname = usePathname();
+  const { state, toggleSidebar } = useSidebar();
+  const isCollapsed = state === 'collapsed';
+
+  const handleSidebarClick = (e: React.MouseEvent) => {
+    if (isCollapsed) {
+      e.preventDefault();
+      toggleSidebar();
+    }
+  };
+
+  return (
+    <Sidebar
+      collapsible="icon"
+      onClick={handleSidebarClick}
+      className={isCollapsed ? 'cursor-pointer' : ''}
+    >
+      <SidebarHeader className={`py-4 ${isCollapsed ? 'px-0' : 'px-3'}`}>
         <SidebarWordmark />
       </SidebarHeader>
 
@@ -112,18 +143,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <ThemeToggle />
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SignOutButton>
-              <SidebarMenuButton
-                className="w-full cursor-pointer"
-                tooltip="Sign out"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sign out</span>
-              </SidebarMenuButton>
-            </SignOutButton>
+            <SidebarToggleButton />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
