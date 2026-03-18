@@ -243,6 +243,14 @@ export const extractFinancialData = async (
     const mergeResult = mergeExtractionsWithConflicts(allExtractions as Parameters<typeof mergeExtractionsWithConflicts>[0]);
     let rawMerged = mergeResult.metrics;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 4 pre-merge: Fiscal Year Key Normalization
+    // Validate that all year keys are 4-digit calendar years (1900–2099).
+    // Common AI variants like "FY2023", "2023E", or "2022/23" are normalized.
+    // Unrecognizable keys are warned and dropped to prevent downstream errors.
+    // ─────────────────────────────────────────────────────────────────────────
+    rawMerged = normalizeFiscalYearKeys(rawMerged, extractionWarnings);
+
     // Log merge conflicts for transparency
     if (mergeResult.conflictsDetected > 0) {
       console.log(
@@ -359,7 +367,10 @@ export const extractFinancialData = async (
     // Runs AFTER detected-scale conversion as a safety net for ambiguous documents
     // ─────────────────────────────────────────────────────────────────────────
 
-    const crossMetricResult = validateCrossMetricScale(rawMerged);
+    // Pass the set of years already scaled in Pass 1 so Passes 2 and 3 skip
+    // them — preventing double-correction (e.g., millions→thousands then ÷1000).
+    const pass1CorrectedYears = detectedScaleResult.correctedYears;
+    const crossMetricResult = validateCrossMetricScale(rawMerged, pass1CorrectedYears);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 4d: Cross-Year Scale Normalization
@@ -367,7 +378,13 @@ export const extractFinancialData = async (
     // between years (e.g., 2023 in thousands, 2024 in raw dollars)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const crossYearResult = normalizeScaleMismatch(crossMetricResult.metrics);
+    // Combine corrected years from both prior passes so cross-year check
+    // treats them as the reference scale rather than outliers.
+    const allPriorCorrectedYears = new Set<string>([
+      ...(pass1CorrectedYears ?? []),
+      ...(crossMetricResult.correctedYears ?? []),
+    ]);
+    const crossYearResult = normalizeScaleMismatch(crossMetricResult.metrics, allPriorCorrectedYears);
     const merged = crossYearResult.metrics;
 
     // Surface scale corrections as warnings for transparency
@@ -458,6 +475,14 @@ export const extractFinancialData = async (
     // Phase 8: Build Result
     // ─────────────────────────────────────────────────────────────────────────
 
+    // Cap warnings to prevent UI/storage overload — summarize overflow entries
+    const MAX_WARNINGS = 50;
+    if (extractionWarnings.length > MAX_WARNINGS) {
+      const overflow = extractionWarnings.length - MAX_WARNINGS;
+      extractionWarnings.splice(MAX_WARNINGS);
+      extractionWarnings.push(`...and ${overflow} more warning${overflow === 1 ? '' : 's'} (set DEBUG_FINANCIALS=true for full list)`);
+    }
+
     if (Object.keys(computed).length > 0 || riskSnapshot || debtHealthAssessment || quantitativeRiskAssessment) {
       console.log('✅ Extraction complete. Returning combined result.');
       return {
@@ -496,6 +521,105 @@ export const extractFinancialData = async (
     throw new Error('AI processing failed: ' + errorMessage);
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fiscal Year Key Normalization
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Validate and normalize the year keys of the merged metrics object.
+ *
+ * Accepted canonical form: 4-digit year string, 1900–2099 (e.g. "2023").
+ * Common AI variants are normalized:
+ *   - "FY2023", "fy2023"            → "2023"
+ *   - "2023E", "2023A", "2023F"     → "2023" (estimated/actual/forecast suffixes)
+ *   - "2022/23", "2022-23"          → "2023" (fiscal overlap — use later year)
+ *   - "2023/2024", "2023-2024"      → "2024" (full overlap — use later year)
+ *
+ * Keys that cannot be resolved to a valid 4-digit year are dropped and a
+ * warning is pushed. Duplicate keys (two variants resolving to the same year)
+ * retain the higher-confidence original; the duplicate is dropped with a warning.
+ *
+ * @param metrics  - Raw merged metrics keyed by AI-provided year strings
+ * @param warnings - Mutable warnings array; entries are appended in place
+ * @returns        - Metrics re-keyed with canonical 4-digit year strings
+ */
+function normalizeFiscalYearKeys<T>(
+  metrics: Record<string, T>,
+  warnings: string[]
+): Record<string, T> {
+  const VALID_YEAR_RE = /^\d{4}$/;
+  const VALID_YEAR_RANGE = { min: 1900, max: 2099 };
+
+  function tryNormalize(raw: string): string | null {
+    const trimmed = raw.trim();
+
+    // Already canonical
+    if (VALID_YEAR_RE.test(trimmed)) {
+      const yr = parseInt(trimmed, 10);
+      return yr >= VALID_YEAR_RANGE.min && yr <= VALID_YEAR_RANGE.max ? trimmed : null;
+    }
+
+    // "FY2023", "fy23" (2-digit → unsupported, skip), "FY 2023"
+    const fyMatch = trimmed.match(/^[Ff][Yy]\s*(\d{4})$/);
+    if (fyMatch) return fyMatch[1];
+
+    // "2023E", "2023A", "2023F", "2023P" (suffix indicators)
+    const suffixMatch = trimmed.match(/^(\d{4})[EeAaFfPp]$/);
+    if (suffixMatch) return suffixMatch[1];
+
+    // "2022/23" or "2022-23" — short overlap, use later year (20XX)
+    const shortOverlapMatch = trimmed.match(/^(\d{4})[\/\-](\d{2})$/);
+    if (shortOverlapMatch) {
+      const century = shortOverlapMatch[1].slice(0, 2);
+      return `${century}${shortOverlapMatch[2]}`;
+    }
+
+    // "2023/2024" or "2023-2024" — full overlap, use later year
+    const fullOverlapMatch = trimmed.match(/^(\d{4})[\/\-](\d{4})$/);
+    if (fullOverlapMatch) return fullOverlapMatch[2];
+
+    return null;
+  }
+
+  const normalized: Record<string, T> = {};
+  for (const [key, value] of Object.entries(metrics) as [string, T][]) {
+    const canonical = tryNormalize(key);
+    if (canonical === null) {
+      warnings.push(
+        `Fiscal year key "${key}" is not a recognizable year format and was dropped — ` +
+        `expected 4-digit year (1900–2099); check document header or AI extraction`
+      );
+      console.warn(`⚠️ Dropped unrecognizable fiscal year key: "${key}"`);
+      continue;
+    }
+
+    const yr = parseInt(canonical, 10);
+    if (yr < VALID_YEAR_RANGE.min || yr > VALID_YEAR_RANGE.max) {
+      warnings.push(
+        `Fiscal year "${canonical}" (from "${key}") is outside the valid range ` +
+        `${VALID_YEAR_RANGE.min}–${VALID_YEAR_RANGE.max} and was dropped`
+      );
+      continue;
+    }
+
+    if (canonical !== key) {
+      console.log(`📅 Normalized fiscal year key: "${key}" → "${canonical}"`);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(normalized, canonical)) {
+      warnings.push(
+        `Duplicate fiscal year "${canonical}" after normalization (from "${key}") — ` +
+        `keeping earlier entry; duplicate dropped`
+      );
+      continue;
+    }
+
+    normalized[canonical] = value;
+  }
+
+  return normalized;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Metric Computation

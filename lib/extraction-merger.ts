@@ -162,11 +162,15 @@ export interface MergeResult {
 
 /**
  * Result from scale normalization functions
- * Includes both corrected metrics and human-readable correction descriptions
+ * Includes both corrected metrics and human-readable correction descriptions.
+ * correctedYears tracks which years received a uniform scale conversion so
+ * downstream passes can skip them and avoid over-correction.
  */
 export interface ScaleNormalizationResult {
   metrics: Record<string, YearMetrics>;
   corrections: string[];
+  /** Years where a uniform scale correction was already applied (Pass 1). */
+  correctedYears?: Set<string>;
 }
 
 // Nested object keys that need special handling
@@ -1265,6 +1269,7 @@ export function applyDetectedScale(
   }
 
   const corrected = structuredClone(metrics);
+  const correctedYears = new Set<string>();
 
   for (const [year, yearData] of Object.entries(corrected)) {
     let count = 0;
@@ -1295,9 +1300,10 @@ export function applyDetectedScale(
       `${year}: Applied ${metadata.detected_scale}→thousands conversion (×${multiplier}) to ${count} values` +
       ` (indicator: "${metadata.scale_indicator_found ?? 'none'}", confidence: ${metadata.scale_confidence})`
     );
+    correctedYears.add(year);
   }
 
-  return { metrics: corrected, corrections };
+  return { metrics: corrected, corrections, correctedYears };
 }
 
 /**
@@ -1311,7 +1317,8 @@ export function applyDetectedScale(
  * @returns Normalized metrics with corrections log
  */
 export function normalizeScaleMismatch(
-  merged: Record<string, YearMetrics>
+  merged: Record<string, YearMetrics>,
+  alreadyCorrectedYears?: Set<string>
 ): ScaleNormalizationResult {
   const corrections: string[] = [];
   const years = Object.keys(merged);
@@ -1323,9 +1330,11 @@ export function normalizeScaleMismatch(
   const normalized = structuredClone(merged);
 
   for (const metric of CURRENCY_METRICS) {
-    // Collect non-null values for this metric across years
+    // Collect non-null values for this metric across years, excluding already-corrected years
+    // to prevent over-correction (e.g., a year already scaled in Pass 1 appearing as an outlier)
     const values: { year: string; value: number }[] = [];
     for (const yr of years) {
+      if (alreadyCorrectedYears?.has(yr)) continue;
       const val = normalized[yr]?.[metric];
       if (typeof val === 'number' && val !== 0) {
         values.push({ year: yr, value: val });
@@ -1386,12 +1395,17 @@ export function normalizeScaleMismatch(
  * @returns Corrected metrics with corrections log
  */
 export function validateCrossMetricScale(
-  metrics: Record<string, YearMetrics>
+  metrics: Record<string, YearMetrics>,
+  alreadyCorrectedYears?: Set<string>
 ): ScaleNormalizationResult {
   const corrections: string[] = [];
   const corrected = structuredClone(metrics);
 
   for (const [year, yearData] of Object.entries(corrected)) {
+    // Skip years that were already uniformly scaled in Pass 1 (applyDetectedScale)
+    // to prevent double-correction (e.g., millions→thousands then ÷1000 again)
+    if (alreadyCorrectedYears?.has(year)) continue;
+
     const revenue = yearData.revenue as number | null | undefined;
     const netIncome = yearData.net_income as number | null | undefined;
 

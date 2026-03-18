@@ -162,6 +162,17 @@ All 3 items implemented across 2 modified files and 1 new file:
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
+### Task 10: Extraction Pipeline Robustness (COMPLETED)
+All 3 items implemented across `lib/extraction-merger.ts` and `utils/aiProcessor.ts`:
+
+1. **Scale over-correction prevention** — `ScaleNormalizationResult` now carries a `correctedYears?: Set<string>`. Pass 1 (`applyDetectedScale`) populates this set for every year it uniformly scales. Pass 2 (`validateCrossMetricScale`) and Pass 3 (`normalizeScaleMismatch`) both accept an `alreadyCorrectedYears` parameter and skip years already corrected — eliminating the ×1000 then ÷1000 double-correction that could silently net to the wrong scale on some documents. `aiProcessor.ts` threads the set through all three passes.
+
+2. **Fiscal year key normalization** — New `normalizeFiscalYearKeys<T>()` function runs immediately after `mergeExtractionsWithConflicts` in `aiProcessor.ts`. Normalises common AI variants: `FY2023` → `2023`, `2023E/A/F/P` → `2023`, `2022/23` → `2023` (short overlap), `2023/2024` → `2024` (full overlap). Invalid formats (non-parseable) are dropped with an analyst-visible warning. Duplicate year keys (two variants resolving to the same year) keep the first entry and warn. Year range restricted to 1900–2099.
+
+3. **Warnings array cap** — After all warnings are accumulated (conflicts, scale corrections, arithmetic, AI reconciliation), the array is capped at 50 entries. Overflow is summarised as `"...and N more warnings (set DEBUG_FINANCIALS=true for full list)"`. Prevents UI/storage overload on complex multi-chunk documents.
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase

@@ -307,11 +307,11 @@ Protect against abuse and data leaks.
 - [x] Implement structured logging with sensitive data redaction — FCCR/Debt/Capital values in `risk-generator.ts` now gated behind `DEBUG_FINANCIALS` env flag (same pattern as chunk-processor and extraction-merger)
 - [x] Replace synchronous file I/O in `risk-generator.ts` cache — disk cache removed entirely; replaced with in-memory Map (100-entry LRU-style, oldest evicted when full)
 
-### Task 10: Medium — Extraction Pipeline Robustness
+### Task 10: Medium — Extraction Pipeline Robustness ✅
 Improve accuracy and consistency of the extraction pipeline.
-- [ ] Add `scale_correction_applied` flag per metric to prevent over-correction across the 3 normalization passes (detected scale → cross-metric → cross-year)
-- [ ] Validate and normalize fiscal year format immediately after extraction — reject unrecognizable formats with warning
-- [ ] Cap warnings array at ~50 entries; summarize overflow as "...and N more warnings"
+- [x] Add `scale_correction_applied` flag per metric to prevent over-correction across the 3 normalization passes (detected scale → cross-metric → cross-year)
+- [x] Validate and normalize fiscal year format immediately after extraction — reject unrecognizable formats with warning
+- [x] Cap warnings array at ~50 entries; summarize overflow as "...and N more warnings"
 
 ### Task 11: Low — Type Safety & Developer Experience
 Reduce technical debt and improve maintainability.
