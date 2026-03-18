@@ -113,6 +113,19 @@ Key design decisions:
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
+### Task 6: Critical — Database & Data Integrity Fixes (COMPLETED)
+All 4 items implemented across `app/api/extractData/route.ts` and `app/api/resolve-conflict/route.ts`:
+
+1. **Conflict detection moved before DB insert** — `extractData/route.ts` now builds a phantom `ExtractionWithDocument` object from the AI extraction result and runs `detectYearConflicts` against existing extractions BEFORE inserting into the database. The extraction is only inserted once its conflict status is known, so the final `processing_status` is set correctly in a single pass rather than being updated post-hoc.
+
+2. **Stale processing record cleanup** — New `cleanupStaleProcessingRecords()` function called at the start of every extraction. Queries documents for the project in `processing` status with `created_at` older than 15 minutes and bulk-updates them to `failed` with an explanatory `error_message`. Prevents orphaned records from permanently blocking the project view.
+
+3. **Validated every Supabase `.error`** — `updateDocumentStatus` now checks and logs the update error. The project risk-score update in `extractData/route.ts` is wrapped in `{ error: projectUpdateError }` destructuring with a logged warning on failure. Both document and project updates in `resolve-conflict/route.ts` similarly validated.
+
+4. **Extraction insert is now a hard failure** — Previously the code continued past a failed extraction insert and sent a success SSE event. Now, if the insert fails, the document is marked `failed`, an error SSE event is sent, and the stream is closed.
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase

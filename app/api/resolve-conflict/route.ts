@@ -88,14 +88,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Update the document status to completed
-    await supabase
+    const { error: docUpdateError } = await supabase
       .from('documents')
       .update({ processing_status: 'completed' })
       .eq('id', targetExtraction.document_id);
 
+    if (docUpdateError) {
+      console.error('❗ Failed to update document status after conflict resolution:', docUpdateError.message);
+    }
+
     // Update project status if we have risk assessment
     if (merged.quantitativeRiskAssessment) {
-      await supabase
+      const { error: projectUpdateError } = await supabase
         .from('projects')
         .update({
           status: 'completed',
@@ -104,6 +108,10 @@ export async function POST(req: NextRequest) {
           risk_band: merged.quantitativeRiskAssessment.risk_band,
         })
         .eq('id', projectId);
+
+      if (projectUpdateError) {
+        console.error('❗ Failed to update project risk score after conflict resolution:', projectUpdateError.message);
+      }
     }
 
     console.log(

@@ -281,12 +281,12 @@ Validate extraction integrity using the real financial reports in `public/financ
 
 
 
-### Task 6: Critical — Database & Data Integrity Fixes
+### Task 6: Critical — Database & Data Integrity Fixes ✅
 Prevent data corruption and silent failures in the extraction pipeline.
-- [ ] Wrap extraction insert + project risk-score update in a Supabase RPC transaction (or validate every `.error` response)
-- [ ] Fix year-conflict detection running after insertion — detect conflicts before insert, or clean up orphaned records on cancel
-- [ ] Audit all Supabase calls in `route.ts` — check `{ data, error }` on every operation, log failures, update document status to `'failed'`
-- [ ] Add cleanup mechanism for stale `processing` records (background job or cron marking stuck documents as `failed` after 15 min)
+- [x] Wrap extraction insert + project risk-score update in a Supabase RPC transaction (or validate every `.error` response) — validated every `.error` response on extraction insert and project update; non-fatal project update failure is now logged rather than silently swallowed
+- [x] Fix year-conflict detection running after insertion — detect conflicts before insert, or clean up orphaned records on cancel — moved conflict detection to run on a phantom extraction object BEFORE the DB insert; extraction is only inserted after conflict status is known
+- [x] Audit all Supabase calls in `route.ts` — check `{ data, error }` on every operation, log failures, update document status to `'failed'` — all Supabase operations now check `.error`; `updateDocumentStatus` logs failures; project update failure in `resolve-conflict/route.ts` also now logged
+- [x] Add cleanup mechanism for stale `processing` records (background job or cron marking stuck documents as `failed` after 15 min) — `cleanupStaleProcessingRecords()` runs at the start of each extraction, marking any document for that project stuck in `processing` for >15 min as `failed`
 
 ### Task 7: Critical — Document Parsing Completeness
 Ensure all accepted file types can actually be processed.

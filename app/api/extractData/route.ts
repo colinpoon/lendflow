@@ -20,6 +20,47 @@ function sseMessage(data: Record<string, unknown> | SSECompleteProgress): string
   return `data: ${JSON.stringify(data)}\n\n`;
 }
 
+/**
+ * Mark any document for this project that has been stuck in 'processing' status
+ * for more than 15 minutes as 'failed'. Prevents orphaned records from blocking
+ * the project view indefinitely.
+ */
+async function cleanupStaleProcessingRecords(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  projectId: string
+): Promise<void> {
+  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+
+  const { data: staleDocuments, error: queryError } = await supabase
+    .from('documents')
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('processing_status', 'processing')
+    .lt('created_at', fifteenMinutesAgo);
+
+  if (queryError) {
+    console.warn('⚠️ Failed to query stale processing records:', queryError.message);
+    return;
+  }
+
+  if (!staleDocuments || staleDocuments.length === 0) return;
+
+  const staleIds = staleDocuments.map((d) => d.id);
+  const { error: updateError } = await supabase
+    .from('documents')
+    .update({
+      processing_status: 'failed',
+      error_message: 'Processing timed out after 15 minutes',
+    })
+    .in('id', staleIds);
+
+  if (updateError) {
+    console.warn('⚠️ Failed to mark stale processing records as failed:', updateError.message);
+  } else {
+    console.log(`🧹 Marked ${staleIds.length} stale processing record(s) as failed for project ${projectId}`);
+  }
+}
+
 export async function POST(req: NextRequest) {
   console.log('✅ API Hit: /api/extractData');
 
@@ -146,6 +187,9 @@ export async function POST(req: NextRequest) {
         console.log(`✅ Created new project: ${projectId}`);
       }
 
+      // Clean up any stuck processing records for this project before adding a new one
+      await cleanupStaleProcessingRecords(supabase, projectId!);
+
       // Generate document ID and storage path
       const documentId = crypto.randomUUID();
       const storagePath = `${userId}/${projectId}/${documentId}/${file.name}`;
@@ -265,7 +309,64 @@ export async function POST(req: NextRequest) {
         // (AI extraction can take several minutes, original token may have expired)
         const freshSupabase = await createClient();
 
-        // Save extraction to database (with pending_conflict status if conflicts exist)
+        // ── Conflict detection BEFORE insertion ────────────────────────────────
+        // Query existing extractions for this project so we can detect year
+        // overlaps before committing the new extraction to the database.
+        const { data: existingExtractions, error: existingError } = await freshSupabase
+          .from('extractions')
+          .select('*, documents(id, file_name)')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false });
+
+        if (existingError) {
+          console.error('❗ Error querying existing extractions:', existingError);
+          // Non-fatal: proceed without conflict detection
+        }
+
+        let hasConflicts = false;
+        let detectedConflicts: ReturnType<typeof detectYearConflicts>['conflicts'] = [];
+
+        if (existingExtractions && existingExtractions.length > 0) {
+          // Build a phantom extraction object (not yet in DB) to run conflict detection
+          const now = new Date().toISOString();
+          // Cast to ExtractionWithDocument: aiProcessor.ExtractionResult and
+          // lib/supabase/types.ExtractionResult are structurally compatible at
+          // runtime even though they have different TypeScript declarations.
+          const phantomExtraction = {
+            id: documentId, // placeholder — extraction not yet persisted
+            document_id: documentId,
+            project_id: projectId!,
+            user_id: userId,
+            extraction_data: extractedData,
+            fiscal_years: years,
+            latest_fccr: latestMetrics?.fccr ?? null,
+            latest_dscr: latestMetrics?.dscr ?? null,
+            latest_senior_debt_to_ebitda: latestMetrics?.senior_debt_to_ebitda ?? null,
+            latest_debt_to_capital: latestMetrics?.total_debt_to_capital ?? null,
+            latest_adjusted_ebitda: latestMetrics?.adjusted_ebitda ?? null,
+            quantitative_risk_score: extractedData.quantitativeRiskAssessment?.normalized_score ?? null,
+            quantitative_risk_band: extractedData.quantitativeRiskAssessment?.risk_band ?? null,
+            validation_issues: extractedData.validation_issues ?? null,
+            processing_time_ms: processingTime,
+            created_at: now,
+            updated_at: now,
+            documents: { id: documentId, file_name: file.name },
+          } as unknown as ExtractionWithDocument;
+
+          const conflictResult = detectYearConflicts(
+            phantomExtraction,
+            existingExtractions as ExtractionWithDocument[]
+          );
+
+          hasConflicts = conflictResult.hasConflicts;
+          detectedConflicts = conflictResult.conflicts;
+        }
+
+        if (hasConflicts) {
+          console.log(`⚠️ Year conflicts detected: ${detectedConflicts.map(c => c.year).join(', ')}`);
+        }
+
+        // ── Insert extraction ──────────────────────────────────────────────────
         const { data: extraction, error: extractionError } = await freshSupabase
           .from('extractions')
           .insert({
@@ -290,69 +391,59 @@ export async function POST(req: NextRequest) {
           .select()
           .single();
 
-        if (extractionError) {
+        if (extractionError || !extraction) {
           console.error('❗ Error saving extraction:', extractionError);
           await updateDocumentStatus(freshSupabase, documentId, 'failed', 'Failed to save extraction results');
-        } else {
-          console.log(`✅ Extraction saved: ${extraction?.id}`);
+          await sendProgress({
+            stage: 'error',
+            progress: 0,
+            message: 'Failed to save extraction results',
+          });
+          await closeWriter();
+          return;
+        }
 
-          // Check for year conflicts with existing extractions
-          const { data: existingExtractions } = await freshSupabase
-            .from('extractions')
-            .select('*, documents(id, file_name)')
-            .eq('project_id', projectId)
-            .neq('document_id', documentId) // Exclude the one we just inserted
-            .order('created_at', { ascending: false });
+        console.log(`✅ Extraction saved: ${extraction.id}`);
 
-          if (existingExtractions && existingExtractions.length > 0) {
-            // Build the new extraction object for conflict detection
-            const newExtractionForConflict: ExtractionWithDocument = {
-              ...extraction,
-              documents: { id: documentId, file_name: file.name },
-            };
+        // ── Branch: conflict vs. clean path ───────────────────────────────────
+        if (hasConflicts) {
+          // Mark document as pending_conflict and surface to the client
+          await updateDocumentStatus(freshSupabase, documentId, 'pending_conflict');
 
-            const conflictResult = detectYearConflicts(
-              newExtractionForConflict,
-              existingExtractions as ExtractionWithDocument[]
-            );
-
-            if (conflictResult.hasConflicts) {
-              console.log(`⚠️ Year conflicts detected: ${conflictResult.conflicts.map(c => c.year).join(', ')}`);
-
-              // Update document status to pending_conflict
-              await updateDocumentStatus(freshSupabase, documentId, 'pending_conflict');
-
-              // Send conflict detected message and stop processing
-              if (!writerClosed) {
-                await writer.write(encoder.encode(sseMessage({
-                  stage: 'conflict_detected',
-                  progress: 95,
-                  message: `Conflicts detected for years: ${conflictResult.conflicts.map(c => c.year).join(', ')}`,
-                  conflicts: conflictResult.conflicts,
-                  extractionId: extraction.id,
-                  pendingDocumentId: documentId,
-                })));
-              }
-
-              await closeWriter();
-              return;
-            }
+          if (!writerClosed) {
+            await writer.write(encoder.encode(sseMessage({
+              stage: 'conflict_detected',
+              progress: 95,
+              message: `Conflicts detected for years: ${detectedConflicts.map(c => c.year).join(', ')}`,
+              conflicts: detectedConflicts,
+              extractionId: extraction.id,
+              pendingDocumentId: documentId,
+            })));
           }
 
-          // No conflicts - update document status to completed
-          await updateDocumentStatus(freshSupabase, documentId, 'completed');
+          await closeWriter();
+          return;
+        }
 
-          // Update project with risk info
-          if (extractedData.quantitativeRiskAssessment) {
-            await freshSupabase
-              .from('projects')
-              .update({
-                status: 'completed',
-                risk_score:
-                  (extractedData.quantitativeRiskAssessment.normalized_score ?? 0) / 10,
-                risk_band: extractedData.quantitativeRiskAssessment.risk_band,
-              })
-              .eq('id', projectId);
+        // No conflicts — finalize
+        await updateDocumentStatus(freshSupabase, documentId, 'completed');
+
+        // Update project with risk info
+        if (extractedData.quantitativeRiskAssessment) {
+          const { error: projectUpdateError } = await freshSupabase
+            .from('projects')
+            .update({
+              status: 'completed',
+              risk_score:
+                (extractedData.quantitativeRiskAssessment.normalized_score ?? 0) / 10,
+              risk_band: extractedData.quantitativeRiskAssessment.risk_band,
+            })
+            .eq('id', projectId);
+
+          if (projectUpdateError) {
+            // Non-fatal: extraction is saved; project badge will be stale until next load
+            console.error('❗ Failed to update project risk score:', projectUpdateError.message);
+          } else {
             console.log('✅ Project risk score updated');
           }
         }
@@ -368,7 +459,7 @@ export async function POST(req: NextRequest) {
               filename: file.name,
               projectId,
               documentId,
-              extractionId: extraction?.id,
+              extractionId: extraction.id,
               financialMetrics: extractedData,
             },
           })));
@@ -432,5 +523,9 @@ async function updateDocumentStatus(
     updateData.error_message = errorMessage;
   }
 
-  await supabase.from('documents').update(updateData).eq('id', documentId);
+  const { error } = await supabase.from('documents').update(updateData).eq('id', documentId);
+  if (error) {
+    console.error(`❗ Failed to update document ${documentId} status to '${status}':`, error.message);
+  }
 }
+
