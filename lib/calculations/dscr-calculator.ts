@@ -81,9 +81,15 @@ export function calculateDSCR(
   const linesOfCredit = dc.lines_of_credit ?? 0;
 
   // Calculate total bank debt (same logic as debt-calculator.ts senior_debt)
-  let totalBankDebt = bankDebtCurrent + bankDebtLongTerm;
-  if (totalBankDebt === 0) {
-    totalBankDebt = termLoans + revolvingCredit + overdraft + linesOfCredit;
+  // Only trust the aggregate when BOTH current and long-term are extracted.
+  // If either is null, the aggregate is incomplete and may understate bank debt.
+  let totalBankDebt: number;
+  if (dc.bank_debt_current != null && dc.bank_debt_long_term != null) {
+    totalBankDebt = bankDebtCurrent + bankDebtLongTerm;
+  } else {
+    const disaggregated = termLoans + revolvingCredit + overdraft + linesOfCredit;
+    const partial = bankDebtCurrent + bankDebtLongTerm;
+    totalBankDebt = disaggregated > 0 ? Math.max(disaggregated, partial) : partial;
   }
 
   // Finance lease liabilities only — operating leases are excluded per banking convention.
