@@ -5,10 +5,9 @@ import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
 
 export const maxDuration = 150;
-
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -32,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 50MB.' },
+        { error: `File too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.` },
         { status: 400 }
       );
     }
