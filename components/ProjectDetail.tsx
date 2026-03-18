@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -23,6 +23,7 @@ import {
   Building2,
 } from 'lucide-react';
 
+import CovenantParametersPanel from '@/components/CovenantParametersPanel';
 import FileUpload from '@/components/FileUpload';
 import FinancialTable from '@/components/FinancialTable';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
@@ -33,6 +34,11 @@ import ExtractionWarnings from '@/components/ExtractionWarnings';
 import { RiskData } from '@/components/RiskAssessment';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 import type { ComputedMetrics } from '@/types';
+import {
+  recalculateWithCovenantConfig,
+  DEFAULT_COVENANT_CONFIG,
+  type CovenantConfig,
+} from '@/lib/calculations/recalculate';
 import { Project } from '@/lib/supabase/types';
 import { MergedExtraction } from '@/lib/extraction-utils';
 import { toast } from 'sonner';
@@ -219,6 +225,27 @@ export default function ProjectDetail({
   // Document deletion
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
 
+  // Covenant parameter configuration — drives client-side recalculation
+  const [covenantConfig, setCovenantConfig] = useState<CovenantConfig>(DEFAULT_COVENANT_CONFIG);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Recalculate covenant-sensitive metrics whenever the user changes
+  // a covenant parameter or new financial data arrives from the server.
+  // The original financialData is never mutated; displayData is the derived
+  // view used for all downstream display components.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const displayData = useMemo(() => {
+    if (!financialData) return null;
+    return {
+      ...financialData,
+      metrics_by_year: recalculateWithCovenantConfig(
+        financialData.metrics_by_year,
+        covenantConfig
+      ),
+    };
+  }, [financialData, covenantConfig]);
+
   // ─────────────────────────────────────────────────────────────────────────
   // Scrollspy via IntersectionObserver
   // ─────────────────────────────────────────────────────────────────────────
@@ -369,7 +396,9 @@ export default function ProjectDetail({
   const hasData = financialData !== null;
   const years = financialData ? Object.keys(financialData.metrics_by_year).sort() : [];
   const latestYear = mostRecentYear || years[years.length - 1];
-  const latestMetrics = financialData && latestYear ? financialData.metrics_by_year[latestYear] : null;
+  // Use displayData for all display-facing derived values so covenant config changes
+  // are reflected in the hero metric cards and all downstream components.
+  const latestMetrics = displayData && latestYear ? displayData.metrics_by_year[latestYear] : null;
 
   // Hero metric values
   const riskScore = debtHealthAssessment?.weighted_score ?? null;
@@ -625,12 +654,18 @@ export default function ProjectDetail({
               ))}
             </div>
           )}
+          {/* Covenant Parameters — controls client-side recalculation */}
+          <CovenantParametersPanel
+            config={covenantConfig}
+            onConfigChange={setCovenantConfig}
+          />
+
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold tracking-tight">Financial Summary</CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
-              <FinancialTable data={financialData as unknown as Parameters<typeof FinancialTable>[0]['data']} />
+              <FinancialTable data={displayData as unknown as Parameters<typeof FinancialTable>[0]['data']} />
             </CardContent>
           </Card>
         </section>
@@ -658,14 +693,14 @@ export default function ProjectDetail({
             </CardContent>
           </Card>
 
-          {financialData && (
+          {displayData && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-semibold tracking-tight">Risk Assessment</CardTitle>
               </CardHeader>
               <CardContent>
                 <WeightedRiskGauge
-                  data={financialData}
+                  data={displayData}
                   debtHealthAssessment={debtHealthAssessment}
                   riskData={riskData}
                 />
@@ -673,24 +708,24 @@ export default function ProjectDetail({
             </Card>
           )}
 
-          {financialData && (
+          {displayData && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-semibold tracking-tight">Adjusted EBITDA</CardTitle>
               </CardHeader>
               <CardContent>
-                <AdjustedEBITDA data={financialData} />
+                <AdjustedEBITDA data={displayData} />
               </CardContent>
             </Card>
           )}
 
-          {financialData && (
+          {displayData && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-semibold tracking-tight">Debt Health Indicators</CardTitle>
               </CardHeader>
               <CardContent>
-                <DebtHealthMeters data={financialData} />
+                <DebtHealthMeters data={displayData} />
               </CardContent>
             </Card>
           )}
