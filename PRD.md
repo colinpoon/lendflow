@@ -352,9 +352,9 @@ Code-approver and senior-engineer agree on type drift, hardcoded thresholds, and
 - [x] Import thresholds from `constants.ts` — hero cards in `ProjectDetail` hardcode Sr. Debt/EBITDA "good" at 3.0x when `constants.ts` defines 2.5x. `WeightedRiskGauge` hardcodes weight percentages. `QuantitativeRiskCard` hardcodes arc length. All should read from shared constants.
 - [x] Import `PILLAR_KEYS` from `constants.ts` in `RiskAssessment.tsx` — currently duplicated locally, will drift if pillar set changes.
 - [ ] Fix `onDataExtracted` to consume ExtractionResult payload — `ProjectDetail.handleDataUpdate` discards the extraction result and calls `router.refresh()`, forcing an unnecessary server round-trip when the data is already in memory from the SSE stream.
-- [ ] Remove dead `riskData` state in `ProjectDetail` — stored, prop-drilled to `WeightedRiskGauge`, but never rendered (pillar observations section is commented out).
+- [x] Remove dead `riskData` state in `ProjectDetail` — stored, prop-drilled to `WeightedRiskGauge`, but never rendered (pillar observations section is commented out).
 - [ ] Fix `as unknown as` cast in `ProjectDetail.tsx:703` — type mismatch between `displayData` and `FinancialTable` props being suppressed with unsafe cast. Align types properly.
-- [ ] Fix `getFCCRRiskLevel(null)` defaulting to `'adequate'` — null FCCR (unmeasured) is styled as borderline rather than unknown. Should return a conservative or distinct `'unknown'` state.
+- [x] Fix `getFCCRRiskLevel(null)` defaulting to `'adequate'` — null FCCR (unmeasured) is styled as borderline rather than unknown. Should return a conservative or distinct `'unknown'` state.
 
 ---
 

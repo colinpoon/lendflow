@@ -642,3 +642,22 @@ All 3 sub-items implemented:
 Task 21 is now fully complete.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 15: Type Safety & UI Consistency — continued (commits be57e87, ee363c9)
+Two more sub-items completed:
+
+1. **Remove dead riskData state** — Removed `riskData` state variable, `setRiskData` call,
+   and `riskData` prop from `ProjectDetail.tsx`. Removed `riskData` prop from
+   `WeightedRiskGauge.tsx` interface, destructuring, and unused `RiskData` import.
+
+2. **Fix getFCCRRiskLevel(null) → 'unknown'** — Added `'unknown'` to `RiskLevel` union type.
+   Added neutral gray color config (`bg-gray-100`, `text-gray-500`, `#6b7280`) to `riskColors`
+   record. Changed all four risk level functions (`getFCCRRiskLevel`, `getDSCRRiskLevel`,
+   `getDebtEBITDARiskLevel`, `getDebtCapitalRiskLevel`) to return `'unknown'` for null/undefined
+   instead of `'adequate'`. Null values now clearly indicate unmeasured data rather than
+   masquerading as borderline health.
+
+Task 15 progress: 7 of 8 sub-items complete. Remaining: `onDataExtracted` payload consumption,
+`as unknown as` cast fix.
+
+- TypeScript: clean (npm run build passes, 0 errors)
