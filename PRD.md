@@ -330,13 +330,13 @@ Consensus across senior-engineer and code-approver; some overlap with financial-
 
 ### Task 14: High — Pipeline Robustness
 Senior-engineer and code-approver agree on extraction pipeline ordering and data flow issues.
-- [ ] Normalize year keys BEFORE merge, not after — two chunks producing `"FY2023"` and `"2023"` for the same year are treated as separate years during merge, then one is silently dropped by post-merge normalization. Normalize on each individual extraction result before passing to `mergeExtractionsWithConflicts`.
-- [ ] Fix FCCR receiving stale `m` instead of updated `result` in `computeMetrics` — DSCR correctly passes the cloned/updated `result`, but FCCR passes the original `m`. If a future change writes a field to `result` that FCCR reads, it will silently use stale data.
-- [ ] Fix `primary_fiscal_year` using first-non-null instead of most-common/latest — chunk 1 may contain only notes pages with a comparative year header. Should pick the most-commonly reported value or the latest year.
-- [ ] Add TTM annualization for interim period submissions — if a borrower submits a Q3 report, revenue/EBITDA are 9-month figures but debt balances are point-in-time. Coverage ratios will be distorted without annualization.
-- [ ] Fix `JSON.stringify` replacer used incorrectly for risk cache key — second argument to `JSON.stringify` is a replacer/filter, not a key sorter. Nested keys are not sorted, producing unstable cache keys that cause cache misses and waste AI tokens.
-- [ ] Implement `isOverlapSource` or remove it — stub always returns `false`, making `SOURCE_WEIGHTS.overlap = 0.68` dead code. Overlap-region values are never downweighted.
-- [ ] Fix `principal || null` converting legitimate zero to null — in `debt-service-resolver.ts`, if a company has fully repaid debt and `principal` is legitimately `0`, the audit trail shows `null` instead of `0`.
+- [x] Normalize year keys BEFORE merge, not after — now normalizes each extraction's `metrics_by_year` keys before passing to `mergeExtractionsWithConflicts`; post-merge pass kept as safety net
+- [x] Fix FCCR receiving stale `m` instead of updated `result` in `computeMetrics` — now passes `result` to both FCCR and DSCR consistently
+- [x] Fix `primary_fiscal_year` using first-non-null instead of most-common/latest — now uses most commonly reported value across chunks; ties broken by latest year
+- [ ] Add TTM annualization for interim period submissions *(DEFERRED: requires extraction schema changes to detect interim periods, prompt modifications, and annualization logic across flow metrics. Better scoped as a separate feature task.)* — if a borrower submits a Q3 report, revenue/EBITDA are 9-month figures but debt balances are point-in-time. Coverage ratios will be distorted without annualization.
+- [x] Fix `JSON.stringify` replacer used incorrectly for risk cache key — replaced with recursive key-sorted replacer function for stable cache keys
+- [x] Implement `isOverlapSource` or remove it — removed dead stub from `validation.ts`; actual overlap detection is implemented in `extraction-merger.ts` with proper pattern matching
+- [x] Fix `principal || null` converting legitimate zero to null — changed all source value fields from `|| null` to `?? null` to preserve legitimate zeros
 
 ### Task 15½: High — API Error Resilience & User Feedback
 Discovered when Anthropic API returned 400 (insufficient credits) — pipeline silently saved incomplete data with null risk assessment and 0-year quantitative risk.

@@ -532,3 +532,29 @@ Remaining 3 sub-items BLOCKED by Clerk JWT UUID mismatch:
 - Storage bucket RLS policies (depends on RLS fix)
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 14: Pipeline Robustness (Partial — commits 56e7a54, 1c197c1, f0b7390, 3692403, da081fc, 6e4f631)
+Completed 6 of 7 sub-items:
+
+1. **Year key normalization before merge** — normalizes each extraction's `metrics_by_year`
+   keys before merge so two chunks producing "FY2023" and "2023" are properly unified.
+   Post-merge normalization kept as safety net.
+
+2. **FCCR stale data fix** — `computeMetrics` was passing original `m` to FCCR while DSCR
+   received the updated `result`. Both now consistently receive `result`.
+
+3. **primary_fiscal_year** — changed from first-non-null to most-commonly-reported value
+   across chunks; ties broken by latest year.
+
+4. **Risk cache key** — replaced incorrect `JSON.stringify` replacer with recursive
+   key-sorted serializer for stable cache keys.
+
+5. **isOverlapSource stub** — removed dead stub from `validation.ts`; actual overlap
+   detection implemented in `extraction-merger.ts`.
+
+6. **principal || null** — changed all source value fields in `debt-service-resolver.ts`
+   from `|| null` to `?? null` to preserve legitimate zeros.
+
+Remaining: TTM annualization (DEFERRED — requires extraction schema changes).
+
+- TypeScript: clean (npm run build passes, 0 errors)
