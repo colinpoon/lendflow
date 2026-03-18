@@ -121,11 +121,11 @@ export function YearConflictDialog({
                     Fiscal Year {conflict.year}
                   </h4>
                   {isNewRecommended ? (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                    <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded">
                       New document recommended
                     </span>
                   ) : (
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
+                    <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-1 rounded">
                       Keep existing recommended
                     </span>
                   )}
@@ -144,12 +144,12 @@ export function YearConflictDialog({
                     }
                     className={`p-3 rounded-lg border-2 text-left transition-colors ${
                       selection === 'keep'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/40'
+                        : 'border-gray-200 hover:border-gray-300 dark:border-zinc-700 dark:hover:border-zinc-500'
                     }`}
                   >
                     <div className="flex items-start gap-2">
-                      <FileText className="h-4 w-4 mt-0.5 text-gray-500" />
+                      <FileText className="h-4 w-4 mt-0.5 text-gray-500 dark:text-gray-400" />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">
                           {conflict.existingSource.file_name}
@@ -168,7 +168,7 @@ export function YearConflictDialog({
                           ).toLocaleDateString()}
                         </p>
                         {selection === 'keep' && (
-                          <span className="inline-block mt-2 text-xs font-medium text-blue-600">
+                          <span className="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">
                             Selected
                           </span>
                         )}
@@ -187,12 +187,12 @@ export function YearConflictDialog({
                     }
                     className={`p-3 rounded-lg border-2 text-left transition-colors ${
                       selection === 'overwrite'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/40'
+                        : 'border-gray-200 hover:border-gray-300 dark:border-zinc-700 dark:hover:border-zinc-500'
                     }`}
                   >
                     <div className="flex items-start gap-2">
-                      <FileText className="h-4 w-4 mt-0.5 text-gray-500" />
+                      <FileText className="h-4 w-4 mt-0.5 text-gray-500 dark:text-gray-400" />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">
                           {conflict.newSource.file_name}
@@ -210,7 +210,7 @@ export function YearConflictDialog({
                           ).toLocaleDateString()}
                         </p>
                         {selection === 'overwrite' && (
-                          <span className="inline-block mt-2 text-xs font-medium text-blue-600">
+                          <span className="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">
                             Selected
                           </span>
                         )}
@@ -228,13 +228,13 @@ export function YearConflictDialog({
           <AlertTriangle className="h-4 w-4" />
           <span>
             {overwriteCount > 0 && (
-              <span className="text-blue-600 font-medium">
+              <span className="text-blue-600 dark:text-blue-400 font-medium">
                 {overwriteCount} year(s) will use new data
               </span>
             )}
             {overwriteCount > 0 && keepCount > 0 && ' • '}
             {keepCount > 0 && (
-              <span className="text-amber-600 font-medium">
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
                 {keepCount} year(s) will keep existing data
               </span>
             )}

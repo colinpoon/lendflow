@@ -175,28 +175,28 @@ const VisionFileUpload: React.FC<VisionFileUploadProps> = ({
   const isProcessing = stage === 'processing';
 
   return (
-    <div className="p-6 border rounded-lg shadow-sm w-full max-w-md mx-auto space-y-4">
+    <div className="p-6 border border-border rounded-lg shadow-sm w-full max-w-md mx-auto space-y-4 bg-card">
       {/* Vision Badge */}
-      <div className="flex items-center justify-center gap-2 text-sm text-blue-600 bg-blue-50 rounded-md py-2">
+      <div className="flex items-center justify-center gap-2 text-sm text-primary bg-primary/10 rounded-md py-2">
         <span className="font-medium">Claude Vision Extraction</span>
-        <span className="text-xs text-blue-500">(PDF only)</span>
+        <span className="text-xs text-primary/70">(PDF only)</span>
       </div>
 
       {/* Error State */}
       {errorMessage && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
-          <AlertCircle className="h-5 w-5 text-red-500" />
-          <span className="text-sm text-red-800">{errorMessage}</span>
+        <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-md">
+          <AlertCircle className="h-5 w-5 text-destructive" />
+          <span className="text-sm text-destructive">{errorMessage}</span>
         </div>
       )}
 
       {/* Success State */}
       {stage === 'complete' && (
-        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
-          <CheckCircle className="h-5 w-5 text-green-500" />
+        <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-md">
+          <CheckCircle className="h-5 w-5 text-success" />
           <div className="text-sm">
-            <span className="font-medium text-green-800">Vision Extraction Complete</span>
-            <span className="text-green-600 ml-1">— {extractedFileName}</span>
+            <span className="font-medium text-success">Vision Extraction Complete</span>
+            <span className="text-muted-foreground ml-1">— {extractedFileName}</span>
           </div>
         </div>
       )}
@@ -214,9 +214,9 @@ const VisionFileUpload: React.FC<VisionFileUploadProps> = ({
         <label
           htmlFor="vision-file-input"
           className={`w-full text-center py-3 px-4 border-2 border-dashed rounded-md cursor-pointer transition-colors
-            ${isProcessing ? 'opacity-50 cursor-not-allowed border-gray-200' : 'border-blue-300 hover:border-blue-400 hover:bg-blue-50'}`}
+            ${isProcessing ? 'opacity-50 cursor-not-allowed border-border bg-muted/20' : 'border-primary/30 hover:border-primary/50 hover:bg-primary/[0.03]'}`}
         >
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-muted-foreground">
             {file ? file.name : 'Click to select a PDF file'}
           </span>
         </label>
@@ -226,8 +226,8 @@ const VisionFileUpload: React.FC<VisionFileUploadProps> = ({
           disabled={isProcessing || !file}
           className={`w-full py-2 rounded-md font-medium text-sm transition-colors
             ${isProcessing || !file
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+              ? 'bg-muted text-muted-foreground cursor-not-allowed'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
         >
           {isProcessing ? 'Processing with Vision...' : stage === 'complete' ? 'Process Another' : 'Extract with Vision'}
         </button>
@@ -236,15 +236,15 @@ const VisionFileUpload: React.FC<VisionFileUploadProps> = ({
       {/* Progress */}
       {isProcessing && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Loader2 className="h-3 w-3 animate-spin text-primary" />
               <span>{STAGE_LABELS[currentStage] || currentStage}</span>
             </div>
             <span>{progress}%</span>
           </div>
           <Progress value={progress} className="h-1.5" />
-          <p className="text-xs text-gray-400 text-center">{stageMessage}</p>
+          <p className="text-xs text-muted-foreground/70 text-center">{stageMessage}</p>
         </div>
       )}
     </div>

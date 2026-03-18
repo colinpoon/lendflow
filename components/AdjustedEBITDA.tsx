@@ -298,39 +298,43 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
         initial="hidden"
         animate="visible"
       >
-        {/* Reported EBITDA — dark gradient card */}
+        {/* Reported EBITDA card */}
         <motion.div
           variants={itemVariants}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-black p-5 min-h-[140px] flex flex-col justify-between shadow-lg"
+          className="relative overflow-hidden rounded-2xl p-5 min-h-[140px] flex flex-col justify-between shadow-sm
+            bg-card border border-border
+            dark:bg-gradient-to-br dark:from-zinc-800 dark:via-zinc-900 dark:to-zinc-950 dark:border-zinc-700 dark:shadow-lg"
         >
-          <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
-          <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-white/[0.07] blur-2xl" />
-          <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-white/50">
+          <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
+          <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
+          <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-muted-foreground dark:text-white/50">
             Reported EBITDA
           </p>
           <div className="relative mt-auto">
-            <p className="text-3xl font-bold tabular-nums tracking-tight text-white">
+            <p className="text-3xl font-bold tabular-nums tracking-tight text-foreground dark:text-white">
               {formatCurrency(metrics.ebitda)}
             </p>
           </div>
         </motion.div>
 
-        {/* Adjusted EBITDA — dark gradient card with green tint */}
+        {/* Adjusted EBITDA card */}
         <motion.div
           variants={itemVariants}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-emerald-900/80 to-black p-5 min-h-[140px] flex flex-col justify-between shadow-lg"
+          className="relative overflow-hidden rounded-2xl p-5 min-h-[140px] flex flex-col justify-between shadow-sm
+            bg-card border border-border
+            dark:bg-gradient-to-br dark:from-emerald-950 dark:via-emerald-900/80 dark:to-zinc-950 dark:border-zinc-700 dark:shadow-lg"
         >
-          <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
-          <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-white/[0.07] blur-2xl" />
-          <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-white/50">
+          <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
+          <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
+          <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-muted-foreground dark:text-white/50">
             Adjusted EBITDA {usesReportedValue && '(Reported)'}
           </p>
           <div className="relative mt-auto">
-            <p className="text-3xl font-bold tabular-nums tracking-tight text-emerald-300">
+            <p className="text-3xl font-bold tabular-nums tracking-tight text-success dark:text-emerald-300">
               {formatCurrency(adjustedEBITDA)}
             </p>
             {ebitdaDelta != null && (
-              <p className="text-[11px] text-white/40 tabular-nums mt-1">
+              <p className="text-[11px] text-muted-foreground/70 dark:text-white/40 tabular-nums mt-1">
                 {ebitdaDelta >= 0 ? '+' : ''}
                 {formatCurrency(ebitdaDelta)} vs reported
               </p>

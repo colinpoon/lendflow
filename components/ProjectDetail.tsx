@@ -24,6 +24,7 @@ import {
   Building2,
 } from 'lucide-react';
 
+import { motion } from 'framer-motion';
 import CovenantParametersPanel from '@/components/CovenantParametersPanel';
 import { CompactErrorBoundary } from '@/components/ErrorBoundary';
 import FileUpload from '@/components/FileUpload';
@@ -108,6 +109,14 @@ const SECTIONS = [
   { id: 'risk', label: 'Risk' },
   { id: 'decision', label: 'Decision' },
 ] as const;
+
+// Shared fade-up animation config used across content sections.
+// Short duration and small y-offset keep it professional for a financial app.
+const SECTION_ENTER = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: (delay = 0) => ({ duration: 0.35, ease: 'easeOut' as const, delay }),
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hero Metric helpers
@@ -681,7 +690,12 @@ export default function ProjectDetail({
         <section id="analysis" ref={setSectionRef('analysis')} className="scroll-mt-16 space-y-4">
           {/* Year source indicators */}
           {Object.keys(yearSources).length > 1 && (
-            <div className="flex flex-wrap gap-1.5 text-[11px]">
+            <motion.div
+              className="flex flex-wrap gap-1.5 text-[11px]"
+              initial={SECTION_ENTER.initial}
+              animate={SECTION_ENTER.animate}
+              transition={SECTION_ENTER.transition(0)}
+            >
               {years.map((year) => (
                 <Badge
                   key={year}
@@ -694,24 +708,36 @@ export default function ProjectDetail({
                   </span>
                 </Badge>
               ))}
-            </div>
+            </motion.div>
           )}
           {/* Covenant Parameters — controls client-side recalculation */}
-          <CovenantParametersPanel
-            config={covenantConfig}
-            onConfigChange={setCovenantConfig}
-          />
+          <motion.div
+            initial={SECTION_ENTER.initial}
+            animate={SECTION_ENTER.animate}
+            transition={SECTION_ENTER.transition(0.05)}
+          >
+            <CovenantParametersPanel
+              config={covenantConfig}
+              onConfigChange={setCovenantConfig}
+            />
+          </motion.div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold tracking-tight">Financial Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CompactErrorBoundary errorTitle="Failed to render financial table">
-                <FinancialTable data={displayData} />
-              </CompactErrorBoundary>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={SECTION_ENTER.initial}
+            animate={SECTION_ENTER.animate}
+            transition={SECTION_ENTER.transition(0.1)}
+          >
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold tracking-tight">Financial Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CompactErrorBoundary errorTitle="Failed to render financial table">
+                  <FinancialTable data={displayData} />
+                </CompactErrorBoundary>
+              </CardContent>
+            </Card>
+          </motion.div>
         </section>
       )}
 
@@ -720,65 +746,94 @@ export default function ProjectDetail({
         <section id="risk" ref={setSectionRef('risk')} className="scroll-mt-16 space-y-5">
           {/* Risk assessment source info */}
           {mostRecentYear && extractionCount > 1 && (
-            <p className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md">
+            <motion.p
+              className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md"
+              initial={SECTION_ENTER.initial}
+              animate={SECTION_ENTER.animate}
+              transition={SECTION_ENTER.transition(0)}
+            >
               Risk metrics based on <span className="font-medium text-foreground">{mostRecentYear}</span> data
               {mostRecentYearSource && (
                 <> from <span className="font-medium text-foreground">{mostRecentYearSource.file_name}</span></>
               )}
-            </p>
+            </motion.p>
           )}
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold tracking-tight">Quantitative Risk Scorecard</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CompactErrorBoundary errorTitle="Failed to render risk scorecard">
-                <QuantitativeRiskCard data={quantitativeRiskAssessment} />
-              </CompactErrorBoundary>
-            </CardContent>
-          </Card>
-
-          {displayData && (
+          <motion.div
+            initial={SECTION_ENTER.initial}
+            animate={SECTION_ENTER.animate}
+            transition={SECTION_ENTER.transition(0.05)}
+          >
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold tracking-tight">Risk Assessment</CardTitle>
+                <CardTitle className="text-lg font-semibold tracking-tight">Quantitative Risk Scorecard</CardTitle>
               </CardHeader>
               <CardContent>
-                <CompactErrorBoundary errorTitle="Failed to render risk assessment">
-                  <WeightedRiskGauge
-                    data={displayData}
-                    debtHealthAssessment={debtHealthAssessment}
-                  />
+                <CompactErrorBoundary errorTitle="Failed to render risk scorecard">
+                  <QuantitativeRiskCard data={quantitativeRiskAssessment} />
                 </CompactErrorBoundary>
               </CardContent>
             </Card>
+          </motion.div>
+
+          {displayData && (
+            <motion.div
+              initial={SECTION_ENTER.initial}
+              animate={SECTION_ENTER.animate}
+              transition={SECTION_ENTER.transition(0.1)}
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-semibold tracking-tight">Risk Assessment</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CompactErrorBoundary errorTitle="Failed to render risk assessment">
+                    <WeightedRiskGauge
+                      data={displayData}
+                      debtHealthAssessment={debtHealthAssessment}
+                    />
+                  </CompactErrorBoundary>
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
 
           {displayData && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold tracking-tight">Adjusted EBITDA</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CompactErrorBoundary errorTitle="Failed to render EBITDA breakdown">
-                  <AdjustedEBITDA data={displayData} />
-                </CompactErrorBoundary>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={SECTION_ENTER.initial}
+              animate={SECTION_ENTER.animate}
+              transition={SECTION_ENTER.transition(0.15)}
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-semibold tracking-tight">Adjusted EBITDA</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CompactErrorBoundary errorTitle="Failed to render EBITDA breakdown">
+                    <AdjustedEBITDA data={displayData} />
+                  </CompactErrorBoundary>
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
 
           {displayData && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold tracking-tight">Debt Health Indicators</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CompactErrorBoundary errorTitle="Failed to render debt health meters">
-                  <DebtHealthMeters data={displayData} />
-                </CompactErrorBoundary>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={SECTION_ENTER.initial}
+              animate={SECTION_ENTER.animate}
+              transition={SECTION_ENTER.transition(0.2)}
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-semibold tracking-tight">Debt Health Indicators</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CompactErrorBoundary errorTitle="Failed to render debt health meters">
+                    <DebtHealthMeters data={displayData} />
+                  </CompactErrorBoundary>
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
         </section>
       )}
@@ -811,6 +866,11 @@ export default function ProjectDetail({
 
       {/* Decision Section */}
       <section id="decision" ref={setSectionRef('decision')} className="scroll-mt-16">
+        <motion.div
+          initial={SECTION_ENTER.initial}
+          animate={SECTION_ENTER.animate}
+          transition={SECTION_ENTER.transition(0)}
+        >
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-semibold tracking-tight">Loan Decision</CardTitle>
@@ -922,6 +982,7 @@ export default function ProjectDetail({
             )}
           </CardContent>
         </Card>
+        </motion.div>
       </section>
     </article>
   );

@@ -411,12 +411,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
 
         {/* ── Success banner ──────────────────────────────────────────────── */}
         {stage === 'complete' && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-success/10 border border-success/25">
-            <CheckCircle className="h-4 w-4 text-success shrink-0" />
-            <div className="text-sm min-w-0">
-              <span className="font-medium text-foreground">Extraction complete</span>
+          <div className="flex items-center gap-3 px-4 py-3.5 rounded-lg bg-success/10 border border-success/30 animate-in fade-in duration-300 dark:bg-success/[0.08] dark:border-success/20">
+            <CheckCircle className="h-4 w-4 text-success shrink-0 check-pop" />
+            <div className="text-sm min-w-0 flex-1">
+              <span className="font-semibold text-success">Extraction complete</span>
               {extractedFileName && (
-                <span className="text-muted-foreground ml-1 truncate"> — {extractedFileName}</span>
+                <span className="text-muted-foreground ml-1.5 truncate text-xs"> — {extractedFileName}</span>
               )}
             </div>
           </div>
@@ -424,20 +424,28 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
 
         {/* ── Error banner ─────────────────────────────────────────────────── */}
         {stage === 'error' && errorMessage && (
-          <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-error/8 border border-error/25">
-            <AlertCircle className="h-4 w-4 text-error shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 px-4 py-3.5 rounded-lg bg-destructive/10 border border-destructive/30 animate-in fade-in duration-300 dark:bg-destructive/[0.12] dark:border-destructive/25">
+            <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-error">Extraction failed</p>
+              <p className="text-sm font-semibold text-destructive">Extraction failed</p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{errorMessage}</p>
+              {/* File type hint */}
+              {(errorMessage.toLowerCase().includes('type') || errorMessage.toLowerCase().includes('format') || errorMessage.toLowerCase().includes('unsupported')) && (
+                <p className="text-xs text-muted-foreground/80 mt-1">
+                  Supported formats: <span className="font-medium text-foreground">PDF, XLS, XLSX, DOC, DOCX</span>
+                </p>
+              )}
             </div>
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={handleRetry}
-              className="flex items-center gap-1 text-xs text-error hover:text-error/80 transition-colors shrink-0 font-medium"
+              className="shrink-0 gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 dark:border-destructive/25"
             >
               <RotateCcw className="h-3 w-3" />
               Retry
-            </button>
+            </Button>
           </div>
         )}
 
@@ -460,12 +468,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
             'w-full min-h-[200px] rounded-xl border-2 border-dashed',
             'cursor-pointer transition-all duration-200 px-6 py-8',
             isDisabled
-              ? 'opacity-50 cursor-not-allowed border-border bg-muted/20'
+              ? 'opacity-50 cursor-not-allowed border-border bg-muted/20 dark:bg-muted/10'
               : isDragging
               ? 'drop-zone-active cursor-copy'
               : file
-              ? 'border-success/40 bg-success/5 hover:border-success/60'
-              : 'border-border bg-card hover:border-primary/30 hover:bg-primary/[0.03]',
+              ? 'border-success/40 bg-success/5 hover:border-success/60 dark:bg-success/[0.06] dark:border-success/30 dark:hover:border-success/50'
+              : 'border-border bg-card hover:border-primary/40 hover:bg-primary/[0.03] dark:bg-card dark:hover:border-primary/30 dark:hover:bg-primary/[0.04]',
           ].join(' ')}
         >
           {/* Icon */}
@@ -564,14 +572,38 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
         {/* ── Processing progress ─────────────────────────────────────────── */}
         {isProcessing && (
           <div className="space-y-3 pt-1 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5">
                 <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                <span className="font-medium text-foreground">
+                <span className="font-semibold text-foreground">
                   {STAGE_LABELS[currentStage] || currentStage}
                 </span>
+                {currentStage === 'uploading' && (
+                  <span className="text-muted-foreground">— transferring file</span>
+                )}
+                {currentStage === 'parsing' && (
+                  <span className="text-muted-foreground">— reading document structure</span>
+                )}
+                {currentStage === 'chunking' && (
+                  <span className="text-muted-foreground">— splitting into segments</span>
+                )}
+                {currentStage === 'extracting' && (
+                  <span className="text-muted-foreground">— AI analyzing financials</span>
+                )}
+                {currentStage === 'merging' && (
+                  <span className="text-muted-foreground">— consolidating results</span>
+                )}
+                {currentStage === 'computing' && (
+                  <span className="text-muted-foreground">— calculating ratios</span>
+                )}
+                {currentStage === 'assessing' && (
+                  <span className="text-muted-foreground">— building risk profile</span>
+                )}
+                {currentStage === 'saving' && (
+                  <span className="text-muted-foreground">— writing to database</span>
+                )}
               </div>
-              <span className="tabular-nums font-mono font-medium text-foreground">
+              <span className="tabular-nums font-mono font-semibold text-foreground">
                 {progress}%
               </span>
             </div>
@@ -598,7 +630,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
                   );
                 })}
             </div>
-            <Progress value={progress} className="h-1.5" />
+            {/* Breathing pulse applied to the progress fill via CSS class on the wrapper */}
+            <div className="progress-breathe">
+              <Progress value={progress} className="h-1.5" />
+            </div>
             {stageMessage && (
               <p className="text-[11px] text-muted-foreground/70 text-center leading-relaxed">
                 {stageMessage}

@@ -827,52 +827,70 @@ const getRatioColor = (key: string, value: number | null): string => {
 
 /**
  * Maps a RowVariant to Tailwind classes for the <tr> element.
+ *
+ * @param variant  - visual variant controlling border and background
+ * @param isEven   - pass true for even-indexed data rows to apply zebra striping.
+ *                   Ignored for 'total' and 'subtotal' variants which always
+ *                   carry their own explicit background.
  */
-const getRowClasses = (variant: RowVariant): string => {
+const getRowClasses = (variant: RowVariant, isEven?: boolean): string => {
   switch (variant) {
     case 'total':
-      return 'border-t-2 border-border bg-primary/5 hover:bg-primary/10';
+      // Always blue-tinted regardless of row parity
+      return 'border-t-2 border-border bg-primary/5 dark:bg-primary/10 hover:bg-primary/10 dark:hover:bg-primary/15';
     case 'subtotal':
-      return 'border-t border-border bg-muted/80 hover:bg-muted';
+      // Always muted regardless of row parity
+      return 'border-t border-border bg-muted/80 dark:bg-muted/60 hover:bg-muted dark:hover:bg-muted/80';
     case 'addback':
-      return 'border-b border-border hover:bg-muted/30';
+      return isEven
+        ? 'border-b border-border bg-gray-50 dark:bg-zinc-800/50 hover:bg-muted/30 dark:hover:bg-zinc-700/40'
+        : 'border-b border-border bg-white dark:bg-zinc-900 hover:bg-muted/30 dark:hover:bg-zinc-700/40';
     case 'deduction':
-      return 'border-b border-border hover:bg-muted/20';
+      return isEven
+        ? 'border-b border-border bg-gray-50 dark:bg-zinc-800/50 hover:bg-muted/20 dark:hover:bg-zinc-700/30'
+        : 'border-b border-border bg-white dark:bg-zinc-900 hover:bg-muted/20 dark:hover:bg-zinc-700/30';
     case 'separator':
       return 'h-1 bg-transparent';
     case 'normal':
     default:
-      return 'border-b border-border hover:bg-muted/50';
+      return isEven
+        ? 'border-b border-border bg-gray-50 dark:bg-zinc-800/50 hover:bg-muted/50 dark:hover:bg-zinc-700/50'
+        : 'border-b border-border bg-white dark:bg-zinc-900 hover:bg-muted/50 dark:hover:bg-zinc-700/50';
   }
 };
 
 /**
  * Maps a RowVariant to Tailwind classes for the label <td>.
+ * `whitespace-nowrap` prevents metric names from wrapping awkwardly on
+ * narrower viewports — the outer `overflow-x-auto` container handles scroll.
  */
 const getLabelClasses = (variant: RowVariant): string => {
+  const base = 'whitespace-nowrap';
   switch (variant) {
     case 'total':
-      return 'py-2.5 px-4 font-bold text-foreground pl-4';
+      return `${base} py-2.5 px-4 font-bold text-foreground pl-4`;
     case 'subtotal':
-      return 'py-2 px-4 font-semibold text-foreground pl-4';
+      return `${base} py-2 px-4 font-semibold text-foreground pl-4`;
     case 'addback':
-      return 'py-1.5 px-4 text-muted-foreground pl-10 text-sm';
+      return `${base} py-1.5 px-4 text-muted-foreground pl-10 text-sm`;
     case 'deduction':
-      return 'py-1.5 px-4 text-muted-foreground pl-10 text-sm';
+      return `${base} py-1.5 px-4 text-muted-foreground pl-10 text-sm`;
     case 'normal':
     default:
-      return 'py-2 px-4 text-foreground pl-4';
+      return `${base} py-2 px-4 text-foreground pl-4`;
   }
 };
 
 /**
  * Maps a RowVariant to Tailwind classes for value <td> cells.
+ * `tabular-nums` ensures digits align vertically across rows.
+ * `min-w-[120px]` prevents year columns from becoming too narrow to read.
  */
 const getValueClasses = (
   variant: RowVariant,
   colorClass?: string,
 ): string => {
-  const base = 'py-2 px-4 text-right tabular-nums';
+  const base = 'py-2 px-4 text-right tabular-nums min-w-[120px]';
   switch (variant) {
     case 'total':
       return `${base} font-bold text-foreground ${colorClass ?? ''}`.trim();
@@ -921,6 +939,10 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   }
 
   const years = Object.keys(data.metrics_by_year).sort().reverse();
+
+  // Mutable parity counter shared across all row renderers within a single
+  // render pass. Passed into renderRow so zebra striping spans section boundaries.
+  const rowParity = { count: 0 };
 
   const toggleSection = (title: string) => {
     setCollapsedSections((prev) => {
@@ -1047,7 +1069,16 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
 
   // ── Row renderer ─────────────────────────────────────────────────────────
 
-  const renderRow = (row: RowConfig, sectionTitle: string) => {
+  /**
+   * Renders a single data row. `parity` is a shared counter object mutated
+   * in-place each time a visible row is emitted, enabling cross-section
+   * zebra striping without lifting state.
+   */
+  const renderRow = (
+    row: RowConfig,
+    sectionTitle: string,
+    parity: { count: number },
+  ) => {
     const variant: RowVariant = row.variant ?? 'normal';
 
     if (variant === 'separator') {
@@ -1078,10 +1109,11 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
       });
       if (!hasStrVal) return null;
 
+      const isEven = parity.count++ % 2 === 0;
       return (
         <tr
           key={`${sectionTitle}-${row.key}`}
-          className={getRowClasses(variant)}
+          className={getRowClasses(variant, isEven)}
         >
           <td className={getLabelClasses(variant)}>{row.label}</td>
           {years.map((y) => {
@@ -1120,10 +1152,11 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         row.variant === 'total' &&
         sectionTitle === 'Adjusted EBITDA Bridge');
 
+    const isEven = parity.count++ % 2 === 0;
     return (
       <tr
         key={`${sectionTitle}-${row.key}`}
-        className={getRowClasses(variant)}
+        className={getRowClasses(variant, isEven)}
       >
         <td className={getLabelClasses(variant)}>{row.label}</td>
         {years.map((y) => {
@@ -1181,7 +1214,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   // This is shown inline within the CFADS section only when the breakdown
   // data exists, giving a transparent build-up from Adj EBITDA to CFADS.
 
-  const renderCfadsDetail = () => {
+  const renderCfadsDetail = (parity: { count: number }) => {
     if (!hasFccrBreakdown) return null;
 
     const rows: Array<{
@@ -1215,27 +1248,30 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
       .filter((r) =>
         years.some((y) => getFccrBreakdownValue(y, r.key) !== null),
       )
-      .map((r) => (
-        <tr
-          key={`cfads-detail-${r.key}`}
-          className={getRowClasses(r.variant)}
-        >
-          <td className={getLabelClasses(r.variant)}>{r.label}</td>
-          {years.map((y) => (
-            <td key={y} className={getValueClasses(r.variant)}>
-              {formatValue(
-                getFccrBreakdownValue(y, r.key),
-                'currency',
-              )}
-            </td>
-          ))}
-        </tr>
-      ));
+      .map((r) => {
+        const isEven = parity.count++ % 2 === 0;
+        return (
+          <tr
+            key={`cfads-detail-${r.key}`}
+            className={getRowClasses(r.variant, isEven)}
+          >
+            <td className={getLabelClasses(r.variant)}>{r.label}</td>
+            {years.map((y) => (
+              <td key={y} className={getValueClasses(r.variant)}>
+                {formatValue(
+                  getFccrBreakdownValue(y, r.key),
+                  'currency',
+                )}
+              </td>
+            ))}
+          </tr>
+        );
+      });
   };
 
   // ── FCCR denominator detail ─────────────────────────────────────────────
 
-  const renderFccrDenominatorDetail = () => {
+  const renderFccrDenominatorDetail = (parity: { count: number }) => {
     if (!hasFccrBreakdown) return null;
 
     const rows: Array<{
@@ -1272,27 +1308,33 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
           return v !== null && v !== 0;
         }),
       )
-      .map((r) => (
-        <tr
-          key={`fccr-denom-${r.key}`}
-          className={getRowClasses(r.variant)}
-        >
-          <td className={getLabelClasses(r.variant)}>{r.label}</td>
-          {years.map((y) => (
-            <td key={y} className={getValueClasses(r.variant)}>
-              {formatValue(
-                getFccrBreakdownValue(y, r.key),
-                'currency',
-              )}
-            </td>
-          ))}
-        </tr>
-      ));
+      .map((r) => {
+        const isEven = parity.count++ % 2 === 0;
+        return (
+          <tr
+            key={`fccr-denom-${r.key}`}
+            className={getRowClasses(r.variant, isEven)}
+          >
+            <td className={getLabelClasses(r.variant)}>{r.label}</td>
+            {years.map((y) => (
+              <td key={y} className={getValueClasses(r.variant)}>
+                {formatValue(
+                  getFccrBreakdownValue(y, r.key),
+                  'currency',
+                )}
+              </td>
+            ))}
+          </tr>
+        );
+      });
   };
 
   // ── Ratio formula component rows ─────────────────────────────────────────
 
-  const renderFormulaRows = (ratioKey: string) => {
+  const renderFormulaRows = (
+    ratioKey: string,
+    parity: { count: number },
+  ) => {
     const formulas = ratioFormulas[ratioKey];
     if (!formulas) return null;
 
@@ -1302,22 +1344,25 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
           (y) => f.getValue(data.metrics_by_year[y]) !== null,
         ),
       )
-      .map((f, i) => (
-        <tr
-          key={`formula-${ratioKey}-${i}`}
-          className={getRowClasses('addback')}
-        >
-          <td className={getLabelClasses('addback')}>{f.label}</td>
-          {years.map((y) => (
-            <td key={y} className={getValueClasses('addback')}>
-              {formatValue(
-                f.getValue(data.metrics_by_year[y]),
-                f.format,
-              )}
-            </td>
-          ))}
-        </tr>
-      ));
+      .map((f, i) => {
+        const isEven = parity.count++ % 2 === 0;
+        return (
+          <tr
+            key={`formula-${ratioKey}-${i}`}
+            className={getRowClasses('addback', isEven)}
+          >
+            <td className={getLabelClasses('addback')}>{f.label}</td>
+            {years.map((y) => (
+              <td key={y} className={getValueClasses('addback')}>
+                {formatValue(
+                  f.getValue(data.metrics_by_year[y]),
+                  f.format,
+                )}
+              </td>
+            ))}
+          </tr>
+        );
+      });
   };
 
   // ── Equation verification cards ────────────────────────────────────────
@@ -1582,16 +1627,23 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
-        <table className="min-w-160 w-full text-sm tabular-nums border-collapse">
-          <thead>
+        {/*
+         * `table-financial` activates the zebra/hover rules in globals.css
+         * (kept as a fallback). Row-level parity classes take precedence via
+         * Tailwind utility specificity, giving us cross-section striping that
+         * respects variant overrides (subtotal, total).
+         */}
+        <table className="table-financial min-w-160 w-full text-sm tabular-nums border-collapse">
+          <thead className="sticky top-0 z-10">
             <tr className="bg-primary border-b-2 border-primary">
-              <th className="py-3 px-4 text-left font-semibold text-primary-foreground w-56">
+              {/* Label column — wide enough for longest metric name */}
+              <th className="py-3 px-4 text-left text-xs font-bold uppercase tracking-wider text-primary-foreground w-56 whitespace-nowrap bg-primary">
                 Line Item
               </th>
               {years.map((y) => (
                 <th
                   key={y}
-                  className="py-3 px-4 text-right font-semibold text-primary-foreground tabular-nums"
+                  className="py-3 px-4 text-right text-xs font-bold uppercase tracking-wider text-primary-foreground tabular-nums min-w-[140px] bg-primary"
                 >
                   {y}
                 </th>
@@ -1617,20 +1669,20 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                         <React.Fragment
                           key={`${section.title}-${row.key}-wrap`}
                         >
-                          {renderRow(row, section.title)}
-                          {renderFormulaRows(row.key)}
+                          {renderRow(row, section.title, rowParity)}
+                          {renderFormulaRows(row.key, rowParity)}
                         </React.Fragment>
                       ))}
 
                       {/* Inject CFADS detail rows under "Cash Available for Debt Service" */}
                       {section.title ===
                         'Cash Available for Debt Service (CFADS)' &&
-                        renderCfadsDetail()}
+                        renderCfadsDetail(rowParity)}
 
                       {/* Inject FCCR denominator breakdown under "Debt Service" */}
                       {section.title ===
                         'Debt Service (Fixed Charges)' &&
-                        renderFccrDenominatorDetail()}
+                        renderFccrDenominatorDetail(rowParity)}
                     </>
                   )}
                 </React.Fragment>
