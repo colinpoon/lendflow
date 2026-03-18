@@ -405,6 +405,14 @@ export const extractVisionData = async (pdfBuffer: Buffer, userId?: string): Pro
     }
   }
 
+  // Cap warnings array to prevent unbounded growth
+  const MAX_WARNINGS = 50;
+  if (extractionWarnings.length > MAX_WARNINGS) {
+    const overflow = extractionWarnings.length - MAX_WARNINGS;
+    extractionWarnings.splice(MAX_WARNINGS);
+    extractionWarnings.push(`...and ${overflow} more warning${overflow === 1 ? '' : 's'} (set DEBUG_FINANCIALS=true for full list)`);
+  }
+
   // ── Step 9: Calculate token usage and cost ────────────────────────────────
   const tokenUsage = {
     input_tokens: visionResult.totalUsage.inputTokens,
