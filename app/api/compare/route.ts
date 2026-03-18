@@ -61,6 +61,15 @@ export async function POST(req: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    // Validate PDF magic bytes (%PDF) before writing to disk
+    if (buffer.length < 4 || buffer[0] !== 0x25 || buffer[1] !== 0x50 || buffer[2] !== 0x44 || buffer[3] !== 0x46) {
+      return NextResponse.json(
+        { error: 'File does not appear to be a valid PDF.' },
+        { status: 400 }
+      );
+    }
+
     await writeFile(tempFilePath, buffer);
 
     try {

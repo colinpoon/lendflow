@@ -252,6 +252,22 @@ export async function POST(req: NextRequest) {
 
       console.log(`📤 Uploading to Supabase Storage: ${storagePath}`);
 
+      // Read file buffer once — used for magic byte validation, storage upload, and temp file
+      const fileBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(fileBuffer);
+
+      // Validate magic bytes BEFORE uploading — reject spoofed MIME types early
+      if (!validateMagicBytes(buffer, file.type)) {
+        console.error(`❗ Magic byte validation failed: claimed ${file.type}, content mismatch`);
+        await sendProgress({
+          stage: 'error',
+          progress: 0,
+          message: 'File validation failed. The uploaded file does not appear to be a valid document.',
+        });
+        await closeWriter();
+        return;
+      }
+
       await sendProgress({
         stage: 'uploading',
         progress: 8,
@@ -259,7 +275,6 @@ export async function POST(req: NextRequest) {
       });
 
       // Upload to Supabase Storage (use admin client to bypass RLS UUID casting issues)
-      const fileBuffer = await file.arrayBuffer();
       const { error: uploadError } = await adminSupabase.storage
         .from('financial-documents')
         .upload(storagePath, fileBuffer, {
@@ -313,41 +328,9 @@ export async function POST(req: NextRequest) {
         message: 'File uploaded successfully',
       });
 
-      // Download file to temp for AI processing (use admin client to bypass RLS)
-      const { data: fileData, error: downloadError } = await adminSupabase.storage
-        .from('financial-documents')
-        .download(storagePath);
-
-      if (downloadError || !fileData) {
-        console.error('❗ Error downloading file for processing:', downloadError);
-        await updateDocumentStatus(supabase, documentId, 'failed', 'Failed to download file for processing');
-        await sendProgress({
-          stage: 'error',
-          progress: 0,
-          message: 'Failed to download file for processing',
-        });
-        await closeWriter();
-        return;
-      }
-
-      // Write to temp file for AI processor
+      // Write to temp file for AI processor (buffer already validated above)
       const tempDir = os.tmpdir();
       const tempPath = path.join(tempDir, `${documentId}-${sanitizedFileName}`);
-      const buffer = Buffer.from(await fileData.arrayBuffer());
-
-      // Validate magic bytes — reject files whose content doesn't match their claimed type
-      if (!validateMagicBytes(buffer, file.type)) {
-        console.error(`❗ Magic byte validation failed: claimed ${file.type}, content mismatch`);
-        await updateDocumentStatus(supabase, documentId, 'failed', 'File content does not match declared type');
-        await sendProgress({
-          stage: 'error',
-          progress: 0,
-          message: 'File validation failed. The uploaded file does not appear to be a valid document.',
-        });
-        await closeWriter();
-        return;
-      }
-
       fs.writeFileSync(tempPath, buffer);
 
       console.log(`📂 Temp file created: ${tempPath}`);
