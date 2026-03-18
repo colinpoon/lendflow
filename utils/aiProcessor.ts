@@ -748,7 +748,9 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
   // FCCR Calculation
   // ─────────────────────────────────────────────────────────────────────────
 
-  const fccrResult = calculateFCCR(result.adjusted_ebitda ?? result.ebitda, m, undefined, year);
+  // Pass `result` (not `m`) so FCCR sees updated debt/EBITDA values from earlier
+  // computation phases — consistent with how DSCR receives `result` below.
+  const fccrResult = calculateFCCR(result.adjusted_ebitda ?? result.ebitda, result, undefined, year);
   result.fccr = fccrResult.fccr;
   result.fccr_numerator = fccrResult.fccr_numerator;
   result.total_fixed_charges = fccrResult.total_fixed_charges;
@@ -756,7 +758,7 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
   result.fccr_breakdown = fccrResult.fccr_breakdown;
 
   // Debug logging
-  logFCCR(result.adjusted_ebitda ?? result.ebitda, m, fccrResult);
+  logFCCR(result.adjusted_ebitda ?? result.ebitda, result, fccrResult);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Ratio Calculations
