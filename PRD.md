@@ -281,6 +281,48 @@ Validate extraction integrity using the real financial reports in `public/financ
 
 
 
+### Task 6: Critical — Database & Data Integrity Fixes
+Prevent data corruption and silent failures in the extraction pipeline.
+- [ ] Wrap extraction insert + project risk-score update in a Supabase RPC transaction (or validate every `.error` response)
+- [ ] Fix year-conflict detection running after insertion — detect conflicts before insert, or clean up orphaned records on cancel
+- [ ] Audit all Supabase calls in `route.ts` — check `{ data, error }` on every operation, log failures, update document status to `'failed'`
+- [ ] Add cleanup mechanism for stale `processing` records (background job or cron marking stuck documents as `failed` after 15 min)
+
+### Task 7: Critical — Document Parsing Completeness
+Ensure all accepted file types can actually be processed.
+- [ ] Either implement Excel parsing (`.xlsx` via existing `xlsx` dependency) and Word parsing (`.docx`) in `document-parser.ts`
+- [ ] Or remove Excel/Word MIME types from `ALLOWED_MIME_TYPES` in `route.ts` until support is built
+- [ ] Add file content validation — detect scanned/image-only PDFs and warn the user before processing
+
+### Task 8: High — Error Handling & Resilience
+Make the pipeline gracefully handle failures instead of losing all progress.
+- [ ] Wrap `generateRiskAssessment()`, `generateDebtHealthAssessment()`, `calculateQuantitativeRisk()` in individual try/catch blocks — allow partial success (return metrics with `riskSnapshot: null`)
+- [ ] Implement exponential backoff with jitter for all Claude API calls (enable Anthropic SDK's built-in retry support)
+- [ ] Guard all division operations in `lib/calculations/` — handle negative EBITDA, negative equity, zero denominators with `null` returns and explanatory warnings
+- [ ] Align file-size limits: frontend (`FileUpload.tsx` 10MB) vs API (`route.ts` 50MB) vs error message (30MB) — use a single shared constant
+
+### Task 9: High — Security Hardening
+Protect against abuse and data leaks.
+- [ ] Add per-user rate limiting on `/api/extractData` (Upstash Redis rate limiter or in-memory token bucket)
+- [ ] Implement structured logging with sensitive data redaction — remove/encrypt financial values from production logs regardless of `DEBUG_FINANCIALS` flag
+- [ ] Replace synchronous file I/O (`readFileSync`/`writeFileSync`) in `risk-generator.ts` cache with async alternatives or in-memory LRU cache
+
+### Task 10: Medium — Extraction Pipeline Robustness
+Improve accuracy and consistency of the extraction pipeline.
+- [ ] Add `scale_correction_applied` flag per metric to prevent over-correction across the 3 normalization passes (detected scale → cross-metric → cross-year)
+- [ ] Validate and normalize fiscal year format immediately after extraction — reject unrecognizable formats with warning
+- [ ] Cap warnings array at ~50 entries; summarize overflow as "...and N more warnings"
+
+### Task 11: Low — Type Safety & Developer Experience
+Reduce technical debt and improve maintainability.
+- [ ] Add Zod schemas for AI response validation at the boundary; generate TypeScript types from schemas
+- [ ] Replace `as unknown as X` casts and `Record<string, unknown>` types with proper typed interfaces
+- [ ] Wrap `FinancialTable`, `RiskAssessment`, and `EBITDA` components with `<ErrorBoundary>`
+- [ ] Move AI model version to `ANTHROPIC_MODEL` env var with current value as default
+- [ ] Add `.env.example` with all required environment variables and placeholder values
+
+---
+
 ## Summary
 
 Lendflow is a serious fintech tool that replicates what a credit analyst does — reading financial statements, normalizing data, computing covenant ratios, and assessing risk — but does it in minutes with AI. The extraction pipeline has audit-grade sophistication (source weighting, conflict resolution, scale normalization, canonical statement mapping), and the calculation engine mirrors real commercial loan agreement structures with configurable covenant parameters.
