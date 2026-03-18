@@ -216,11 +216,22 @@ export const extractFinancialData = async (
       .filter((result): result is AIExtractionResponse => result !== null);
 
     // Derive primary_fiscal_year from chunk responses.
-    // Multiple chunks may each report one — take the first non-null value found.
-    // The AI is instructed to emit the document's primary reporting year (not
-    // comparative columns), so any chunk that identifies it is authoritative.
-    const primary_fiscal_year: string | null =
-      allExtractions.find((e) => e.primary_fiscal_year != null)?.primary_fiscal_year ?? null;
+    // Multiple chunks may each report different values — chunk 1 might see only notes
+    // pages with a comparative year header. Use the most commonly reported value;
+    // break ties by taking the latest (most recent) year.
+    const primary_fiscal_year: string | null = (() => {
+      const counts = new Map<string, number>();
+      for (const e of allExtractions) {
+        if (e.primary_fiscal_year) {
+          counts.set(e.primary_fiscal_year, (counts.get(e.primary_fiscal_year) ?? 0) + 1);
+        }
+      }
+      if (counts.size === 0) return null;
+      const maxCount = Math.max(...counts.values());
+      const candidates = [...counts.entries()].filter(([, c]) => c === maxCount).map(([y]) => y);
+      // Break ties by choosing the latest year
+      return candidates.sort().pop()!;
+    })();
 
     if (primary_fiscal_year) {
       console.log(`📅 Primary fiscal year identified: ${primary_fiscal_year}`);
