@@ -782,7 +782,7 @@ PILLAR SCORING GUIDANCE (each pillar scored 1–10, higher = worse risk):
 
 1. debt_service_capacity (weight 30%):
    Evaluate FCCR, DSCR, and interest coverage ratio.
-   - FCCR >= 2.0x → 1–2; 1.5–2.0x → 3–4; 1.2–1.5x → 5–6; 1.0–1.2x → 7–8; < 1.0x → 9–10
+   - FCCR >= 2.0x → 1–2; 1.5–2.0x → 3–4; 1.25–1.5x → 5–6; 1.0–1.25x → 7–8; < 1.0x → 9–10
    - Cross-check with DSCR and interest coverage for consistency.
 
 2. leverage (weight 25%):
@@ -829,7 +829,7 @@ SCORING WEIGHTS:
 - Total Debt / Total Capital: 15% weight
 
 SCORING THRESHOLDS (each metric scored 0-10, higher = worse):
-- FCCR: >=2.0x=1 (excellent), 1.5-2.0=3 (good), 1.2-1.5=5 (adequate), 1.0-1.2=7 (weak), <1.0=9 (poor), negative=10 (critical)
+- FCCR: >=2.0x=1 (excellent), 1.5-2.0=3 (good), 1.25-1.5=5 (adequate), 1.0-1.25=7 (weak), <1.0=9 (poor), negative=10 (critical)
 - Debt/EBITDA: <=1.5x=1, 1.5-2.5x=3, 2.5-3.0x=5, 3.0-4.0x=7, >4.0x=9
 - Debt/Capital: <30%=1, 30-50%=3, 50-60%=5, 60-70%=7, >70%=9
 

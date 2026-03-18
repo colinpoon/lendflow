@@ -65,8 +65,8 @@ const METRIC_CONFIG = {
     bands: [
       { min: 2.0, max: Infinity, score: 1 },  // >=2.00x
       { min: 1.5, max: 2.0, score: 2 },       // 1.50x to 1.99x
-      { min: 1.2, max: 1.5, score: 3 },       // 1.20x to 1.49x
-      { min: 1.0, max: 1.2, score: 4 },       // 1.00x to 1.19x
+      { min: 1.25, max: 1.5, score: 3 },      // 1.25x to 1.49x
+      { min: 1.0, max: 1.25, score: 4 },      // 1.00x to 1.24x
       { min: -Infinity, max: 1.0, score: 5 }, // <1.00x
     ],
     higher_is_better: true,

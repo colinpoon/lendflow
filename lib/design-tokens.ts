@@ -318,7 +318,7 @@ export function getFCCRRiskLevel(value: number | null | undefined): RiskLevel {
   if (value == null) return 'adequate';
   if (value >= 2.0) return 'excellent';
   if (value >= 1.5) return 'good';
-  if (value >= 1.2) return 'adequate';
+  if (value >= 1.25) return 'adequate';
   if (value >= 1.0) return 'weak';
   return 'poor';
 }

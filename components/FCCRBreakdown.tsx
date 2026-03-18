@@ -217,7 +217,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
         {/* FCCR Card */}
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 text-center border border-blue-200">
           <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Covenant FCCR</p>
-          <p className={`text-2xl font-bold ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })}`}>
+          <p className={`text-2xl font-bold ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>
             {formatRatio(adjustedFCCR)}
           </p>
           <p className="text-xs text-gray-500 mt-1">Cash Flow Coverage (Lender)</p>
@@ -333,7 +333,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-gray-800">Covenant FCCR Calculation Breakdown</span>
-                <span className={`text-sm px-2 py-0.5 rounded ${getRatioColor(metrics.fccr ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })} bg-opacity-20`}>
+                <span className={`text-sm px-2 py-0.5 rounded ${getRatioColor(metrics.fccr ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })} bg-opacity-20`}>
                   {formatRatio(metrics.fccr)}
                 </span>
               </div>
@@ -559,7 +559,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <span className="text-gray-500">Denominator =</span> {fccrBreakdown.ttm_principal_payments.toLocaleString()} + {fccrBreakdown.ttm_interest_expense.toLocaleString()}{fccrBreakdown.lease_payments > 0 ? ` + ${fccrBreakdown.lease_payments.toLocaleString()}` : ''} = <span className="font-semibold text-blue-700">{fccrBreakdown.denominator.toLocaleString()}</span>
                     </div>
                     <div className="pt-2 border-t border-gray-300 text-center">
-                      <span className="text-gray-500">Covenant FCCR =</span> {(adjustedNumerator ?? fccrBreakdown.numerator).toLocaleString()} / {fccrBreakdown.denominator.toLocaleString()} = <span className={`font-bold text-lg ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.2 })}`}>{formatRatio(adjustedFCCR)}</span>
+                      <span className="text-gray-500">Covenant FCCR =</span> {(adjustedNumerator ?? fccrBreakdown.numerator).toLocaleString()} / {fccrBreakdown.denominator.toLocaleString()} = <span className={`font-bold text-lg ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>{formatRatio(adjustedFCCR)}</span>
                     </div>
                   </div>
                   {totalCustomAdjustments !== 0 && (

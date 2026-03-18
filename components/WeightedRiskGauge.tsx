@@ -322,7 +322,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
       {/* FCCR */}
       <div>
         <h5 className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground mb-3">
-          Covenant FCCR (Target: &gt; 1.2x)
+          Covenant FCCR (Target: &gt; 1.25x)
         </h5>
         <ChartContainer config={historicalChartConfig} className="h-[120px] w-full">
           <BarChart

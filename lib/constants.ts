@@ -97,7 +97,7 @@ export const MERGE_CONFIG = {
 export const FCCR_THRESHOLDS = {
   EXCELLENT: 2.0,
   GOOD: 1.5,
-  ADEQUATE: 1.2,
+  ADEQUATE: 1.25,
   WEAK: 1.0,
 } as const;
 

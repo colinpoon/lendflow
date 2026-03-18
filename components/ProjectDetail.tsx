@@ -517,8 +517,8 @@ export default function ProjectDetail({
           <MetricCard
             label="Covenant FCCR"
             value={formatRatio(fccr)}
-            subtitle={fccr !== null ? (fccr >= 1.2 ? 'Adequate' : 'Below threshold') : undefined}
-            colorClass={getRatioStatus(fccr, { good: 1.2, fair: 1.0, direction: 'above' })}
+            subtitle={fccr !== null ? (fccr >= 1.25 ? 'Adequate' : 'Below threshold') : undefined}
+            colorClass={getRatioStatus(fccr, { good: 1.25, fair: 1.0, direction: 'above' })}
           />
           <MetricCard
             label="Sr. Debt / EBITDA"
