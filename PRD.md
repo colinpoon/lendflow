@@ -375,10 +375,10 @@ Financial Director sign-off on calculation engine (2026-03-17). Core methodology
 
 ### Task 17: High — Revolver Warning & Fatal Error Fixes
 Senior-engineer and code-approver review (2026-03-18). Both reviewers converged on the same critical finding: the revolver warning shipped in `9d98846` is invisible to analysts in the most common scenario.
-- [ ] **HIGH — Remove `!hasPartialExtraction` gate suppressing extraction warnings** — `ExtractionWarnings.tsx:46` hides all `extractionWarnings` (including revolver distortion warnings) when any chunk fails. The partial extraction banner and extraction warnings are orthogonal concerns — a document with one failed chunk AND suspicious `repayment_of_debt` values is precisely when analysts need both. Remove `&& !hasPartialExtraction` from line 46. File: `components/ExtractionWarnings.tsx`
-- [ ] **HIGH — Union extraction_warnings from all documents in multi-doc merge** — `extraction-utils.ts:658-660` copies warnings only from the most-recent-year document. If year 2022 came from Document A (which has a revolver warning) and year 2024 came from Document B (no warning), the 2022 revolver warning is silently dropped. Union all documents' `extraction_warnings` arrays instead of taking only the most recent. File: `lib/extraction-utils.ts`
-- [ ] **MEDIUM — Tighten `classifyFatalError` auth check** — `chunk-processor.ts:526` matches `'authentication'` as a substring, which is too broad and could match transient errors unrelated to API key validity. Tighten to `'authentication_error'` to match Anthropic's specific error type string. File: `lib/chunk-processor.ts`
-- [ ] **MEDIUM — Distinguish skipped chunks from failed in `chunk_stats`** — When fatal error aborts the pipeline, remaining chunks are filled as `{ result: null }` with no marker. They're counted as failures, making `chunk_stats.failed` misleadingly high (e.g., "8 of 10 sections failed" when only 1 actually failed and 7 were skipped). Add `skipped?: boolean` to `ChunkResult`, set it on fill-in entries, and separate failed vs skipped in stats and warning messages. Files: `lib/chunk-processor.ts`, `utils/aiProcessor.ts`
+- [x] **HIGH — Remove `!hasPartialExtraction` gate suppressing extraction warnings** — removed `&& !hasPartialExtraction` from line 46; extraction warnings now visible alongside partial extraction banner
+- [x] **HIGH — Union extraction_warnings from all documents in multi-doc merge** — now unions all documents' warnings arrays with deduplication, plus includes union merge warnings
+- [x] **MEDIUM — Tighten `classifyFatalError` auth check** — changed substring match from `'authentication'` to `'authentication_error'`
+- [x] **MEDIUM — Distinguish skipped chunks from failed in `chunk_stats`** — added `skipped?: boolean` to `ChunkResult`; stats and UI message now separate failed vs skipped
 
 ---
 

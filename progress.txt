@@ -488,3 +488,26 @@ Both removals preserve the safe dedup triggers: Check 1a (direct value match), C
 Task 16 is now fully complete (all 5 sub-items checked off).
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 17: Revolver Warning & Fatal Error Fixes (COMPLETED — commits 1771efb, 7a528d5, d65ed48, 892c2df)
+All 4 sub-items implemented:
+
+1. **ExtractionWarnings gate** — removed `&& !hasPartialExtraction` that was hiding all
+   extraction warnings (including revolver distortion) when any chunk failed. Partial
+   extraction banner and extraction warnings are now independent.
+
+2. **Union extraction_warnings** — multi-doc merge now unions warnings from ALL documents
+   instead of copying only from the most-recent-year document. Also includes union merge
+   warnings and deduplicates identical entries via Set.
+
+3. **classifyFatalError auth check** — tightened substring match from `'authentication'`
+   to `'authentication_error'` to match Anthropic's specific error type string.
+
+4. **Skipped vs failed chunks** — added `skipped?: boolean` to `ChunkResult` interface,
+   set on fill-in entries when pipeline aborts. `chunk_stats` now separates `failed`
+   (actually attempted) from `skipped` (never attempted). UI message updated to show
+   both counts distinctly.
+
+Task 17 is now fully complete (all 4 sub-items checked off).
+
+- TypeScript: clean (npm run build passes, 0 errors)
