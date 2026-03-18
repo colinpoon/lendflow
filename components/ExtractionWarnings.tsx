@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { AlertTriangle, ClipboardList, ChevronDown, ChevronUp } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 
 interface ExtractionWarningsProps {
@@ -44,17 +45,23 @@ export default function ExtractionWarnings({
 
       {/* Extraction Warnings */}
       {extractionWarnings && extractionWarnings.length > 0 && (
-        <Alert className="bg-card border-border">
-          <AlertTriangle className="h-4 w-4 text-warning" />
-          <AlertTitle className="text-foreground">Extraction Notice</AlertTitle>
-          <AlertDescription className="text-muted-foreground">
-            <ul className="list-disc list-inside mt-1 space-y-1">
-              {extractionWarnings.map((warning, index) => (
-                <li key={index}>{warning}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
+        <Accordion type="single" collapsible className="bg-card border border-border rounded-lg px-4">
+          <AccordionItem value="extraction-warnings" className="border-b-0">
+            <AccordionTrigger className="py-3 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <span className="font-medium text-foreground">Extraction Notice</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="text-muted-foreground">
+              <ul className="list-disc list-inside space-y-1">
+                {extractionWarnings.map((warning, index) => (
+                  <li key={index}>{warning}</li>
+                ))}
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       )}
 
       {/* Validation Issues */}
