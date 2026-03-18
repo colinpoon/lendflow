@@ -99,7 +99,10 @@ export async function generateRiskAssessment(
     if (!validation.success) {
       console.warn('⚠️ Risk assessment response failed schema validation:', validation.error.flatten().fieldErrors);
     }
-    const riskSnapshot = validation.success ? validation.data : parsed;
+    if (!validation.success) {
+      return null;
+    }
+    const riskSnapshot = validation.data;
 
     // Cache the result — evict the oldest entry if at capacity
     if (riskCache.size >= RISK_CACHE_MAX) {
@@ -191,7 +194,10 @@ export async function generateDebtHealthAssessment(
     if (!validation.success) {
       console.warn('⚠️ Debt health assessment response failed schema validation:', validation.error.flatten().fieldErrors);
     }
-    const assessment = validation.success ? validation.data : parsed;
+    if (!validation.success) {
+      return null;
+    }
+    const assessment = validation.data;
 
     console.log('✅ AI debt health assessment generated');
     console.log(`   Recommendations: ${assessment.recommendations?.length || 0} items`);
