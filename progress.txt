@@ -255,3 +255,36 @@ Both early-return paths (null denominator) also propagate `cashTaxesFallbackWarn
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
+
+### Task 12: Fix Revolver Gross-Draw Distortion in DSCR Denominator (COMPLETED — commit fa10464)
+Implemented the actual correction (cap), not just the warning that was shipped in 9d98846.
+
+Problem: `repayment_of_debt` on the US GAAP cash flow statement includes gross revolving
+credit draws and repayments in the same period. A company cycling a $20M revolver 12x/year
+shows $240M in repayment_of_debt — severely inflating the DSCR/FCCR denominator.
+
+Fix: When `repayment_of_debt` is the principal source AND it exceeds `funded_debt * 1.5`,
+cap principal at the funded debt balance. The economic rationale: a company cannot retire
+more debt than it has outstanding; any excess is gross revolving activity.
+
+- Funded debt computed using same formula as dscr-calculator.ts (bank debt + finance leases)
+- Analyst-facing warning pushed to `extractionWarnings` (visible in UI) with uncapped value
+- Earlier diagnostic-only revolving credit warnings suppressed when cap fires (avoids noise)
+- `principal_capped_at_funded_debt?: boolean` added to sources for breakdown display
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
+### Task 12: Fix ICR to use Adjusted EBITDA (COMPLETED — commit 6cd964c)
+`risk-generator.ts` was computing ICR with raw `m.ebitda` while DSCR/FCCR both use
+`m.adjusted_ebitda`. This gave the AI risk assessor an inconsistent set of coverage ratios —
+ICR excluded the same add-backs (owner comp normalization, one-time charges, etc.) that lenders
+explicitly accept via FCCR and DSCR.
+
+Two issues fixed together:
+1. Numerator corrected: now uses `m.adjusted_ebitda ?? m.ebitda`. Falls back to raw EBITDA
+   only when adjusted_ebitda is unavailable (no adjustment components extracted).
+2. Null handling corrected: was `(m.ebitda ?? 0) / m.interest` — produced 0x ICR when EBITDA
+   was missing, causing AI to treat unmeasured coverage as zero. Now returns null, consistent
+   with how all other ratios handle absent inputs.
+
+File: `lib/risk-generator.ts`
+- TypeScript: clean (tsc --noEmit, 0 errors)

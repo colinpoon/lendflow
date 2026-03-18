@@ -310,10 +310,10 @@ Improve accuracy and consistency of the extraction pipeline.
 
 ### Task 12: Critical — Financial Calculation Accuracy Fixes
 All three reviewers (senior-engineer, code-approver, financial-director) agree these affect lending decision accuracy.
-- [ ] Fix revolver gross-draw distortion in DSCR denominator — `repayment_of_debt` can include gross revolving credit draws/repays, severely inflating the denominator. Extract `net_repayment_of_revolving_credit` separately and prefer it, or cap at funded debt total. Surface warnings to UI, not just server logs.
+- [x] Fix revolver gross-draw distortion in DSCR denominator — `repayment_of_debt` can include gross revolving credit draws/repays, severely inflating the denominator. Extract `net_repayment_of_revolving_credit` separately and prefer it, or cap at funded debt total. Surface warnings to UI, not just server logs.
 - [x] Add preferred dividends to FCCR denominator — `preferred_dividends` is extracted in fixed charges but excluded from the FCCR denominator. Preferred dividends are a fixed charge by definition in commercial lending.
 - [x] Fix cash taxes fallback to zero in FCCR — when `cash_taxes_paid` is null, the numerator defaults to zero tax deduction, inflating FCCR for profitable companies by 10-20+ bps. Fallback should use income statement tax expense.
-- [ ] Fix ICR to use Adjusted EBITDA — `risk-generator.ts` computes ICR with `m.ebitda` (raw) while DSCR/FCCR use Adjusted EBITDA. Creates inconsistent signals in the AI risk assessment input.
+- [x] Fix ICR to use Adjusted EBITDA — `risk-generator.ts` computes ICR with `m.ebitda` (raw) while DSCR/FCCR use Adjusted EBITDA. Creates inconsistent signals in the AI risk assessment input.
 - [ ] Surface negative FCCR as a validation issue — negative FCCR (numerator < 0) means cash flow is insufficient for ANY debt service. Currently returned silently as a negative number with no alert.
 - [ ] Fix `funded_debt_to_ebitda` coerced to 0 in DSCR breakdown — type forces `number` instead of `number | null`, causing the display to show `0x` instead of `N/A` when EBITDA is zero. Misleads analysts.
 - [ ] Fix bank debt double-counting edge case — when `bank_debt_current` is partially extracted (non-zero) but `bank_debt_long_term` is missing, the fallback to disaggregated fields is skipped. Guard should check both are non-null, not just that their sum is non-zero.
