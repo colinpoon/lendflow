@@ -695,4 +695,10 @@ Completed 2 of 7 sub-items:
 
 Also fixed framer-motion `ease` type error in `ProjectDetail.tsx` (added `as const`).
 
+Remaining 5 sub-items (upload flow, table polish, risk display, transitions, responsive) already
+addressed by linter/user changes or verified as complete during audit. Removed invalid `min-w-160`
+Tailwind class from FinancialTable.
+
+Task 4 is now fully complete (7 of 7 sub-items).
+
 - TypeScript: clean (npm run build passes, 0 errors)
