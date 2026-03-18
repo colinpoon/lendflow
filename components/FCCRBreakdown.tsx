@@ -78,18 +78,18 @@ const SourceInfo: React.FC<{
   }
 
   return (
-    <span className="text-xs text-gray-400 ml-1">
+    <span className="text-xs text-muted-foreground/60 ml-1">
       ({parts.join(', ')})
     </span>
   );
 };
 
 const getRatioColor = (ratio: number | null, thresholds: { good: number; ok: number; warning: number }): string => {
-  if (ratio == null) return 'text-gray-500';
-  if (ratio >= thresholds.good) return 'text-green-600';
+  if (ratio == null) return 'text-muted-foreground';
+  if (ratio >= thresholds.good) return 'text-emerald-600 dark:text-emerald-400';
   if (ratio >= thresholds.ok) return 'text-lime-600';
-  if (ratio >= thresholds.warning) return 'text-yellow-600';
-  return 'text-red-600';
+  if (ratio >= thresholds.warning) return 'text-amber-600 dark:text-amber-400';
+  return 'text-destructive';
 };
 
 const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
@@ -113,7 +113,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
   const [openAccordions, setOpenAccordions] = useState<string[]>(['fccr', 'dscr', 'guide']);
 
   if (!data?.metrics_by_year || Object.keys(data.metrics_by_year).length === 0) {
-    return <p className="text-gray-500">No coverage ratio data available.</p>;
+    return <p className="text-muted-foreground">No coverage ratio data available.</p>;
   }
 
   const years = Object.keys(data.metrics_by_year).sort().reverse();
@@ -161,21 +161,21 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-800">Debt Coverage Analysis</h3>
-        <span className="text-sm text-gray-500">Fiscal Year {latestYear}</span>
+        <h3 className="text-lg font-semibold text-foreground">Debt Coverage Analysis</h3>
+        <span className="text-sm text-muted-foreground">Fiscal Year {latestYear}</span>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* FCCR Card */}
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 text-center border border-blue-200">
-          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Covenant FCCR</p>
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 text-center border border-primary/20">
+          <p className="text-xs text-primary font-medium uppercase tracking-wide">Covenant FCCR</p>
           <p className={`text-2xl font-bold ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>
             {formatRatio(adjustedFCCR)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Cash Flow Coverage (Lender)</p>
+          <p className="text-xs text-muted-foreground mt-1">Cash Flow Coverage (Lender)</p>
           {totalCustomAdjustments !== 0 && (
-            <p className="text-xs text-blue-500 mt-1">(adjusted)</p>
+            <p className="text-xs text-primary/80 mt-1">(adjusted)</p>
           )}
         </div>
 
@@ -185,16 +185,16 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           <p className={`text-2xl font-bold ${getRatioColor(metrics.dscr ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>
             {formatRatio(metrics.dscr)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Adj. EBITDA / Total Debt Service</p>
+          <p className="text-xs text-muted-foreground mt-1">Adj. EBITDA / Total Debt Service</p>
         </div>
 
         {/* Funded Debt Card */}
-        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 text-center border border-gray-200">
-          <p className="text-xs text-gray-600 font-medium uppercase tracking-wide">Funded Debt</p>
-          <p className="text-2xl font-bold text-gray-800">
+        <div className="bg-gradient-to-br from-muted to-muted rounded-lg p-4 text-center border border-border">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Funded Debt</p>
+          <p className="text-2xl font-bold text-foreground">
             {formatCurrency(metrics.funded_debt)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Bank Debt + Finance Leases</p>
+          <p className="text-xs text-muted-foreground mt-1">Bank Debt + Finance Leases</p>
         </div>
 
         {/* Funded Debt / EBITDA Card */}
@@ -203,7 +203,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           <p className={`text-2xl font-bold ${getRatioColor(metrics.funded_debt_to_ebitda ?? null, { good: 1.5, ok: 2.5, warning: 3.0 })}`}>
             {formatRatio(metrics.funded_debt_to_ebitda)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Funded Debt / EBITDA</p>
+          <p className="text-xs text-muted-foreground mt-1">Funded Debt / EBITDA</p>
         </div>
       </div>
 
@@ -212,8 +212,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
         <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h4 className="font-semibold text-gray-800">CapEx Treatment</h4>
-              <p className="text-xs text-gray-500">How should capital expenditures affect Covenant FCCR?</p>
+              <h4 className="font-semibold text-foreground">CapEx Treatment</h4>
+              <p className="text-xs text-muted-foreground">How should capital expenditures affect Covenant FCCR?</p>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -221,8 +221,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
               onClick={() => onCapexTreatmentChange('unfunded')}
               className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
                 capexTreatment === 'unfunded'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:bg-muted/50'
               }`}
             >
               <div className="font-medium">Unfunded Only</div>
@@ -232,8 +232,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
               onClick={() => onCapexTreatmentChange('all')}
               className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
                 capexTreatment === 'all'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:bg-muted/50'
               }`}
             >
               <div className="font-medium">Deduct All</div>
@@ -243,8 +243,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
               onClick={() => onCapexTreatmentChange('none')}
               className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
                 capexTreatment === 'none'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:bg-muted/50'
               }`}
             >
               <div className="font-medium">No Deduction</div>
@@ -254,8 +254,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
               onClick={() => onCapexTreatmentChange('custom')}
               className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
                 capexTreatment === 'custom'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:bg-muted/50'
               }`}
             >
               <div className="font-medium">Custom %</div>
@@ -264,7 +264,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           </div>
           {capexTreatment === 'custom' && onCustomPercentChange && (
             <div className="mt-3 flex items-center gap-3">
-              <label className="text-sm text-gray-600">Deduct</label>
+              <label className="text-sm text-muted-foreground">Deduct</label>
               <input
                 type="number"
                 min="0"
@@ -273,7 +273,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 onChange={(e) => onCustomPercentChange(Number(e.target.value))}
                 className="w-20 px-2 py-1 border rounded text-center"
               />
-              <span className="text-sm text-gray-600">% of CapEx</span>
+              <span className="text-sm text-muted-foreground">% of CapEx</span>
             </div>
           )}
         </div>
@@ -285,7 +285,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           <AccordionItem value="fccr" className="border rounded-lg px-4 mb-4">
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-gray-800">Covenant FCCR Calculation Breakdown</span>
+                <span className="font-semibold text-foreground">Covenant FCCR Calculation Breakdown</span>
                 <span className={`text-sm px-2 py-0.5 rounded ${getRatioColor(metrics.fccr ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })} bg-opacity-20`}>
                   {formatRatio(metrics.fccr)}
                 </span>
@@ -294,30 +294,30 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
             <AccordionContent>
               <div className="space-y-4 text-sm">
                 {/* Methodology Disclosure */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700 text-xs">
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-primary text-xs">
                   <strong>Covenant FCCR — Lendflow Methodology:</strong> This ratio uses a lender-defined cash flow formula, not the rating-agency (Moody&apos;s/S&amp;P) FCCR.
                   The numerator deducts unfunded CapEx and cash taxes from Adjusted EBITDA to represent true cash available for debt service.
                   Distributions are excluded — they are discretionary and typically restricted by the covenant, not included in the coverage calculation.
                 </div>
 
                 {/* Numerator Section */}
-                <div className="bg-green-50 rounded-lg p-4">
-                  <h5 className="font-semibold text-green-800 mb-3">
+                <div className="bg-emerald-500/5 rounded-lg p-4">
+                  <h5 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-3">
                     Numerator Components
                     {!fccrBreakdown.sources && (
-                      <span className="text-xs text-amber-600 ml-2">(Re-upload document to see source values)</span>
+                      <span className="text-xs text-amber-600 dark:text-amber-400 ml-2">(Re-upload document to see source values)</span>
                     )}
                   </h5>
                   <div className="space-y-2">
                     {/* Adjusted EBITDA */}
                     <div className="flex justify-between">
-                      <span className="text-gray-700 font-medium">Adjusted EBITDA</span>
+                      <span className="text-foreground font-medium">Adjusted EBITDA</span>
                       <span className="font-semibold">{formatCurrency(fccrBreakdown.adjusted_ebitda)}</span>
                     </div>
 
                     {/* CapEx Section */}
-                    <div className="border-t border-green-200 pt-2 mt-2">
-                      <div className="flex justify-between text-gray-600">
+                    <div className="border-t border-emerald-500/20 pt-2 mt-2">
+                      <div className="flex justify-between text-muted-foreground">
                         <span className="flex items-center flex-wrap">
                           Capital Expenditures
                           {fccrBreakdown.sources && (
@@ -326,7 +326,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                         </span>
                         <span>{formatCurrency(fccrBreakdown.capital_expenditures)}</span>
                       </div>
-                      <div className="flex justify-between text-gray-600">
+                      <div className="flex justify-between text-muted-foreground">
                         <span className="flex items-center flex-wrap">
                           Proceeds from LT Debt
                           {fccrBreakdown.sources && (
@@ -338,50 +338,50 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <div className="flex justify-between font-medium mt-1">
                         <span className="flex items-center gap-2">
                           Unfunded CapEx
-                          <span className="px-1.5 py-0.5 bg-green-200 rounded text-xs text-green-700">
+                          <span className="px-1.5 py-0.5 bg-emerald-500/20 rounded text-xs text-emerald-700 dark:text-emerald-400">
                             {fccrBreakdown.capex_treatment === 'unfunded' && 'CapEx - Proceeds'}
                             {fccrBreakdown.capex_treatment === 'all' && '100% CapEx'}
                             {fccrBreakdown.capex_treatment === 'none' && 'Excluded'}
                             {fccrBreakdown.capex_treatment === 'custom' && `${fccrBreakdown.capex_custom_percentage ?? 0}%`}
                           </span>
                         </span>
-                        <span className="text-red-600">
+                        <span className="text-destructive">
                           {fccrBreakdown.unfunded_capex === 0 ? '$0K' : `- ${formatCurrency(fccrBreakdown.unfunded_capex)}`}
                         </span>
                       </div>
                     </div>
 
                     {/* Other Deductions */}
-                    <div className="border-t border-green-200 pt-2 mt-2">
-                      <div className="flex justify-between text-gray-600">
+                    <div className="border-t border-emerald-500/20 pt-2 mt-2">
+                      <div className="flex justify-between text-muted-foreground">
                         <span className="flex items-center flex-wrap">
                           Cash Taxes Paid
                           {fccrBreakdown.sources && (
                             <SourceInfo extracted={fccrBreakdown.sources.cash_taxes_paid_extracted} />
                           )}
                         </span>
-                        <span className="text-red-600">- {formatCurrency(fccrBreakdown.cash_taxes_paid)}</span>
+                        <span className="text-destructive">- {formatCurrency(fccrBreakdown.cash_taxes_paid)}</span>
                       </div>
                     </div>
 
                     {/* Custom Adjustments Section */}
                     {customAdjustments.length > 0 && (
-                      <div className="border-t border-green-200 pt-2 mt-2">
-                        <div className="text-xs text-green-700 font-medium mb-2">Custom Adjustments:</div>
+                      <div className="border-t border-emerald-500/20 pt-2 mt-2">
+                        <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mb-2">Custom Adjustments:</div>
                         <div className="space-y-1">
                           {customAdjustments.map((adj) => (
-                            <div key={adj.id} className="flex justify-between items-center text-gray-600 group">
+                            <div key={adj.id} className="flex justify-between items-center text-muted-foreground group">
                               <span className="flex items-center gap-2">
                                 <button
                                   onClick={() => handleRemoveAdjustment(adj.id)}
-                                  className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity text-xs"
+                                  className="opacity-0 group-hover:opacity-100 text-destructive/60 hover:text-destructive transition-opacity text-xs"
                                   title="Remove adjustment"
                                 >
                                   ×
                                 </button>
                                 {adj.description}
                               </span>
-                              <span className={adj.amount >= 0 ? 'text-green-600' : 'text-red-600'}>
+                              <span className={adj.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}>
                                 {adj.amount >= 0 ? '+ ' : '- '}{formatCurrency(Math.abs(adj.amount))}
                               </span>
                             </div>
@@ -391,17 +391,17 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                     )}
 
                     {/* Add New Adjustment Input */}
-                    <div className="border-t border-green-200 pt-3 mt-2">
-                      <div className="text-xs text-green-700 font-medium mb-2">Add Adjustment:</div>
+                    <div className="border-t border-emerald-500/20 pt-3 mt-2">
+                      <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mb-2">Add Adjustment:</div>
                       <div className="flex gap-2">
                         <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-sm">$</span>
                           <input
                             type="number"
                             value={newAdjustmentAmount}
                             onChange={(e) => setNewAdjustmentAmount(e.target.value)}
                             placeholder="0"
-                            className="w-24 pl-6 pr-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                            className="w-24 pl-6 pr-2 py-1.5 text-sm border border-border rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
                           />
                         </div>
                         <input
@@ -409,7 +409,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                           value={newAdjustmentDescription}
                           onChange={(e) => setNewAdjustmentDescription(e.target.value)}
                           placeholder="Description..."
-                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                          className="flex-1 px-2 py-1.5 text-sm border border-border rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleAddAdjustment();
                           }}
@@ -417,20 +417,20 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                         <button
                           onClick={handleAddAdjustment}
                           disabled={!newAdjustmentAmount || !newAdjustmentDescription.trim()}
-                          className="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                          className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:bg-muted disabled:cursor-not-allowed transition-colors"
                         >
                           Add
                         </button>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-muted-foreground/60 mt-1">
                         Use negative values for deductions, positive for additions
                       </p>
                     </div>
 
                     {/* Numerator Total */}
-                    <div className="flex justify-between font-bold border-t-2 border-green-400 pt-2 mt-2 bg-green-100 -mx-4 px-4 py-2 rounded-b">
+                    <div className="flex justify-between font-bold border-t-2 border-emerald-400/40 pt-2 mt-2 bg-emerald-500/10 -mx-4 px-4 py-2 rounded-b">
                       <span>= Cash Available for Debt Service {totalCustomAdjustments !== 0 && '(Adjusted)'}</span>
-                      <span className="text-green-700">
+                      <span className="text-emerald-700 dark:text-emerald-400">
                         {formatCurrency(totalCustomAdjustments === 0 ? fccrBreakdown.numerator : (adjustedNumerator ?? fccrBreakdown.numerator))}
                       </span>
                     </div>
@@ -438,27 +438,27 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 </div>
 
                 {/* Denominator Section */}
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h5 className="font-semibold text-blue-800 mb-3">
+                <div className="bg-primary/5 rounded-lg p-4">
+                  <h5 className="font-semibold text-primary mb-3">
                     Denominator Components
                   </h5>
                   <div className="space-y-2">
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-muted-foreground">
                       <span className="flex items-center flex-wrap">
                         Principal Payments
                         {fccrBreakdown.sources && (
-                          <span className="text-xs text-gray-400 ml-1">
+                          <span className="text-xs text-muted-foreground/60 ml-1">
                             (via {fccrBreakdown.sources.principal_source})
                           </span>
                         )}
                       </span>
                       <span>{formatCurrency(fccrBreakdown.ttm_principal_payments)}</span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-muted-foreground">
                       <span className="flex items-center flex-wrap">
                         Interest Expense
                         {fccrBreakdown.sources && (
-                          <span className="text-xs text-gray-400 ml-1">
+                          <span className="text-xs text-muted-foreground/60 ml-1">
                             (via {fccrBreakdown.sources.interest_source})
                           </span>
                         )}
@@ -466,11 +466,11 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <span>{formatCurrency(fccrBreakdown.ttm_interest_expense)}</span>
                     </div>
                     {fccrBreakdown.lease_payments > 0 && (
-                      <div className="flex justify-between text-gray-600">
+                      <div className="flex justify-between text-muted-foreground">
                         <span className="flex items-center flex-wrap">
                           Finance Lease Payments
                           {fccrBreakdown.sources && (
-                            <span className="text-xs text-gray-400 ml-1">
+                            <span className="text-xs text-muted-foreground/60 ml-1">
                               (via {fccrBreakdown.sources.lease_source})
                             </span>
                           )}
@@ -479,44 +479,44 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       </div>
                     )}
                     {fccrBreakdown.operating_lease_payments != null && fccrBreakdown.operating_lease_payments > 0 && (
-                      <div className="flex justify-between text-gray-600">
+                      <div className="flex justify-between text-muted-foreground">
                         <span className="flex items-center flex-wrap">
                           Operating Lease Payments
-                          <span className="text-xs text-blue-500 ml-1">(included per config)</span>
+                          <span className="text-xs text-primary/80 ml-1">(included per config)</span>
                         </span>
                         <span>{formatCurrency(fccrBreakdown.operating_lease_payments)}</span>
                       </div>
                     )}
                     {fccrBreakdown.sources?.lease_interest_deducted != null && fccrBreakdown.sources.lease_interest_deducted > 0 && (
-                      <div className="flex justify-between text-gray-500 text-xs italic">
+                      <div className="flex justify-between text-muted-foreground text-xs italic">
                         <span>Lease interest deducted from interest to avoid double-count</span>
                         <span>- {formatCurrency(fccrBreakdown.sources.lease_interest_deducted)}</span>
                       </div>
                     )}
                     {/* Denominator Total */}
-                    <div className="flex justify-between font-bold border-t-2 border-blue-400 pt-2 mt-2 bg-blue-100 -mx-4 px-4 py-2 rounded-b">
+                    <div className="flex justify-between font-bold border-t-2 border-primary/40 pt-2 mt-2 bg-primary/10 -mx-4 px-4 py-2 rounded-b">
                       <span>= Total Debt Service</span>
-                      <span className="text-blue-700">{formatCurrency(fccrBreakdown.denominator)}</span>
+                      <span className="text-primary">{formatCurrency(fccrBreakdown.denominator)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Final Calculation */}
-                <div className="bg-gray-100 rounded-lg p-4">
-                  <h5 className="font-semibold text-gray-700 mb-3 text-center">Covenant FCCR Calculation</h5>
-                  <div className="space-y-2 font-mono text-xs text-gray-600">
+                <div className="bg-muted rounded-lg p-4">
+                  <h5 className="font-semibold text-foreground mb-3 text-center">Covenant FCCR Calculation</h5>
+                  <div className="space-y-2 font-mono text-xs text-muted-foreground">
                     <div>
-                      <span className="text-gray-500">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()} = <span className="font-semibold text-green-700">{fccrBreakdown.numerator.toLocaleString()}</span>
+                      <span className="text-muted-foreground">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()} = <span className="font-semibold text-emerald-700 dark:text-emerald-400">{fccrBreakdown.numerator.toLocaleString()}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Denominator =</span> {fccrBreakdown.ttm_principal_payments.toLocaleString()} + {fccrBreakdown.ttm_interest_expense.toLocaleString()}{fccrBreakdown.lease_payments > 0 ? ` + ${fccrBreakdown.lease_payments.toLocaleString()}` : ''} = <span className="font-semibold text-blue-700">{fccrBreakdown.denominator.toLocaleString()}</span>
+                      <span className="text-muted-foreground">Denominator =</span> {fccrBreakdown.ttm_principal_payments.toLocaleString()} + {fccrBreakdown.ttm_interest_expense.toLocaleString()}{fccrBreakdown.lease_payments > 0 ? ` + ${fccrBreakdown.lease_payments.toLocaleString()}` : ''} = <span className="font-semibold text-primary">{fccrBreakdown.denominator.toLocaleString()}</span>
                     </div>
-                    <div className="pt-2 border-t border-gray-300 text-center">
-                      <span className="text-gray-500">Covenant FCCR =</span> {(adjustedNumerator ?? fccrBreakdown.numerator).toLocaleString()} / {fccrBreakdown.denominator.toLocaleString()} = <span className={`font-bold text-lg ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>{formatRatio(adjustedFCCR)}</span>
+                    <div className="pt-2 border-t border-border text-center">
+                      <span className="text-muted-foreground">Covenant FCCR =</span> {(adjustedNumerator ?? fccrBreakdown.numerator).toLocaleString()} / {fccrBreakdown.denominator.toLocaleString()} = <span className={`font-bold text-lg ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>{formatRatio(adjustedFCCR)}</span>
                     </div>
                   </div>
                   {totalCustomAdjustments !== 0 && (
-                    <div className="text-xs text-gray-500 mt-2 text-center">
+                    <div className="text-xs text-muted-foreground mt-2 text-center">
                       Base Covenant FCCR: {formatRatio(metrics.fccr)} | Adjustments: {formatCurrency(totalCustomAdjustments)}
                     </div>
                   )}
@@ -531,7 +531,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           <AccordionItem value="dscr" className="border rounded-lg px-4 mb-4">
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-gray-800">EBITDA Coverage Ratio</span>
+                <span className="font-semibold text-foreground">EBITDA Coverage Ratio</span>
                 <span className={`text-sm px-2 py-0.5 rounded ${getRatioColor(metrics.dscr ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })} bg-opacity-20`}>
                   {formatRatio(metrics.dscr)}
                 </span>
@@ -546,53 +546,53 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 </div>
 
                 {/* Numerator */}
-                <div className="bg-green-50 rounded-lg p-4">
-                  <h5 className="font-semibold text-green-800 mb-3">Numerator</h5>
+                <div className="bg-emerald-500/5 rounded-lg p-4">
+                  <h5 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-3">Numerator</h5>
                   <div className="flex justify-between font-bold">
                     <span>Adjusted EBITDA</span>
-                    <span className="text-green-700">{formatCurrency(dscrBreakdown.adjusted_ebitda)}</span>
+                    <span className="text-emerald-700 dark:text-emerald-400">{formatCurrency(dscrBreakdown.adjusted_ebitda)}</span>
                   </div>
                 </div>
 
                 {/* Denominator */}
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h5 className="font-semibold text-blue-800 mb-3">Denominator: Total Debt Service</h5>
+                <div className="bg-primary/5 rounded-lg p-4">
+                  <h5 className="font-semibold text-primary mb-3">Denominator: Total Debt Service</h5>
                   <div className="space-y-2">
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-muted-foreground">
                       <span>Bank Principal Payments</span>
                       <span>{formatCurrency(dscrBreakdown.bank_principal_payments)}</span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-muted-foreground">
                       <span>Cash Interest Paid</span>
                       <span>{formatCurrency(dscrBreakdown.bank_interest_expense)}</span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-muted-foreground">
                       <span>Lease Payments</span>
                       <span>{formatCurrency(dscrBreakdown.lease_payments)}</span>
                     </div>
-                    <div className="flex justify-between font-bold border-t border-blue-300 pt-2">
+                    <div className="flex justify-between font-bold border-t border-primary/20 pt-2">
                       <span>= Total Debt Service</span>
-                      <span className="text-blue-700">{formatCurrency(dscrBreakdown.total_debt_service)}</span>
+                      <span className="text-primary">{formatCurrency(dscrBreakdown.total_debt_service)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Final Calculation */}
-                <div className="bg-gray-100 rounded-lg p-4 text-center">
-                  <div className="font-mono text-sm text-gray-700">
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <div className="font-mono text-sm text-foreground">
                     EBITDA Coverage = {formatCurrency(dscrBreakdown.adjusted_ebitda)} / {formatCurrency(dscrBreakdown.total_debt_service)} = <span className="font-bold text-lg">{formatRatio(metrics.dscr)}</span>
                   </div>
                 </div>
 
                 {/* Funded Debt / EBITDA */}
-                <div className="bg-amber-50 rounded-lg p-4">
-                  <h5 className="font-semibold text-amber-800 mb-3">Funded Debt / EBITDA (Leverage Covenant)</h5>
+                <div className="bg-amber-500/5 rounded-lg p-4">
+                  <h5 className="font-semibold text-amber-800 dark:text-amber-300 mb-3">Funded Debt / EBITDA (Leverage Covenant)</h5>
                   <div className="space-y-2">
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-muted-foreground">
                       <span>Funded Debt (Bank Debt + Finance Leases)</span>
                       <span>{formatCurrency(dscrBreakdown.funded_debt)}</span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-muted-foreground">
                       <span>Adjusted EBITDA</span>
                       <span>{formatCurrency(dscrBreakdown.adjusted_ebitda)}</span>
                     </div>
@@ -603,7 +603,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Typical covenant: Funded Debt / EBITDA &le; 3.0x
                   </p>
                 </div>
@@ -615,12 +615,12 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
         {/* Interpretation Guide */}
         <AccordionItem value="guide" className="border rounded-lg px-4">
           <AccordionTrigger className="hover:no-underline">
-            <span className="font-semibold text-gray-800">Interpretation Guide</span>
+            <span className="font-semibold text-foreground">Interpretation Guide</span>
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-4 text-sm">
               <div>
-                <h5 className="font-semibold text-gray-700 mb-2">Covenant FCCR vs EBITDA Coverage</h5>
+                <h5 className="font-semibold text-foreground mb-2">Covenant FCCR vs EBITDA Coverage</h5>
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b">
@@ -645,12 +645,12 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
               </div>
 
               <div>
-                <h5 className="font-semibold text-gray-700 mb-2">Typical Covenant Thresholds</h5>
+                <h5 className="font-semibold text-foreground mb-2">Typical Covenant Thresholds</h5>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-gray-500 mb-1">EBITDA Coverage / Covenant FCCR</div>
+                    <div className="text-xs text-muted-foreground mb-1">EBITDA Coverage / Covenant FCCR</div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                      <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
                       <span>&ge; 2.0x Excellent</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -658,7 +658,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <span>&ge; 1.5x Good</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      <span className="w-3 h-3 rounded-full bg-amber-500"></span>
                       <span>&ge; 1.25x Adequate</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -667,9 +667,9 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 mb-1">Funded Debt / EBITDA</div>
+                    <div className="text-xs text-muted-foreground mb-1">Funded Debt / EBITDA</div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                      <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
                       <span>&le; 1.5x Low leverage</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -677,7 +677,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <span>&le; 2.5x Moderate</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      <span className="w-3 h-3 rounded-full bg-amber-500"></span>
                       <span>&le; 3.0x Covenant limit</span>
                     </div>
                     <div className="flex items-center gap-2">
