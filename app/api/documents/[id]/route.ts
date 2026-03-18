@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -33,9 +33,12 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Failed to delete document' }, { status: 500 });
   }
 
-  // Delete file from storage
+  // Delete file from storage — use admin client to bypass RLS UUID casting
+  // issue (same approach as extraction routes; see Task 18 BLOCKED item for
+  // the root cause and long-term fix)
   if (document.storage_path) {
-    const { error: storageError } = await supabase.storage
+    const adminSupabase = createAdminClient();
+    const { error: storageError } = await adminSupabase.storage
       .from('financial-documents')
       .remove([document.storage_path]);
 

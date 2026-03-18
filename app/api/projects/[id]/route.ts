@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -148,12 +148,13 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 });
   }
 
-  // Delete files from storage
+  // Delete files from storage — use admin client to bypass RLS UUID casting issue
   if (project?.documents && project.documents.length > 0) {
+    const adminSupabase = createAdminClient();
     const storagePaths = project.documents.map(
       (doc: { storage_path: string }) => doc.storage_path
     );
-    await supabase.storage.from('financial-documents').remove(storagePaths);
+    await adminSupabase.storage.from('financial-documents').remove(storagePaths);
   }
 
   // Delete the project (cascade will handle documents and extractions)
