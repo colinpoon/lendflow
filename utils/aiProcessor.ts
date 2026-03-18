@@ -791,6 +791,29 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Reported vs. Calculated Adjusted EBITDA reconciliation
+  // When the company discloses its own Adjusted EBITDA, compare to the
+  // lender's calculation. Divergence >5% is a red flag for analyst review.
+  // ─────────────────────────────────────────────────────────────────────────
+  if (
+    m.reported_adjusted_ebitda != null &&
+    result.calculated_adjusted_ebitda != null &&
+    result.calculated_adjusted_ebitda !== 0
+  ) {
+    const reported = m.reported_adjusted_ebitda;
+    const calculated = result.calculated_adjusted_ebitda;
+    const variance = Math.abs(reported - calculated) / Math.abs(calculated);
+    if (variance > 0.05) {
+      const pct = (variance * 100).toFixed(1);
+      calculationWarnings.push(
+        `Reported Adjusted EBITDA (${reported.toLocaleString()}) diverges from lender-calculated ` +
+        `Adjusted EBITDA (${calculated.toLocaleString()}) by ${pct}%. ` +
+        `Review adjusted_ebitda_components for company-specific add-backs that may not meet lender standards.`
+      );
+    }
+  }
+
   return { metrics: result, warnings: calculationWarnings };
 }
 
