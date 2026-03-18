@@ -215,6 +215,9 @@ export interface FCCRBreakdown {
      *  'income_statement_fallback' = taxes from income statement (accrual proxy).
      *  'zero_fallback' = $0 used; coverage may be overstated. */
     cash_taxes_source?: 'cash_flow' | 'income_statement_fallback' | 'zero_fallback';
+    /** True when cash_taxes_paid exceeds income statement taxes by >25%, suggesting
+     *  non-recurring disposal/capital gains taxes may be inflating the FCCR deduction. */
+    cash_taxes_may_include_disposal?: boolean;
     distributions_paid_extracted: number | null;
     // Denominator sources (from debt service resolver)
     principal_source: string;

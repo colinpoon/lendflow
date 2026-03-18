@@ -185,6 +185,28 @@ export function calculateFCCR(
     );
   }
   const cashTaxesPaid = Math.max(0, rawCashTaxesPaid);
+
+  // ─── Non-recurring disposal tax warning ──────────────────────────────
+  // When cash_taxes_paid significantly exceeds income statement taxes, it may
+  // include taxes on capital gains from asset sales. Since those gains are already
+  // excluded from Adjusted EBITDA (as one-time items), deducting the full cash taxes
+  // double-penalizes the borrower in the FCCR numerator. Flag for analyst review.
+  const cashTaxesMayIncludeDisposal =
+    cashTaxesSource === 'cash_flow' &&
+    metrics.taxes != null &&
+    metrics.taxes > 0 &&
+    cashTaxesPaid > metrics.taxes * 1.25;
+
+  if (cashTaxesMayIncludeDisposal) {
+    const excessPct = Math.round(((cashTaxesPaid - metrics.taxes!) / metrics.taxes!) * 100);
+    cashTaxesFallbackWarnings.push(
+      `Cash taxes paid (${cashTaxesPaid.toLocaleString()}) exceeds income statement tax expense ` +
+      `(${metrics.taxes!.toLocaleString()}) by ${excessPct}%. This may include taxes on non-recurring ` +
+      `asset disposals or capital gains. If those gains were excluded from Adjusted EBITDA, the ` +
+      `FCCR numerator is double-penalized. Review cash tax composition for disposal-related taxes.`
+    );
+  }
+
   const distributionsPaid = metrics.distributions_paid ?? 0;
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -321,6 +343,7 @@ export function calculateFCCR(
         proceeds_from_lt_debt_extracted: metrics.proceeds_from_long_term_debt,
         cash_taxes_paid_extracted: metrics.cash_taxes_paid,
         cash_taxes_source: cashTaxesSource,
+        ...(cashTaxesMayIncludeDisposal && { cash_taxes_may_include_disposal: true }),
         distributions_paid_extracted: metrics.distributions_paid,
         // Denominator source tracking from resolver
         principal_source: debtService.sources.principal_source,
