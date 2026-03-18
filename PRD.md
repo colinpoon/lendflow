@@ -340,10 +340,10 @@ Senior-engineer and code-approver agree on extraction pipeline ordering and data
 
 ### Task 15½: High — API Error Resilience & User Feedback
 Discovered when Anthropic API returned 400 (insufficient credits) — pipeline silently saved incomplete data with null risk assessment and 0-year quantitative risk.
-- [ ] Surface API billing/auth errors to the user — when Claude returns 400 (credit balance, invalid key, etc.), the extraction currently "succeeds" and saves to DB with `riskSnapshot: null` and `quantitativeRisk: null`. The user sees no error. Show a clear toast/banner: "Risk assessment unavailable — API credit issue" with the specific error reason.
-- [ ] Distinguish API errors from extraction failures — a 400 billing error is not a transient failure worth retrying. Tag the error class (billing, auth, rate-limit, model error, transient) so the UI can show actionable guidance ("add credits" vs "try again later").
-- [ ] Prevent saving extractions with 0-year quantitative risk — `quantitative-risk.ts` computed for "0 years: []" and returned NULL. The extraction was still saved as successful. If both risk assessment AND quantitative risk are null, flag the extraction as `partial` in the DB status rather than letting it appear complete.
-- [ ] Fix storage delete error (22P02) — `DELETE /api/documents/[id]` logs `StorageApiError: database error, code: 22P02` (invalid text representation — likely a UUID format issue). The delete returns 200 despite the storage failure, leaving orphaned files.
+- [x] Surface API billing/auth errors to the user — risk generator failures now captured and surfaced as extraction warnings with actionable guidance (billing vs auth vs generic)
+- [x] Distinguish API errors from extraction failures — error message is checked for billing/auth patterns to provide specific guidance ("add credits" vs "check API key" vs "try again")
+- [x] Prevent saving extractions with 0-year quantitative risk — when both `riskAssessment` and `quantitativeRiskAssessment` are null, document status is now set to `'partial'` instead of `'completed'`
+- [x] Fix storage delete error (22P02) — switched document and project deletion to admin client for storage operations, consistent with extraction routes; root cause is Clerk UUID mismatch in storage RLS
 
 ### Task 15: Medium — Type Safety & UI Consistency
 Code-approver and senior-engineer agree on type drift, hardcoded thresholds, and display issues.

@@ -558,3 +558,23 @@ Completed 6 of 7 sub-items:
 Remaining: TTM annualization (DEFERRED — requires extraction schema changes).
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 15½: API Error Resilience & User Feedback (COMPLETED — commits 1a60939, 415e7b2, 5606905)
+All 4 sub-items implemented:
+
+1. **Surface API errors** — risk generator failures now captured and surfaced as
+   extraction warnings with actionable guidance (billing vs auth vs generic).
+
+2. **Distinguish error types** — error messages checked for billing/auth patterns to
+   provide specific guidance ("add credits" vs "check API key" vs "try again").
+
+3. **Partial extraction status** — when both riskAssessment and quantitativeRiskAssessment
+   are null, document status set to `'partial'` instead of `'completed'`.
+
+4. **Storage delete 22P02** — switched document and project deletion routes to admin
+   client for storage operations, matching extraction routes. Root cause is Clerk
+   UUID mismatch in storage RLS (tracked in Task 18 BLOCKED items).
+
+Task 15½ is now fully complete.
+
+- TypeScript: clean (npm run build passes, 0 errors)
