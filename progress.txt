@@ -339,3 +339,20 @@ they diverge by >5%, an analyst-facing warning surfaces through `extraction_warn
 review of the adjustment components.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 12: Calibrate FCCR Adequate threshold from 1.2x to 1.25x (COMPLETED — commit c617c6b)
+Industry minimum covenant standard is 1.25x. The prior 1.2x threshold gave false comfort —
+a 1.21x FCCR is borderline and should be flagged, not presented as "Adequate."
+
+Updated across 7 files:
+- `lib/constants.ts` — FCCR_THRESHOLDS.ADEQUATE
+- `lib/design-tokens.ts` — getFCCRRiskLevel()
+- `lib/quantitative-risk.ts` — FCCR scoring bands
+- `lib/prompts/extraction-prompt.ts` — AI risk assessment and quantitative scoring thresholds
+- `components/ProjectDetail.tsx` — hero card subtitle + color
+- `components/FCCRBreakdown.tsx` — ratio color coding (3 locations)
+- `components/WeightedRiskGauge.tsx` — target label
+
+Task 12 is now fully complete (all 9 sub-items checked off).
+
+- TypeScript: clean (npm run build passes, 0 errors)

@@ -318,7 +318,7 @@ All three reviewers (senior-engineer, code-approver, financial-director) agree t
 - [x] Fix `funded_debt_to_ebitda` coerced to 0 in DSCR breakdown — type forces `number` instead of `number | null`, causing the display to show `0x` instead of `N/A` when EBITDA is zero. Misleads analysts.
 - [x] Fix bank debt double-counting edge case — when `bank_debt_current` is partially extracted (non-zero) but `bank_debt_long_term` is missing, the fallback to disaggregated fields is skipped. Guard should check both are non-null, not just that their sum is non-zero.
 - [x] Add reported vs. calculated Adjusted EBITDA reconciliation — when company discloses its own Adjusted EBITDA, the system uses it without comparing to the lender's calculation. Divergence >5% should surface as a red flag to the analyst.
-- [ ] Calibrate FCCR Adequate threshold from 1.2x to 1.25x — industry minimum covenant standard is 1.25x. Showing 1.2x as "Adequate" sends a false comfort signal.
+- [x] Calibrate FCCR Adequate threshold from 1.2x to 1.25x — industry minimum covenant standard is 1.25x. Showing 1.2x as "Adequate" sends a false comfort signal.
 
 ### Task 13: Critical — Security & Data Integrity
 Consensus across senior-engineer and code-approver; some overlap with financial-director on data correctness.
