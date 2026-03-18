@@ -388,3 +388,14 @@ validation failure instead of falling back to `parsed`. Callers already handle n
 (risk assessment displays as unavailable).
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 13: Scope risk cache to userId (COMPLETED — commit 10f0b1b)
+The in-memory `riskCache` used only a SHA-256 hash of financial metrics as the key. Two companies
+with identical metrics would share a cached risk assessment — returning Company A's assessment
+for Company B.
+
+Fix: Added optional `userId` parameter to `generateRiskAssessment`, threaded through
+`extractFinancialData` and `extractVisionData`, and included in the cache key as
+`${userId}:${metricsHash}-risk`. Both API routes now pass the authenticated userId.
+
+- TypeScript: clean (npm run build passes, 0 errors)
