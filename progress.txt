@@ -579,15 +579,28 @@ Task 15½ is now fully complete.
 
 - TypeScript: clean (npm run build passes, 0 errors)
 
-### Task 19: Prompt Injection Defense (In Progress — commit 2ab7f3e)
-Sub-item 1 of 4 completed:
+### Task 19: Prompt Injection Defense (COMPLETED — commits 2ab7f3e, ce06383, efa468c, b1ee6b9)
+All 4 sub-items implemented (three-layer defense):
 
 1. **Anti-injection system prompt preambles** — Added explicit security blocks to all three
    AI system prompts (`FINANCIAL_EXTRACTION_PROMPT`, `RECONCILIATION_PROMPT`, vision
-   `EXTRACTION_PROMPT`). Each preamble:
-   - Declares user message as RAW untrusted document text, not operator instructions
-   - Instructs Claude to ignore meta-instructions, role overrides, prompt leak attempts
-   - Directs injection attempt flagging to `extraction_notes` field
-   - Prohibits code execution, URL visits, or action requests from document text
+   `EXTRACTION_PROMPT`). Each preamble declares user message as untrusted data, instructs
+   Claude to ignore meta-instructions, and flags injection attempts in `extraction_notes`.
+
+2. **XML envelope tags** — Wrapped `chunk.content` in `<financial_document_text>` tags in
+   `chunk-processor.ts` and `requestJson` in `<reconciliation_request>` tags in
+   `extraction-reconciler.ts`. Each includes trailing untrusted-content reminder.
+
+3. **Output plausibility validation** — New `validateExtractionPlausibility()` in
+   `validation.ts` flags: year keys outside 1900–2099, suspiciously round large numbers
+   (≥1B divisible by 1M), and 4+ fields with identical non-zero values. Called after Zod
+   schema validation in `chunk-processor.ts`. Non-blocking (warnings only).
+
+4. **Zod `.passthrough()` → `.strip()`** — Replaced all 8 `.passthrough()` with `.strip()`
+   across extraction and risk schemas. Added `extraction_metadata` (typed sub-schema),
+   `extraction_notes`, `_sources`, `_confidence`, `_source_statements` explicitly before
+   stripping so legitimate AI-produced fields survive validation.
+
+Task 19 is now fully complete.
 
 - TypeScript: clean (npm run build passes, 0 errors)
