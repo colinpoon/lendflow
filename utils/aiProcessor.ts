@@ -244,6 +244,22 @@ export const extractFinancialData = async (
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Phase 3.5: Normalize fiscal year keys BEFORE merge
+    // Two chunks producing "FY2023" and "2023" for the same year would be
+    // treated as separate years during merge, then one silently dropped by
+    // post-merge normalization. Normalize on each individual extraction first
+    // so the merge sees consistent keys.
+    // ─────────────────────────────────────────────────────────────────────────
+    for (const extraction of allExtractions) {
+      if (extraction.metrics_by_year) {
+        extraction.metrics_by_year = normalizeFiscalYearKeys(
+          extraction.metrics_by_year,
+          extractionWarnings
+        );
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Phase 4: Merge & Consolidate (conflict-aware weighted merge)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -258,10 +274,10 @@ export const extractFinancialData = async (
     let rawMerged = mergeResult.metrics;
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Phase 4 pre-merge: Fiscal Year Key Normalization
-    // Validate that all year keys are 4-digit calendar years (1900–2099).
-    // Common AI variants like "FY2023", "2023E", or "2022/23" are normalized.
-    // Unrecognizable keys are warned and dropped to prevent downstream errors.
+    // Phase 4 post-merge: Fiscal Year Key Normalization (safety net)
+    // Primary normalization happens pre-merge (Phase 3.5 above). This second
+    // pass catches any keys that the merge itself might produce or any edge
+    // cases missed in individual chunk normalization.
     // ─────────────────────────────────────────────────────────────────────────
     rawMerged = normalizeFiscalYearKeys(rawMerged, extractionWarnings);
 
