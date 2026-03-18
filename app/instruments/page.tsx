@@ -1,19 +1,23 @@
-import { createClient } from '@/utils/supabase/server';
-import { Suspense } from 'react';
-
-async function InstrumentsData() {
-  const supabase = await createClient();
-  const { data: instruments } = await supabase
-    .from('instruments')
-    .select();
-
-  return <pre>{JSON.stringify(instruments, null, 2)}</pre>;
-}
+import { Construction } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Instruments() {
   return (
-    <Suspense fallback={<div>Loading instruments...</div>}>
-      <InstrumentsData />
-    </Suspense>
+    <div className="container mx-auto max-w-2xl py-16">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Construction className="h-5 w-5 text-amber-500" />
+            Financial Instruments
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            This section is under development. Financial instrument tracking
+            will be available in a future release.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

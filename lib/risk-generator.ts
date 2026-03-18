@@ -14,6 +14,7 @@ import {
   getDebtCapitalRiskScore,
   getRiskBand,
 } from './risk-scoring';
+import { riskDataSchema, debtHealthAssessmentSchema } from './validation';
 import type { RiskData, DebtHealthAssessment, ComputedMetrics } from '@/types';
 
 // Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
@@ -84,7 +85,14 @@ export async function generateRiskAssessment(
     // Extract text from Claude response
     const textBlock = response.content.find((block) => block.type === 'text');
     const rawRisk = textBlock?.type === 'text' ? textBlock.text : '{}';
-    const riskSnapshot = JSON.parse(cleanJsonFence(rawRisk));
+    const parsed = JSON.parse(cleanJsonFence(rawRisk));
+
+    // Validate structure at the AI response boundary
+    const validation = riskDataSchema.safeParse(parsed);
+    if (!validation.success) {
+      console.warn('⚠️ Risk assessment response failed schema validation:', validation.error.flatten().fieldErrors);
+    }
+    const riskSnapshot = validation.success ? validation.data : parsed;
 
     // Cache the result — evict the oldest entry if at capacity
     if (riskCache.size >= RISK_CACHE_MAX) {
@@ -169,7 +177,14 @@ export async function generateDebtHealthAssessment(
     // Extract text from Claude response
     const textBlock = response.content.find((block) => block.type === 'text');
     const rawDebtHealth = textBlock?.type === 'text' ? textBlock.text : '{}';
-    const assessment = JSON.parse(cleanJsonFence(rawDebtHealth));
+    const parsed = JSON.parse(cleanJsonFence(rawDebtHealth));
+
+    // Validate structure at the AI response boundary
+    const validation = debtHealthAssessmentSchema.safeParse(parsed);
+    if (!validation.success) {
+      console.warn('⚠️ Debt health assessment response failed schema validation:', validation.error.flatten().fieldErrors);
+    }
+    const assessment = validation.success ? validation.data : parsed;
 
     console.log('✅ AI debt health assessment generated');
     console.log(`   Recommendations: ${assessment.recommendations?.length || 0} items`);

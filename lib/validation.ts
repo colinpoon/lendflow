@@ -419,6 +419,35 @@ export function validateExtractionResponse(
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Risk Assessment Schemas
+// ─────────────────────────────────────────────────────────────────────────────
+
+const pillarScoreSchema = z.object({
+  observations: z.string(),
+  impact: z.string(),
+  weight: z.number().optional(),
+  score: z.number().nullable().optional(),
+}).passthrough();
+
+export const riskDataSchema = z.object({
+  header: z.string(),
+  pillars: z.record(pillarScoreSchema),
+  weighted_score: z.number().nullable(),
+  band: z.string(),
+  lending_recommendation: z.string(),
+}).passthrough();
+
+export const debtHealthAssessmentSchema = z.object({
+  weighted_score: z.number(),
+  risk_band: z.string(),
+  lending_decision: z.string(),
+  key_risk_factors: z.array(z.string()),
+  positive_factors: z.array(z.string()),
+  recommendations: z.array(z.string()),
+  suggested_loan_structure: z.string(),
+}).passthrough();
+
 /**
  * Check if a value looks like it came from a table or primary financial statement
  * Used for source type scoring in merge - these sources get highest confidence
