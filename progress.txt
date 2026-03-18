@@ -451,3 +451,21 @@ Internal field names (`dscr`, `dscr_breakdown`, `calculateDSCR`, `getDSCRRiskLev
 as code identifiers — only user-facing display labels and developer comments changed.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 16: Warn when cash taxes include non-recurring disposal taxes (COMPLETED — commit 5208960)
+When `cash_taxes_paid` exceeds income statement `taxes` by >25%, the FCCR numerator may be
+double-penalizing the borrower — cash taxes include capital gains taxes on asset disposals,
+but those gains are already excluded from Adjusted EBITDA.
+
+Changes:
+- `fccr-calculator.ts` — Added `cashTaxesMayIncludeDisposal` check after cash taxes resolution.
+  When triggered, pushes an analyst-facing warning through the existing `cashTaxesFallbackWarnings`
+  pipeline with the exact excess percentage and guidance to review cash tax composition.
+  Also sets `cash_taxes_may_include_disposal: true` in `fccr_breakdown.sources`.
+- `types/financial.ts` — Added `cash_taxes_may_include_disposal?: boolean` to `FCCRBreakdown.sources`
+  interface for downstream UI consumption.
+
+Warning flows through `extraction_warnings` → ExtractionWarnings UI panel. No values are altered
+(non-corrective) — the warning flags the condition for analyst review only.
+
+- TypeScript: clean (npm run build passes, 0 errors)
