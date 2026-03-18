@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@/utils/supabase/server';
+import { z } from 'zod';
 import {
   mergeExtractions,
   type ExtractionWithDocument,
   type ConflictResolution,
 } from '@/lib/extraction-utils';
+
+// UUID v4 regex for validating IDs
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const resolveConflictSchema = z.object({
+  extractionId: z.string().regex(uuidRegex, 'Invalid extraction ID format'),
+  projectId: z.string().regex(uuidRegex, 'Invalid project ID format'),
+  resolutions: z.record(z.string(), z.enum(['keep', 'overwrite'])),
+});
+
+const deleteConflictSchema = z.object({
+  extractionId: z.string().regex(uuidRegex, 'Invalid extraction ID format').optional(),
+  documentId: z.string().regex(uuidRegex, 'Invalid document ID format').optional(),
+});
 
 /**
  * POST /api/resolve-conflict
@@ -20,26 +35,26 @@ export async function POST(req: NextRequest) {
 
   const supabase = await createClient();
 
-  let body: {
-    extractionId: string;
-    projectId: string;
-    resolutions: ConflictResolution;
-  };
-
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { extractionId, projectId, resolutions } = body;
-
-  if (!extractionId || !projectId || !resolutions) {
+  const parsed = resolveConflictSchema.safeParse(rawBody);
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Missing required fields: extractionId, projectId, resolutions' },
+      { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
       { status: 400 }
     );
   }
+
+  const { extractionId, projectId, resolutions } = parsed.data as {
+    extractionId: string;
+    projectId: string;
+    resolutions: ConflictResolution;
+  };
 
   try {
     // Fetch all extractions for this project with their documents
@@ -153,18 +168,22 @@ export async function DELETE(req: NextRequest) {
 
   const supabase = await createClient();
 
-  let body: {
-    extractionId?: string;
-    documentId?: string;
-  };
-
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { extractionId, documentId } = body;
+  const parsed = deleteConflictSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
+
+  const { extractionId, documentId } = parsed.data;
 
   try {
     // Delete the pending extraction if provided
