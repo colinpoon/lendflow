@@ -131,6 +131,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid projectId format' }, { status: 400 });
   }
 
+  // Verify the authenticated user owns the target project
+  if (projectId) {
+    const { data: ownedProject, error: ownershipError } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .eq('user_id', userId)
+      .single();
+
+    if (ownershipError || !ownedProject) {
+      console.error(`❗ Project ownership check failed: user ${userId} does not own project ${projectId}`);
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+  }
+
   if (!file) {
     console.error('❗ No file uploaded');
     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
@@ -493,7 +508,8 @@ export async function POST(req: NextRequest) {
                 (extractedData.quantitativeRiskAssessment.normalized_score ?? 0) / 10,
               risk_band: extractedData.quantitativeRiskAssessment.risk_band,
             })
-            .eq('id', projectId);
+            .eq('id', projectId)
+            .eq('user_id', userId);
 
           if (projectUpdateError) {
             // Non-fatal: extraction is saved; project badge will be stale until next load
