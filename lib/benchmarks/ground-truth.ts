@@ -992,6 +992,343 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'Company acquired Woolf Building Products in 2024 — inflates investing CF and goodwill. ' +
       'FCCR/DSCR not set — CapEx and cash interest split unavailable from AR summary; requires financial statement notes.',
   },
+  {
+    document: 'Taiga-FY2023',
+    filename: 'FY2023_Q4_Financial_Statements.pdf',
+    fiscal_year: '2023',
+    values: {
+      // Income Statement (thousands CAD, IFRS, year ended December 31, 2023)
+      // Taiga Building Products Ltd. — Canadian wholesale building products distributor
+      // Revenue (Sales): 1,679,667
+      revenue: 1679667,
+      // Net earnings: 61,301
+      net_income: 61301,
+      expenses: 0,
+      profit_margins: 0,
+      // Finance expense (P&L): 2,302 (bank/credit interest only; subordinated debt = 0)
+      // Cash interest paid (supplemental CF): 5,705 (bank + lease interest combined)
+      interest: 2302,
+      // Income tax expense: 15,384
+      taxes: 15384,
+      // Amortization from CF add-backs: 12,276 (PP&E + intangibles + ROU combined)
+      depreciation_amortization: 12276,
+      depreciation_equipment: 0,
+      depreciation_rou: 0,
+      depreciation_other: 0,
+      amortization_intangibles: 0,
+      // ebitda = EBIT + D&A = (61,301 + 2,302 + 15,384) + 12,276 = 91,263
+      // Equivalently: operating earnings before finance (78,987) + D&A (12,276) = 91,263
+      ebitda: 91263,
+      reported_adjusted_ebitda: 0,
+
+      // Balance Sheet
+      // Shareholders' equity: 395,418
+      shareholders_equity: 395418,
+      // Total debt: IFRS 16 lease obligations only (no bank debt at Dec 31, 2023)
+      // Current: 5,527 + Long-term: 89,848 = 95,375
+      total_debt: 95375,
+      // Senior debt = 0 (no bank debt; only leases)
+      senior_debt: 0,
+      // Current assets: 466,630
+      current_assets: 466630,
+      // Current liabilities: 131,653 (AP 126,126 + current lease 5,527)
+      current_liabilities: 131653,
+
+      // Cash Flow
+      // Capital expenditures: 4,746 (purchase of PP&E)
+      capital_expenditures: 4746,
+      proceeds_from_long_term_debt: 0,
+      // Cash income taxes paid: 13,119
+      cash_taxes_paid: 13119,
+      // Dividends paid: 25,002 (first dividend in company's history)
+      distributions_paid: 25002,
+      ttm_principal_payments: 0,
+      ttm_interest_expense: 0,
+      // No bank debt repayment in 2023 (revolving = 0, LT debt = 0)
+      repayment_of_debt: 0,
+      // Repayment of lease obligations (principal): 6,073
+      payment_of_lease_liability: 6073,
+      // Total cash interest paid: 5,705 (bank interest + IFRS 16 lease interest combined)
+      // Bank interest ≈ 2,302; lease interest ≈ 3,403 (5,705 - 2,302)
+      cash_interest_paid: 5705,
+      non_cash_interest_expense: 0,
+
+      // Debt Components
+      // No bank debt at year-end 2023
+      'debt_components.bank_debt_current': 0,
+      'debt_components.bank_debt_long_term': 0,
+      'debt_components.term_loans': 0,
+      'debt_components.revolving_credit_facilities': 0,
+      'debt_components.overdraft_facilities': 0,
+      'debt_components.lines_of_credit': 0,
+      // Lease liabilities: current 5,527 + long-term 89,848 = 95,375
+      'debt_components.lease_liabilities_current': 5527,
+      'debt_components.lease_liabilities_long_term': 89848,
+      'debt_components.finance_lease_liabilities': 0,
+      'debt_components.operating_lease_liabilities': 0,
+      'debt_components.notes_payable': 0,
+      'debt_components.subordinated_debt': 0,
+      'debt_components.convertible_debt': 0,
+      'debt_components.bonds_debentures': 0,
+      'debt_components.other_borrowings': 0,
+
+      // Fixed Charges
+      // Bank interest = 2,302 (Finance expense from P&L)
+      'fixed_charges.senior_debt_interest': 2302,
+      'fixed_charges.subordinated_debt_interest': 0,
+      // Lease interest = approximately 3,403 (= total cash interest 5,705 - bank interest 2,302)
+      'fixed_charges.lease_interest': 3403,
+      // Total interest expense: 5,705 (= cash interest paid per CF supplemental)
+      'fixed_charges.total_interest_expense': 5705,
+      // Lease principal paid: 6,073
+      'fixed_charges.minimum_lease_payments': 6073,
+      'fixed_charges.finance_lease_payments': 0,
+      'fixed_charges.operating_lease_payments': 0,
+      // No bank principal payments in 2023
+      'fixed_charges.principal_payments': 0,
+      'fixed_charges.preferred_dividends': 0,
+      'fixed_charges.other_fixed_charges': 0,
+
+      // Adjusted EBITDA Components
+      // No significant non-recurring adjustments identified for Taiga FY2023
+      'adjusted_ebitda_components.stock_based_compensation': 0,
+      'adjusted_ebitda_components.impairment_charges': 0,
+      'adjusted_ebitda_components.goodwill_impairment': 0,
+      'adjusted_ebitda_components.unrealized_gains_losses': 0,
+      'adjusted_ebitda_components.deferred_compensation': 0,
+      'adjusted_ebitda_components.loss_on_disposal': 0,
+      'adjusted_ebitda_components.other_non_cash': 0,
+      'adjusted_ebitda_components.restructuring_costs': 0,
+      'adjusted_ebitda_components.severance_costs': 0,
+      'adjusted_ebitda_components.transaction_costs': 0,
+      'adjusted_ebitda_components.legal_settlements': 0,
+      'adjusted_ebitda_components.professional_fees_one_time': 0,
+      'adjusted_ebitda_components.casualty_losses': 0,
+      'adjusted_ebitda_components.other_one_time_expenses': 0,
+      'adjusted_ebitda_components.gain_on_disposal': 0,
+      'adjusted_ebitda_components.gain_on_asset_sale': 0,
+      'adjusted_ebitda_components.other_income_non_operating': 0,
+      'adjusted_ebitda_components.insurance_proceeds': 0,
+      'adjusted_ebitda_components.other_one_time_gains': 0,
+      'adjusted_ebitda_components.owner_compensation_adjustment': 0,
+      'adjusted_ebitda_components.related_party_adjustments': 0,
+      'adjusted_ebitda_components.management_fees_adjustment': 0,
+      'adjusted_ebitda_components.accounting_policy_adjustments': 0,
+      'adjusted_ebitda_components.foreign_exchange_adjustments': 0,
+      'adjusted_ebitda_components.unrealized_fx_cash_flow': 0,
+      'adjusted_ebitda_components.realized_fx_pl': 0,
+      'adjusted_ebitda_components.pro_forma_cost_savings': 0,
+      'adjusted_ebitda_components.pro_forma_synergies': 0,
+
+      // Computed Ratios
+      // adjusted_ebitda = ebitda (no adjustments identified) = 91,263
+      adjusted_ebitda: 91263,
+      calculated_adjusted_ebitda: 0,
+      // fccr = (Adj EBITDA - CapEx - cash_taxes - distributions) / (principal + cash_interest + lease_principal)
+      //      = (91,263 - 4,746 - 13,119 - 25,002) / (0 + 5,705 + 6,073)
+      //      = 48,396 / 11,778 = 4.11
+      fccr: 4.11,
+      // dscr = Adj EBITDA / (cash_interest + lease_principal) = 91,263 / 11,778 = 7.75
+      dscr: 7.75,
+      funded_debt: 0,
+      funded_debt_to_ebitda: 0,
+      // senior_debt_to_ebitda: bank debt = 0; using total_debt/EBITDA = 95,375 / 91,263 = 1.05
+      senior_debt_to_ebitda: 0,
+      // total_debt_to_capital = 95,375 / (95,375 + 395,418) = 0.19
+      total_debt_to_capital: 0.19,
+      // interest_coverage_ratio = EBITDA / P&L finance = 91,263 / 2,302 = 39.65 (very high — minimal bank interest)
+      interest_coverage_ratio: 39.65,
+      // debt_to_equity_ratio = 95,375 / 395,418 = 0.24
+      debt_to_equity_ratio: 0.24,
+      // current_ratio = 466,630 / 131,653 = 3.54
+      current_ratio: 3.54,
+    },
+    source_notes:
+      'Verified from source PDF (FY2023_Q4_Financial_Statements.pdf — Taiga Building Products Ltd. FY2023). ' +
+      'All values in thousands of Canadian dollars (CAD). ' +
+      'IFRS reporting. Fiscal year ended December 31, 2023. ' +
+      'Taiga Building Products Ltd. — same company as Taiga FY2024 (prior year). ' +
+      'NO bank debt at December 31, 2023 — only IFRS 16 lease obligations (95,375 total). ' +
+      'All long-term debt and subordinated notes were fully repaid in prior periods. ' +
+      'P&L Finance expense (2,302) = bank/credit interest only. ' +
+      'Cash interest paid (5,705) = bank interest (2,302) + lease interest (~3,403) per CF. ' +
+      'FCCR = 4.11 reflects strong cash generation with minimal debt service obligations. ' +
+      'First-ever dividend paid: 25,002 thousand ($0.23/share × 108M shares). ' +
+      'Revenue declined ~23% from 2022 (2.19B→1.68B) due to building products deflation post-COVID inflation spike.',
+  },
+  {
+    document: 'PBHC-FY2024',
+    filename: 'PBHC.Consolidated.FS.Q4-2024.FINAL.pdf',
+    fiscal_year: '2024',
+    values: {
+      // Income Statement (MILLIONS CAD — stored as thousands by multiplying × 1000)
+      // Premium Brands Holdings Corporation — specialty food manufacturer/distributor
+      // CRITICAL: Original document is in millions; all values converted to thousands here
+      // Revenue: 6,470.5M = 6,470,500 thousands
+      revenue: 6470500,
+      // Net earnings: 121.5M = 121,500 thousands
+      net_income: 121500,
+      expenses: 0,
+      profit_margins: 0,
+      // Interest and other financing costs: 170.7M = 170,700 thousands
+      // Note: P&L also includes "Accretion of lease obligations: 28.6M" (IFRS 16 interest, non-cash)
+      interest: 170700,
+      // Income tax expense: 46.9M = 46,900 thousands (current 53.6M - deferred recovery 6.7M)
+      taxes: 46900,
+      // D&A: depreciation capital assets (92.0) + amortization intangibles (21.6) + amortization ROU (65.9) = 179.5M
+      depreciation_amortization: 179500,
+      depreciation_equipment: 92000,
+      depreciation_rou: 65900,
+      depreciation_other: 0,
+      amortization_intangibles: 21600,
+      // ebitda = NI + I + accretion + T + D&A = 121.5 + 170.7 + 28.6 + 46.9 + 179.5 = 547.2M = 547,200 thousands
+      ebitda: 547200,
+      // Company's "operating profit before D&A and plant restructuring" = 593.7M = 593,700
+      reported_adjusted_ebitda: 593700,
+
+      // Balance Sheet (thousands CAD, converted from millions)
+      // Shareholders' equity: 1,769.2M = 1,769,200 thousands
+      shareholders_equity: 1769200,
+      // Total debt: bank (19.1) + LT debt (1.0+1,921.1) + leases (61.9+695.0) + convertibles (171.7+299.2) = 3,169.0M
+      // = 3,169,000 thousands
+      total_debt: 3169000,
+      // Senior debt = bank + LT debt = 19.1 + 1.0 + 1,921.1 = 1,941.2M = 1,941,200
+      senior_debt: 1941200,
+      // Current assets: 1,501.9M = 1,501,900
+      current_assets: 1501900,
+      // Current liabilities: 932.7M = 932,700
+      current_liabilities: 932700,
+
+      // Cash Flow (thousands, converted from millions)
+      // Capital asset additions: 364.8M = 364,800
+      capital_expenditures: 364800,
+      // LT debt borrowings: 749.0M = 749,000
+      proceeds_from_long_term_debt: 749000,
+      // Income taxes paid: 47.8M = 47,800
+      cash_taxes_paid: 47800,
+      // Dividends paid: 148.1M = 148,100
+      distributions_paid: 148100,
+      ttm_principal_payments: 0,
+      ttm_interest_expense: 0,
+      // LT debt repayments: 468.2M = 468,200
+      repayment_of_debt: 468200,
+      // Payments for lease obligations: 81.5M = 81,500 (principal portion of IFRS 16 leases)
+      payment_of_lease_liability: 81500,
+      // Cash interest and financing costs paid (supplemental CF): 165.2M = 165,200
+      cash_interest_paid: 165200,
+      // Non-cash: accretion of lease obligations (28.6M) + non-cash financing (8.1M) = 36.7M = 36,700
+      non_cash_interest_expense: 36700,
+
+      // Debt Components (thousands, converted from millions)
+      // Bank indebtedness (current): 19.1M = 19,100
+      'debt_components.bank_debt_current': 19100,
+      // LT debt: current 1.0M + non-current 1,921.1M = 1,922.1M = 1,922,100
+      'debt_components.bank_debt_long_term': 1921100,
+      'debt_components.term_loans': 0,
+      'debt_components.revolving_credit_facilities': 0,
+      'debt_components.overdraft_facilities': 0,
+      'debt_components.lines_of_credit': 0,
+      // Lease liabilities: current 61.9M + long-term 695.0M
+      'debt_components.lease_liabilities_current': 61900,
+      'debt_components.lease_liabilities_long_term': 695000,
+      'debt_components.finance_lease_liabilities': 0,
+      'debt_components.operating_lease_liabilities': 0,
+      // Convertible unsecured subordinated debentures: current 171.7M + LT 299.2M = 470.9M = 470,900
+      'debt_components.notes_payable': 0,
+      'debt_components.subordinated_debt': 0,
+      'debt_components.convertible_debt': 470900,
+      'debt_components.bonds_debentures': 0,
+      'debt_components.other_borrowings': 0,
+
+      // Fixed Charges — cash interest split between bank and leases not separately disclosed
+      // Total cash interest: 165,200 (supplemental CF note)
+      'fixed_charges.senior_debt_interest': 0,
+      'fixed_charges.subordinated_debt_interest': 0,
+      // Accretion (non-cash lease interest): 28,600
+      'fixed_charges.lease_interest': 28600,
+      'fixed_charges.total_interest_expense': 165200,
+      // Lease payment (principal): 81,500
+      'fixed_charges.minimum_lease_payments': 81500,
+      'fixed_charges.finance_lease_payments': 0,
+      'fixed_charges.operating_lease_payments': 0,
+      // Bank/term debt principal repaid: 468,200 (includes revolving repayments)
+      'fixed_charges.principal_payments': 468200,
+      // Dividends paid: 148,100
+      'fixed_charges.preferred_dividends': 0,
+      'fixed_charges.other_fixed_charges': 0,
+
+      // Adjusted EBITDA Components
+      // Plant start-up and restructuring: 43.7M = 43,700
+      'adjusted_ebitda_components.stock_based_compensation': 0,
+      'adjusted_ebitda_components.impairment_charges': 0,
+      'adjusted_ebitda_components.goodwill_impairment': 0,
+      'adjusted_ebitda_components.unrealized_gains_losses': 0,
+      'adjusted_ebitda_components.deferred_compensation': 0,
+      'adjusted_ebitda_components.loss_on_disposal': 0,
+      'adjusted_ebitda_components.other_non_cash': 0,
+      // Plant start-up and restructuring: 43,700
+      'adjusted_ebitda_components.restructuring_costs': 43700,
+      'adjusted_ebitda_components.severance_costs': 0,
+      // Acquisition transaction costs: 5.8M = 5,800
+      'adjusted_ebitda_components.transaction_costs': 5800,
+      'adjusted_ebitda_components.legal_settlements': 0,
+      'adjusted_ebitda_components.professional_fees_one_time': 0,
+      'adjusted_ebitda_components.casualty_losses': 0,
+      'adjusted_ebitda_components.other_one_time_expenses': 0,
+      'adjusted_ebitda_components.gain_on_disposal': 0,
+      // Acquisition bargain purchase gain: (5.5M) = (5,500) — reduces Adj EBITDA
+      'adjusted_ebitda_components.gain_on_asset_sale': 0,
+      'adjusted_ebitda_components.other_income_non_operating': 0,
+      'adjusted_ebitda_components.insurance_proceeds': 0,
+      'adjusted_ebitda_components.other_one_time_gains': 0,
+      'adjusted_ebitda_components.owner_compensation_adjustment': 0,
+      'adjusted_ebitda_components.related_party_adjustments': 0,
+      'adjusted_ebitda_components.management_fees_adjustment': 0,
+      'adjusted_ebitda_components.accounting_policy_adjustments': 0,
+      'adjusted_ebitda_components.foreign_exchange_adjustments': 0,
+      'adjusted_ebitda_components.unrealized_fx_cash_flow': 0,
+      'adjusted_ebitda_components.realized_fx_pl': 0,
+      'adjusted_ebitda_components.pro_forma_cost_savings': 0,
+      'adjusted_ebitda_components.pro_forma_synergies': 0,
+
+      // Computed Ratios
+      // adjusted_ebitda = EBITDA (547,200) + restructuring (43,700) + transaction costs (5,800) = 596,700
+      adjusted_ebitda: 596700,
+      calculated_adjusted_ebitda: 0,
+      // FCCR not set — revolving credit repayments (468.2M) inflate denominator inappropriately
+      // Only 1.0M is scheduled term loan repayment; rest is revolving facility management
+      // A clean FCCR would use: (596,700 - 364,800 - 47,800 - 148,100) / (1,000 + 165,200 + 81,500) = 35,700/247,700 = 0.14
+      // But this reflects heavy CapEx investment cycle, not sustainable debt service capacity
+      fccr: 0,
+      dscr: 0,
+      funded_debt: 0,
+      funded_debt_to_ebitda: 0,
+      // senior_debt_to_ebitda = (bank 19,100 + LT debt 1,922,100) / EBITDA (547,200) = 1,941,200 / 547,200 = 3.55
+      senior_debt_to_ebitda: 3.55,
+      // total_debt_to_capital = 3,169,000 / (3,169,000 + 1,769,200) = 0.64
+      total_debt_to_capital: 0.64,
+      // interest_coverage_ratio = EBITDA / I = 547,200 / 170,700 = 3.21
+      interest_coverage_ratio: 3.21,
+      // debt_to_equity_ratio = 3,169,000 / 1,769,200 = 1.79
+      debt_to_equity_ratio: 1.79,
+      // current_ratio = 1,501,900 / 932,700 = 1.61
+      current_ratio: 1.61,
+    },
+    source_notes:
+      'Verified from source PDF (PBHC.Consolidated.FS.Q4-2024.FINAL.pdf — Premium Brands Holdings Corporation). ' +
+      'CRITICAL: Original document in MILLIONS of CAD; all values multiplied ×1000 for thousands consistency. ' +
+      'IFRS reporting. 52-week fiscal year ended December 28, 2024. ' +
+      'Premium Brands Holdings Corporation (TSX: PBH) — Canada\'s largest specialty food manufacturer. ' +
+      'Complex capital structure: revolving credit (bank 19.1M) + term debt (1,922.1M) + ' +
+      'IFRS 16 leases (756.9M) + convertible debentures (470.9M) = 3,169.0M total debt. ' +
+      'Current LT debt = 1.0M (minimal scheduled repayment); revolving credit managed dynamically. ' +
+      'Convertible debentures: 171.7M current (due within year) + 299.2M long-term. ' +
+      'D&A = 179.5M (excl. lease accretion 28.6M); total financial charges = 199.3M. ' +
+      'Cash interest paid = 165.2M per supplemental CF (bank + lease interest combined). ' +
+      'FCCR not computed — revolving credit borrowings/repayments (749M/468M) distort denominator. ' +
+      'CapEx = 364.8M (significant growth investment: new facilities, equipment). ' +
+      'Scale normalization is critical for this document — AI must detect millions not thousands.',
+  },
 ];
 
 /**
