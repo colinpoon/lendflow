@@ -43,6 +43,7 @@ import {
 } from '@/lib/calculations/recalculate';
 import { Project } from '@/lib/supabase/types';
 import { MergedExtraction } from '@/lib/extraction-utils';
+import { FCCR_THRESHOLDS, DEBT_EBITDA_THRESHOLDS, DEBT_CAPITAL_THRESHOLDS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -517,20 +518,20 @@ export default function ProjectDetail({
           <MetricCard
             label="Covenant FCCR"
             value={formatRatio(fccr)}
-            subtitle={fccr !== null ? (fccr >= 1.25 ? 'Adequate' : 'Below threshold') : undefined}
-            colorClass={getRatioStatus(fccr, { good: 1.25, fair: 1.0, direction: 'above' })}
+            subtitle={fccr !== null ? (fccr >= FCCR_THRESHOLDS.ADEQUATE ? 'Adequate' : 'Below threshold') : undefined}
+            colorClass={getRatioStatus(fccr, { good: FCCR_THRESHOLDS.ADEQUATE, fair: FCCR_THRESHOLDS.WEAK, direction: 'above' })}
           />
           <MetricCard
             label="Sr. Debt / EBITDA"
             value={formatRatio(seniorDebtToEbitda)}
-            subtitle={seniorDebtToEbitda !== null ? (seniorDebtToEbitda <= 3.0 ? 'Healthy' : 'Elevated') : undefined}
-            colorClass={getRatioStatus(seniorDebtToEbitda, { good: 3.0, fair: 4.5, direction: 'below' })}
+            subtitle={seniorDebtToEbitda !== null ? (seniorDebtToEbitda <= DEBT_EBITDA_THRESHOLDS.GOOD ? 'Healthy' : 'Elevated') : undefined}
+            colorClass={getRatioStatus(seniorDebtToEbitda, { good: DEBT_EBITDA_THRESHOLDS.GOOD, fair: DEBT_EBITDA_THRESHOLDS.WEAK, direction: 'below' })}
           />
           <MetricCard
             label="Debt / Capital"
             value={formatPercent(totalDebtToCapital)}
-            subtitle={totalDebtToCapital !== null ? (totalDebtToCapital <= 0.5 ? 'Conservative' : 'Leveraged') : undefined}
-            colorClass={getRatioStatus(totalDebtToCapital, { good: 0.5, fair: 0.65, direction: 'below' })}
+            subtitle={totalDebtToCapital !== null ? (totalDebtToCapital <= DEBT_CAPITAL_THRESHOLDS.GOOD ? 'Conservative' : 'Leveraged') : undefined}
+            colorClass={getRatioStatus(totalDebtToCapital, { good: DEBT_CAPITAL_THRESHOLDS.GOOD, fair: DEBT_CAPITAL_THRESHOLDS.ADEQUATE, direction: 'below' })}
           />
         </section>
       )}

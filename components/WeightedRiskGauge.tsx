@@ -27,6 +27,7 @@ import {
 import type { RiskData, DebtHealthAssessment } from '@/types/risk';
 import type { RiskConfig } from '@/types';
 import type { ComputedMetrics as YearMetrics } from '@/types/financial';
+import { RISK_WEIGHTS } from '@/lib/constants';
 import {
   getFCCRRiskScore,
   getDebtEBITDARiskScore,
@@ -550,25 +551,25 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         {/* Component score badges */}
         <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
           <MetricBadge
-            label={customFccrAdjustment !== 0 ? 'Covenant FCCR (50%) *' : 'Covenant FCCR (50%)'}
+            label={customFccrAdjustment !== 0 ? `Covenant FCCR (${RISK_WEIGHTS.FCCR * 100}%) *` : `Covenant FCCR (${RISK_WEIGHTS.FCCR * 100}%)`}
             value={adjustedFccr}
             score={fccrScore}
             format={(v) => `${v.toFixed(2)}x`}
-            weight={50}
+            weight={RISK_WEIGHTS.FCCR * 100}
           />
           <MetricBadge
-            label="Senior Debt / EBITDA (35%)"
+            label={`Senior Debt / EBITDA (${RISK_WEIGHTS.DEBT_EBITDA * 100}%)`}
             value={metrics.senior_debt_to_ebitda}
             score={debtEbitdaScore}
             format={(v) => `${v.toFixed(2)}x`}
-            weight={35}
+            weight={RISK_WEIGHTS.DEBT_EBITDA * 100}
           />
           <MetricBadge
-            label="Total Debt / Capital (15%)"
+            label={`Total Debt / Capital (${RISK_WEIGHTS.DEBT_CAPITAL * 100}%)`}
             value={metrics.total_debt_to_capital}
             score={debtCapitalScore}
             format={(v) => `${(v * 100).toFixed(1)}%`}
-            weight={15}
+            weight={RISK_WEIGHTS.DEBT_CAPITAL * 100}
           />
           {customFccrAdjustment !== 0 && (
             <div className="rounded-xl border border-surface-border-1 bg-surface-2 p-3 text-center">
