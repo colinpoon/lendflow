@@ -337,9 +337,33 @@ export const extractVisionData = async (pdfBuffer: Buffer, userId?: string): Pro
   const validationIssues = validateVisionMetrics(computed);
 
   // ── Step 7: Generate risk assessments ─────────────────────────────────────
-  const riskAssessment = await generateRiskAssessment(computed, userId);
-  const debtHealthAssessment = await generateDebtHealthAssessment(computed);
-  const quantitativeRiskAssessment = calculateQuantitativeRisk(computed);
+  // Each risk generator runs in its own try/catch so a failure in one does not
+  // abort the entire extraction. Partial results are still returned to the caller.
+  let riskAssessment: Awaited<ReturnType<typeof generateRiskAssessment>> = null;
+  let riskError: string | null = null;
+  try {
+    riskAssessment = await generateRiskAssessment(computed, userId);
+  } catch (riskErr) {
+    console.warn('⚠️ generateRiskAssessment failed — returning null:', riskErr);
+    riskError = riskErr instanceof Error ? riskErr.message : String(riskErr);
+  }
+
+  let debtHealthAssessment: Awaited<ReturnType<typeof generateDebtHealthAssessment>> = null;
+  try {
+    debtHealthAssessment = await generateDebtHealthAssessment(computed);
+  } catch (debtHealthErr) {
+    console.warn('⚠️ generateDebtHealthAssessment failed — returning null:', debtHealthErr);
+    if (!riskError) {
+      riskError = debtHealthErr instanceof Error ? debtHealthErr.message : String(debtHealthErr);
+    }
+  }
+
+  let quantitativeRiskAssessment: ReturnType<typeof calculateQuantitativeRisk> = null;
+  try {
+    quantitativeRiskAssessment = calculateQuantitativeRisk(computed);
+  } catch (quantErr) {
+    console.warn('⚠️ calculateQuantitativeRisk failed — returning null:', quantErr);
+  }
 
   console.log(
     `Vision extraction complete: ${visionResult.pagesProcessed} pages, ` +
@@ -360,6 +384,25 @@ export const extractVisionData = async (pdfBuffer: Buffer, userId?: string): Pro
     extractionWarnings.push(
       `Applied ${extractionCorrections.length} auto-correction(s): ${extractionCorrections.join('; ')}`
     );
+  }
+
+  // Surface risk assessment failures as analyst-visible warnings
+  if (!riskAssessment && riskError) {
+    const isBillingError = riskError.includes('credit') || riskError.includes('billing');
+    const isAuthError = riskError.includes('authentication') || riskError.includes('api key') || riskError.includes('invalid x-api-key');
+    if (isBillingError) {
+      extractionWarnings.push(
+        'Risk assessment unavailable — API credit balance may be insufficient. Financial metrics were extracted successfully. Please check your Anthropic billing dashboard and re-run extraction.'
+      );
+    } else if (isAuthError) {
+      extractionWarnings.push(
+        'Risk assessment unavailable — API authentication error. Financial metrics were extracted successfully. Please verify your API key configuration.'
+      );
+    } else {
+      extractionWarnings.push(
+        'Risk assessment could not be generated due to an internal error. Financial metrics were extracted successfully. You may re-run extraction to retry.'
+      );
+    }
   }
 
   // ── Step 9: Calculate token usage and cost ────────────────────────────────
