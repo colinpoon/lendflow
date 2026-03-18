@@ -43,10 +43,18 @@ export async function generateRiskAssessment(
   userId?: string
 ): Promise<RiskData | null> {
   // Check cache first — scope to userId to prevent cross-user cache sharing
-  const canonicalJson = JSON.stringify(
-    metricsByYear,
-    Object.keys(metricsByYear).sort()
-  );
+  // Use a recursive key-sorted serializer for stable cache keys — JSON.stringify's
+  // second argument is a replacer/filter, not a key sorter; nested keys within each
+  // year's metrics would be serialized in insertion order, producing unstable hashes.
+  const canonicalJson = JSON.stringify(metricsByYear, (_key, value) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return Object.keys(value).sort().reduce<Record<string, unknown>>((sorted, k) => {
+        sorted[k] = value[k];
+        return sorted;
+      }, {});
+    }
+    return value;
+  });
   const metricsHash = crypto.createHash('sha256').update(canonicalJson).digest('hex');
   const cacheKey = userId ? `${userId}:${metricsHash}-risk` : `${metricsHash}-risk`;
 
