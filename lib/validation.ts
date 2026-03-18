@@ -487,13 +487,4 @@ export function isTableSource(sourceDescription: string): boolean {
   return tablePatterns.some((p) => p.test(sourceDescription));
 }
 
-/**
- * Check if a value is from an overlap region
- * Overlap regions have lower confidence as they may be partial
- * @returns false - placeholder for future enhancement when overlap tracking is added
- */
-export function isOverlapSource(): boolean {
-  // For now, we can't detect overlap without more context
-  // This will be enhanced when we track overlap regions in chunking
-  return false;
-}
+
