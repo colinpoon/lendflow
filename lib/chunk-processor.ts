@@ -366,6 +366,11 @@ export interface ChunkResult {
     prompt_tokens: number;
     completion_tokens: number;
   };
+  /** Non-retryable error that should abort the entire pipeline */
+  fatalError?: {
+    type: 'billing' | 'auth' | 'invalid_request';
+    message: string;
+  };
 }
 
 /**
@@ -499,8 +504,32 @@ export async function processChunk(chunk: UniqueChunk): Promise<ChunkResult> {
   }
 
   const errorMessage = lastError instanceof Error ? lastError.message : String(lastError);
+  const errorStatus = (lastError as { status?: number })?.status;
   console.warn(`⚠️ Failed to process chunk ${chunk.index}: ${errorMessage}`);
-  return { index: chunk.index, result: null };
+
+  // Classify non-retryable errors so the pipeline can abort early
+  const fatalError = classifyFatalError(errorStatus, errorMessage);
+  return { index: chunk.index, result: null, fatalError: fatalError ?? undefined };
+}
+
+/**
+ * Classify API errors that should abort the entire pipeline immediately.
+ * These are errors where retrying or processing more chunks is pointless.
+ */
+function classifyFatalError(
+  status: number | undefined,
+  message: string
+): ChunkResult['fatalError'] | null {
+  if (message.includes('credit balance is too low') || message.includes('purchase credits')) {
+    return { type: 'billing', message: 'Anthropic API credit balance is too low. Please add credits at console.anthropic.com.' };
+  }
+  if (status === 401 || message.includes('invalid x-api-key') || message.includes('authentication')) {
+    return { type: 'auth', message: 'Anthropic API key is invalid or expired. Check your ANTHROPIC_API_KEY.' };
+  }
+  if (status === 400 && message.includes('invalid_request_error') && !message.includes('credit balance')) {
+    return { type: 'invalid_request', message: `Anthropic API rejected the request: ${message.slice(0, 200)}` };
+  }
+  return null;
 }
 
 /**
@@ -538,6 +567,18 @@ export async function processChunksSequentially(
 
     const result = await processChunk(chunk);
     results.push(result);
+
+    // Abort immediately on non-retryable errors — no point processing remaining chunks
+    if (result.fatalError) {
+      console.error(
+        `🛑 Fatal API error on chunk ${i + 1}/${chunks.length}: ${result.fatalError.message}. Aborting remaining chunks.`
+      );
+      // Fill remaining chunks as skipped so chunk_stats are accurate
+      for (let j = i + 1; j < chunks.length; j++) {
+        results.push({ index: chunks[j].index, result: null });
+      }
+      break;
+    }
 
     // Accumulate token usage (COST-01)
     if (result.usage) {

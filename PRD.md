@@ -321,6 +321,54 @@ Reduce technical debt and improve maintainability.
 - [x] Move AI model version to `ANTHROPIC_MODEL` env var with current value as default — `lib/constants.ts` reads `process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514'`; vision files updated
 - [x] Add `.env.example` with all required environment variables and placeholder values
 
+### Task 12: Critical — Financial Calculation Accuracy Fixes
+All three reviewers (senior-engineer, code-approver, financial-director) agree these affect lending decision accuracy.
+- [ ] Fix revolver gross-draw distortion in DSCR denominator — `repayment_of_debt` can include gross revolving credit draws/repays, severely inflating the denominator. Extract `net_repayment_of_revolving_credit` separately and prefer it, or cap at funded debt total. Surface warnings to UI, not just server logs.
+- [ ] Add preferred dividends to FCCR denominator — `preferred_dividends` is extracted in fixed charges but excluded from the FCCR denominator. Preferred dividends are a fixed charge by definition in commercial lending.
+- [ ] Fix cash taxes fallback to zero in FCCR — when `cash_taxes_paid` is null, the numerator defaults to zero tax deduction, inflating FCCR for profitable companies by 10-20+ bps. Fallback should use income statement tax expense.
+- [ ] Fix ICR to use Adjusted EBITDA — `risk-generator.ts` computes ICR with `m.ebitda` (raw) while DSCR/FCCR use Adjusted EBITDA. Creates inconsistent signals in the AI risk assessment input.
+- [ ] Surface negative FCCR as a validation issue — negative FCCR (numerator < 0) means cash flow is insufficient for ANY debt service. Currently returned silently as a negative number with no alert.
+- [ ] Fix `funded_debt_to_ebitda` coerced to 0 in DSCR breakdown — type forces `number` instead of `number | null`, causing the display to show `0x` instead of `N/A` when EBITDA is zero. Misleads analysts.
+- [ ] Fix bank debt double-counting edge case — when `bank_debt_current` is partially extracted (non-zero) but `bank_debt_long_term` is missing, the fallback to disaggregated fields is skipped. Guard should check both are non-null, not just that their sum is non-zero.
+- [ ] Add reported vs. calculated Adjusted EBITDA reconciliation — when company discloses its own Adjusted EBITDA, the system uses it without comparing to the lender's calculation. Divergence >5% should surface as a red flag to the analyst.
+- [ ] Calibrate FCCR Adequate threshold from 1.2x to 1.25x — industry minimum covenant standard is 1.25x. Showing 1.2x as "Adequate" sends a false comfort signal.
+
+### Task 13: Critical — Security & Data Integrity
+Consensus across senior-engineer and code-approver; some overlap with financial-director on data correctness.
+- [ ] Fix path traversal vulnerability in temp file creation — `file.name` is user-controlled and used directly in `path.join()` for temp path. Sanitize with `path.basename()` and strip special characters.
+- [ ] Replace in-memory rate limiter with persistent solution — module-level `Map` does not survive serverless cold starts or work across instances. Replace with Redis/Upstash before handling real financial data.
+- [ ] Fix Zod validation fallback passing unvalidated risk data — when `riskDataSchema.safeParse()` fails, raw unvalidated AI output is used as `riskSnapshot` and stored in Supabase. Should return `null` (caller already handles it) instead of passing malformed data through.
+- [ ] Scope risk cache to userId — module-level `riskCache` uses metrics hash as key without user/document scoping. Two companies with identical metrics would share a cached risk assessment. Include `userId` in cache key.
+- [ ] Add server-side magic-byte file type validation — MIME type check uses browser-supplied `Content-Type` which is trivially spoofable. Add `file-type` or similar magic-byte detection for uploaded documents.
+
+### Task 14: High — Pipeline Robustness
+Senior-engineer and code-approver agree on extraction pipeline ordering and data flow issues.
+- [ ] Normalize year keys BEFORE merge, not after — two chunks producing `"FY2023"` and `"2023"` for the same year are treated as separate years during merge, then one is silently dropped by post-merge normalization. Normalize on each individual extraction result before passing to `mergeExtractionsWithConflicts`.
+- [ ] Fix FCCR receiving stale `m` instead of updated `result` in `computeMetrics` — DSCR correctly passes the cloned/updated `result`, but FCCR passes the original `m`. If a future change writes a field to `result` that FCCR reads, it will silently use stale data.
+- [ ] Fix `primary_fiscal_year` using first-non-null instead of most-common/latest — chunk 1 may contain only notes pages with a comparative year header. Should pick the most-commonly reported value or the latest year.
+- [ ] Add TTM annualization for interim period submissions — if a borrower submits a Q3 report, revenue/EBITDA are 9-month figures but debt balances are point-in-time. Coverage ratios will be distorted without annualization.
+- [ ] Fix `JSON.stringify` replacer used incorrectly for risk cache key — second argument to `JSON.stringify` is a replacer/filter, not a key sorter. Nested keys are not sorted, producing unstable cache keys that cause cache misses and waste AI tokens.
+- [ ] Implement `isOverlapSource` or remove it — stub always returns `false`, making `SOURCE_WEIGHTS.overlap = 0.68` dead code. Overlap-region values are never downweighted.
+- [ ] Fix `principal || null` converting legitimate zero to null — in `debt-service-resolver.ts`, if a company has fully repaid debt and `principal` is legitimately `0`, the audit trail shows `null` instead of `0`.
+
+### Task 15½: High — API Error Resilience & User Feedback
+Discovered when Anthropic API returned 400 (insufficient credits) — pipeline silently saved incomplete data with null risk assessment and 0-year quantitative risk.
+- [ ] Surface API billing/auth errors to the user — when Claude returns 400 (credit balance, invalid key, etc.), the extraction currently "succeeds" and saves to DB with `riskSnapshot: null` and `quantitativeRisk: null`. The user sees no error. Show a clear toast/banner: "Risk assessment unavailable — API credit issue" with the specific error reason.
+- [ ] Distinguish API errors from extraction failures — a 400 billing error is not a transient failure worth retrying. Tag the error class (billing, auth, rate-limit, model error, transient) so the UI can show actionable guidance ("add credits" vs "try again later").
+- [ ] Prevent saving extractions with 0-year quantitative risk — `quantitative-risk.ts` computed for "0 years: []" and returned NULL. The extraction was still saved as successful. If both risk assessment AND quantitative risk are null, flag the extraction as `partial` in the DB status rather than letting it appear complete.
+- [ ] Fix storage delete error (22P02) — `DELETE /api/documents/[id]` logs `StorageApiError: database error, code: 22P02` (invalid text representation — likely a UUID format issue). The delete returns 200 despite the storage failure, leaving orphaned files.
+
+### Task 15: Medium — Type Safety & UI Consistency
+Code-approver and senior-engineer agree on type drift, hardcoded thresholds, and display issues.
+- [ ] Eliminate duplicate type definitions — `FCCRBreakdown` is defined in 3 places (`types/financial.ts`, `DebtHealthMeters.tsx`, `FCCRBreakdown.tsx`). `ExtractionResult` has two definitions (`aiProcessor.ts`, `supabase/types.ts`). Use canonical types from `types/` everywhere.
+- [ ] Fix FCCRBreakdown component dark mode — entire component uses raw Tailwind colors (`text-gray-800`, `bg-blue-50`) instead of design tokens (`text-foreground`, `bg-card`). Broken in dark mode and visually inconsistent.
+- [ ] Import thresholds from `constants.ts` — hero cards in `ProjectDetail` hardcode Sr. Debt/EBITDA "good" at 3.0x when `constants.ts` defines 2.5x. `WeightedRiskGauge` hardcodes weight percentages. `QuantitativeRiskCard` hardcodes arc length. All should read from shared constants.
+- [ ] Import `PILLAR_KEYS` from `constants.ts` in `RiskAssessment.tsx` — currently duplicated locally, will drift if pillar set changes.
+- [ ] Fix `onDataExtracted` to consume ExtractionResult payload — `ProjectDetail.handleDataUpdate` discards the extraction result and calls `router.refresh()`, forcing an unnecessary server round-trip when the data is already in memory from the SSE stream.
+- [ ] Remove dead `riskData` state in `ProjectDetail` — stored, prop-drilled to `WeightedRiskGauge`, but never rendered (pillar observations section is commented out).
+- [ ] Fix `as unknown as` cast in `ProjectDetail.tsx:703` — type mismatch between `displayData` and `FinancialTable` props being suppressed with unsafe cast. Align types properly.
+- [ ] Fix `getFCCRRiskLevel(null)` defaulting to `'adequate'` — null FCCR (unmeasured) is styled as borderline rather than unknown. Should return a conservative or distinct `'unknown'` state.
+
 ---
 
 ## Summary

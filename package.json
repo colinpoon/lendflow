@@ -61,7 +61,6 @@
     "@types/pdf-parse": "^1.1.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/mammoth": "^1.8.5",
     "@types/webpack": "^5.28.5",
     "clear": "^0.1.0",
     "eslint": "^9",

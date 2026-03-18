@@ -3,12 +3,6 @@
 import React from 'react';
 import { fmtCurrency } from '@/utils/format';
 import type {
-  DebtComponents,
-  FixedCharges,
-  AdjustedEBITDAComponents,
-  FCCRBreakdown,
-  DSCRBreakdown,
-  AdjustedEBITDABreakdown,
   FinancialDataProps,
 } from '@/types/financial';
 

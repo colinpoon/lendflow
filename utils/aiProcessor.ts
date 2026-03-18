@@ -167,6 +167,12 @@ export const extractFinancialData = async (
     const chunkProcessingResult = await processChunksSequentially(uniqueChunks, onProgress);
     const chunkResults = chunkProcessingResult.results;
 
+    // Check for fatal API errors (billing, auth) that aborted the pipeline
+    const fatalError = chunkResults.find((r) => r.fatalError)?.fatalError;
+    if (fatalError) {
+      throw new Error(`API ${fatalError.type} error: ${fatalError.message}`);
+    }
+
     // Calculate chunk stats
     const successfulChunks = chunkResults.filter((r) => r.result !== null);
     const failedChunkCount = chunkResults.length - successfulChunks.length;
