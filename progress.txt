@@ -1,5 +1,11 @@
 ## Progress Tracker
 
+### Task 10 — Extraction Pipeline Robustness (2026-03-18)
+
+**10.1 — Scale correction tracking:** Fixed critical bug — `validateCrossMetricScale()` (Pass 2) never returned `correctedYears`, so Pass 3 didn't know about Pass 2 corrections. Now tracks all correction paths. Prevents double-correction.
+**10.2 — Fiscal year format validation:** Already implemented — `normalizeFiscalYearKeys()` runs pre-merge with strict regex normalization and hard rejection of unrecognizable formats. Range validation (1900-2099) also present.
+**10.3 — Cap warnings array:** Text pipeline already capped at 50. Added matching cap to vision pipeline.
+
 ### Task 8 — Error Handling & Resilience (2026-03-18)
 
 **8.1 — Wrap risk generators in try/catch:** Vision pipeline was missing error handling. Fixed.

@@ -304,9 +304,9 @@ Protect against abuse and data leaks.
 
 ### Task 10: Medium — Extraction Pipeline Robustness 
 Improve accuracy and consistency of the extraction pipeline.
-- [] Add `scale_correction_applied` flag per metric to prevent over-correction across the 3 normalization passes (detected scale → cross-metric → cross-year)
-- [] Validate and normalize fiscal year format immediately after extraction — reject unrecognizable formats with warning
-- [] Cap warnings array at ~50 entries; summarize overflow as "...and N more warnings"
+- [x] Add `scale_correction_applied` flag per metric to prevent over-correction across the 3 normalization passes (detected scale → cross-metric → cross-year) — fixed: `validateCrossMetricScale()` (Pass 2) now populates and returns `correctedYears` Set tracking all 3 correction paths. Pass 3 already consumed this via `allPriorCorrectedYears` merge but was receiving an empty set. Year-level tracking is the correct granularity since all passes operate on entire years.
+- [x] Validate and normalize fiscal year format immediately after extraction — reject unrecognizable formats with warning — already implemented: `normalizeFiscalYearKeys()` runs pre-merge on each extraction (strict regex normalization, hard rejection of unrecognizable formats with warnings). Post-merge safety net also applied. Range validation (1900-2099) in `validateExtractionPlausibility()`. Handles FY2023, 2023E, 2023/24 variants; drops H1, Q4, current-style keys with analyst warnings.
+- [x] Cap warnings array at ~50 entries; summarize overflow as "...and N more warnings" — text pipeline already had this cap (aiProcessor.ts). Added matching cap to vision pipeline (visionProcessor.ts) for consistency.
 
 ### Task 12: Critical — Financial Calculation Accuracy Fixes
 All three reviewers (senior-engineer, code-approver, financial-director) agree these affect lending decision accuracy.
