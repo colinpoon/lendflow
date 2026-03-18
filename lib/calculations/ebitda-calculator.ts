@@ -354,33 +354,11 @@ function deduplicateFinanceCostExpenses(
     return 0;
   }
 
-  // ── Tier 2: Envelope test (existing, unchanged at 25%) ───────────────
-  // Materiality gate: non_cash_interest_expense must be >= 25% of total interest.
-  // This proves the AI found a material non-cash component from the finance cost note,
-  // not just a small amortization item. Without this, the envelope test could
-  // false-positive on companies with small non-cash interest and coincidentally
-  // similar-sized legitimate one-time expenses.
-  const nonCashRatio = nonCashInterestExpense / interestExpense;
-  if (nonCashRatio < 0.25) {
-    return rawOtherOneTimeExpenses;
-  }
-
-  // The finance cost envelope includes both cash and non-cash components.
-  // If the non-cash portion + the suspected expenses fit within total interest,
-  // these expenses are likely sub-line-items from the finance cost note.
-  const financeCostSubtotal = nonCashInterestExpense + rawOtherOneTimeExpenses;
-  const envelopeMax = interestExpense * (1 + tolerance);
-
-  if (financeCostSubtotal <= envelopeMax) {
-    console.warn(
-      `⚠️ DEDUP [Guard 7 — envelope]: other_one_time_expenses (${rawOtherOneTimeExpenses}) + ` +
-      `non_cash_interest_expense (${nonCashInterestExpense}) = ${financeCostSubtotal} ` +
-      `fits within interest envelope (${interestExpense}), and non_cash_interest is ` +
-      `${(nonCashRatio * 100).toFixed(0)}% of interest (>25% materiality gate). ` +
-      `These are likely finance cost sub-components. Zeroing other_one_time_expenses.`
-    );
-    return 0;
-  }
+  // Tier 2 envelope test removed: "fits within the interest envelope" is not evidence
+  // of duplication. Legitimate restructuring costs (e.g., legal fees) alongside
+  // non-cash interest could sum within the interest total by coincidence.
+  // Only Tier 1 identity match (expenses ≈ cash interest residual) has clear
+  // economic rationale for dedup.
 
   return rawOtherOneTimeExpenses;
 }
