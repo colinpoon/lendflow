@@ -301,11 +301,11 @@ Make the pipeline gracefully handle failures instead of losing all progress.
 - [x] Guard all division operations in `lib/calculations/` — handle negative EBITDA, negative equity, zero denominators with `null` returns and explanatory warnings
 - [x] Align file-size limits: frontend (`FileUpload.tsx` 10MB) vs API (`route.ts` 50MB) vs error message (30MB) — use a single shared constant
 
-### Task 9: High — Security Hardening
+### Task 9: High — Security Hardening ✅
 Protect against abuse and data leaks.
-- [ ] Add per-user rate limiting on `/api/extractData` (Upstash Redis rate limiter or in-memory token bucket)
-- [ ] Implement structured logging with sensitive data redaction — remove/encrypt financial values from production logs regardless of `DEBUG_FINANCIALS` flag
-- [ ] Replace synchronous file I/O (`readFileSync`/`writeFileSync`) in `risk-generator.ts` cache with async alternatives or in-memory LRU cache
+- [x] Add per-user rate limiting on `/api/extractData` — in-memory sliding-window limiter (5 req/10 min per user, map capped at 10k entries); returns 429 with `Retry-After` header
+- [x] Implement structured logging with sensitive data redaction — FCCR/Debt/Capital values in `risk-generator.ts` now gated behind `DEBUG_FINANCIALS` env flag (same pattern as chunk-processor and extraction-merger)
+- [x] Replace synchronous file I/O in `risk-generator.ts` cache — disk cache removed entirely; replaced with in-memory Map (100-entry LRU-style, oldest evicted when full)
 
 ### Task 10: Medium — Extraction Pipeline Robustness
 Improve accuracy and consistency of the extraction pipeline.

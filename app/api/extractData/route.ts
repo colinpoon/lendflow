@@ -7,6 +7,7 @@ import { extractFinancialData, type ProgressCallback } from '@/utils/aiProcessor
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { detectYearConflicts, type ExtractionWithDocument } from '@/lib/extraction-utils';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
+import { checkRateLimit } from '@/lib/rate-limiter';
 
 // SSE progress type for complete message with data
 interface SSECompleteProgress {
@@ -70,6 +71,15 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     console.error('❗ Unauthorized request');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { allowed, retryAfterSeconds } = checkRateLimit(userId);
+  if (!allowed) {
+    console.warn(`⚠️ Rate limit exceeded for user ${userId}`);
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait before uploading again.' },
+      { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } }
+    );
   }
 
   const supabase = await createClient();

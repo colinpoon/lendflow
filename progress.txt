@@ -151,6 +151,17 @@ All 4 items implemented:
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
+### Task 9: High — Security Hardening (COMPLETED)
+All 3 items implemented across 2 modified files and 1 new file:
+
+1. **Per-user rate limiting** — New `lib/rate-limiter.ts`: sliding-window limiter keyed by Clerk userId. Allows 5 extractions per 10-minute window. Map capped at 10,000 entries (oldest evicted when full). `app/api/extractData/route.ts` calls `checkRateLimit(userId)` immediately after auth and returns 429 with a `Retry-After` header if the user is over limit.
+
+2. **Sensitive data redaction** — `lib/risk-generator.ts`: added `const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true'` and gated the FCCR/Debt/Capital values log line in `generateDebtHealthAssessment` behind the flag. Matches the same pattern already used in `chunk-processor.ts` and `extraction-merger.ts`.
+
+3. **Async cache (sync I/O removed)** — `lib/risk-generator.ts`: removed all `fs` (readFileSync/writeFileSync/existsSync), `path`, and `os` imports. Removed `CACHE_DIR` setup block and `getCachedAnalysisPath`. Replaced disk-based cache with an in-memory `Map<string, unknown>` (100-entry LRU-style — oldest key evicted when full).
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase

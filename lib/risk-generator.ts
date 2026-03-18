@@ -5,10 +5,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
-import { existsSync, readFileSync, writeFileSync } from 'fs';
-import path from 'path';
-import os from 'os';
-import { AI_CONFIG, CACHE_CONFIG } from './constants';
+import { AI_CONFIG } from './constants';
 import { RISK_ASSESSMENT_PROMPT, DEBT_HEALTH_PROMPT } from './prompts/extraction-prompt';
 import { cleanJsonFence } from './chunk-processor';
 import {
@@ -19,20 +16,17 @@ import {
 } from './risk-scoring';
 import type { RiskData, DebtHealthAssessment, ComputedMetrics } from '@/types';
 
+// Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
+const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
+
 // Anthropic Claude client for risk assessment.
 // maxRetries: 3 enables the SDK's built-in exponential backoff with jitter,
 // handling transient 429/5xx errors before surfacing them to the caller.
 const anthropic = new Anthropic({ maxRetries: AI_CONFIG.MAX_RETRIES });
 
-// Cache directory setup
-const CACHE_DIR = path.join(os.tmpdir(), CACHE_CONFIG.DIR_NAME);
-if (!existsSync(CACHE_DIR)) {
-  import('fs').then((fs) => fs.mkdirSync(CACHE_DIR, { recursive: true }));
-}
-
-function getCachedAnalysisPath(hash: string): string {
-  return path.join(CACHE_DIR, `${hash}.json`);
-}
+// In-memory LRU-style cache (max 100 entries; oldest entry evicted when full)
+const RISK_CACHE_MAX = 100;
+const riskCache = new Map<string, unknown>();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Risk Assessment Generation
@@ -52,16 +46,11 @@ export async function generateRiskAssessment(
     Object.keys(metricsByYear).sort()
   );
   const metricsHash = crypto.createHash('sha256').update(canonicalJson).digest('hex');
-  const cachedPath = getCachedAnalysisPath(`${metricsHash}-risk`);
+  const cacheKey = `${metricsHash}-risk`;
 
-  if (existsSync(cachedPath)) {
-    try {
-      const cached = readFileSync(cachedPath, 'utf-8');
-      console.log('♻️ Reusing cached risk assessment');
-      return JSON.parse(cached);
-    } catch (e) {
-      console.warn('⚠️ Failed to load cached risk snapshot:', e);
-    }
+  if (riskCache.has(cacheKey)) {
+    console.log('♻️ Reusing cached risk assessment');
+    return riskCache.get(cacheKey) as RiskData;
   }
 
   // Build ratios for assessment
@@ -97,12 +86,14 @@ export async function generateRiskAssessment(
     const rawRisk = textBlock?.type === 'text' ? textBlock.text : '{}';
     const riskSnapshot = JSON.parse(cleanJsonFence(rawRisk));
 
-    // Cache the result
-    try {
-      writeFileSync(cachedPath, JSON.stringify(riskSnapshot, null, 2), 'utf-8');
-    } catch (e) {
-      console.warn('⚠️ Failed to write risk cache file:', e);
+    // Cache the result — evict the oldest entry if at capacity
+    if (riskCache.size >= RISK_CACHE_MAX) {
+      const oldestKey = riskCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        riskCache.delete(oldestKey);
+      }
     }
+    riskCache.set(cacheKey, riskSnapshot);
 
     console.log('✅ Risk assessment generated');
     return riskSnapshot;
@@ -145,9 +136,11 @@ export async function generateDebtHealthAssessment(
     fccrScore * 0.5 + debtEbitdaScore * 0.35 + debtCapitalScore * 0.15;
 
   console.log('🎯 Generating AI debt health assessment...');
-  console.log(
-    `   FCCR: ${latestMetrics.fccr}, Debt/EBITDA: ${latestMetrics.senior_debt_to_ebitda}, Debt/Capital: ${latestMetrics.total_debt_to_capital}`
-  );
+  if (DEBUG_FINANCIALS) {
+    console.log(
+      `   FCCR: ${latestMetrics.fccr}, Debt/EBITDA: ${latestMetrics.senior_debt_to_ebitda}, Debt/Capital: ${latestMetrics.total_debt_to_capital}`
+    );
+  }
 
   try {
     const response = await anthropic.messages.create({
