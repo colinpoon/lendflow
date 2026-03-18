@@ -24,7 +24,7 @@ import {
   BarChart3,
   ClipboardList,
 } from 'lucide-react';
-import type { RiskData, DebtHealthAssessment } from '@/types/risk';
+import type { DebtHealthAssessment } from '@/types/risk';
 import type { RiskConfig } from '@/types';
 import type { ComputedMetrics as YearMetrics } from '@/types/financial';
 import { RISK_WEIGHTS } from '@/lib/constants';
@@ -51,7 +51,6 @@ import {
 interface WeightedRiskGaugeProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
   debtHealthAssessment: DebtHealthAssessment | null;
-  riskData?: RiskData | null;
   /** Custom FCCR adjustment from FCCRBreakdown (total of all custom adjustments) */
   customFccrAdjustment?: number;
 }
@@ -446,8 +445,6 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
 const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   data,
   debtHealthAssessment,
-  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-  riskData,
   customFccrAdjustment = 0,
 }) => {
   if (
@@ -785,11 +782,6 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
       )}
 
       {/* Credit Risk Pillar Observations - temporarily disabled */}
-      {/* {riskData && riskData.pillars && Object.keys(riskData.pillars).length > 0 && (
-        <div className="mt-6 pt-4 border-t">
-          ...
-        </div>
-      )} */}
     </motion.div>
   );
 };

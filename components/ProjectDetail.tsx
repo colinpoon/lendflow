@@ -33,7 +33,6 @@ import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import ExtractionWarnings from '@/components/ExtractionWarnings';
-import type { RiskData } from '@/types/risk';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 import type { ComputedMetrics } from '@/types';
 import {
@@ -214,7 +213,6 @@ export default function ProjectDetail({
   const [financialData, setFinancialData] = useState<{
     metrics_by_year: Record<string, ComputedMetrics>;
   } | null>(null);
-  const [riskData, setRiskData] = useState<RiskData | null>(null);
   const [debtHealthAssessment, setDebtHealthAssessment] =
     useState<DebtHealthAssessment | null>(null);
   const [quantitativeRiskAssessment, setQuantitativeRiskAssessment] =
@@ -385,7 +383,6 @@ export default function ProjectDetail({
         setFinancialData({ metrics_by_year: mergedData.metrics_by_year });
       }
 
-      if (mergedData.riskAssessment) setRiskData(mergedData.riskAssessment);
       if (mergedData.debtHealthAssessment) setDebtHealthAssessment(mergedData.debtHealthAssessment);
       if (mergedData.quantitativeRiskAssessment) setQuantitativeRiskAssessment(mergedData.quantitativeRiskAssessment);
       if (mergedData.year_sources) setYearSources(mergedData.year_sources);
@@ -742,7 +739,6 @@ export default function ProjectDetail({
                   <WeightedRiskGauge
                     data={displayData}
                     debtHealthAssessment={debtHealthAssessment}
-                    riskData={riskData}
                   />
                 </CompactErrorBoundary>
               </CardContent>
