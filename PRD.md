@@ -315,8 +315,8 @@ Improve accuracy and consistency of the extraction pipeline.
 
 ### Task 11: Low — Type Safety & Developer Experience
 Reduce technical debt and improve maintainability.
-- [ ] Add Zod schemas for AI response validation at the boundary; generate TypeScript types from schemas
-- [ ] Replace `as unknown as X` casts and `Record<string, unknown>` types with proper typed interfaces
+- [x] Add Zod schemas for AI response validation at the boundary; generate TypeScript types from schemas
+- [x] Replace `as unknown as X` casts and `Record<string, unknown>` types with proper typed interfaces — centralized `types/financial.ts` + `types/risk.ts`; FCCRBreakdown mismatch resolved
 - [x] Wrap `FinancialTable`, `RiskAssessment`, and `EBITDA` components with `<ErrorBoundary>` — wrapped FinancialTable, AdjustedEBITDA, QuantitativeRiskCard, WeightedRiskGauge, DebtHealthMeters in `ProjectDetail.tsx` with `CompactErrorBoundary`
 - [x] Move AI model version to `ANTHROPIC_MODEL` env var with current value as default — `lib/constants.ts` reads `process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514'`; vision files updated
 - [x] Add `.env.example` with all required environment variables and placeholder values

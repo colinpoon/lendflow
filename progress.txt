@@ -176,13 +176,9 @@ All 3 items implemented across `lib/extraction-merger.ts` and `utils/aiProcessor
 ### Remaining PRD Gaps:
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase
 
-### Task 11: Type Safety & Developer Experience (Partial — 4 of 5 items, commit 4188ec1)
-Previously 3 items were done. This iteration added:
+### Task 11: Type Safety & Developer Experience (COMPLETED — commit 561e386)
+All 5 items done. Final iteration (this session):
 
-4. **Zod schemas for risk AI responses** — `lib/validation.ts`: Added `riskDataSchema` and `debtHealthAssessmentSchema` Zod schemas matching `RiskData` and `DebtHealthAssessment` types. `lib/risk-generator.ts`: Both `generateRiskAssessment()` and `generateDebtHealthAssessment()` now `.safeParse()` the JSON after parsing — logs a warning with field errors on mismatch, falls back to raw parsed data. Catches malformed AI responses at the boundary without breaking resilience.
-
-5. **`/instruments` page fix** — Replaced the stub page that crashed by querying a non-existent Supabase `instruments` table with a proper "under development" placeholder using `Card` + `Construction` icon. No more runtime Supabase errors on that route.
-
-Remaining in Task 11: Typed interfaces to replace `as unknown as X` casts (requires aligning local FinancialTable FCCRBreakdown field names with global types — `ttm_principal_payments` vs `principal_payments` mismatch).
+5. **Centralized type definitions + `Record<string,unknown>` elimination** — Created `types/financial.ts` and `types/risk.ts` as the single source of truth for all financial and risk types. Removed ~150 lines of duplicated local interface definitions from `FinancialTable.tsx`, `RiskAssessment.tsx`, `WeightedRiskGauge.tsx`. Resolved the `ttm_principal_payments` vs `principal_payments` FCCRBreakdown field mismatch by using canonical `FCCRBreakdown` from `types/financial.ts`. Updated `lib/supabase/types.ts`: `riskAssessment` and `debtHealthAssessment` now typed as `RiskData | null` and `DebtHealthAssessment | null` (was `Record<string, unknown>`). Tightened `FileUpload.tsx` and `VisionFileUpload.tsx` `onDataExtracted` callback to `(data: ExtractionResult) => void` (was `Record<string, unknown>`). Zero `as unknown as X` casts remain in production code.
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
