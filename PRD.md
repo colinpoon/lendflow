@@ -351,9 +351,9 @@ Code-approver and senior-engineer agree on type drift, hardcoded thresholds, and
 - [x] Fix FCCRBreakdown component dark mode — entire component uses raw Tailwind colors (`text-gray-800`, `bg-blue-50`) instead of design tokens (`text-foreground`, `bg-card`). Broken in dark mode and visually inconsistent.
 - [x] Import thresholds from `constants.ts` — hero cards in `ProjectDetail` hardcode Sr. Debt/EBITDA "good" at 3.0x when `constants.ts` defines 2.5x. `WeightedRiskGauge` hardcodes weight percentages. `QuantitativeRiskCard` hardcodes arc length. All should read from shared constants.
 - [x] Import `PILLAR_KEYS` from `constants.ts` in `RiskAssessment.tsx` — currently duplicated locally, will drift if pillar set changes.
-- [ ] Fix `onDataExtracted` to consume ExtractionResult payload — `ProjectDetail.handleDataUpdate` discards the extraction result and calls `router.refresh()`, forcing an unnecessary server round-trip when the data is already in memory from the SSE stream.
+- [x] Fix `onDataExtracted` to consume ExtractionResult payload — fixed type mismatch: SSE sends `UploadCompletePayload` (wraps ExtractionResult in `financialMetrics`), not raw ExtractionResult. Introduced shared `UploadCompletePayload` type, fixed vision page handler. `router.refresh()` kept intentionally — ProjectDetail needs merged multi-document view from server.
 - [x] Remove dead `riskData` state in `ProjectDetail` — stored, prop-drilled to `WeightedRiskGauge`, but never rendered (pillar observations section is commented out).
-- [ ] Fix `as unknown as` cast in `ProjectDetail.tsx:703` — type mismatch between `displayData` and `FinancialTable` props being suppressed with unsafe cast. Align types properly.
+- [x] Fix `as unknown as` cast in `ProjectDetail.tsx:703` — types were structurally identical (`{ metrics_by_year: Record<string, ComputedMetrics> } | null`), cast was unnecessary. Removed.
 - [x] Fix `getFCCRRiskLevel(null)` defaulting to `'adequate'` — null FCCR (unmeasured) is styled as borderline rather than unknown. Should return a conservative or distinct `'unknown'` state.
 
 ---

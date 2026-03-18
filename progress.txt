@@ -657,7 +657,19 @@ Two more sub-items completed:
    instead of `'adequate'`. Null values now clearly indicate unmeasured data rather than
    masquerading as borderline health.
 
-Task 15 progress: 7 of 8 sub-items complete. Remaining: `onDataExtracted` payload consumption,
-`as unknown as` cast fix.
+3. **Fix onDataExtracted type mismatch** (commit aa25de8) — The SSE complete message and
+   resolve-conflict endpoint wrap `ExtractionResult` inside `{ message, filename, projectId,
+   documentId, extractionId, financialMetrics }`. Both upload components typed the callback as
+   `(data: ExtractionResult) => void`, masking the real shape. Introduced `UploadCompletePayload`
+   type in `FileUpload.tsx`, updated `VisionFileUpload` to import it, and rewrote the vision
+   page handler to extract data from `financialMetrics` directly instead of fragile fallback
+   logic. `ProjectDetail.handleDataUpdate` keeps `router.refresh()` intentionally — it needs
+   the merged multi-document view from the server, not a single-document extraction.
+
+4. **Remove unsafe `as unknown as` cast** (commit cca9e9a) — `displayData` and `FinancialData`
+   are structurally identical (`{ metrics_by_year: Record<string, ComputedMetrics> } | null`).
+   The double cast was unnecessary and is now removed.
+
+Task 15 is now fully complete (8 of 8 sub-items).
 
 - TypeScript: clean (npm run build passes, 0 errors)
