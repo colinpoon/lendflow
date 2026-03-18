@@ -469,3 +469,22 @@ Warning flows through `extraction_warnings` → ExtractionWarnings UI panel. No 
 (non-corrective) — the warning flags the condition for analyst review only.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 16: Remove unsafe dedup heuristics from EBITDA calculator (COMPLETED — commits 1a64f9f, b23f74e)
+Two deduplication heuristics in `ebitda-calculator.ts` were silently zeroing legitimate
+EBITDA adjustment items based on numerical coincidence rather than structural evidence:
+
+1. **Check 1b** (deduplicateOtherNonCash) — zeroed `other_non_cash` when it was 30-100% of
+   `non_cash_interest_expense`. Proportion alone is not evidence of duplication; legitimate
+   SBC entries would be silently dropped. Removed entirely.
+
+2. **Guard 7 Tier 2** (deduplicateFinanceCostExpenses) — zeroed `other_one_time_expenses`
+   when the sum fit within the interest envelope. "Fits numerically" is not the same as
+   "is a sub-component." Legitimate restructuring costs could coincidentally fit. Removed.
+
+Both removals preserve the safe dedup triggers: Check 1a (direct value match), Check 1c
+(usedGrossFallback), and Guard 7 Tier 1 (identity match against cash interest residual).
+
+Task 16 is now fully complete (all 5 sub-items checked off).
+
+- TypeScript: clean (npm run build passes, 0 errors)
