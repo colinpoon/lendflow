@@ -1633,7 +1633,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
          * Tailwind utility specificity, giving us cross-section striping that
          * respects variant overrides (subtotal, total).
          */}
-        <table className="table-financial min-w-160 w-full text-sm tabular-nums border-collapse">
+        <table className="table-financial w-full text-sm tabular-nums border-collapse">
           <thead className="sticky top-0 z-10">
             <tr className="bg-primary border-b-2 border-primary">
               {/* Label column — wide enough for longest metric name */}

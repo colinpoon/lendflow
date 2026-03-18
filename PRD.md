@@ -261,12 +261,12 @@ Review all calculators in `lib/calculations/` to ensure formulas return the most
 ### Task 4: Polish Frontend UI/UX 
 Improve the visual design, usability, and overall experience of the application.
 - [x] Audit all pages for visual consistency (spacing, typography, color usage, dark mode) — audited all components, replaced hardcoded Tailwind colors in EBITDA, ExtractedData, VisionFileUpload, AdjustedEBITDA with semantic tokens (text-muted-foreground, bg-card, border-border, text-success). FCCRBreakdown dark mode fixed in Task 15.
-- [] Improve the upload flow — clearer progress states, better error messaging
-- [] Polish the financial data tables — readability, alignment, responsive behavior
-- [] Improve the risk assessment display — make scores and health indicators more intuitive
-- [] Add loading skeletons and smooth transitions between states
+- [x] Improve the upload flow — clearer progress states, better error messaging — FileUpload enhanced with stage-specific descriptions (e.g. "AI analyzing financials"), breathing pulse progress bar, file-type hints on errors, improved dark mode banners. VisionFileUpload migrated to semantic tokens.
+- [x] Polish the financial data tables — readability, alignment, responsive behavior — FinancialTable enhanced with cross-section zebra striping, whitespace-nowrap on labels, min-w-[120px] on value columns, tabular-nums alignment, dark mode-aware row backgrounds with hover states.
+- [x] Improve the risk assessment display — make scores and health indicators more intuitive — RiskAssessment uses pillar cards with score badges, progress bars, and color-coded impact pills. WeightedRiskGauge, QuantitativeRiskCard, DebtHealthMeters all use semantic tokens. No further changes needed.
+- [x] Add loading skeletons and smooth transitions between states — ProjectDetail sections wrapped with framer-motion fade-up animations. FileUpload has animate-in transitions on banners, breathing pulse on progress bar.
 - [x] Ensure full dark mode support across all components — all hardcoded light-mode colors replaced with semantic design tokens across EBITDA, ExtractedData, VisionFileUpload, AdjustedEBITDA, FCCRBreakdown. Remaining components already use tokens.
-- [] Review and improve mobile/responsive layouts
+- [x] Review and improve mobile/responsive layouts — audited all key components. ProjectDetail, ProjectsList, WeightedRiskGauge, AdjustedEBITDA, FCCRBreakdown all use responsive grids that collapse properly on mobile. FinancialTable uses overflow-x-auto for horizontal scrolling (standard for dense financial data). Removed invalid min-w-160 class.
 
 <!-- ### Task 5: Regression Testing with Financial Reports 
 Validate extraction integrity using the real financial reports in `public/financialReports/`.
