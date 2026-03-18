@@ -1403,6 +1403,7 @@ export function validateCrossMetricScale(
 ): ScaleNormalizationResult {
   const corrections: string[] = [];
   const corrected = structuredClone(metrics);
+  const correctedYears = new Set<string>();
 
   for (const [year, yearData] of Object.entries(corrected)) {
     // Skip years that were already uniformly scaled in Pass 1 (applyDetectedScale)
@@ -1449,6 +1450,7 @@ export function validateCrossMetricScale(
 
         const correction = `${year}: Revenue ${revenue.toLocaleString()} exceeds $100M threshold - all ${correctedCount} currency values divided by ${SCALE_VALIDATION.SCALE_FACTOR} (likely raw dollars)`;
         corrections.push(correction);
+        correctedYears.add(year);
         if (DEBUG_FINANCIALS) console.log(`⚠️ ${correction}`);
         continue; // Skip other checks for this year - already corrected
       }
@@ -1509,12 +1511,14 @@ export function validateCrossMetricScale(
             }
             const correction = `${year}: All ${correctedCount} currency metrics divided by ${SCALE_VALIDATION.SCALE_FACTOR} (entire year in raw dollars, EBITDA margin was ${(ebitdaMargin * 100).toFixed(3)}%)`;
             corrections.push(correction);
+            correctedYears.add(year);
             if (DEBUG_FINANCIALS) console.log(`⚠️ ${correction}`);
           } else {
             // Only revenue is wrong - other metrics are already in thousands
             corrected[year].revenue = correctedRevenue;
             const correction = `${year}/revenue: ${revenue.toLocaleString()} → ${correctedRevenue.toLocaleString()} (÷${SCALE_VALIDATION.SCALE_FACTOR}, EBITDA margin was ${(ebitdaMargin * 100).toFixed(3)}% → ${(correctedMargin * 100).toFixed(1)}%)`;
             corrections.push(correction);
+            correctedYears.add(year);
             if (DEBUG_FINANCIALS) console.log(`⚠️ ${correction}`);
           }
         }
@@ -1562,5 +1566,5 @@ export function validateCrossMetricScale(
     }
   }
 
-  return { metrics: corrected, corrections };
+  return { metrics: corrected, corrections, correctedYears };
 }
