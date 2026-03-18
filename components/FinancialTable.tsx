@@ -449,7 +449,7 @@ const sections: SectionConfig[] = [
       },
       {
         key: 'dscr',
-        label: 'DSCR',
+        label: 'EBITDA Coverage',
         format: 'ratio',
         variant: 'total',
       },

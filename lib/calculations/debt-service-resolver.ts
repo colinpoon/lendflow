@@ -1,5 +1,5 @@
 /**
- * Shared debt service resolver for FCCR and DSCR denominators
+ * Shared debt service resolver for FCCR and EBITDA Coverage denominators
  *
  * Resolves principal, interest, and lease components using priority chains.
  *
@@ -35,7 +35,7 @@ export interface ResolvedDebtService {
   operatingLeases: number;
   /**
    * Preferred dividends from fixed_charges.preferred_dividends.
-   * NOT included in `total` — excluded from DSCR (banker's ratio) but added to
+   * NOT included in `total` — excluded from EBITDA Coverage Ratio but added to
    * FCCR denominator by fccr-calculator.ts, where preferred dividends are a
    * contractual senior fixed obligation per commercial lending convention.
    */

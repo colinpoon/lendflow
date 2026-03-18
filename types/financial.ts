@@ -232,7 +232,7 @@ export interface FCCRBreakdown {
 }
 
 export interface DSCRBreakdown {
-  calculation_type: 'banker_covenant';
+  calculation_type: 'ebitda_coverage';
   // Numerator
   adjusted_ebitda: number;
   // Denominator components (bank debt service only)

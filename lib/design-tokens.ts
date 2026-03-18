@@ -148,7 +148,7 @@ export interface RiskColorConfig {
 
 /**
  * Risk level color configurations
- * Used for Covenant FCCR, DSCR, Debt/EBITDA, and other financial metrics
+ * Used for Covenant FCCR, EBITDA Coverage, Debt/EBITDA, and other financial metrics
  */
 export const riskColors: Record<RiskLevel, RiskColorConfig> = {
   excellent: {
@@ -324,7 +324,7 @@ export function getFCCRRiskLevel(value: number | null | undefined): RiskLevel {
 }
 
 /**
- * Determine risk level for DSCR (Debt Service Coverage Ratio)
+ * Determine risk level for EBITDA Coverage Ratio (Adj. EBITDA / Total Debt Service)
  * Higher is better
  */
 export function getDSCRRiskLevel(value: number | null | undefined): RiskLevel {

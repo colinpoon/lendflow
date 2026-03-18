@@ -226,13 +226,13 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           )}
         </div>
 
-        {/* DSCR Card */}
+        {/* EBITDA Coverage Card */}
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 text-center border border-purple-200">
-          <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">DSCR</p>
+          <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">EBITDA Coverage</p>
           <p className={`text-2xl font-bold ${getRatioColor(metrics.dscr ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>
             {formatRatio(metrics.dscr)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Debt Service Coverage</p>
+          <p className="text-xs text-gray-500 mt-1">Adj. EBITDA / Total Debt Service</p>
         </div>
 
         {/* Funded Debt Card */}
@@ -573,12 +573,12 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           </AccordionItem>
         )}
 
-        {/* DSCR Breakdown (Banker's Method) */}
+        {/* EBITDA Coverage Ratio Breakdown */}
         {dscrBreakdown && (
           <AccordionItem value="dscr" className="border rounded-lg px-4 mb-4">
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-gray-800">DSCR Calculation (Banker&apos;s Covenant)</span>
+                <span className="font-semibold text-gray-800">EBITDA Coverage Ratio</span>
                 <span className={`text-sm px-2 py-0.5 rounded ${getRatioColor(metrics.dscr ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })} bg-opacity-20`}>
                   {formatRatio(metrics.dscr)}
                 </span>
@@ -587,9 +587,9 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
             <AccordionContent>
               <div className="space-y-4 text-sm">
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-purple-700 text-xs">
-                  <strong>Banker&apos;s Method:</strong> Simpler formula used in loan covenants.
-                  Does not deduct CapEx from numerator (assumes discretionary).
-                  Typical covenant requirement: DSCR &ge; 1.25x
+                  <strong>EBITDA Coverage:</strong> Measures raw EBITDA capacity to service debt.
+                  Unlike FCCR, does not deduct CapEx, taxes, or distributions from numerator.
+                  Typical covenant requirement: &ge; 1.25x
                 </div>
 
                 {/* Numerator */}
@@ -627,7 +627,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 {/* Final Calculation */}
                 <div className="bg-gray-100 rounded-lg p-4 text-center">
                   <div className="font-mono text-sm text-gray-700">
-                    DSCR = {formatCurrency(dscrBreakdown.adjusted_ebitda)} / {formatCurrency(dscrBreakdown.total_debt_service)} = <span className="font-bold text-lg">{formatRatio(metrics.dscr)}</span>
+                    EBITDA Coverage = {formatCurrency(dscrBreakdown.adjusted_ebitda)} / {formatCurrency(dscrBreakdown.total_debt_service)} = <span className="font-bold text-lg">{formatRatio(metrics.dscr)}</span>
                   </div>
                 </div>
 
@@ -667,25 +667,25 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
           <AccordionContent>
             <div className="space-y-4 text-sm">
               <div>
-                <h5 className="font-semibold text-gray-700 mb-2">Covenant FCCR vs DSCR</h5>
+                <h5 className="font-semibold text-gray-700 mb-2">Covenant FCCR vs EBITDA Coverage</h5>
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-1">Metric</th>
                       <th className="text-left py-1">Use Case</th>
-                      <th className="text-left py-1">CapEx Treatment</th>
+                      <th className="text-left py-1">Numerator Deductions</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b">
                       <td className="py-1 font-medium">Covenant FCCR</td>
                       <td className="py-1">Conservative analysis</td>
-                      <td className="py-1">Deducts unfunded CapEx</td>
+                      <td className="py-1">CapEx, taxes, distributions</td>
                     </tr>
                     <tr>
-                      <td className="py-1 font-medium">DSCR</td>
-                      <td className="py-1">Bank covenants</td>
-                      <td className="py-1">No CapEx deduction</td>
+                      <td className="py-1 font-medium">EBITDA Coverage</td>
+                      <td className="py-1">Debt service capacity</td>
+                      <td className="py-1">None (raw EBITDA)</td>
                     </tr>
                   </tbody>
                 </table>
@@ -695,7 +695,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 <h5 className="font-semibold text-gray-700 mb-2">Typical Covenant Thresholds</h5>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-gray-500 mb-1">DSCR / Covenant FCCR</div>
+                    <div className="text-xs text-gray-500 mb-1">EBITDA Coverage / Covenant FCCR</div>
                     <div className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full bg-green-500"></span>
                       <span>&ge; 2.0x Excellent</span>

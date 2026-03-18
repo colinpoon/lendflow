@@ -768,7 +768,7 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
   );
 
   // ─────────────────────────────────────────────────────────────────────────
-  // DSCR Calculation (Banker's Covenant Method)
+  // EBITDA Coverage Ratio (Adj. EBITDA / Total Debt Service)
   // ─────────────────────────────────────────────────────────────────────────
 
   const dscrResult = calculateDSCR(result.adjusted_ebitda ?? result.ebitda, result, year);
@@ -781,7 +781,7 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
   logDSCR(result.adjusted_ebitda ?? result.ebitda, result, dscrResult);
 
   // Collect analyst-facing warnings from debt service resolution.
-  // Both FCCR and DSCR call resolveDebtService independently — deduplicate by text
+  // Both FCCR and EBITDA Coverage call resolveDebtService independently — deduplicate by text
   // since the same revolver warning can fire from both paths.
   const calculationWarnings: string[] = [];
   const seenWarnings = new Set<string>();
@@ -931,7 +931,7 @@ function logDSCR(
   const breakdown = result.dscr_breakdown;
   if (!breakdown) return;
 
-  console.log(`\n📊 DSCR CALCULATION DEBUG (BANKER'S COVENANT METHOD):`);
+  console.log(`\n📊 EBITDA COVERAGE RATIO DEBUG:`);
   console.log(`   NUMERATOR:`);
   console.log(`     Adjusted EBITDA:           ${adjustedEbitda}`);
   console.log(`   DENOMINATOR COMPONENTS (Debt Service):`);
@@ -939,7 +939,7 @@ function logDSCR(
   console.log(`     Cash Interest Paid:        ${breakdown.bank_interest_expense} (extracted: ${m.cash_interest_paid})`);
   console.log(`     Lease Payments:            ${breakdown.lease_payments} (extracted: ${m.payment_of_lease_liability})`);
   console.log(`     Total Debt Service:        ${breakdown.total_debt_service}`);
-  console.log(`   DSCR = ${adjustedEbitda} / ${breakdown.total_debt_service} = ${result.dscr}x`);
+  console.log(`   EBITDA Coverage = ${adjustedEbitda} / ${breakdown.total_debt_service} = ${result.dscr}x`);
   console.log(`   FUNDED DEBT METRICS:`);
   console.log(`     Funded Debt (Bank + Leases): ${breakdown.funded_debt}`);
   console.log(`     Funded Debt / EBITDA:      ${breakdown.funded_debt_to_ebitda != null ? `${breakdown.funded_debt_to_ebitda}x` : 'N/A'}\n`);

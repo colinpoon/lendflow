@@ -1,11 +1,12 @@
 /**
- * DSCR (Debt Service Coverage Ratio) calculation utilities
- * Banker's covenant formula for debt servicing capacity
+ * EBITDA Coverage Ratio calculation utilities
  *
- * This differs from FCCR in that it uses the simpler banker's definition:
- * DSCR = Adjusted EBITDA / Total Debt Service
+ * Formula: Adjusted EBITDA / Total Debt Service
  *
- * Banks typically require DSCR >= 1.25:1.00
+ * Unlike FCCR, this ratio does NOT deduct CapEx, cash taxes, or distributions
+ * from the numerator — it measures raw EBITDA capacity to service debt.
+ *
+ * Banks typically require >= 1.25:1.00
  */
 
 import type { ExtractedMetrics, DSCRBreakdown, DebtComponents } from '@/types';
@@ -21,11 +22,9 @@ export interface DSCRCalculationResult {
 }
 
 /**
- * Calculate Debt Service Coverage Ratio (DSCR) using banker's covenant formula
+ * Calculate EBITDA Coverage Ratio (Adjusted EBITDA / Total Debt Service)
  *
- * Banker's formula:
- * - DSCR = Adjusted EBITDA / Total Debt Service
- * - Total Debt Service = Principal Payments + Interest Payments (cash basis)
+ * Total Debt Service = Principal Payments + Interest Payments (cash basis)
  *
  * Also calculates:
  * - Funded Debt = Senior bank debt + finance lease liabilities
@@ -163,7 +162,7 @@ export function calculateDSCR(
     funded_debt: fundedDebt != null ? fundedDebt : null,
     funded_debt_to_ebitda: fundedDebtToEbitda,
     dscr_breakdown: {
-      calculation_type: 'banker_covenant',
+      calculation_type: 'ebitda_coverage',
       adjusted_ebitda: adjustedEbitda,
       bank_principal_payments: repaymentOfDebt,
       bank_interest_expense: cashInterestPaid,

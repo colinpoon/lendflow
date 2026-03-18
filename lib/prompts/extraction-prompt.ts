@@ -647,7 +647,7 @@ CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
   - Do NOT include preferred share dividends (those belong in fixed_charges.preferred_dividends)
   - Extract as POSITIVE number
 
-DEBT SERVICE ITEMS (CRITICAL FOR BANKER'S DSCR COVENANT):
+DEBT SERVICE ITEMS (CRITICAL FOR EBITDA COVERAGE & FCCR CALCULATION):
 
 • repayment_of_debt: From CASH FLOW STATEMENT under "Financing activities". Look for:
   - "Repayment of debt" (bank debt only, NOT lease payments)
@@ -781,9 +781,9 @@ Return EXACT JSON matching this schema — no markdown, no fences, no extra keys
 PILLAR SCORING GUIDANCE (each pillar scored 1–10, higher = worse risk):
 
 1. debt_service_capacity (weight 30%):
-   Evaluate FCCR, DSCR, and interest coverage ratio.
+   Evaluate FCCR, EBITDA Coverage Ratio, and interest coverage ratio.
    - FCCR >= 2.0x → 1–2; 1.5–2.0x → 3–4; 1.25–1.5x → 5–6; 1.0–1.25x → 7–8; < 1.0x → 9–10
-   - Cross-check with DSCR and interest coverage for consistency.
+   - Cross-check with EBITDA Coverage and interest coverage for consistency.
 
 2. leverage (weight 25%):
    Evaluate Senior Debt/EBITDA, Total Debt/Capital, and Debt-to-Equity.

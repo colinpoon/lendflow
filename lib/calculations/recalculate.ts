@@ -14,7 +14,7 @@
  *   2. Ratio updates — senior_debt_to_ebitda, total_debt_to_capital
  *   3. FCCR          — fccr, fccr_numerator, total_fixed_charges,
  *                       cash_flow_for_debt_servicing, fccr_breakdown
- *   4. DSCR          — dscr, funded_debt, funded_debt_to_ebitda, dscr_breakdown
+ *   4. EBITDA Coverage — dscr, funded_debt, funded_debt_to_ebitda, dscr_breakdown
  *
  * Everything else (adjusted_ebitda, interest_coverage_ratio, current_ratio,
  * debt_to_equity_ratio, all extraction fields) is preserved unchanged from
