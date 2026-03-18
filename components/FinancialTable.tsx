@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { fmtCurrency } from '@/utils/format';
-import type {
-  FinancialDataProps,
-} from '@/types/financial';
+import type { FinancialDataProps } from '@/types/financial';
 
 // Re-export canonical types so that the local alias `YearMetrics` used throughout
 // this file continues to resolve without touching every downstream reference.
@@ -726,7 +724,9 @@ const getMetricValue = (
   if (nested) {
     const nestedObj = metrics[nested as keyof YearMetrics];
     if (!nestedObj || typeof nestedObj !== 'object') return null;
-    const value = (nestedObj as unknown as Record<string, unknown>)[key];
+    const value = (nestedObj as unknown as Record<string, unknown>)[
+      key
+    ];
     if (value === null || value === undefined) return null;
     return typeof value === 'number' ? value : null;
   }
@@ -980,7 +980,9 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
   ): number | null => {
     const breakdown = data.metrics_by_year[year]?.fccr_breakdown;
     if (!breakdown) return null;
-    const value = (breakdown as unknown as Record<string, number>)[key];
+    const value = (breakdown as unknown as Record<string, number>)[
+      key
+    ];
     return typeof value === 'number' ? value : null;
   };
 
@@ -1335,7 +1337,8 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
           const hasDebtCap =
             m.total_debt != null && m.total_debt_to_capital != null;
 
-          if (!hasEbitda && !hasFccr && !hasSenior && !hasDebtCap) return null;
+          if (!hasEbitda && !hasFccr && !hasSenior && !hasDebtCap)
+            return null;
 
           return (
             <div key={year} className="space-y-3">
@@ -1350,30 +1353,48 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                       Adjusted EBITDA
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Reported EBITDA</span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground">
+                        Reported EBITDA
+                      </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className="font-semibold text-foreground">
                         {fmtEq(ab.reported_ebitda)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Adj. EBITDA</span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground">
+                        Adj. EBITDA
+                      </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className="text-foreground">
                         {eqLine(ab.reported_ebitda, [
                           { v: ab.non_cash_adjustments, op: '+' },
                           { v: ab.one_time_expenses, op: '+' },
                           { v: ab.one_time_gains, op: '−' },
                           { v: ab.interest_income_excluded, op: '−' },
-                          { v: ab.owner_management_adjustments, op: '+' },
+                          {
+                            v: ab.owner_management_adjustments,
+                            op: '+',
+                          },
                           { v: ab.accounting_adjustments, op: '+' },
                           { v: ab.pro_forma_adjustments, op: '+' },
                         ])}
                       </span>
                     </div>
                     <div className="border-t border-border pt-2 mt-1">
-                      <span className="text-muted-foreground">Adjusted EBITDA</span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground">
+                        Adjusted EBITDA
+                      </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className="font-bold text-success">
                         {fmtEq(
                           m.calculated_adjusted_ebitda ??
@@ -1381,11 +1402,13 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                             ab.reported_ebitda,
                         )}
                       </span>
-                      {ab.uses_reported_value && m.adjusted_ebitda != null && (
-                        <span className="text-muted-foreground/60 text-xs ml-2">
-                          (using reported: {fmtEq(m.adjusted_ebitda)})
-                        </span>
-                      )}
+                      {ab.uses_reported_value &&
+                        m.adjusted_ebitda != null && (
+                          <span className="text-muted-foreground/60 text-xs ml-2">
+                            (using reported:{' '}
+                            {fmtEq(m.adjusted_ebitda)})
+                          </span>
+                        )}
                     </div>
                   </div>
                 )}
@@ -1397,22 +1420,35 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                       Covenant FCCR
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Numerator</span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground">
+                        Numerator
+                      </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className="text-foreground">
                         {eqLine(fb.adjusted_ebitda, [
                           { v: fb.capex_deduction, op: '−' },
                           { v: fb.cash_taxes_paid, op: '−' },
                         ])}
                       </span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className="font-bold text-warning">
                         {fmtEq(fb.numerator)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Denominator</span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground">
+                        Denominator
+                      </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className="text-foreground">
                         {[
                           fb.ttm_principal_payments,
@@ -1423,18 +1459,30 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                           .map((v) => fmtEq(v))
                           .join(' + ')}
                       </span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className="font-bold text-primary">
                         {fmtEq(fb.denominator)}
                       </span>
                     </div>
                     <div className="border-t border-border pt-2 mt-1">
-                      <span className="text-muted-foreground">Covenant FCCR</span>
-                      <span className="text-muted-foreground/60"> = </span>
-                      <span className="text-foreground">
-                        {fmtEq(fb.numerator)} / {fmtEq(fb.denominator)}
+                      <span className="text-muted-foreground">
+                        Covenant FCCR
                       </span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
+                      <span className="text-foreground">
+                        {fmtEq(fb.numerator)} /{' '}
+                        {fmtEq(fb.denominator)}
+                      </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className={getRatioColor('fccr', m.fccr)}>
                         {m.fccr!.toFixed(2)}x
                       </span>
@@ -1452,12 +1500,18 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                       <span className="text-muted-foreground">
                         Senior Debt / Adj. EBITDA
                       </span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className="text-foreground">
                         {fmtEq(m.senior_debt!)} /{' '}
                         {fmtEq(m.adjusted_ebitda ?? m.ebitda ?? 0)}
                       </span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span
                         className={getRatioColor(
                           'senior_debt_to_ebitda',
@@ -1480,14 +1534,21 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                       <span className="text-muted-foreground">
                         Total Debt / Total Capital
                       </span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span className="text-foreground">
                         {fmtEq(m.total_debt!)} /{' '}
                         {fmtEq(
-                          m.total_debt! + (m.shareholders_equity ?? 0),
+                          m.total_debt! +
+                            (m.shareholders_equity ?? 0),
                         )}
                       </span>
-                      <span className="text-muted-foreground/60"> = </span>
+                      <span className="text-muted-foreground/60">
+                        {' '}
+                        ={' '}
+                      </span>
                       <span
                         className={getRatioColor(
                           'total_debt_to_capital',
@@ -1521,62 +1582,62 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
-      <table className="min-w-[640px] w-full text-sm tabular-nums border-collapse">
-        <thead>
-          <tr className="bg-primary border-b-2 border-primary">
-            <th className="py-3 px-4 text-left font-semibold text-primary-foreground w-56">
-              Line Item
-            </th>
-            {years.map((y) => (
-              <th
-                key={y}
-                className="py-3 px-4 text-right font-semibold text-primary-foreground tabular-nums"
-              >
-                {y}
+        <table className="min-w-160 w-full text-sm tabular-nums border-collapse">
+          <thead>
+            <tr className="bg-primary border-b-2 border-primary">
+              <th className="py-3 px-4 text-left font-semibold text-primary-foreground w-56">
+                Line Item
               </th>
-            ))}
-          </tr>
-        </thead>
+              {years.map((y) => (
+                <th
+                  key={y}
+                  className="py-3 px-4 text-right font-semibold text-primary-foreground tabular-nums"
+                >
+                  {y}
+                </th>
+              ))}
+            </tr>
+          </thead>
 
-        <tbody>
-          {sections.map((section) => {
-            if (!sectionHasData(section)) return null;
+          <tbody>
+            {sections.map((section) => {
+              if (!sectionHasData(section)) return null;
 
-            const isCollapsed =
-              section.collapsible &&
-              collapsedSections.has(section.title);
+              const isCollapsed =
+                section.collapsible &&
+                collapsedSections.has(section.title);
 
-            return (
-              <React.Fragment key={section.title}>
-                {renderSectionHeader(section)}
+              return (
+                <React.Fragment key={section.title}>
+                  {renderSectionHeader(section)}
 
-                {!isCollapsed && (
-                  <>
-                    {section.rows.map((row) => (
-                      <React.Fragment
-                        key={`${section.title}-${row.key}-wrap`}
-                      >
-                        {renderRow(row, section.title)}
-                        {renderFormulaRows(row.key)}
-                      </React.Fragment>
-                    ))}
+                  {!isCollapsed && (
+                    <>
+                      {section.rows.map((row) => (
+                        <React.Fragment
+                          key={`${section.title}-${row.key}-wrap`}
+                        >
+                          {renderRow(row, section.title)}
+                          {renderFormulaRows(row.key)}
+                        </React.Fragment>
+                      ))}
 
-                    {/* Inject CFADS detail rows under "Cash Available for Debt Service" */}
-                    {section.title ===
-                      'Cash Available for Debt Service (CFADS)' &&
-                      renderCfadsDetail()}
+                      {/* Inject CFADS detail rows under "Cash Available for Debt Service" */}
+                      {section.title ===
+                        'Cash Available for Debt Service (CFADS)' &&
+                        renderCfadsDetail()}
 
-                    {/* Inject FCCR denominator breakdown under "Debt Service" */}
-                    {section.title ===
-                      'Debt Service (Fixed Charges)' &&
-                      renderFccrDenominatorDetail()}
-                  </>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+                      {/* Inject FCCR denominator breakdown under "Debt Service" */}
+                      {section.title ===
+                        'Debt Service (Fixed Charges)' &&
+                        renderFccrDenominatorDetail()}
+                    </>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Formula verification cards below the table */}
