@@ -424,7 +424,15 @@ export const extractFinancialData = async (
 
     const computed: Record<string, ComputedMetrics> = {};
     for (const yr of Object.keys(merged)) {
-      computed[yr] = computeMetrics(merged[yr] as unknown as ExtractedMetrics, yr);
+      const { metrics: yearMetrics, warnings: yearWarnings } = computeMetrics(
+        merged[yr] as unknown as ExtractedMetrics,
+        yr
+      );
+      computed[yr] = yearMetrics;
+      // Surface debt service warnings (e.g. gross revolving credit distortion) to the UI
+      for (const w of yearWarnings) {
+        extractionWarnings.push(w);
+      }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -639,9 +647,9 @@ function normalizeFiscalYearKeys<T>(
 /**
  * Compute all derived metrics for a single year
  * @param m - Extracted metrics for one year
- * @returns Computed metrics including ratios and breakdowns
+ * @returns Computed metrics including ratios and breakdowns, plus analyst-facing warnings
  */
-function computeMetrics(m: ExtractedMetrics, year?: string): ComputedMetrics {
+function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: ComputedMetrics; warnings: string[] } {
   // Deep clone to prevent nested objects (debt_components, fixed_charges,
   // adjusted_ebitda_components, etc.) from sharing references with the caller's
   // copy of `m`. A shallow spread would let mutations on `result` silently mutate
@@ -771,7 +779,19 @@ function computeMetrics(m: ExtractedMetrics, year?: string): ComputedMetrics {
   // Debug logging
   logDSCR(result.adjusted_ebitda ?? result.ebitda, result, dscrResult);
 
-  return result;
+  // Collect analyst-facing warnings from debt service resolution.
+  // Both FCCR and DSCR call resolveDebtService independently — deduplicate by text
+  // since the same revolver warning can fire from both paths.
+  const calculationWarnings: string[] = [];
+  const seenWarnings = new Set<string>();
+  for (const w of [...fccrResult.warnings, ...dscrResult.warnings]) {
+    if (!seenWarnings.has(w)) {
+      seenWarnings.add(w);
+      calculationWarnings.push(w);
+    }
+  }
+
+  return { metrics: result, warnings: calculationWarnings };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

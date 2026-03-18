@@ -39,6 +39,8 @@ export interface FCCRCalculationResult {
   total_fixed_charges: number | null;
   cash_flow_for_debt_servicing: number | null;
   fccr_breakdown: FCCRBreakdown | null;
+  /** Analyst-facing warnings from debt service resolution (e.g. gross revolver distortion). */
+  warnings: string[];
 }
 
 /** Default CapEx treatment configuration */
@@ -124,6 +126,7 @@ export function calculateFCCR(
       total_fixed_charges: null,
       cash_flow_for_debt_servicing: null,
       fccr_breakdown: null,
+      warnings: [],
     };
   }
 
@@ -217,6 +220,7 @@ export function calculateFCCR(
       total_fixed_charges: null,
       cash_flow_for_debt_servicing: null,
       fccr_breakdown: null,
+      warnings: debtService.warnings,
     };
   }
 
@@ -238,6 +242,7 @@ export function calculateFCCR(
     fccr_numerator: parseFloat(numerator.toFixed(2)),
     total_fixed_charges: parseFloat(totalDebtService.toFixed(2)),
     cash_flow_for_debt_servicing: parseFloat(numerator.toFixed(2)),
+    warnings: debtService.warnings,
     fccr_breakdown: {
       calculation_type: 'lender_defined',
       // CapEx treatment info

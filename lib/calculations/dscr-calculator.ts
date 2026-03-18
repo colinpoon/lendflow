@@ -16,6 +16,8 @@ export interface DSCRCalculationResult {
   funded_debt: number | null;
   funded_debt_to_ebitda: number | null;
   dscr_breakdown: DSCRBreakdown | null;
+  /** Analyst-facing warnings from debt service resolution (e.g. gross revolver distortion). */
+  warnings: string[];
 }
 
 /**
@@ -45,6 +47,7 @@ export function calculateDSCR(
       funded_debt: null,
       funded_debt_to_ebitda: null,
       dscr_breakdown: null,
+      warnings: [],
     };
   }
 
@@ -127,6 +130,7 @@ export function calculateDSCR(
       funded_debt: fundedDebt != null ? fundedDebt : null,
       funded_debt_to_ebitda: null,
       dscr_breakdown: null,
+      warnings: debtService.warnings,
     };
   }
 
@@ -165,5 +169,6 @@ export function calculateDSCR(
       funded_debt: fundedDebt,
       funded_debt_to_ebitda: fundedDebtToEbitda ?? 0,
     },
+    warnings: debtService.warnings,
   };
 }

@@ -48,6 +48,12 @@ export interface ResolvedDebtService {
     operating_lease_source: 'operating_lease_payments' | 'none';
     operating_lease_value: number | null;
   };
+  /**
+   * Analyst-facing warnings that should be surfaced in the UI.
+   * Populated when a data quality concern requires human review
+   * (e.g., potential gross revolving credit distortion in principal).
+   */
+  warnings: string[];
 }
 
 /**
@@ -70,6 +76,10 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
   const yearTag = year ? `[${year}] ` : '';
   const dc = (metrics.debt_components || {}) as DebtComponents;
   const fc = (metrics.fixed_charges || {}) as FixedCharges;
+
+  // Analyst-facing warnings accumulated during resolution.
+  // These are returned in the result and should be surfaced to the UI.
+  const warnings: string[] = [];
 
   // ── Principal ──────────────────────────────────────────────────────────
   // Prefer repayment_of_debt (cash flow financing activities) — captures ALL
@@ -105,11 +115,38 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
     dc.bank_debt_current > 0 &&
     principal > dc.bank_debt_current * 1.5
   ) {
-    console.warn(
-      `⚠️ ${yearTag}PRINCIPAL: repayment_of_debt (${principal}) exceeds bank_debt_current ` +
-      `(${dc.bank_debt_current}) by ${((principal / dc.bank_debt_current - 1) * 100).toFixed(0)}%. ` +
-      `Verify this is not a gross revolving credit repayment.`
-    );
+    const overagePct = ((principal / dc.bank_debt_current - 1) * 100).toFixed(0);
+    const warnMsg =
+      `${yearTag}DSCR/FCCR: repayment_of_debt (${principal.toLocaleString()}) exceeds ` +
+      `bank_debt_current (${dc.bank_debt_current.toLocaleString()}) by ${overagePct}%. ` +
+      `If the company has a revolving credit facility, gross draws and repayments may both ` +
+      `appear in this line, inflating the denominator and understating coverage. ` +
+      `Verify against the financing activities note.`;
+    console.warn(`⚠️ ${warnMsg}`);
+    warnings.push(warnMsg);
+  }
+
+  // Additional check: when repayment_of_debt is substantially larger than the
+  // revolving credit balance, the excess is likely gross revolving activity.
+  // A company drawing and fully repaying a $20M revolver 12x/year would show
+  // $240M in repayment_of_debt against a $20M balance — a classic distortion.
+  if (
+    principalSource === 'repayment_of_debt' &&
+    dc.revolving_credit_facilities != null &&
+    dc.revolving_credit_facilities > 0 &&
+    principal > dc.revolving_credit_facilities * 3
+  ) {
+    const revolvingWarnMsg =
+      `${yearTag}DSCR/FCCR: repayment_of_debt (${principal.toLocaleString()}) is ` +
+      `${(principal / dc.revolving_credit_facilities).toFixed(1)}x the revolving_credit_facilities ` +
+      `balance (${dc.revolving_credit_facilities.toLocaleString()}). ` +
+      `Gross revolving credit activity likely inflates the DSCR/FCCR denominator. ` +
+      `Consider using net revolving repayment or capping principal at funded debt balance.`;
+    console.warn(`⚠️ ${revolvingWarnMsg}`);
+    // Only push if not already warned (avoid duplicate messages when both conditions fire)
+    if (!warnings.some(w => w.includes('revolving_credit_facilities'))) {
+      warnings.push(revolvingWarnMsg);
+    }
   }
 
   // ── Interest ───────────────────────────────────────────────────────────
@@ -287,5 +324,6 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
       operating_lease_source: operatingLeaseSource,
       operating_lease_value: operatingLeases || null,
     },
+    warnings,
   };
 }
