@@ -6,6 +6,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
+import { checkRateLimit } from '@/lib/rate-limiter';
 
 export const maxDuration = 150;
 
@@ -14,6 +15,17 @@ export async function POST(req: NextRequest) {
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { allowed, retryAfterSeconds } = checkRateLimit(userId);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Please wait before submitting another extraction.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(retryAfterSeconds) },
+      }
+    );
   }
 
   let tempFilePath: string | null = null;
