@@ -264,24 +264,10 @@ function deduplicateOtherNonCash(
     return 0;
   }
 
-  // Check 1b: Sub-component of non_cash_interest_expense.
-  // When non_cash_interest_expense is populated and other_non_cash is a sizable fraction
-  // (>=30%) of it, the AI likely extracted the same finance cost breakdown at two
-  // granularity levels. E.g., KITS: non_cash_interest_expense=$361K, other_non_cash=$163K
-  // (45% — accretion sub-item already in the $361K).
-  // The 30% floor prevents false-positives from unrelated small non-cash items
-  // (e.g., $50K straight-line rent when non_cash_interest_expense is $400K).
-  if (nonCashInterestExpense > 0 &&
-      rawOtherNonCash > 0 &&
-      rawOtherNonCash < nonCashInterestExpense &&
-      rawOtherNonCash >= nonCashInterestExpense * 0.30) {
-    console.warn(
-      `⚠️ DEDUP [other_non_cash]: value (${rawOtherNonCash}) is ${((rawOtherNonCash / nonCashInterestExpense) * 100).toFixed(0)}% of ` +
-      `non_cash_interest_expense (${nonCashInterestExpense}) — likely a sub-component ` +
-      `already in finance costs, zeroing other_non_cash`
-    );
-    return 0;
-  }
+  // Check 1b removed: proportionality heuristic (other_non_cash >= 30% of
+  // non_cash_interest_expense) was zeroing legitimate non-cash items (e.g., SBC)
+  // based solely on numerical proportion, without structural evidence of duplication.
+  // Only Check 1a (direct value match) and Check 1c (usedGrossFallback) remain.
 
   // Check 1c: Fallback-sourced interest (net-finance-income companies like Taiga).
   // When the P&L net finance line was negative and the fallback chain provided a
