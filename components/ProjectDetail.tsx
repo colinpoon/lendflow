@@ -224,6 +224,7 @@ export default function ProjectDetail({
   const [validationIssues, setValidationIssues] = useState<Record<string, string[]> | undefined>();
   const [extractionWarnings, setExtractionWarnings] = useState<string[] | undefined>();
   const [chunkStats, setChunkStats] = useState<{ total: number; successful: number; failed: number } | undefined>();
+  const [tokenUsage, setTokenUsage] = useState<{ input_tokens: number; output_tokens: number; model: string; cost_usd?: number } | undefined>();
 
   // Scrollspy
   const [activeSection, setActiveSection] = useState<string>('upload');
@@ -392,6 +393,7 @@ export default function ProjectDetail({
       if (mergedData.validation_issues) setValidationIssues(mergedData.validation_issues);
       if (mergedData.extraction_warnings) setExtractionWarnings(mergedData.extraction_warnings);
       if (mergedData.chunk_stats) setChunkStats(mergedData.chunk_stats);
+      if (mergedData.token_usage) setTokenUsage(mergedData.token_usage);
     }
   }, [mergedData]);
 
@@ -580,6 +582,28 @@ export default function ProjectDetail({
           extractionWarnings={extractionWarnings}
           chunkStats={chunkStats}
         />
+      )}
+
+      {/* Token Usage Summary */}
+      {hasData && tokenUsage && (
+        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground px-1">
+          <span title="AI model used for extraction" className="flex items-center gap-1">
+            <span className="font-medium text-foreground">Model:</span> {tokenUsage.model}
+          </span>
+          <span className="text-border">·</span>
+          <span title="Tokens consumed by this extraction">
+            <span className="font-medium text-foreground">{(tokenUsage.input_tokens + tokenUsage.output_tokens).toLocaleString()}</span> tokens
+            ({tokenUsage.input_tokens.toLocaleString()} in / {tokenUsage.output_tokens.toLocaleString()} out)
+          </span>
+          {tokenUsage.cost_usd !== undefined && (
+            <>
+              <span className="text-border">·</span>
+              <span title="Estimated API cost for this extraction">
+                <span className="font-medium text-foreground">${tokenUsage.cost_usd.toFixed(4)}</span> est. cost
+              </span>
+            </>
+          )}
+        </div>
       )}
 
       {!hasData && (

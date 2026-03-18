@@ -10,6 +10,13 @@ export interface MergedExtraction {
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
   chunk_stats?: { total: number; successful: number; failed: number };
+  /** Aggregated token usage across all extractions in this project */
+  token_usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    model: string;
+    cost_usd?: number;
+  };
   // Track which document each year's data came from
   year_sources: Record<string, { document_id: string; file_name: string; extracted_at: string; fiscal_year_end_date?: string }>;
   // The most recent fiscal year and its source
@@ -473,6 +480,7 @@ export function mergeExtractions(
       validation_issues: data.validation_issues,
       extraction_warnings: data.extraction_warnings,
       chunk_stats: data.chunk_stats,
+      token_usage: data.token_usage,
       year_sources,
       most_recent_year: mostRecentYear,
       most_recent_year_source: mostRecentYear ? {
@@ -683,6 +691,25 @@ export function mergeExtractions(
         merged.chunk_stats = data.chunk_stats;
       }
     }
+  }
+
+  // Aggregate token usage across all extractions
+  const tokenTotals = extractions.reduce<{ input: number; output: number; cost: number; model: string } | null>(
+    (acc, extraction) => {
+      const usage = (extraction.extraction_data as ExtractionResult).token_usage;
+      if (!usage) return acc;
+      if (!acc) return { input: usage.input_tokens, output: usage.output_tokens, cost: usage.cost_usd ?? 0, model: usage.model };
+      return { input: acc.input + usage.input_tokens, output: acc.output + usage.output_tokens, cost: acc.cost + (usage.cost_usd ?? 0), model: usage.model };
+    },
+    null
+  );
+  if (tokenTotals) {
+    merged.token_usage = {
+      input_tokens: tokenTotals.input,
+      output_tokens: tokenTotals.output,
+      model: tokenTotals.model,
+      ...(tokenTotals.cost > 0 && { cost_usd: tokenTotals.cost }),
+    };
   }
 
   // Append any gap-fill warnings produced by unionMergeMetrics so analysts can

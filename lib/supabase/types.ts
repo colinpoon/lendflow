@@ -22,6 +22,12 @@ export interface ExtractionResult {
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
   chunk_stats?: { total: number; successful: number; failed: number };
+  token_usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    model: string;
+    cost_usd?: number;
+  };
 }
 
 // Metrics for a single year in an extraction result
