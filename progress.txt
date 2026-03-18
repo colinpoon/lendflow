@@ -70,6 +70,31 @@ All 7 sub-items implemented across 6 files:
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
+### Task 4: Polish Frontend UI/UX — Second Pass (COMPLETED)
+Additional targeted improvements on top of the first-pass commit:
+
+1. **Accessibility** — Replaced `window.confirm()` dialogs in `ProjectDetail.tsx` and `ProjectsList.tsx` with Shadcn `AlertDialog` components. Proper theming, mobile-safe, screen-reader-accessible.
+
+2. **Navigation** — Replaced all `window.location.reload()` calls in `ProjectDetail.tsx` with `router.refresh()` (Next.js soft re-render, preserves client state).
+
+3. **Scroll anchors** — Changed `scroll-mt-28` → `scroll-mt-16` on all 4 section elements in `ProjectDetail.tsx` to correctly clear the sticky nav height.
+
+4. **Icons** — `ShieldQuestion` → `ShieldX` for decline verdict in `ProjectDetail.tsx` (semantically correct: clear rejection, not uncertainty).
+
+5. **Upload flow** — Added `<Loader2>` spinner during PDF compression stage; added stage dot progress indicator above the `<Progress>` bar showing pipeline steps (uploading → parsing → chunking → … → saving).
+
+6. **Risk assessment** — Added "Better" / "Worse" micro-labels flanking each pillar score bar; removed component-owned `mt-6` margin; changed `border-2` → `border` on verdict panel; `leading-relaxed` → `leading-normal` on recommendation text.
+
+7. **Dark mode / design tokens** — `app/globals.css`: added `.skeleton` shimmer utility class; fixed `.drop-zone-active` to use `var(--emerald-brand)` via `color-mix()` instead of hardcoded OKLCH dark-mode value.
+
+8. **Theme** — `app/layout.tsx`: `defaultTheme="light"` → `defaultTheme="system"` so OS dark mode preference is respected on first visit.
+
+9. **New project form** — `autoFocus` on name input; Cancel button `variant="outline"` → `variant="ghost"`; error div gained `role="alert"` + `AlertCircle` icon + `text-error`/`bg-error` tokens (was `text-destructive`).
+
+10. **Accessibility** — `QuantitativeRiskCard.tsx`: added `aria-label="Risk score: X out of 100"` to score display; fixed dropdown trigger in `ProjectsList.tsx` to use `opacity-0 group-hover:opacity-100 focus-within:opacity-100 focus-visible:opacity-100` (was fully transparent to keyboard users — WCAG SC 1.4.11 violation).
+
+- TypeScript: clean (tsc --noEmit, 0 errors)
+
 ### Remaining PRD Gaps:
 - Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
 - Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase

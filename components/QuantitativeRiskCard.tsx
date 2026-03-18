@@ -159,7 +159,7 @@ const ScoreGauge: React.FC<{ score: number; maxScore?: number }> = ({
         </svg>
       </div>
 
-      <div className="text-center -mt-2">
+      <div className="text-center -mt-2" aria-label={`Risk score: ${score} out of 100`}>
         <span className="text-4xl font-bold text-foreground">{score}</span>
         <span className="text-lg text-muted-foreground">/100</span>
       </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, Home, FolderOpen, FolderPlus } from 'lucide-react';
+import { ChevronRight, Home, FolderOpen, FolderPlus, AlertCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,6 +129,7 @@ export default function NewProjectPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={isCreating}
+                autoFocus
               />
             </div>
 
@@ -156,8 +157,9 @@ export default function NewProjectPage() {
             </div>
 
             {error && (
-              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-                {error}
+              <div role="alert" className="flex items-start gap-2 text-sm text-error bg-error/10 border border-error/25 p-3 rounded-md">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
             )}
 
@@ -167,7 +169,7 @@ export default function NewProjectPage() {
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={() => router.push('/dashboard')}
                 disabled={isCreating}
               >

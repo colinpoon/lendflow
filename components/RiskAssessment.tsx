@@ -121,7 +121,7 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
   const bandColors = getRiskBandColors(data.band ?? '');
 
   return (
-    <section className="mt-6 space-y-4">
+    <section className="space-y-4">
       <h2 className="text-base font-semibold text-foreground">{data.header}</h2>
 
       {/* Pillar breakdown — card-per-row for readability and mobile-friendliness */}
@@ -176,19 +176,25 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
 
               {/* Score progress bar */}
               {normalizedScore !== null && (
-                <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${(normalizedScore / 10) * 100}%`,
-                      backgroundColor:
-                        normalizedScore <= 3
-                          ? 'var(--success)'
-                          : normalizedScore <= 5
-                          ? 'var(--warning)'
-                          : 'var(--error)',
-                    }}
-                  />
+                <div className="space-y-0.5">
+                  <div className="flex justify-between text-[9px] text-muted-foreground/50 uppercase tracking-wide">
+                    <span>Better</span>
+                    <span>Worse</span>
+                  </div>
+                  <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${(normalizedScore / 10) * 100}%`,
+                        backgroundColor:
+                          normalizedScore <= 3
+                            ? 'var(--success)'
+                            : normalizedScore <= 5
+                            ? 'var(--warning)'
+                            : 'var(--error)',
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -204,7 +210,7 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* Overall verdict — weighted score, risk band, and lending recommendation */}
-      <div className={`rounded-lg border-2 p-5 space-y-4 ${bandColors.container}`}>
+      <div className={`rounded-lg border p-5 space-y-4 ${bandColors.container}`}>
         {/* Score and band row */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
@@ -233,7 +239,7 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
               Lending Recommendation
             </p>
-            <p className="text-sm leading-relaxed text-foreground">
+            <p className="text-sm leading-normal text-foreground">
               {data.lending_recommendation}
             </p>
           </div>

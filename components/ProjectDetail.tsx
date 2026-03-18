@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ChevronRight,
   Home,
@@ -16,7 +17,7 @@ import {
   Loader2,
   ShieldCheck,
   ShieldAlert,
-  ShieldQuestion,
+  ShieldX,
   AlertTriangle,
   ThumbsUp,
   ListChecks,
@@ -65,6 +66,16 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -197,6 +208,7 @@ export default function ProjectDetail({
   documentCoverage,
   extractionCount,
 }: ProjectDetailProps) {
+  const router = useRouter();
   const [financialData, setFinancialData] = useState<{
     metrics_by_year: Record<string, ComputedMetrics>;
   } | null>(null);
@@ -224,6 +236,7 @@ export default function ProjectDetail({
 
   // Document deletion
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
 
   // Covenant parameter configuration — drives client-side recalculation
   const [covenantConfig, setCovenantConfig] = useState<CovenantConfig>(DEFAULT_COVENANT_CONFIG);
@@ -310,7 +323,7 @@ export default function ProjectDetail({
 
       if (response.ok) {
         setIsEditingName(false);
-        window.location.reload();
+        router.refresh();
       } else {
         const data = await response.json();
         toast.error(data.error || 'Failed to update project name');
@@ -338,11 +351,7 @@ export default function ProjectDetail({
     }
   };
 
-  const handleDeleteDocument = async (documentId: string, fileName: string) => {
-    if (!confirm(`Are you sure you want to delete "${fileName}"? This will remove its data from the analysis.`)) {
-      return;
-    }
-
+  const handleDeleteDocument = async (documentId: string) => {
     setDeletingDocId(documentId);
     try {
       const response = await fetch(`/api/documents/${documentId}`, {
@@ -350,7 +359,7 @@ export default function ProjectDetail({
       });
 
       if (response.ok) {
-        window.location.reload();
+        router.refresh();
       } else {
         const data = await response.json();
         toast.error(data.error || 'Failed to delete document');
@@ -386,7 +395,7 @@ export default function ProjectDetail({
   }, [mergedData]);
 
   const handleDataUpdate = () => {
-    window.location.reload();
+    router.refresh();
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -544,7 +553,7 @@ export default function ProjectDetail({
                     <span className="font-medium">{doc.file_name}</span>
                     <span className="text-muted-foreground tabular-nums">({doc.years.join(', ')})</span>
                     <button
-                      onClick={() => handleDeleteDocument(doc.document_id, doc.file_name)}
+                      onClick={() => setDeleteDocId(doc.document_id)}
                       disabled={deletingDocId === doc.document_id}
                       className="ml-0.5 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
                       title="Remove document"
@@ -617,7 +626,7 @@ export default function ProjectDetail({
        * ───────────────────────────────────────────────────────────────────── */}
 
       {/* Upload Section */}
-      <section id="upload" ref={setSectionRef('upload')} className="scroll-mt-28 space-y-4">
+      <section id="upload" ref={setSectionRef('upload')} className="scroll-mt-16 space-y-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-semibold tracking-tight">Upload Financial Document</CardTitle>
@@ -636,7 +645,7 @@ export default function ProjectDetail({
 
       {/* Analysis Section */}
       {hasData && (
-        <section id="analysis" ref={setSectionRef('analysis')} className="scroll-mt-28 space-y-4">
+        <section id="analysis" ref={setSectionRef('analysis')} className="scroll-mt-16 space-y-4">
           {/* Year source indicators */}
           {Object.keys(yearSources).length > 1 && (
             <div className="flex flex-wrap gap-1.5 text-[11px]">
@@ -673,7 +682,7 @@ export default function ProjectDetail({
 
       {/* Risk Section */}
       {hasData && (
-        <section id="risk" ref={setSectionRef('risk')} className="scroll-mt-28 space-y-5">
+        <section id="risk" ref={setSectionRef('risk')} className="scroll-mt-16 space-y-5">
           {/* Risk assessment source info */}
           {mostRecentYear && extractionCount > 1 && (
             <p className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md">
@@ -732,8 +741,34 @@ export default function ProjectDetail({
         </section>
       )}
 
+      {/* Document Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDocId !== null} onOpenChange={(open) => !open && setDeleteDocId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the document and its extracted data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-error hover:bg-error/90 text-white"
+              onClick={() => {
+                if (deleteDocId) {
+                  handleDeleteDocument(deleteDocId);
+                  setDeleteDocId(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Decision Section */}
-      <section id="decision" ref={setSectionRef('decision')} className="scroll-mt-28">
+      <section id="decision" ref={setSectionRef('decision')} className="scroll-mt-16">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-semibold tracking-tight">Loan Decision</CardTitle>
@@ -759,7 +794,7 @@ export default function ProjectDetail({
                   ) : debtHealthAssessment.lending_decision.toLowerCase().includes('conditional') ? (
                     <ShieldAlert className="h-8 w-8 shrink-0" />
                   ) : (
-                    <ShieldQuestion className="h-8 w-8 shrink-0" />
+                    <ShieldX className="h-8 w-8 shrink-0" />
                   )}
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">Lending Decision</p>

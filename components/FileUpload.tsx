@@ -484,6 +484,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
           <div className="text-center space-y-1">
             {isCompressing ? (
               <>
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto mb-2" />
                 <p className="text-sm font-medium text-foreground">Optimizing PDF...</p>
                 <p className="text-xs text-muted-foreground">Please wait</p>
               </>
@@ -558,6 +559,29 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
               <span className="tabular-nums font-mono font-medium text-foreground">
                 {progress}%
               </span>
+            </div>
+            {/* Stage dots */}
+            <div className="flex items-center gap-1 justify-center mb-1">
+              {(Object.keys(STAGE_LABELS) as Array<keyof typeof STAGE_LABELS>)
+                .filter(k => k !== 'error')
+                .map((stage, i) => {
+                  const stages = (Object.keys(STAGE_LABELS) as Array<keyof typeof STAGE_LABELS>).filter(k => k !== 'error');
+                  const currentIdx = stages.indexOf(currentStage as keyof typeof STAGE_LABELS);
+                  const stageIdx = i;
+                  return (
+                    <div
+                      key={stage}
+                      className={[
+                        'rounded-full transition-all duration-300',
+                        stageIdx === currentIdx
+                          ? 'w-4 h-1.5 bg-primary'
+                          : stageIdx < currentIdx
+                          ? 'w-1.5 h-1.5 bg-primary/40'
+                          : 'w-1.5 h-1.5 bg-muted-foreground/20'
+                      ].join(' ')}
+                    />
+                  );
+                })}
             </div>
             <Progress value={progress} className="h-1.5" />
             {stageMessage && (

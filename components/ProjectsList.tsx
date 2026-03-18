@@ -4,6 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Plus,
   FolderOpen,
   Search,
@@ -110,6 +120,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('updated_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Filtering & Sorting
@@ -200,10 +211,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
     }
   };
 
-  const handleDeleteProject = async (e: React.MouseEvent, projectId: string) => {
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this project?')) return;
-
+  const handleDeleteProject = async (projectId: string) => {
     try {
       const response = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
       if (response.ok) {
@@ -422,7 +430,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground/0 group-hover:text-muted-foreground hover:text-foreground transition-colors"
+                            className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 focus-within:opacity-100 focus-visible:opacity-100 transition-opacity"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <MoreHorizontal className="h-4 w-4" />
@@ -435,7 +443,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
-                            onClick={(e) => handleDeleteProject(e, project.id)}
+                            onClick={(e) => { e.stopPropagation(); setDeleteProjectId(project.id); }}
                           >
                             <Trash2 className="h-4 w-4" />
                             Delete
@@ -485,6 +493,32 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
           {searchQuery && ` matching "${searchQuery}"`}
         </p>
       )}
+
+      {/* Project Delete Confirmation Dialog */}
+      <AlertDialog open={deleteProjectId !== null} onOpenChange={(open) => !open && setDeleteProjectId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the project and all its extracted data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-error hover:bg-error/90 text-white"
+              onClick={() => {
+                if (deleteProjectId) {
+                  handleDeleteProject(deleteProjectId);
+                  setDeleteProjectId(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
