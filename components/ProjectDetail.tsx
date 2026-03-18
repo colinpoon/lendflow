@@ -33,7 +33,7 @@ import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import ExtractionWarnings from '@/components/ExtractionWarnings';
-import { RiskData } from '@/components/RiskAssessment';
+import type { RiskData } from '@/types/risk';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
 import type { ComputedMetrics } from '@/types';
 import {

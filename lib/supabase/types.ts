@@ -1,3 +1,5 @@
+import type { RiskData, DebtHealthAssessment } from '@/types/risk';
+
 // ExtractionResult type - matches the structure from aiProcessor
 // Note: Using ComputedMetrics for proper typing of year metrics
 export interface ExtractionResult {
@@ -10,8 +12,8 @@ export interface ExtractionResult {
    * for the year it primarily reports on than for comparative years.
    */
   primary_fiscal_year?: string | null;
-  riskAssessment?: Record<string, unknown> | null;
-  debtHealthAssessment?: Record<string, unknown> | null;
+  riskAssessment?: RiskData | null;
+  debtHealthAssessment?: DebtHealthAssessment | null;
   quantitativeRiskAssessment?: {
     normalized_score: number;
     risk_band: string;

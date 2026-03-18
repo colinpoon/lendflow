@@ -9,9 +9,10 @@ import { PDFDocument } from 'pdf-lib';
 import { YearConflictDialog } from '@/components/YearConflictDialog';
 import type { YearConflict, ConflictResolution } from '@/lib/extraction-utils';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
+import type { ExtractionResult } from '@/utils/aiProcessor';
 
 interface FileUploadProps {
-  onDataExtracted: (data: Record<string, unknown>) => void;
+  onDataExtracted: (data: ExtractionResult) => void;
   onUploadStart?: () => void;
   projectId?: string;
 }
@@ -24,7 +25,7 @@ interface SSEProgress {
   message: string;
   chunk?: number;
   totalChunks?: number;
-  data?: Record<string, unknown>;
+  data?: ExtractionResult;
   conflicts?: YearConflict[];
   extractionId?: string;
   pendingDocumentId?: string;

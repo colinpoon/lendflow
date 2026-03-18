@@ -33,7 +33,19 @@
       "Bash(ls /Users/colinpoon/Dev/lendflow/app/\\\\\\(dashboard\\\\\\))",
       "Bash(npx tsx:*)",
       "Bash(grep -c '\"type\":\"assistant\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/a5b7085be00787932.output 2>/dev/null && grep '\"stop_reason\":\"end_turn\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/a5b7085be00787932.output 2>/dev/null | tail -1 | python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\('COMPLETE' if d else 'RUNNING'\\)\" 2>/dev/null || echo \"Still running\")",
-      "Bash(grep -c '\"type\":\"assistant\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/ac1da90e273f49b71.output 2>/dev/null && grep '\"stop_reason\":\"end_turn\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/ac1da90e273f49b71.output 2>/dev/null | tail -1 | python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\('COMPLETE' if d else 'RUNNING'\\)\" 2>/dev/null || echo \"Still running\")"
+      "Bash(grep -c '\"type\":\"assistant\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/ac1da90e273f49b71.output 2>/dev/null && grep '\"stop_reason\":\"end_turn\"' /private/tmp/claude-501/-Users-colinpoon-Dev-lendflow/tasks/ac1da90e273f49b71.output 2>/dev/null | tail -1 | python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\('COMPLETE' if d else 'RUNNING'\\)\" 2>/dev/null || echo \"Still running\")",
+      "Bash(git commit:*)",
+      "Bash(node -v 2>/dev/null; npm -v 2>/dev/null)",
+      "Bash(docker --version 2>&1; docker sandbox --help 2>&1 | head -5)",
+      "Bash(which claude:*)",
+      "Bash(chmod +x /Users/colinpoon/Dev/lendflow/ralph-once.sh /Users/colinpoon/Dev/lendflow/afk-ralph.sh)",
+      "Bash(ls -1 /Users/colinpoon/Dev/lendflow/components/*.tsx | xargs -I {} basename {})",
+      "Bash(cat /Users/colinpoon/Dev/lendflow/app/dashboard/\\\\[projectId\\\\]/page.tsx | head -50)",
+      "Bash(cat /Users/colinpoon/Dev/lendflow/app/sign-in/\\\\[\\\\[...sign-in\\\\]\\\\]/page.tsx)",
+      "Bash(bash ./afk-ralph.sh 20)",
+      "Bash(docker sandbox:*)",
+      "Bash(./afk-ralph.sh 20)",
+      "Bash(git pull:*)"
     ]
   },
   "enabledMcpjsonServers": [

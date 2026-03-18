@@ -2,173 +2,21 @@
 
 import React from 'react';
 import { fmtCurrency } from '@/utils/format';
+import type {
+  DebtComponents,
+  FixedCharges,
+  AdjustedEBITDAComponents,
+  FCCRBreakdown,
+  DSCRBreakdown,
+  AdjustedEBITDABreakdown,
+  FinancialDataProps,
+} from '@/types/financial';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Type Definitions
-// ─────────────────────────────────────────────────────────────────────────────
+// Re-export canonical types so that the local alias `YearMetrics` used throughout
+// this file continues to resolve without touching every downstream reference.
+import type { ComputedMetrics as YearMetrics } from '@/types/financial';
 
-interface DebtComponents {
-  bank_debt_current: number | null;
-  bank_debt_long_term: number | null;
-  term_loans: number | null;
-  revolving_credit_facilities: number | null;
-  overdraft_facilities: number | null;
-  lines_of_credit: number | null;
-  lease_liabilities_current: number | null;
-  lease_liabilities_long_term: number | null;
-  finance_lease_liabilities: number | null;
-  operating_lease_liabilities: number | null;
-  notes_payable: number | null;
-  subordinated_debt: number | null;
-  convertible_debt: number | null;
-  bonds_debentures: number | null;
-  other_borrowings: number | null;
-}
-
-interface FixedCharges {
-  senior_debt_interest: number | null;
-  subordinated_debt_interest: number | null;
-  lease_interest: number | null;
-  total_interest_expense: number | null;
-  senior_debt_interest_rate: string | null;
-  minimum_lease_payments: number | null;
-  finance_lease_payments: number | null;
-  operating_lease_payments: number | null;
-  principal_payments: number | null;
-  preferred_dividends: number | null;
-  other_fixed_charges: number | null;
-}
-
-interface AdjustedEBITDAComponents {
-  stock_based_compensation: number | null;
-  impairment_charges: number | null;
-  goodwill_impairment: number | null;
-  unrealized_gains_losses: number | null;
-  deferred_compensation: number | null;
-  loss_on_disposal: number | null;
-  other_non_cash: number | null;
-  restructuring_costs: number | null;
-  severance_costs: number | null;
-  transaction_costs: number | null;
-  legal_settlements: number | null;
-  professional_fees_one_time: number | null;
-  casualty_losses: number | null;
-  other_one_time_expenses: number | null;
-  gain_on_disposal: number | null;
-  gain_on_asset_sale: number | null;
-  other_income_non_operating: number | null;
-  insurance_proceeds: number | null;
-  other_one_time_gains: number | null;
-  owner_compensation_adjustment: number | null;
-  related_party_adjustments: number | null;
-  management_fees_adjustment: number | null;
-  accounting_policy_adjustments: number | null;
-  foreign_exchange_adjustments: number | null;
-  unrealized_fx_cash_flow: number | null;
-  realized_fx_pl: number | null;
-  pro_forma_cost_savings: number | null;
-  pro_forma_synergies: number | null;
-}
-
-interface FCCRBreakdown {
-  adjusted_ebitda: number;
-  unfunded_capex: number;
-  capex_deduction: number;
-  cash_taxes_paid: number;
-  distributions_paid: number;
-  ttm_principal_payments: number;
-  ttm_interest_expense: number;
-  lease_payments: number;
-  numerator: number;
-  denominator: number;
-}
-
-interface DSCRBreakdown {
-  bank_principal_payments: number;
-  bank_interest_expense: number;
-  lease_payments: number;
-  total_debt_service: number;
-  funded_debt: number;
-  funded_debt_to_ebitda: number;
-}
-
-interface AdjustedEBITDABreakdown {
-  reported_ebitda: number;
-  non_cash_adjustments: number;
-  one_time_expenses: number;
-  one_time_gains: number;
-  interest_income_excluded: number;
-  owner_management_adjustments: number;
-  accounting_adjustments: number;
-  unrealized_fx_adjustment: number;
-  realized_fx_pl: number;
-  pro_forma_adjustments: number;
-  capital_expenditures_not_in_calc: number;
-  uses_reported_value: boolean;
-}
-
-interface YearMetrics {
-  // Income Statement
-  revenue: number | null;
-  net_income: number | null;
-  expenses: number | null;
-  profit_margins: number | null;
-  interest: number | null;
-  taxes: number | null;
-  depreciation_amortization: number | null;
-  // Depreciation Breakdown
-  depreciation_equipment: number | null;
-  depreciation_rou: number | null;
-  depreciation_other: number | null;
-  amortization_intangibles: number | null;
-  // EBITDA
-  ebitda: number | null;
-  ebitda_calculated?: boolean;
-  adjusted_ebitda: number | null;
-  reported_adjusted_ebitda: number | null;
-  calculated_adjusted_ebitda: number | null;
-  // Balance Sheet
-  total_debt: number | null;
-  senior_debt: number | null;
-  shareholders_equity: number | null;
-  current_assets: number | null;
-  current_liabilities: number | null;
-  // Cash Flow
-  capital_expenditures: number | null;
-  proceeds_from_long_term_debt: number | null;
-  cash_taxes_paid: number | null;
-  distributions_paid: number | null;
-  repayment_of_debt: number | null;
-  payment_of_lease_liability: number | null;
-  cash_interest_paid: number | null;
-  non_cash_interest_expense: number | null;
-  ttm_principal_payments: number | null;
-  ttm_interest_expense: number | null;
-  // Nested Components
-  debt_components: DebtComponents | null;
-  fixed_charges: FixedCharges | null;
-  adjusted_ebitda_components: AdjustedEBITDAComponents | null;
-  // CFADS
-  cash_flow_for_debt_servicing: number | null;
-  // Breakdowns
-  fccr_breakdown: FCCRBreakdown | null;
-  dscr_breakdown: DSCRBreakdown | null;
-  adjusted_ebitda_breakdown: AdjustedEBITDABreakdown | null;
-  // Key Ratios
-  fccr: number | null;
-  senior_debt_to_ebitda: number | null;
-  total_debt_to_capital: number | null;
-  dscr: number | null;
-  funded_debt: number | null;
-  funded_debt_to_ebitda: number | null;
-  interest_coverage_ratio: number | null;
-  debt_to_equity_ratio: number | null;
-  current_ratio: number | null;
-}
-
-interface FinancialTableProps {
-  data: { metrics_by_year: Record<string, YearMetrics> } | null;
-}
+type FinancialTableProps = FinancialDataProps;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Row & Section Configuration

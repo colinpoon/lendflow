@@ -22,6 +22,21 @@ npm run start        # Start production server
 ```
 Open [http://localhost:3000](http://localhost:3000) 
 
+  # Start (uses cached build if nothing changed)
+  docker compose up
+
+  # Rebuild after dependency or code changes
+  docker compose up --build
+  docker compose build ralph
+
+  # Run in background (detached)
+  docker compose up -d
+
+  # Stop
+  docker compose down
+
+  # View logs when running detached
+  docker compose logs -f
 ## Environment Variables
 
 Requires `ANTHROPIC_API_KEY` in `.env` file.

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { fmtCurrency, sanitizeObservationText } from '@/utils/format';
+import type { PillarScore, RiskData } from '@/types/risk';
 
 const PILLAR_KEYS = [
   'debt_service_capacity',
@@ -84,31 +85,6 @@ function getImpactClass(impact: string): string {
   if (lower === 'positive') return 'bg-success/12 text-success';
   if (lower === 'negative') return 'bg-error/12 text-error';
   return 'bg-muted text-muted-foreground';
-}
-
-export interface PillarScore {
-  observations: string;
-  impact: string; // "Positive" | "Negative" | "Manageable" | …
-  weight?: number; // optional weighting %
-  score?: number | null; // 1‑10 or null
-}
-
-export interface RiskData {
-  /** human readable header e.g. "Credit‑risk snapshot – Zedcor Inc. (fiscal year‑end 2023)" */
-  header: string;
-  pillars: Partial<
-    Record<
-      | 'debt_service_capacity'
-      | 'leverage'
-      | 'profitability'
-      | 'cash_flow'
-      | 'financial_trajectory',
-      PillarScore
-    >
-  >;
-  weighted_score: number | null; // 0‑10 overall
-  band: string; // e.g. "Moderate‑Low"
-  lending_recommendation: string; // free text summary
 }
 
 interface Props {

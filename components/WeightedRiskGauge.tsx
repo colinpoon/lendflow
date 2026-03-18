@@ -24,8 +24,9 @@ import {
   BarChart3,
   ClipboardList,
 } from 'lucide-react';
-import { RiskData } from '@/components/RiskAssessment';
+import type { RiskData, DebtHealthAssessment } from '@/types/risk';
 import type { RiskConfig } from '@/types';
+import type { ComputedMetrics as YearMetrics } from '@/types/financial';
 import {
   getFCCRRiskScore,
   getDebtEBITDARiskScore,
@@ -45,28 +46,6 @@ import {
 } from 'recharts';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
-
-interface DebtHealthAssessment {
-  weighted_score: number;
-  risk_band: string;
-  lending_decision: string;
-  key_risk_factors: string[];
-  positive_factors: string[];
-  recommendations: string[];
-  suggested_loan_structure: string;
-}
-
-interface YearMetrics {
-  fccr: number | null;
-  senior_debt_to_ebitda: number | null;
-  total_debt_to_capital: number | null;
-  adjusted_ebitda: number | null;
-  ebitda: number | null;
-  fccr_breakdown?: {
-    numerator: number;
-    denominator: number;
-  } | null;
-}
 
 interface WeightedRiskGaugeProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;

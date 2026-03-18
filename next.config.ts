@@ -2,6 +2,7 @@ import type { Configuration } from 'webpack';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   devIndicators: false,
   // Mark native modules as external so Turbopack/webpack doesn't try to bundle them
   serverExternalPackages: ['canvas', 'pdf-to-img'],

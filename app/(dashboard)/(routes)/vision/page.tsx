@@ -12,9 +12,8 @@ import VisionFileUpload from '@/components/VisionFileUpload';
 import FinancialTable from '@/components/FinancialTable';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
 import WeightedRiskGauge from '@/components/WeightedRiskGauge';
-import RiskAssessment, {
-  RiskData,
-} from '@/components/RiskAssessment';
+import RiskAssessment from '@/components/RiskAssessment';
+import type { RiskData, DebtHealthAssessment } from '@/types/risk';
 import FCCRBreakdown from '@/components/FCCRBreakdown';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
@@ -39,16 +38,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
-
-interface DebtHealthAssessment {
-  weighted_score: number;
-  risk_band: string;
-  lending_decision: string;
-  key_risk_factors: string[];
-  positive_factors: string[];
-  recommendations: string[];
-  suggested_loan_structure: string;
-}
 
 interface CustomAdjustment {
   id: string;
