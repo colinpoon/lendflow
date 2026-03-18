@@ -341,6 +341,17 @@ RULES
 • If a value is unavailable for a metric, output null (do NOT omit the key).
 • EBITDA is calculated by the system from components: EBITDA = net_income + interest + taxes + depreciation_amortization. Always output "ebitda": null — do NOT extract or calculate EBITDA yourself. Extract the components accurately instead.
 
+MULTI-YEAR COLUMN DISCIPLINE (CRITICAL — prevents year-swap errors):
+Financial statements routinely show two or more year columns in a single table (e.g., "2024 | 2023").
+Before extracting any value, identify which column belongs to each year:
+• The LEFTMOST data column in annual financial statement tables is almost always the most recent (current) year.
+• The RIGHTMOST data column is typically the prior-year comparative.
+• Confirm by matching column headers to the document title or cover page year.
+• If a table header is "Year ended December 31" with sub-headers "2024 | 2023", use "2024" for the left column values and "2023" for the right column values throughout that table.
+• Never mix columns: every number you extract must be read from the column whose header matches the year key you are populating.
+• If column headers are ambiguous or absent, use fiscal_year_end_date extracted elsewhere in the document to determine which column is current.
+• IMPORTANT: A value that appears in the "2023" column of a 2024 annual report is PRIOR-YEAR comparative data — populate it under the "2023" key, NOT under "2024".
+
 INCOME STATEMENT FIELDS - CRITICAL:
 • "revenue": Total revenue or net sales from the top of the Income Statement. Look for:
   - "Revenue" / "Net revenue" / "Total revenue" / "Net sales" / "Total net sales"
@@ -580,6 +591,16 @@ Extract depreciation by category from INCOME STATEMENT and/or CASH FLOW STATEMEN
   - Extract as POSITIVE number. If the company has no intangible assets, extract null.
 • depreciation_amortization: MUST equal the SUM of ALL depreciation and amortization lines across ALL sections of the income statement AND cash flow statement. CRITICAL: Depreciation may appear in MULTIPLE sections (e.g., "Direct expenses" AND "Operating expenses" AND "Other expenses"). You MUST sum them ALL. Also check the cash flow statement operating activities section for total depreciation figures which may be more reliable than summing income statement lines. Cross-check: depreciation_amortization should equal depreciation_equipment + depreciation_rou + depreciation_other + amortization_intangibles. If it doesn't, recalculate.
 
+D&A ARITHMETIC SELF-VERIFICATION (REQUIRED):
+After determining depreciation_amortization, you MUST perform and record this check:
+1. Sum all extracted sub-components: computed_sum = depreciation_equipment + depreciation_rou + depreciation_other + amortization_intangibles (treat null sub-components as 0).
+2. Compare computed_sum to depreciation_amortization.
+3. Record the result in _sources["depreciation_amortization"] using this format:
+   "Cash Flow Statement operating add-back: [CF value]. Sub-component sum: [computed_sum] ([equipment]+[rou]+[other]+[intangibles]). [MATCH or MISMATCH — used CF aggregate]"
+4. If there is a MISMATCH and a cash flow aggregate is available, USE the cash flow aggregate as depreciation_amortization (it is the authoritative complete total) and set _confidence["depreciation_amortization"] to "high".
+5. If there is a MISMATCH and NO cash flow aggregate is available, use the sub-component sum and set _confidence["depreciation_amortization"] to "medium".
+6. If sub-components are all null (the document only shows a combined D&A line), record that fact in _sources.
+
 SOURCE TAGGING FOR DEPRECIATION:
 • When you find D&A figures in the Cash Flow Statement operating activities as a reconciling
   add-back (e.g., "Depreciation and amortization: 850" under non-cash adjustments), tag
@@ -606,14 +627,24 @@ CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
   - "Proceeds from term loan" or "New borrowings"
   - Extract as POSITIVE number
 
-• cash_taxes_paid: From CASH FLOW STATEMENT under "Operating activities". Look for:
-  - "Income taxes paid" or "Cash taxes paid"
-  - "Taxes paid" in supplemental cash flow information
-  - Extract as POSITIVE number
+• cash_taxes_paid: From CASH FLOW STATEMENT. Look for (EXHAUSTIVE LIST — check all):
+  - Under "Operating activities": "Income taxes paid", "Cash taxes paid", "Taxes paid"
+  - Supplemental cash flow information section: "Income taxes paid in cash", "Cash paid for income taxes"
+  - IFRS variants: "Tax paid", "Income tax instalments paid", "Current tax paid", "Tax paid on account"
+  - Canadian GAAP / ASPE: "Income taxes paid", "Current income taxes paid"
+  - If shown as a net refund (negative), extract as negative number
+  - Extract as POSITIVE number (negative only if it is a net tax refund for the full year)
+  - IMPORTANT: Do NOT use income tax expense from the income statement — that is accrual basis.
+    cash_taxes_paid is the CASH basis amount from the CF statement, which often differs materially.
 
-• distributions_paid: From CASH FLOW STATEMENT under "Financing activities". Look for:
-  - "Dividends paid" or "Distributions to shareholders"
-  - "Distributions to partners" or "Owner draws"
+• distributions_paid: From CASH FLOW STATEMENT under "Financing activities". Look for (EXHAUSTIVE LIST):
+  - Common: "Dividends paid", "Dividends paid to shareholders", "Cash dividends paid"
+  - Private companies / partnerships / trusts: "Distributions to shareholders", "Distributions to partners",
+    "Distributions to unitholders", "Trust distributions", "Distributions paid to owners"
+  - Owner-managed: "Owner draws", "Drawings", "Amounts paid to owners"
+  - IFRS: "Payment of dividends", "Dividends paid to equity holders"
+  - Do NOT include dividends paid to non-controlling interests (unless that is the only equity class)
+  - Do NOT include preferred share dividends (those belong in fixed_charges.preferred_dividends)
   - Extract as POSITIVE number
 
 DEBT SERVICE ITEMS (CRITICAL FOR BANKER'S DSCR COVENANT):
@@ -624,11 +655,22 @@ DEBT SERVICE ITEMS (CRITICAL FOR BANKER'S DSCR COVENANT):
   - "Principal payments on credit facilities"
   - Extract as POSITIVE number
 
-• payment_of_lease_liability: From CASH FLOW STATEMENT under "Financing activities". Look for:
-  - "Payment of lease liability" or "Repayment of lease obligations"
-  - "Lease payments" (principal portion)
-  - This is SEPARATE from bank debt repayment
-  - Extract as POSITIVE number
+• payment_of_lease_liability: PRINCIPAL portion of lease payments from CASH FLOW STATEMENT under
+  "Financing activities". This captures the balance-sheet reduction (principal repayment) of lease
+  liabilities, NOT the interest portion.
+  Look for (EXHAUSTIVE LIST):
+  - "Payment of lease liability" / "Repayment of lease liabilities" / "Principal payments on leases"
+  - "Repayment of lease obligations" / "Lease principal payments" / "Lease liability payments"
+  - IFRS 16 / ASC 842 label: "Payment of principal portion of lease liabilities"
+  - Under financing activities: "Repayment of right-of-use lease liabilities"
+  IMPORTANT — DO NOT include:
+  - Interest on lease liabilities (that is in the interest/finance costs section, already captured in "interest")
+  - Operating lease payments that are presented as operating cash outflows (pre-IFRS-16 short-term/low-value
+    leases may still appear in operating activities — these are NOT this field)
+  - Future undiscounted total lease commitments from the lease maturity schedule (that is a multi-year total)
+  This field is used as the DENOMINATOR component in DSCR and FCCR calculations. Extracting the
+  interest portion or multi-year total here will OVERSTATE fixed charges and depress coverage ratios.
+  Extract as POSITIVE number. This is SEPARATE from bank debt repayment (repayment_of_debt).
 
 • cash_interest_paid: TOTAL cash interest paid from CASH FLOW STATEMENT supplementary information.
   CRITICAL: Sum ALL interest paid lines — do NOT extract only one component. Look for:

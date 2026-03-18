@@ -1059,8 +1059,58 @@ export function validateArithmeticConsistency(
       }
     }
 
-    // Total D&A identity check can be added here:
-    // - Total D&A = Equipment D&A + ROU D&A + Other D&A
+    // ─────────────────────────────────────────────────────────────────────────
+    // D&A Component Identity Check
+    // Total D&A aggregate ≥ sum of sub-components (sub-components may be partial
+    // when not all categories appear in every document section).
+    // A significant shortfall in the aggregate vs sub-component sum indicates
+    // the AI may have only found a partial D&A figure (e.g., equipment only,
+    // missing ROU / intangibles). Flag this so analysts can review.
+    // ─────────────────────────────────────────────────────────────────────────
+    const daAggregate = metrics.depreciation_amortization as number | null;
+    const daEquipment = metrics.depreciation_equipment as number | null;
+    const daRou = metrics.depreciation_rou as number | null;
+    const daOther = metrics.depreciation_other as number | null;
+    const daIntangibles = metrics.amortization_intangibles as number | null;
+
+    const daSubComponents = [daEquipment, daRou, daOther, daIntangibles].filter(
+      (v): v is number => typeof v === 'number'
+    );
+
+    if (daAggregate != null && daSubComponents.length > 0) {
+      const daComponentSum = daSubComponents.reduce((sum, v) => sum + v, 0);
+
+      // Aggregate should be >= component sum (components may be partial).
+      // Flag if the aggregate is more than 5% BELOW the component sum — that
+      // means sub-components exceed the total, which is arithmetically impossible
+      // and indicates a partial-total extraction error.
+      if (daComponentSum > 0 && daAggregate < daComponentSum * 0.95) {
+        corrections.push(
+          `${year}/depreciation_amortization: Warning — aggregate D&A (${daAggregate}) is less than ` +
+          `sub-component sum (${daComponentSum.toFixed(0)}) ` +
+          `[equip=${daEquipment ?? 0}, rou=${daRou ?? 0}, other=${daOther ?? 0}, intang=${daIntangibles ?? 0}]. ` +
+          `Aggregate may be a partial figure (e.g., equipment-only). Review recommended.`
+        );
+        if (DEBUG_FINANCIALS) {
+          console.warn(
+            `⚠️ D&A component check ${year}: aggregate ${daAggregate} < ` +
+            `sub-sum ${daComponentSum.toFixed(0)}. Possible partial extraction.`
+          );
+        }
+      }
+
+      // Also flag when the aggregate is more than 50% ABOVE the component sum and
+      // multiple sub-components were found — suggests a component is missing.
+      // Threshold is intentionally wide to avoid false positives on documents that
+      // legitimately show only a subset of categories.
+      if (daSubComponents.length >= 2 && daComponentSum > 0 && daAggregate > daComponentSum * 1.50) {
+        corrections.push(
+          `${year}/depreciation_amortization: Info — aggregate D&A (${daAggregate}) exceeds ` +
+          `sub-component sum (${daComponentSum.toFixed(0)}) by more than 50%. ` +
+          `A D&A category may be missing from the breakdown (e.g., amortization of intangibles not found separately).`
+        );
+      }
+    }
 
     // Senior debt cannot exceed total debt
     const seniorDebt = metrics.senior_debt as number | null;

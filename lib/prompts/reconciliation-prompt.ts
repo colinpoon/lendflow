@@ -103,10 +103,17 @@ RESOLUTION RULES (in order of priority):
    - Prefer the value consistent with document's stated reporting scale
    - More precise values (4,863.42) are typically more reliable than rounded (5,000)
 
-5. TEMPORAL ACCURACY:
+5. TEMPORAL ACCURACY (CRITICAL — most common source of wrong values):
    - Ensure value is from correct fiscal year
-   - Watch for comparative columns (prior year data in same table)
-   - Check section headers for year references
+   - Multi-column tables: the LEFT column is almost always the current/most-recent year.
+     The RIGHT column is prior-year comparative. A candidate whose source says "left column"
+     or "current year column" should be strongly preferred over one from an unspecified column.
+   - Watch for comparative columns: if two candidates differ by roughly the same amount as
+     another year's known figure, one candidate is likely a year-swap error.
+   - Check section headers and column headers for explicit year references.
+   - If one candidate's source description explicitly names the correct year (e.g.,
+     "Income Statement 2024, Revenue line") and another does not, strongly prefer the
+     explicitly year-labeled one.
 
 6. CONFIDENCE WEIGHTING:
    - All else equal, prefer "high" confidence over "medium" over "low"

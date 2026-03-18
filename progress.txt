@@ -1,0 +1,43 @@
+## Progress Tracker
+
+### Task 1: Covenant Parameters UI (COMPLETED)
+- Created `lib/calculations/recalculate.ts` — client-safe recalculation utility that re-runs covenant-sensitive calculations (debt metrics, FCCR, leverage ratios) with configurable parameters without re-running AI extraction
+- Created `components/CovenantParametersPanel.tsx` — UI panel with controls for all 3 PRD-specified covenant parameters: CapEx treatment (unfunded/all/none/custom %), lease debt treatment (include/exclude from senior debt), operating lease treatment (include/exclude from FCCR denominator)
+- Wired into `components/ProjectDetail.tsx` with useMemo-based displayData pattern — original server data preserved, recalculated data used for all display components
+- Build passes, TypeScript clean
+- Commit: d44245f
+
+### Task 3: Audit & Fix Calculation Engine (COMPLETED)
+Full audit of all 7 calculator modules. Fixed 4 high-priority bugs:
+
+1. **ebitda-calculator.ts** — `usedGrossFallback` flag stayed `false` when the P&L interest field was `null` (absent) rather than negative. When a fallback source (e.g. `cash_interest_paid`) was used in this case, downstream `calculateAdjustedEBITDA` would still subtract interest income, causing a double-deduction and understated Adjusted EBITDA. Fix: set flag unconditionally whenever a fallback is used.
+
+2. **fccr-calculator.ts** — `distributions_paid` was extracted but never deducted from the FCCR numerator. This systematically overstated FCCR for owner-operated businesses paying dividends/draws. Fix: deduct `distributionsPaid` from numerator alongside `capexDeduction` and `cashTaxesPaid`.
+
+3. **ratio-calculator.ts** — Three distress conditions returned `null` instead of the actual (potentially negative or >100%) ratio: `calculateTotalDebtToCapital` with negative equity, `calculateSeniorDebtToEBITDA` with negative EBITDA, and `calculateDebtToEquityRatio` with negative equity. These nulls masked critical signals from lenders. Fix: removed the early-return guards; ratios are now computed and returned regardless of sign.
+
+4. **recalculate.ts** — DSCR/funded_debt was not recalculated when covenant config changed. After recalculating FCCR and senior debt, the DSCR breakdown panel showed stale funded debt values. Fix: added `calculateDSCR` call in the recalculation loop, updating `m.dscr`, `m.funded_debt`, `m.funded_debt_to_ebitda`, and `m.dscr_breakdown`.
+
+- TypeScript: clean (0 errors)
+- One remaining audit item: cross-check outputs against financial report test files (manual validation)
+
+### Task 2: Increase Extraction Accuracy (Partial — prompt engineering + merge improvements)
+Improved extraction accuracy via targeted prompt engineering and merger validation:
+
+1. **extraction-prompt.ts — Multi-year column pinning** — Added `MULTI-YEAR COLUMN DISCIPLINE` rule. The AI now traces every value to the column header matching the year key being populated, preventing cross-year contamination in comparative financial statements.
+
+2. **extraction-prompt.ts — D&A arithmetic self-verification** — Added required arithmetic evidence block inside the depreciation section. AI must compute `sum(sub-components)`, compare to its aggregate figure, and emit the evidence in `_sources["depreciation_amortization"]`. Prefers CF add-back as the authoritative aggregate when sub-components mismatch.
+
+3. **extraction-prompt.ts — Expanded IFRS synonyms** — `cash_taxes_paid` now covers IFRS/ASPE/Canadian variants ("Tax paid", "Income tax instalments paid", "Current tax paid"). `distributions_paid` covers trust/private-company variants ("Distributions to unitholders", "Owner draws", "Drawings") with explicit exclusions for preferred/NCI dividends.
+
+4. **extraction-prompt.ts — Lease liability principal clarification** — `payment_of_lease_liability` now clearly specifies principal-only (IFRS 16 balance-sheet liability reduction), with explicit exclusion of interest-on-leases, operating-activity short-term payments, and maturity schedule totals. Explains downstream FCCR/DSCR impact.
+
+5. **extraction-merger.ts — D&A component identity check** — Implemented `validateArithmeticConsistency` D&A sub-component validation. Detects impossible aggregates (below sub-component sum) and missing D&A categories (aggregate >150% of sub-sum when 2+ components found). Surfaces in `extraction_warnings` for analyst review.
+
+6. **reconciliation-prompt.ts — Year-column awareness** — Reconciler now explicitly uses left-column/right-column convention to diagnose year-swap conflicts and prefers sources with explicit year-column evidence.
+
+- TypeScript: clean (tsc --noEmit passes, 0 errors)
+
+### Remaining PRD Gaps:
+- Task 2: Instruments Table — `/instruments` page queries a Supabase `instruments` table that doesn't exist
+- Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase
