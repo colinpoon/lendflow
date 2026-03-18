@@ -623,3 +623,22 @@ All 3 sub-items implemented:
 Task 20 is now fully complete.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 21: File Validation & Rate Limiter Hardening (COMPLETED — commits 382ada1, 1465c16)
+All 3 sub-items implemented:
+
+1. **Magic bytes before upload** — Moved magic byte validation before Supabase storage upload
+   in extractData route. Buffer read once and reused for validation, upload, and temp file.
+   Eliminated unnecessary download-then-validate round-trip. Added PDF magic byte check to
+   compare route.
+
+2. **LRU eviction** — Rate limiter now uses delete-and-reinsert on every access (including
+   rate-limited requests) for true LRU. Previously used FIFO which could evict active users.
+
+3. **Tiered rate limits** — Added `tier` parameter: `standard` (5/10min) for text extraction,
+   `vision` (3/10min) for more expensive vision extraction. Vision route passes `'vision'` tier.
+   Includes TODO for Redis-backed solution for production multi-instance deployments.
+
+Task 21 is now fully complete.
+
+- TypeScript: clean (npm run build passes, 0 errors)
