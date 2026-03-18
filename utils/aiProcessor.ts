@@ -58,6 +58,9 @@ import {
 import { AI_CONFIG } from '@/lib/constants';
 import type { ComputedMetrics, ExtractedMetrics, RiskData, DebtHealthAssessment } from '@/types';
 
+// Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
+const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Export
 // ─────────────────────────────────────────────────────────────────────────────
@@ -221,7 +224,7 @@ export const extractFinancialData = async (
       .filter((m): m is ExtractionMetadata => m != null)
       .sort((a, b) => (confidenceOrder[b.scale_confidence] ?? 0) - (confidenceOrder[a.scale_confidence] ?? 0))[0] ?? null;
 
-    if (extraction_metadata) {
+    if (extraction_metadata && DEBUG_FINANCIALS) {
       console.log(
         `Scale detected: ${extraction_metadata.detected_scale}` +
         ` (confidence: ${extraction_metadata.scale_confidence},` +
@@ -800,8 +803,6 @@ function validateMetrics(
 // Debug Logging
 // Gate behind DEBUG_FINANCIALS to prevent sensitive data in production logs
 // ─────────────────────────────────────────────────────────────────────────────
-
-const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
 
 function logAdjustedEBITDA(
   ebitda: number,

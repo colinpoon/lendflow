@@ -1363,7 +1363,7 @@ export function normalizeScaleMismatch(
           const correctedValue = value / SCALE_VALIDATION.SCALE_FACTOR;
           const correction = `${metric}/${year}: ${value.toLocaleString()} → ${correctedValue.toLocaleString()} (÷${SCALE_VALIDATION.SCALE_FACTOR}, cross-year scale mismatch)`;
           corrections.push(correction);
-          console.log(`⚠️ ${correction}`);
+          if (DEBUG_FINANCIALS) console.log(`⚠️ ${correction}`);
           normalized[year][metric] = correctedValue;
         }
       }
@@ -1446,7 +1446,7 @@ export function validateCrossMetricScale(
 
         const correction = `${year}: Revenue ${revenue.toLocaleString()} exceeds $100M threshold - all ${correctedCount} currency values divided by ${SCALE_VALIDATION.SCALE_FACTOR} (likely raw dollars)`;
         corrections.push(correction);
-        console.log(`⚠️ ${correction}`);
+        if (DEBUG_FINANCIALS) console.log(`⚠️ ${correction}`);
         continue; // Skip other checks for this year - already corrected
       }
     }
@@ -1506,13 +1506,13 @@ export function validateCrossMetricScale(
             }
             const correction = `${year}: All ${correctedCount} currency metrics divided by ${SCALE_VALIDATION.SCALE_FACTOR} (entire year in raw dollars, EBITDA margin was ${(ebitdaMargin * 100).toFixed(3)}%)`;
             corrections.push(correction);
-            console.log(`⚠️ ${correction}`);
+            if (DEBUG_FINANCIALS) console.log(`⚠️ ${correction}`);
           } else {
             // Only revenue is wrong - other metrics are already in thousands
             corrected[year].revenue = correctedRevenue;
             const correction = `${year}/revenue: ${revenue.toLocaleString()} → ${correctedRevenue.toLocaleString()} (÷${SCALE_VALIDATION.SCALE_FACTOR}, EBITDA margin was ${(ebitdaMargin * 100).toFixed(3)}% → ${(correctedMargin * 100).toFixed(1)}%)`;
             corrections.push(correction);
-            console.log(`⚠️ ${correction}`);
+            if (DEBUG_FINANCIALS) console.log(`⚠️ ${correction}`);
           }
         }
       }
