@@ -315,3 +315,15 @@ Changes:
 All display paths already handle null correctly: `formatRatio(null)` → `"N/A"`, `FinancialTable` → `"—"`.
 
 - TypeScript: clean (npm run build passes, 0 errors)
+
+### Task 12: Fix bank debt double-counting edge case (COMPLETED — commit 39e176d)
+When `bank_debt_current` was extracted but `bank_debt_long_term` was null, the null coerced to 0
+via `?? 0`, producing a non-zero aggregate sum. The `if (totalBankDebt === 0)` fallback was
+skipped, so disaggregated fields (term_loans, revolving_credit_facilities, etc.) were never
+consulted — potentially understating total bank debt when only one aggregate field was extracted.
+
+Fix: Check that BOTH aggregate fields are non-null before trusting their sum. When either is
+missing, compute the disaggregated total and take the larger value (conservative, lender-protective).
+Applied to both `debt-calculator.ts` and `dscr-calculator.ts` which shared the same logic.
+
+- TypeScript: clean (npm run build passes, 0 errors)

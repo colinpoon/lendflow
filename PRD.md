@@ -316,7 +316,7 @@ All three reviewers (senior-engineer, code-approver, financial-director) agree t
 - [x] Fix ICR to use Adjusted EBITDA — `risk-generator.ts` computes ICR with `m.ebitda` (raw) while DSCR/FCCR use Adjusted EBITDA. Creates inconsistent signals in the AI risk assessment input.
 - [x] Surface negative FCCR as a validation issue — negative FCCR (numerator < 0) means cash flow is insufficient for ANY debt service. Currently returned silently as a negative number with no alert.
 - [x] Fix `funded_debt_to_ebitda` coerced to 0 in DSCR breakdown — type forces `number` instead of `number | null`, causing the display to show `0x` instead of `N/A` when EBITDA is zero. Misleads analysts.
-- [ ] Fix bank debt double-counting edge case — when `bank_debt_current` is partially extracted (non-zero) but `bank_debt_long_term` is missing, the fallback to disaggregated fields is skipped. Guard should check both are non-null, not just that their sum is non-zero.
+- [x] Fix bank debt double-counting edge case — when `bank_debt_current` is partially extracted (non-zero) but `bank_debt_long_term` is missing, the fallback to disaggregated fields is skipped. Guard should check both are non-null, not just that their sum is non-zero.
 - [ ] Add reported vs. calculated Adjusted EBITDA reconciliation — when company discloses its own Adjusted EBITDA, the system uses it without comparing to the lender's calculation. Divergence >5% should surface as a red flag to the analyst.
 - [ ] Calibrate FCCR Adequate threshold from 1.2x to 1.25x — industry minimum covenant standard is 1.25x. Showing 1.2x as "Adequate" sends a false comfort signal.
 
