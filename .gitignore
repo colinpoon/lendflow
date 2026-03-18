@@ -47,3 +47,19 @@ next-env.d.ts
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# local dev tooling & automation
+afk-ralph.sh
+ralph-once.sh
+ralph-prompt.md
+Dockerfile.claude
+
+# docker (dev-only)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# scratch & session files
+/tmp/
+/tasks/
+.claude/settings.local.json
