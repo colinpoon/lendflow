@@ -173,8 +173,11 @@ All 3 items implemented across `lib/extraction-merger.ts` and `utils/aiProcessor
 
 - TypeScript: clean (tsc --noEmit, 0 errors)
 
-### Remaining PRD Gaps:
-- Task 3: Cost Tracking UI — Token usage captured in extraction but not displayed or persisted to Supabase
+### Token Usage Tracking UI (COMPLETED — commit 032f010)
+Gap closed: token usage was captured in extraction but not surfaced in the UI.
+- `lib/supabase/types.ts`: added `token_usage` field to `ExtractionResult`
+- `lib/extraction-utils.ts`: added `token_usage` to `MergedExtraction`; multi-document projects now aggregate token counts and costs via `mergeExtractions`
+- `components/ProjectDetail.tsx`: renders a compact token usage line below ExtractionWarnings showing model name, total tokens (in/out), and estimated cost (when available)
 
 ### Task 11: Type Safety & Developer Experience (COMPLETED — commit 561e386)
 All 5 items done. Final iteration (this session):
