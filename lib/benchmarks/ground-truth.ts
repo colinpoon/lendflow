@@ -497,6 +497,501 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'FCCR = 60,778 / 7,497 = 8.10 — very strong coverage given asset-light model. ' +
       'No Adj EBITDA adjustments identified from financial statements.',
   },
+  {
+    document: 'KITS-FY2024',
+    filename: 'FY24_KITS_ConsolidatedFS_FINAL.pdf',
+    fiscal_year: '2024',
+    values: {
+      // Income Statement (thousands CAD, IFRS)
+      // Revenue: 159,338
+      revenue: 159338,
+      // Net income: 3,116
+      net_income: 3116,
+      expenses: 0,
+      profit_margins: 0,
+      // Finance costs - net (P&L): 975 (includes interest income offset of 580)
+      interest: 975,
+      // Income taxes: 1,335
+      taxes: 1335,
+      // D&A from cash flow add-backs: PP&E+ROU 2,306 + intangibles 356 = 2,662
+      // (P&L D&A line = 1,171; remaining 1,491 embedded in cost of sales/fulfillment)
+      depreciation_amortization: 2662,
+      depreciation_equipment: 0,
+      depreciation_rou: 0,
+      depreciation_other: 0,
+      // Amortization of intangible assets: 356
+      amortization_intangibles: 356,
+      // ebitda = 3,116 + 975 + 1,335 + 2,662 = 8,088
+      // Alternatively: operating income (5,426) + total D&A (2,662) = 8,088
+      ebitda: 8088,
+      reported_adjusted_ebitda: 0,
+
+      // Balance Sheet
+      // Shareholders' equity: 57,890
+      shareholders_equity: 57890,
+      // Debt: BDC loan (4,761) + promissory note (2,396) + lease liabilities (5,443) = 12,600
+      total_debt: 12600,
+      senior_debt: 12600,
+      // Current assets: 45,075
+      current_assets: 45075,
+      // Current liabilities: 38,753
+      current_liabilities: 38753,
+
+      // Cash Flow
+      // Capital expenditures: 3,154 (purchase of PP&E)
+      capital_expenditures: 3154,
+      proceeds_from_long_term_debt: 0,
+      // Cash taxes paid: 27 (very low — company has deferred tax asset)
+      cash_taxes_paid: 27,
+      distributions_paid: 0,
+      ttm_principal_payments: 0,
+      ttm_interest_expense: 0,
+      // Repayment of BDC bank loan principal: 3,687
+      repayment_of_debt: 3687,
+      // Repayment of lease obligation (principal): 1,189
+      payment_of_lease_liability: 1189,
+      // Cash interest paid per Note 21 supplementary CF: 688
+      // (net of interest received 580; gross interest expense = 605 BDC + 431 lease = 1,036)
+      cash_interest_paid: 688,
+      // Non-cash finance costs: accretion (163) + loss on estimates (158 + 198) = 519
+      non_cash_interest_expense: 519,
+
+      // Debt Components
+      // BDC loan: current 2,982 + long-term 1,779 = 4,761
+      'debt_components.bank_debt_current': 2982,
+      'debt_components.bank_debt_long_term': 1779,
+      'debt_components.term_loans': 0,
+      'debt_components.revolving_credit_facilities': 0,
+      'debt_components.overdraft_facilities': 0,
+      'debt_components.lines_of_credit': 0,
+      // Lease liabilities: current 841 + long-term 4,602 = 5,443
+      'debt_components.lease_liabilities_current': 841,
+      'debt_components.lease_liabilities_long_term': 4602,
+      'debt_components.finance_lease_liabilities': 0,
+      'debt_components.operating_lease_liabilities': 0,
+      // Promissory note (zero-interest, no principal paid in 2024): 2,396
+      'debt_components.notes_payable': 2396,
+      'debt_components.subordinated_debt': 0,
+      'debt_components.convertible_debt': 0,
+      'debt_components.bonds_debentures': 0,
+      'debt_components.other_borrowings': 0,
+
+      // Fixed Charges
+      // BDC loan interest expense: 605 (11.00% effective rate)
+      'fixed_charges.senior_debt_interest': 605,
+      'fixed_charges.subordinated_debt_interest': 0,
+      // IFRS 16 lease interest: 431
+      'fixed_charges.lease_interest': 431,
+      // Total cash interest expense = 605 + 431 = 1,036 (gross, before netting interest income)
+      'fixed_charges.total_interest_expense': 1036,
+      // Lease liability principal payments: 1,189
+      'fixed_charges.minimum_lease_payments': 1189,
+      'fixed_charges.finance_lease_payments': 0,
+      'fixed_charges.operating_lease_payments': 0,
+      // BDC loan principal paid: 3,687
+      'fixed_charges.principal_payments': 3687,
+      'fixed_charges.preferred_dividends': 0,
+      'fixed_charges.other_fixed_charges': 0,
+
+      // Adjusted EBITDA Components
+      // Share-based compensation (non-cash): 1,005
+      'adjusted_ebitda_components.stock_based_compensation': 1005,
+      'adjusted_ebitda_components.impairment_charges': 0,
+      'adjusted_ebitda_components.goodwill_impairment': 0,
+      'adjusted_ebitda_components.unrealized_gains_losses': 0,
+      'adjusted_ebitda_components.deferred_compensation': 0,
+      'adjusted_ebitda_components.loss_on_disposal': 0,
+      'adjusted_ebitda_components.other_non_cash': 0,
+      'adjusted_ebitda_components.restructuring_costs': 0,
+      'adjusted_ebitda_components.severance_costs': 0,
+      'adjusted_ebitda_components.transaction_costs': 0,
+      'adjusted_ebitda_components.legal_settlements': 0,
+      'adjusted_ebitda_components.professional_fees_one_time': 0,
+      'adjusted_ebitda_components.casualty_losses': 0,
+      'adjusted_ebitda_components.other_one_time_expenses': 0,
+      'adjusted_ebitda_components.gain_on_disposal': 0,
+      'adjusted_ebitda_components.gain_on_asset_sale': 0,
+      // FX gain of 2,673 is in operating income — a lender would likely remove it as non-recurring
+      // Not setting other_income_non_operating because FX gain is on the operating income line,
+      // not below-the-line non-operating. AI may or may not classify it correctly.
+      'adjusted_ebitda_components.other_income_non_operating': 0,
+      'adjusted_ebitda_components.insurance_proceeds': 0,
+      'adjusted_ebitda_components.other_one_time_gains': 0,
+      'adjusted_ebitda_components.owner_compensation_adjustment': 0,
+      'adjusted_ebitda_components.related_party_adjustments': 0,
+      'adjusted_ebitda_components.management_fees_adjustment': 0,
+      'adjusted_ebitda_components.accounting_policy_adjustments': 0,
+      'adjusted_ebitda_components.foreign_exchange_adjustments': 0,
+      // Unrealized FX gain reversed in CF: (444) — this is negative (gain reversed, not loss added back)
+      'adjusted_ebitda_components.unrealized_fx_cash_flow': 0,
+      'adjusted_ebitda_components.realized_fx_pl': 0,
+      'adjusted_ebitda_components.pro_forma_cost_savings': 0,
+      'adjusted_ebitda_components.pro_forma_synergies': 0,
+
+      // Computed Ratios
+      // adjusted_ebitda = EBITDA (8,088) + SBC (1,005) = 9,093
+      adjusted_ebitda: 9093,
+      calculated_adjusted_ebitda: 0,
+      // fccr = (Adj EBITDA - CapEx - cash_taxes) / (principal + cash_interest + lease_payments)
+      //      = (9,093 - 3,154 - 27) / (3,687 + 688 + 1,189)
+      //      = 5,912 / 5,564 = 1.06
+      // NOTE: Tight coverage — BDC loan repayments are $3.7M/yr and declining as balance is paid down.
+      // Promissory note ($2.4M) paid zero principal in 2024; matures Jan 2026.
+      fccr: 1.06,
+      // dscr = Adj EBITDA / total debt service = 9,093 / 5,564 = 1.63
+      dscr: 1.63,
+      funded_debt: 0,
+      funded_debt_to_ebitda: 0,
+      // senior_debt_to_ebitda = 12,600 / 8,088 = 1.56 (including IFRS 16 leases)
+      senior_debt_to_ebitda: 1.56,
+      // total_debt_to_capital = 12,600 / (12,600 + 57,890) = 12,600 / 70,490 = 0.18
+      total_debt_to_capital: 0.18,
+      // interest_coverage_ratio = EBITDA / net finance costs = 8,088 / 975 = 8.29
+      interest_coverage_ratio: 8.29,
+      // debt_to_equity_ratio = 12,600 / 57,890 = 0.22
+      debt_to_equity_ratio: 0.22,
+      // current_ratio = 45,075 / 38,753 = 1.16
+      current_ratio: 1.16,
+    },
+    source_notes:
+      'Verified from source PDF (FY24_KITS_ConsolidatedFS_FINAL.pdf). ' +
+      'All values in thousands of Canadian dollars (CAD). ' +
+      'IFRS reporting. Fiscal year ended December 31, 2024. ' +
+      'Kits Eyecare Ltd. — digitally native eyecare platform, vertically integrated, TSX-listed. ' +
+      'Debt structure: BDC floating-rate loan (4,761) + zero-interest promissory note (2,396) + IFRS 16 leases (5,443). ' +
+      'BDC loan at 11.00% effective rate; promissory note matures Jan 31, 2026. ' +
+      'Note: promissory note paid zero principal in 2024 (or 2023) despite scheduled quarterly $121 installments. ' +
+      'cash_interest_paid = 688 per Note 21 (gross interest 1,036 minus timing adjustments). ' +
+      'D&A of 2,662 includes 2,306 (PP&E+ROU depreciation) + 356 (intangible amortization) from CF add-backs. ' +
+      'P&L shows only 1,171 D&A; remainder (1,491) is embedded in cost of sales and fulfillment. ' +
+      'FX gain of 2,673 is on the operating income line — creates an EBITDA inflation risk. ' +
+      'A conservative lender would remove the FX gain, reducing EBITDA to ~5,415 (unfavorable). ' +
+      'adjusted_ebitda adds SBC only (1,005); FX gain adjustment left for analyst judgment. ' +
+      'FCCR = 1.06 is tight; company confirms BDC covenants in good standing as of filing date.',
+  },
+  {
+    document: 'PetValu-FY2024',
+    filename: 'PetValu_Q4_2024_FinancialStatements.pdf',
+    fiscal_year: '2024',
+    values: {
+      // Income Statement (thousands CAD, IFRS, 52-week period ended December 28, 2024)
+      // Revenue: retail 405,357 + franchise 691,836 = 1,097,193
+      revenue: 1097193,
+      // Net income: 87,420
+      net_income: 87420,
+      expenses: 0,
+      profit_margins: 0,
+      // Interest expenses, net: 32,103 (net of lease receivable interest income ~11,914)
+      // Gross cash interest: 22,847 (LT debt) + 23,409 (leases) = 46,256
+      interest: 32103,
+      // Income tax expense: 33,964
+      taxes: 33964,
+      // D&A from cash flow add-backs: 65,913 (PP&E, ROU assets, intangibles combined)
+      depreciation_amortization: 65913,
+      depreciation_equipment: 0,
+      depreciation_rou: 0,
+      depreciation_other: 0,
+      amortization_intangibles: 0,
+      // ebitda = operating income (155,323) + D&A (65,913) = 221,236
+      // (operating income + D&A approach; adds back FX loss vs. NI approach)
+      ebitda: 221236,
+      reported_adjusted_ebitda: 0,
+
+      // Balance Sheet
+      // Shareholders' equity: 95,749 (retained deficit — franchise capital returned to shareholders)
+      shareholders_equity: 95749,
+      // Total debt: LT debt (278,020) + lease liabilities (76,881 + 394,393 = 471,274) = 749,294
+      // Note: 210,391 in lease receivables (franchisee subleases) partially offsets lease obligations
+      total_debt: 749294,
+      // Senior debt = bank/LT debt only (excluding IFRS 16 leases): 278,020
+      // Current portion of LT debt = 0 at Dec 28, 2024
+      senior_debt: 278020,
+      // Current assets: 246,510
+      current_assets: 246510,
+      // Current liabilities: 184,420
+      current_liabilities: 184420,
+
+      // Cash Flow
+      // CapEx: 60,612 (purchases of PP&E for corporate stores and warehouse)
+      capital_expenditures: 60612,
+      // Proceeds from LT debt: not separately available (revolving credit); refinanced during year
+      proceeds_from_long_term_debt: 0,
+      // Cash taxes paid: 31,213
+      cash_taxes_paid: 31213,
+      // Dividends paid: 31,470
+      distributions_paid: 31470,
+      ttm_principal_payments: 0,
+      ttm_interest_expense: 0,
+      // Repayment of LT debt principal: 13,312
+      repayment_of_debt: 13312,
+      // Repayment of lease liabilities (principal): 64,898
+      payment_of_lease_liability: 64898,
+      // Cash interest paid: 22,847 (LT debt) + 23,409 (leases) = 46,256
+      cash_interest_paid: 46256,
+      non_cash_interest_expense: 0,
+
+      // Debt Components
+      // LT debt: 0 current + 278,020 long-term = 278,020 (credit facility)
+      'debt_components.bank_debt_current': 0,
+      'debt_components.bank_debt_long_term': 278020,
+      'debt_components.term_loans': 0,
+      'debt_components.revolving_credit_facilities': 0,
+      'debt_components.overdraft_facilities': 0,
+      'debt_components.lines_of_credit': 0,
+      // Lease liabilities: 76,881 current + 394,393 long-term
+      'debt_components.lease_liabilities_current': 76881,
+      'debt_components.lease_liabilities_long_term': 394393,
+      'debt_components.finance_lease_liabilities': 0,
+      'debt_components.operating_lease_liabilities': 0,
+      'debt_components.notes_payable': 0,
+      'debt_components.subordinated_debt': 0,
+      'debt_components.convertible_debt': 0,
+      'debt_components.bonds_debentures': 0,
+      'debt_components.other_borrowings': 0,
+
+      // Fixed Charges
+      // LT debt interest paid: 22,847
+      'fixed_charges.senior_debt_interest': 22847,
+      'fixed_charges.subordinated_debt_interest': 0,
+      // IFRS 16 lease interest paid: 23,409
+      'fixed_charges.lease_interest': 23409,
+      // Total gross interest paid: 46,256 (22,847 + 23,409)
+      'fixed_charges.total_interest_expense': 46256,
+      // Lease liability principal paid: 64,898
+      'fixed_charges.minimum_lease_payments': 64898,
+      'fixed_charges.finance_lease_payments': 0,
+      'fixed_charges.operating_lease_payments': 0,
+      // LT debt principal paid: 13,312
+      'fixed_charges.principal_payments': 13312,
+      // Dividends on common shares: 31,470
+      'fixed_charges.preferred_dividends': 0,
+      'fixed_charges.other_fixed_charges': 0,
+
+      // Adjusted EBITDA Components
+      // Share-based compensation (non-cash): 7,203
+      'adjusted_ebitda_components.stock_based_compensation': 7203,
+      'adjusted_ebitda_components.impairment_charges': 744,
+      'adjusted_ebitda_components.goodwill_impairment': 0,
+      'adjusted_ebitda_components.unrealized_gains_losses': 0,
+      'adjusted_ebitda_components.deferred_compensation': 0,
+      // Gain on disposal of PP&E: (3,565) — reduces Adj EBITDA (add negative adjustment)
+      'adjusted_ebitda_components.loss_on_disposal': 0,
+      'adjusted_ebitda_components.other_non_cash': 0,
+      'adjusted_ebitda_components.restructuring_costs': 0,
+      'adjusted_ebitda_components.severance_costs': 0,
+      'adjusted_ebitda_components.transaction_costs': 0,
+      'adjusted_ebitda_components.legal_settlements': 0,
+      'adjusted_ebitda_components.professional_fees_one_time': 0,
+      'adjusted_ebitda_components.casualty_losses': 0,
+      'adjusted_ebitda_components.other_one_time_expenses': 0,
+      'adjusted_ebitda_components.gain_on_disposal': 3565,
+      'adjusted_ebitda_components.gain_on_asset_sale': 0,
+      'adjusted_ebitda_components.other_income_non_operating': 0,
+      'adjusted_ebitda_components.insurance_proceeds': 0,
+      'adjusted_ebitda_components.other_one_time_gains': 0,
+      'adjusted_ebitda_components.owner_compensation_adjustment': 0,
+      'adjusted_ebitda_components.related_party_adjustments': 0,
+      'adjusted_ebitda_components.management_fees_adjustment': 0,
+      'adjusted_ebitda_components.accounting_policy_adjustments': 0,
+      'adjusted_ebitda_components.foreign_exchange_adjustments': 0,
+      'adjusted_ebitda_components.unrealized_fx_cash_flow': 0,
+      'adjusted_ebitda_components.realized_fx_pl': 0,
+      'adjusted_ebitda_components.pro_forma_cost_savings': 0,
+      'adjusted_ebitda_components.pro_forma_synergies': 0,
+
+      // Computed Ratios
+      // adjusted_ebitda = EBITDA (221,236) + SBC (7,203) + impairments (744) - gain on disposal (3,565) = 225,618
+      adjusted_ebitda: 225618,
+      calculated_adjusted_ebitda: 0,
+      // fccr = (Adj EBITDA - CapEx - cash_taxes - distributions) / (principal + interest_LTD + lease_principal + lease_interest)
+      //      = (225,618 - 60,612 - 31,213 - 31,470) / (13,312 + 22,847 + 64,898 + 23,409)
+      //      = 102,323 / 124,466 = 0.82
+      // NOTE: Low FCCR reflects high CapEx growth phase (opening stores) + dividends + debt repayment.
+      // PetValu has significant cash generation from operations (200M+) but returns capital aggressively.
+      fccr: 0.82,
+      // dscr = Adj EBITDA / (interest + lease_interest + principal + lease_principal) = 225,618 / 124,466 = 1.81
+      dscr: 1.81,
+      funded_debt: 0,
+      funded_debt_to_ebitda: 0,
+      // senior_debt_to_ebitda = bank debt (278,020) / EBITDA (221,236) = 1.26
+      senior_debt_to_ebitda: 1.26,
+      // total_debt_to_capital = 749,294 / (749,294 + 95,749) = 0.89 (including IFRS 16 leases)
+      // But net of lease receivables (210,391): 538,903 / 634,652 = 0.85
+      total_debt_to_capital: 0.89,
+      // interest_coverage_ratio = EBITDA / net interest = 221,236 / 32,103 = 6.89
+      interest_coverage_ratio: 6.89,
+      // debt_to_equity_ratio = 749,294 / 95,749 = 7.83 (high — franchise model with large IFRS 16 leases)
+      debt_to_equity_ratio: 7.83,
+      // current_ratio = 246,510 / 184,420 = 1.34
+      current_ratio: 1.34,
+    },
+    source_notes:
+      'Verified from source PDF (PetValu_Q4_2024_FinancialStatements.pdf). ' +
+      'All values in thousands of Canadian dollars (CAD). ' +
+      'IFRS reporting. 52-week fiscal year ended December 28, 2024. ' +
+      'Pet Valu Holdings Ltd. — Canadian franchise specialty pet retailer (824 stores: 220 corporate + 604 franchise). ' +
+      'Debt structure: revolving credit facility (278,020) + IFRS 16 lease liabilities (471,274) = 749,294 total. ' +
+      'Senior debt = credit facility only (278,020); IFRS 16 leases substantially offset by lease receivables (210,391). ' +
+      'Net lease position = 471,274 - 210,391 = 260,883 (franchise sublease income offsets lease obligations). ' +
+      'interest: 32,103 is NET of lease receivable interest income (~11,914); gross cash interest = 46,256. ' +
+      'D&A = 65,913 from CF statement (PP&E + ROU + intangibles combined). ' +
+      'FCCR = 0.82 reflects growth CapEx (60.6M for new stores) + dividends (31.5M) + share buybacks. ' +
+      'Cash from operations = 200,076 before investing/financing — strong operating coverage. ' +
+      'total_debt_to_capital of 0.89 overstates risk — franchise model has lease receivable offset.',
+  },
+  {
+    document: 'ADEN-FY2024',
+    filename: 'ADENAnRpt24 2.pdf',
+    fiscal_year: '2024',
+    values: {
+      // Income Statement (thousands USD, IFRS, year ended December 31, 2024)
+      // ADENTRA Inc. — wholesale distributor of architectural building products (86 locations, CA + US)
+      // Note: ADEN reports in US dollars (USD), NOT Canadian dollars
+      revenue: 2184258,
+      // Net income: 46,478 USD thousands
+      net_income: 46478,
+      expenses: 0,
+      profit_margins: 0,
+      // Net finance expense: 41,614 (interest on bank + lease obligations)
+      interest: 41614,
+      // Income tax expense: 8,816 (current 5,664 + deferred 3,152)
+      taxes: 8816,
+      // D&A from EBITDA reconciliation: 76,099 (P&L shows 68,294; additional 7,805 in COGS/SD&A)
+      depreciation_amortization: 76099,
+      depreciation_equipment: 0,
+      // D&A on P&L: depreciation 42,773; amortization of intangibles 25,521 = 68,294
+      depreciation_rou: 0,
+      depreciation_other: 0,
+      amortization_intangibles: 25521,
+      // EBITDA = income from operations (96,908) + D&A (76,099) = 173,007 (matches company disclosed)
+      ebitda: 173007,
+      // Company disclosed Adj EBITDA: ~184,300 (173,007 + LTIP + trade duties + transaction costs)
+      reported_adjusted_ebitda: 184300,
+
+      // Balance Sheet
+      // Shareholders' equity: 634,572 USD thousands
+      shareholders_equity: 634572,
+      // Total debt: bank indebtedness (410,536) + lease obligations (212,530) = 623,066
+      total_debt: 623066,
+      // Senior debt = bank indebtedness only (current 115,347 + long-term 295,189 = 410,536)
+      senior_debt: 410536,
+      // Current assets: 620,642 (cash 28,111 + AR 184,993 + receivables 3,980 + inventory 375,718 + other 27,840)
+      current_assets: 620642,
+      // Current liabilities: 278,340 (bank 115,347 + AP 121,080 + lease 39,305 + dividend 2,608)
+      current_liabilities: 278340,
+
+      // Cash Flow
+      // CapEx not separately extracted — investing total (147,458) includes Woolf acquisition
+      capital_expenditures: 0,
+      // Proceeds from debt: 58,223 (new credit facility draws)
+      proceeds_from_long_term_debt: 58223,
+      cash_taxes_paid: 0,
+      // Dividends paid: 9,632 (10,128 declared, 9,632 paid in cash)
+      distributions_paid: 9632,
+      ttm_principal_payments: 0,
+      ttm_interest_expense: 0,
+      // Repayment of bank indebtedness: 40,000
+      repayment_of_debt: 40000,
+      // Lease payments (estimated — CF shows ~48,050 combined; split unknown)
+      payment_of_lease_liability: 0,
+      cash_interest_paid: 0,
+      non_cash_interest_expense: 0,
+
+      // Debt Components
+      // Bank indebtedness: current 115,347 + long-term 295,189 = 410,536
+      'debt_components.bank_debt_current': 115347,
+      'debt_components.bank_debt_long_term': 295189,
+      'debt_components.term_loans': 0,
+      'debt_components.revolving_credit_facilities': 0,
+      'debt_components.overdraft_facilities': 0,
+      'debt_components.lines_of_credit': 0,
+      // Lease obligations: current 39,305 + long-term 173,225 = 212,530
+      'debt_components.lease_liabilities_current': 39305,
+      'debt_components.lease_liabilities_long_term': 173225,
+      'debt_components.finance_lease_liabilities': 0,
+      'debt_components.operating_lease_liabilities': 0,
+      'debt_components.notes_payable': 0,
+      'debt_components.subordinated_debt': 0,
+      'debt_components.convertible_debt': 0,
+      'debt_components.bonds_debentures': 0,
+      'debt_components.other_borrowings': 0,
+
+      // Fixed Charges — cash interest split not available from annual report summary
+      'fixed_charges.senior_debt_interest': 0,
+      'fixed_charges.subordinated_debt_interest': 0,
+      'fixed_charges.lease_interest': 0,
+      'fixed_charges.total_interest_expense': 0,
+      'fixed_charges.minimum_lease_payments': 0,
+      'fixed_charges.finance_lease_payments': 0,
+      'fixed_charges.operating_lease_payments': 0,
+      'fixed_charges.principal_payments': 0,
+      'fixed_charges.preferred_dividends': 0,
+      'fixed_charges.other_fixed_charges': 0,
+
+      // Adjusted EBITDA Components
+      // Company Adj EBITDA adjustments include: LTIP expense, accrued trade duties, transaction costs
+      // Total adjustments: ~11,293 (184,300 - 173,007). Individual line items not broken out in AR summary.
+      'adjusted_ebitda_components.stock_based_compensation': 0,
+      'adjusted_ebitda_components.impairment_charges': 0,
+      'adjusted_ebitda_components.goodwill_impairment': 0,
+      'adjusted_ebitda_components.unrealized_gains_losses': 0,
+      'adjusted_ebitda_components.deferred_compensation': 0,
+      'adjusted_ebitda_components.loss_on_disposal': 0,
+      'adjusted_ebitda_components.other_non_cash': 0,
+      'adjusted_ebitda_components.restructuring_costs': 0,
+      'adjusted_ebitda_components.severance_costs': 0,
+      'adjusted_ebitda_components.transaction_costs': 0,
+      'adjusted_ebitda_components.legal_settlements': 0,
+      'adjusted_ebitda_components.professional_fees_one_time': 0,
+      'adjusted_ebitda_components.casualty_losses': 0,
+      'adjusted_ebitda_components.other_one_time_expenses': 0,
+      'adjusted_ebitda_components.gain_on_disposal': 0,
+      'adjusted_ebitda_components.gain_on_asset_sale': 0,
+      'adjusted_ebitda_components.other_income_non_operating': 0,
+      'adjusted_ebitda_components.insurance_proceeds': 0,
+      'adjusted_ebitda_components.other_one_time_gains': 0,
+      'adjusted_ebitda_components.owner_compensation_adjustment': 0,
+      'adjusted_ebitda_components.related_party_adjustments': 0,
+      'adjusted_ebitda_components.management_fees_adjustment': 0,
+      'adjusted_ebitda_components.accounting_policy_adjustments': 0,
+      'adjusted_ebitda_components.foreign_exchange_adjustments': 0,
+      'adjusted_ebitda_components.unrealized_fx_cash_flow': 0,
+      'adjusted_ebitda_components.realized_fx_pl': 0,
+      'adjusted_ebitda_components.pro_forma_cost_savings': 0,
+      'adjusted_ebitda_components.pro_forma_synergies': 0,
+
+      // Computed Ratios
+      // adjusted_ebitda = 184,300 per company disclosure (LTIP + trade duties + transaction costs adj)
+      adjusted_ebitda: 184300,
+      calculated_adjusted_ebitda: 0,
+      // FCCR/DSCR not set — CapEx and cash interest split not available from AR summary section
+      fccr: 0,
+      dscr: 0,
+      funded_debt: 0,
+      funded_debt_to_ebitda: 0,
+      // senior_debt_to_ebitda = bank debt (410,536) / EBITDA (173,007) = 2.37
+      senior_debt_to_ebitda: 2.37,
+      // total_debt_to_capital = 623,066 / (623,066 + 634,572) = 0.50
+      total_debt_to_capital: 0.50,
+      // interest_coverage_ratio = EBITDA / net finance expense = 173,007 / 41,614 = 4.16
+      interest_coverage_ratio: 4.16,
+      // debt_to_equity_ratio = 623,066 / 634,572 = 0.98
+      debt_to_equity_ratio: 0.98,
+      // current_ratio = 620,642 / 278,340 = 2.23
+      current_ratio: 2.23,
+    },
+    source_notes:
+      'Verified from source PDF (ADENAnRpt24 2.pdf — ADENTRA Inc. 2024 Annual Report). ' +
+      'CRITICAL: All values in thousands of US dollars (USD), NOT Canadian dollars. ' +
+      'IFRS reporting. Fiscal year ended December 31, 2024. ' +
+      'ADENTRA Inc. (TSX: ADEN) — wholesale distributor of architectural building products (86 locations in Canada & US). ' +
+      'Debt: revolving credit facility classified as bank indebtedness (current 115,347 + LT 295,189 = 410,536 USD). ' +
+      'Total debt includes IFRS 16 lease obligations (current 39,305 + LT 173,225 = 212,530 USD). ' +
+      'D&A = 76,099 from EBITDA reconciliation table; P&L shows only 68,294 (additional 7,805 in COGS/SD&A). ' +
+      'EBITDA = 173,007 matches company disclosure. Company Adj EBITDA = 184,300 (LTIP + trade duties + transaction costs). ' +
+      'Company acquired Woolf Building Products in 2024 — inflates investing CF and goodwill. ' +
+      'FCCR/DSCR not set — CapEx and cash interest split unavailable from AR summary; requires financial statement notes.',
+  },
 ];
 
 /**
