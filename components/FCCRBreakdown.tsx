@@ -296,8 +296,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 {/* Methodology Disclosure */}
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-primary text-xs">
                   <strong>Covenant FCCR — Lendflow Methodology:</strong> This ratio uses a lender-defined cash flow formula, not the rating-agency (Moody&apos;s/S&amp;P) FCCR.
-                  The numerator deducts unfunded CapEx and cash taxes from Adjusted EBITDA to represent true cash available for debt service.
-                  Distributions are excluded — they are discretionary and typically restricted by the covenant, not included in the coverage calculation.
+                  The numerator deducts unfunded CapEx, cash taxes, and distributions from Adjusted EBITDA to represent true cash available for debt service.
                 </div>
 
                 {/* Numerator Section */}
