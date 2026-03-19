@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { z } from 'zod';
 import {
   mergeExtractions,
@@ -210,8 +210,9 @@ export async function DELETE(req: NextRequest) {
         .single();
 
       if (doc?.storage_path) {
-        // Delete from storage
-        await supabase.storage
+        // Delete from storage (use admin client to bypass RLS UUID casting issues)
+        const adminSupabase = createAdminClient();
+        await adminSupabase.storage
           .from('financial-documents')
           .remove([doc.storage_path]);
       }
