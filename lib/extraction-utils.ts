@@ -726,17 +726,6 @@ export function mergeExtractions(
     };
   }
 
-  // Append any gap-fill warnings produced by unionMergeMetrics so analysts can
-  // see which values were sourced from a secondary document. These are appended
-  // after the primary extraction_warnings (if any) so the source document's
-  // own warnings are not displaced.
-  if (unionMergeWarnings.length > 0) {
-    merged.extraction_warnings = [
-      ...(merged.extraction_warnings ?? []),
-      ...unionMergeWarnings,
-    ];
-  }
-
   return merged;
 }
 
