@@ -124,10 +124,11 @@ const SECTION_ENTER = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function getRiskBand(score: number): { label: string; color: string } {
-  if (score <= 30) return { label: 'Low Risk', color: 'text-success' };
-  if (score <= 50) return { label: 'Moderate', color: 'text-warning' };
-  if (score <= 70) return { label: 'Elevated', color: 'text-warning' };
-  return { label: 'High Risk', color: 'text-error' };
+  if (score < 20) return { label: 'Low Risk', color: 'text-success' };
+  if (score < 40) return { label: 'Moderate Risk', color: 'text-warning' };
+  if (score < 60) return { label: 'Elevated Risk', color: 'text-warning' };
+  if (score < 80) return { label: 'High Risk', color: 'text-error' };
+  return { label: 'Distressed', color: 'text-error' };
 }
 
 function getRatioStatus(value: number | null, thresholds: { good: number; fair: number; direction: 'above' | 'below' }): string {
