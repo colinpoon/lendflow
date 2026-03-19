@@ -1,5 +1,23 @@
 ## Progress Tracker
 
+### Task 22 — Commit Audit Bug Fixes (2026-03-18)
+
+**22.8 — FCCRBreakdown distributions tooltip:** Tooltip incorrectly said "Distributions are excluded" but `fccr-calculator.ts` deducts `distributionsPaid` from the numerator. Corrected to list all three deductions: CapEx, cash taxes, and distributions.
+
+**22.7 — resolve-conflict storage client:** Switched `storage.remove()` in resolve-conflict DELETE from RLS-scoped client to `createAdminClient()`, matching other routes. RLS client likely failed silently due to UUID casting issues, leaving orphaned files.
+
+**22.6 — MergedExtraction chunk_stats type:** Added optional `skipped` and `withWarnings` fields to `MergedExtraction.chunk_stats` type to match `ExtractionResult`, allowing these counts to surface through the multi-doc merge path.
+
+**22.5 — Duplicate unionMergeWarnings:** Removed redundant second append of `unionMergeWarnings` (lines 733-738). They were already included in the deduped `allWarnings` Set at line 674. Every union merge warning was doubled.
+
+**22.4 — getFccrBarColor stale threshold:** Changed hardcoded `1.2` to `FCCR_THRESHOLDS.ADEQUATE` (1.25x) imported from `constants.ts`. Also used `FCCR_THRESHOLDS.WEAK` for the yellow threshold.
+
+**22.3 — getBaseScore boundary for higher-is-better:** `getBaseScore` used `(min, max]` intervals for all metrics. For higher-is-better (FCCR, current ratio), exactly 1.25 got score 4 (weak) because `1.25 > 1.25` failed. Now uses `[min, max)` for higher-is-better and `(min, max]` for lower-is-better, so boundary values always get the better score.
+
+**22.2 — getRiskBand threshold alignment:** ProjectDetail hero card used `<= 30/50/70` thresholds that didn't match `quantitative-risk.ts` RISK_BANDS (`0-20/20-40/40-60/60-80/80-100`). Score 25 showed "Low Risk" instead of "Moderate Risk". Aligned to `< 20/40/60/80` with all 5 bands including "Distressed".
+
+**22.1 — Vision route magic-byte validation order:** Moved PDF magic-byte check (`%PDF` header) to run on the raw `ArrayBuffer` immediately after `file.arrayBuffer()`, before storage upload or document record creation. Previously, spoofed files were uploaded to Supabase and a document record created before validation ran. Removed the redundant post-download check.
+
 ### Task 10 — Extraction Pipeline Robustness (2026-03-18)
 
 **10.1 — Scale correction tracking:** Fixed critical bug — `validateCrossMetricScale()` (Pass 2) never returned `correctedYears`, so Pass 3 didn't know about Pass 2 corrections. Now tracks all correction paths. Prevents double-correction.
