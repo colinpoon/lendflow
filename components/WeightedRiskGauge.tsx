@@ -27,7 +27,7 @@ import {
 import type { DebtHealthAssessment } from '@/types/risk';
 import type { RiskConfig } from '@/types';
 import type { ComputedMetrics as YearMetrics } from '@/types/financial';
-import { RISK_WEIGHTS } from '@/lib/constants';
+import { RISK_WEIGHTS, FCCR_THRESHOLDS } from '@/lib/constants';
 import {
   getFCCRRiskScore,
   getDebtEBITDARiskScore,
@@ -116,8 +116,8 @@ const getLendingDecisionStyle = (decision: string): { bg: string; text: string }
 
 const getFccrBarColor = (value: number | null): string => {
   if (value == null) return '#6b7280';
-  if (value >= 1.2) return '#22c55e';
-  if (value >= 1.0) return '#eab308';
+  if (value >= FCCR_THRESHOLDS.ADEQUATE) return '#22c55e';
+  if (value >= FCCR_THRESHOLDS.WEAK) return '#eab308';
   return '#ef4444';
 };
 
