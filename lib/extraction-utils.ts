@@ -9,7 +9,7 @@ export interface MergedExtraction {
   quantitativeRiskAssessment?: QuantitativeRiskAssessment | null;
   validation_issues?: Record<string, string[]>;
   extraction_warnings?: string[];
-  chunk_stats?: { total: number; successful: number; failed: number };
+  chunk_stats?: { total: number; successful: number; failed: number; skipped?: number; withWarnings?: number };
   /** Aggregated token usage across all extractions in this project */
   token_usage?: {
     input_tokens: number;
