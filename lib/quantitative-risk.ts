@@ -160,17 +160,20 @@ function calculateAvgAnnualChange(values: (number | null)[]): number | null {
  */
 function getBaseScore(
   value: number | null,
-  bands: readonly { min: number; max: number; score: number }[]
+  bands: readonly { min: number; max: number; score: number }[],
+  higherIsBetter: boolean = false
 ): number {
   if (value == null || !isFinite(value)) return 3; // Default to middle score
 
   for (const band of bands) {
-    if (value > band.min && value <= band.max) {
-      return band.score;
-    }
-    // Handle edge case for first band (min is -Infinity)
-    if (band.min === -Infinity && value <= band.max) {
-      return band.score;
+    if (higherIsBetter) {
+      // [min, max) — hitting the threshold gives the better (lower) score
+      if (value >= band.min && value < band.max) return band.score;
+      if (band.max === Infinity && value >= band.min) return band.score;
+    } else {
+      // (min, max] — hitting the threshold gives the better (lower) score
+      if (value > band.min && value <= band.max) return band.score;
+      if (band.min === -Infinity && value <= band.max) return band.score;
     }
   }
 
@@ -279,7 +282,7 @@ export function calculateQuantitativeRisk(
   const ebitdaAvgChange = calculateAvgAnnualChange(ebitdaValues);
   const ebitdaConfig = METRIC_CONFIG.ebitda_trend;
   const ebitdaBaseScore = ebitdaAvgChange != null
-    ? getBaseScore(ebitdaAvgChange, ebitdaConfig.bands)
+    ? getBaseScore(ebitdaAvgChange, ebitdaConfig.bands, ebitdaConfig.higher_is_better)
     : 3;
 
   metrics.push({
@@ -302,7 +305,7 @@ export function calculateQuantitativeRisk(
   const fccrValues = years.map(y => metricsByYear[y].fccr);
   const fccrAvgChange = calculateAvgAnnualChange(fccrValues);
   const fccrConfig = METRIC_CONFIG.fccr;
-  const fccrBaseScore = getBaseScore(latestMetrics.fccr, fccrConfig.bands);
+  const fccrBaseScore = getBaseScore(latestMetrics.fccr, fccrConfig.bands, fccrConfig.higher_is_better);
   const fccrTrend = getTrendModifier(fccrAvgChange, fccrConfig.higher_is_better);
   const fccrAdjustedScore = Math.max(1, Math.min(5, fccrBaseScore - fccrTrend.modifier));
 
@@ -324,7 +327,7 @@ export function calculateQuantitativeRisk(
   const leverageValues = years.map(y => metricsByYear[y].senior_debt_to_ebitda);
   const leverageAvgChange = calculateAvgAnnualChange(leverageValues);
   const leverageConfig = METRIC_CONFIG.senior_leverage;
-  const leverageBaseScore = getBaseScore(latestMetrics.senior_debt_to_ebitda, leverageConfig.bands);
+  const leverageBaseScore = getBaseScore(latestMetrics.senior_debt_to_ebitda, leverageConfig.bands, leverageConfig.higher_is_better);
   const leverageTrend = getTrendModifier(leverageAvgChange, leverageConfig.higher_is_better);
   const leverageAdjustedScore = Math.max(1, Math.min(5, leverageBaseScore - leverageTrend.modifier));
 
@@ -346,7 +349,7 @@ export function calculateQuantitativeRisk(
   const debtCapitalValues = years.map(y => metricsByYear[y].total_debt_to_capital);
   const debtCapitalAvgChange = calculateAvgAnnualChange(debtCapitalValues);
   const debtCapitalConfig = METRIC_CONFIG.debt_capital;
-  const debtCapitalBaseScore = getBaseScore(latestMetrics.total_debt_to_capital, debtCapitalConfig.bands);
+  const debtCapitalBaseScore = getBaseScore(latestMetrics.total_debt_to_capital, debtCapitalConfig.bands, debtCapitalConfig.higher_is_better);
   const debtCapitalTrend = getTrendModifier(debtCapitalAvgChange, debtCapitalConfig.higher_is_better);
   const debtCapitalAdjustedScore = Math.max(1, Math.min(5, debtCapitalBaseScore - debtCapitalTrend.modifier));
 
@@ -368,7 +371,7 @@ export function calculateQuantitativeRisk(
   const currentRatioValues = years.map(y => metricsByYear[y].current_ratio);
   const currentRatioAvgChange = calculateAvgAnnualChange(currentRatioValues);
   const currentRatioConfig = METRIC_CONFIG.current_ratio;
-  const currentRatioBaseScore = getBaseScore(latestMetrics.current_ratio, currentRatioConfig.bands);
+  const currentRatioBaseScore = getBaseScore(latestMetrics.current_ratio, currentRatioConfig.bands, currentRatioConfig.higher_is_better);
   const currentRatioTrend = getTrendModifier(currentRatioAvgChange, currentRatioConfig.higher_is_better);
   const currentRatioAdjustedScore = Math.max(1, Math.min(5, currentRatioBaseScore - currentRatioTrend.modifier));
 
