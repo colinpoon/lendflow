@@ -183,8 +183,21 @@ export async function POST(req: NextRequest) {
         message: 'Storing file...',
       });
 
-      // Upload to Supabase Storage (use admin client to bypass RLS UUID casting issues)
+      // Read file and validate magic bytes BEFORE uploading to storage
       const fileBuffer = await file.arrayBuffer();
+      const magicBytes = new Uint8Array(fileBuffer, 0, 4);
+      if (magicBytes.length < 4 || magicBytes[0] !== 0x25 || magicBytes[1] !== 0x50 || magicBytes[2] !== 0x44 || magicBytes[3] !== 0x46) {
+        console.error('❗ Magic byte validation failed: file does not start with %PDF');
+        await sendProgress({
+          stage: 'error',
+          progress: 0,
+          message: 'File validation failed. The uploaded file does not appear to be a valid PDF.',
+        });
+        await closeWriter();
+        return;
+      }
+
+      // Upload to Supabase Storage (use admin client to bypass RLS UUID casting issues)
       const { error: uploadError } = await adminSupabase.storage
         .from('financial-documents')
         .upload(storagePath, fileBuffer, {
@@ -257,19 +270,6 @@ export async function POST(req: NextRequest) {
 
       // Convert Blob to Buffer for vision processor (no temp file needed)
       const pdfBuffer = Buffer.from(await fileData.arrayBuffer());
-
-      // Validate magic bytes — PDF must start with %PDF
-      if (pdfBuffer.length < 4 || pdfBuffer[0] !== 0x25 || pdfBuffer[1] !== 0x50 || pdfBuffer[2] !== 0x44 || pdfBuffer[3] !== 0x46) {
-        console.error('❗ Magic byte validation failed: file does not start with %PDF');
-        await updateDocumentStatus(supabase, documentId, 'failed', 'File content is not a valid PDF');
-        await sendProgress({
-          stage: 'error',
-          progress: 0,
-          message: 'File validation failed. The uploaded file does not appear to be a valid PDF.',
-        });
-        await closeWriter();
-        return;
-      }
 
       console.log('🤖 Starting vision-based extraction...');
 
