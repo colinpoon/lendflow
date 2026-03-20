@@ -22,6 +22,8 @@
 
 **27.1 — HTTP security headers:** Added `headers()` to `next.config.ts` with: X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy (camera/mic/geo disabled), Strict-Transport-Security (HSTS 2yr max-age + preload), and Content-Security-Policy (self-only defaults, connect-src allows Supabase + Anthropic API, frame-ancestors none).
 
+**27.2 — /instruments added to Clerk protected routes:** Added `/instruments(.*)` to `isProtectedRoute` in `middleware.ts`. Previously only had page-level auth redirect without Clerk JWKS verification and session refresh at middleware level.
+
 ### Task 26 — Risk Scoring Consolidation (2026-03-19)
 
 **26.2 — Unified getRiskBand with color mapping:** Exported `getRiskBand` and added `getRiskBandWithColor` from `lib/quantitative-risk.ts` (authoritative 0-100 scale, 5 bands). Removed duplicate local `getRiskBand` from `ProjectDetail.tsx` and replaced with shared import. The `lib/risk-scoring.ts` version (0-10 scale, different band names) is retained as it serves a different scoring system (Task 26 line 392 scope).
