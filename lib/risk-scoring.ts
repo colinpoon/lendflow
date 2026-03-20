@@ -58,6 +58,9 @@ export function getFCCRRiskScore(value: number | null): number {
  * @param value - Debt to EBITDA ratio (lower is better)
  */
 export function getSeniorDebtEBITDAHealth(value: number): HealthConfig {
+  if (value < 0) {
+    return { level: 'poor', color: HEALTH_COLORS.poor, percentage: 20 }; // Negative EBITDA = maximum risk
+  }
   if (value <= DEBT_EBITDA_THRESHOLDS.EXCELLENT) {
     return { level: 'excellent', color: HEALTH_COLORS.excellent, percentage: 100 };
   }
@@ -78,6 +81,7 @@ export function getSeniorDebtEBITDAHealth(value: number): HealthConfig {
  */
 export function getDebtEBITDARiskScore(value: number | null): number {
   if (value == null) return 5;
+  if (value < 0) return 10; // Negative EBITDA = maximum risk — cannot service debt from operations
   if (value <= DEBT_EBITDA_THRESHOLDS.EXCELLENT) return 1;
   if (value <= DEBT_EBITDA_THRESHOLDS.GOOD) return 3;
   if (value <= DEBT_EBITDA_THRESHOLDS.ADEQUATE) return 5;
