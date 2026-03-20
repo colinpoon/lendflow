@@ -408,7 +408,7 @@ New security findings not covered by Tasks 13/18.
 Zero automated tests on a system that makes lending recommendations.
 
 - [x] **CRITICAL — Add automated test framework** `[Senior Engineer]` — No test framework configured. Zero unit/integration/e2e tests. EBITDA dedup rules, FCCR resolution, merger conflict logic, and risk scoring all untested. Add `vitest`. Start with pure-function unit tests for `lib/calculations/` — highest-value coverage. Use test PDFs in `public/financialReports/` and ground truth in `lib/benchmarks/ground-truth.ts` as regression fixtures.
-- [ ] **HIGH — Wire ground truth benchmarks into CI** `[Senior Engineer]` — `scripts/regression-check.ts` and `lib/benchmarks/ground-truth.ts` exist but never run automatically. Add `npm run test:regression` and GitHub Actions workflow. Failing regression should block merge.
+- [x] **HIGH — Wire ground truth benchmarks into CI** `[Senior Engineer]` — `scripts/regression-check.ts` and `lib/benchmarks/ground-truth.ts` exist but never run automatically. Add `npm run test:regression` and GitHub Actions workflow. Failing regression should block merge.
 - [x] **HIGH — Add `zod` as explicit dependency** `[Senior Engineer]` — `zod` is imported in `lib/validation.ts`, `api/projects/route.ts`, `api/resolve-conflict/route.ts` but not in `package.json`. Resolved transitively through another package. If that dep updates, validation breaks. Run `npm install zod`. File: `package.json`
 
 ### Task 29: High — UI/UX & Design System
