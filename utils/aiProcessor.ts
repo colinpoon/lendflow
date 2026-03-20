@@ -838,6 +838,7 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
   // `m`, causing hard-to-diagnose cross-year contamination.
   // structuredClone is available in Node 17+ and all modern browsers.
   const result = structuredClone(m) as ComputedMetrics;
+  let negativeCapitalWarning: string | null = null;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Debt Calculation
@@ -924,6 +925,15 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
     result.shareholders_equity
   );
 
+  // Flag negative total capital (negative equity exceeds debt) — ratio is mathematically
+  // valid but threshold comparisons become misleading for distressed borrowers.
+  if (result.total_debt != null && result.shareholders_equity != null) {
+    const totalCapital = result.total_debt + result.shareholders_equity;
+    if (totalCapital <= 0) {
+      negativeCapitalWarning = `Negative total capital (${totalCapital.toLocaleString()}K): shareholders' equity (${result.shareholders_equity.toLocaleString()}K) is negative. Debt/Capital ratio may be misleading — treat as maximum leverage risk.`;
+    }
+  }
+
   result.senior_debt_to_ebitda = calculateSeniorDebtToEBITDA(
     result.senior_debt,
     result.adjusted_ebitda ?? result.ebitda
@@ -967,7 +977,9 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
   // since the same revolver warning can fire from both paths.
   const calculationWarnings: string[] = [];
   const seenWarnings = new Set<string>();
-  for (const w of [...fccrResult.warnings, ...dscrResult.warnings]) {
+  const allWarnings = [...fccrResult.warnings, ...dscrResult.warnings];
+  if (negativeCapitalWarning) allWarnings.push(negativeCapitalWarning);
+  for (const w of allWarnings) {
     if (!seenWarnings.has(w)) {
       seenWarnings.add(w);
       calculationWarnings.push(w);
