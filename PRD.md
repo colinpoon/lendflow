@@ -430,7 +430,7 @@ Issues impacting analyst trust and usability.
 ### Task 30: Medium — Code Quality & Performance
 Tech debt that affects maintainability and page performance.
 
-- [ ] **HIGH — N+1 query on instruments page** `[Code Improver, Senior Engineer]` — Fires one Supabase query per project inside `Promise.all`. 20 projects = 21 round-trips. Replace with single query using `IN` clause and client-side grouping. Then wrap in `unstable_cache` with short TTL. File: `app/instruments/page.tsx`
+- [x] **HIGH — N+1 query on instruments page** `[Code Improver, Senior Engineer]` — Fires one Supabase query per project inside `Promise.all`. 20 projects = 21 round-trips. Replace with single query using `IN` clause and client-side grouping. Then wrap in `unstable_cache` with short TTL. File: `app/instruments/page.tsx`
 - [ ] **MEDIUM — `process.noDeprecation = true` silences all deprecation warnings** `[Code Improver, Senior Engineer]` — Module-level statement in `document-parser.ts` permanently disables all Node.js deprecation warnings. Replace with scoped workaround or upgrade `pdf-parse`. File: `lib/document-parser.ts`
 - [ ] **MEDIUM — Large monolithic components (1000+ lines)** `[Code Improver, Senior Engineer]` — `FinancialTable.tsx` (1704 lines), `ProjectDetail.tsx` (1247 lines), `extraction-merger.ts` (1588 lines), `aiProcessor.ts` (1128 lines). Split `ProjectDetail` into sub-components. Extract skeleton components.
 - [ ] **MEDIUM — Sequential 3-second inter-chunk delay adds guaranteed latency** `[Code Improver]` — `chunk-processor.ts` waits 3s between every chunk regardless of rate limit status. A 5-chunk doc adds 12s of pure idle time. Remove fixed delay; rely on existing retry logic for actual 429s. File: `lib/chunk-processor.ts`

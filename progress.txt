@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**30.1 — N+1 query on instruments page:** Replaced per-project extraction queries (N+1 round-trips) with a single `IN`-clause fetch of all extractions. Client-side grouping picks the most recent extraction per project. Reduces 21 queries for 20 projects down to 2 total queries.
+
 **29.5 — Section nav reflects actual content structure:** Expanded SECTIONS array from 4 to 6 items (Upload, Analysis, Risk Score, EBITDA, Covenants, Decision). Split monolithic `<section id="risk">` into three separate sections with own `id` and `ref` attributes for Intersection Observer tracking. Each new section has `scroll-mt-16` and `space-y-5`. Nav disabled logic already covers new sections automatically.
 
 **29.4 — Fix lending decision text truncation:** Replaced `truncate` with `break-words` on the lending decision banner in `ProjectDetail.tsx` so critical text like "Conditional Approval" isn't cut off at smaller viewports.
