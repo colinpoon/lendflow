@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**29 — Focus-visible rings:** Added `focus-visible:ring-2 ring-ring ring-offset-2` to 5 custom `<button>` elements across `ProjectDetail.tsx`, `dashboard/layout.tsx`, and `(dashboard)/layout.tsx`. WCAG 2.4.7 compliance.
+
 **23 — Duplicate document detection:** Added SHA-256 content hashing before extraction in both `/api/extractData` and `/api/extractData/vision`. Computes hash from raw buffer, checks for existing documents with matching hash in the same project, rejects with original filename and upload date. Hash stored in `documents.content_hash` column. Created SQL migration with composite index on `(project_id, content_hash)`. Zero API credits wasted on duplicates.
 
 **30.10 — Centralize debug flags:** Created `lib/debug-flags.ts` with `DEBUG_FINANCIALS` and `DEBUG_FINANCE` exports. Replaced local declarations in `aiProcessor.ts`, `chunk-processor.ts`, `extraction-merger.ts`, `risk-generator.ts`. Added `DEBUG_FINANCE` to `.env.example`.
