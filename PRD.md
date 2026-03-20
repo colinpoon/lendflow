@@ -48,9 +48,9 @@ Document Upload (PDF/Excel/Word)
 
 ## What It Extracts (Per Fiscal Year)
 
-**From the AI** (raw `ExtractedMetrics`):
-- **Income Statement**: revenue, net income, expenses, profit margins, interest (with income), taxes, depreciation/amortization (with granular breakdown: equipment, ROU, intangibles)
-- **Balance Sheet**: shareholders' equity, total debt, senior debt, current assets/liabilities, full `DebtComponents` (16 line items: bank debt, term loans, revolving credit, lease liabilities, notes payable, subordinated debt, convertible debt, etc.)
+**From the AI** (raw `ExtractedMetrics` — raw document values ONLY, no AI computation):
+- **Income Statement**: revenue, net income, expenses, interest (with income), taxes, depreciation/amortization (with granular breakdown: equipment, ROU, intangibles)
+- **Balance Sheet**: shareholders' equity, current assets/liabilities, full `DebtComponents` (16 line items: bank debt, term loans, revolving credit, lease liabilities, notes payable, subordinated debt, convertible debt, etc.)
 - **Cash Flow**: CapEx, proceeds from LT debt, cash taxes, distributions, principal/interest payments, lease payments, repayment of debt
 - **Fixed Charges**: senior/subordinated/lease interest, lease payments (operating + finance), principal payments, preferred dividends
 - **Adjusted EBITDA Components**: 25+ adjustment categories (non-cash, one-time expenses/gains, owner adjustments, FX, pro forma)
@@ -61,7 +61,12 @@ Document Upload (PDF/Excel/Word)
 
 | Ratio | Formula | Purpose |
 |---|---|---|
-| **Adjusted EBITDA** | Net Income + Interest + Taxes + D&A +/- adjustments | True operating cash flow |
+| **EBITDA** | Net Income + Interest + Taxes + D&A | Reported earnings before interest, taxes, depreciation, amortization |
+| **Adjusted EBITDA** | EBITDA +/- non-cash, one-time, owner, FX, pro forma adjustments | True operating cash flow |
+| **Senior Debt** | Sum of bank debt + term loans + revolving credit + lease liabilities (configurable) | Priority-secured obligations |
+| **Total Debt** | Sum of all interest-bearing obligations from `DebtComponents` | Full obligation picture |
+| **Total Capital** | Total Debt + Shareholders' Equity | Capital structure base |
+| **Profit Margin** | Net Income / Revenue | Profitability ratio |
 | **FCCR** (Covenant) | (Adj EBITDA - Unfunded CapEx - Cash Taxes - Distributions) / (Principal + Interest + Leases) | Can the borrower cover fixed obligations? |
 | **DSCR** (Banker's) | Adj EBITDA / Total Debt Service | Debt service capacity |
 | **Senior Debt/EBITDA** | Senior Debt / Adj EBITDA | Leverage |
@@ -70,6 +75,23 @@ Document Upload (PDF/Excel/Word)
 | **Interest Coverage** | EBITDA / Interest Expense | Interest paying ability |
 | **Debt-to-Equity** | Total Debt / Equity | Balance sheet leverage |
 | **Current Ratio** | Current Assets / Current Liabilities | Short-term liquidity |
+
+---
+
+## Internal Calculation Principle
+
+**ALL computed metrics must be calculated by the TypeScript application, never by the AI.**
+
+The AI extraction layer exists solely to read raw values from financial documents and return them as-is. The app's `lib/calculations/` engine is the single source of truth for every derived figure. This separation ensures:
+
+1. **Determinism** — TypeScript arithmetic is exact; LLM arithmetic is approximate
+2. **Auditability** — every calculation has a code path that can be inspected and tested
+3. **Correctness after pipeline corrections** — scale normalization, conflict resolution, and arithmetic validation happen post-extraction; any AI-computed aggregate becomes stale after these corrections
+4. **Consistency** — the same formula applies to every document, not whatever the LLM infers
+
+**Gold standard pattern:** The `ebitda` field is present in the extraction schema but the prompt enforces `"ebitda": null` — the app always calculates it from `net_income + interest + taxes + depreciation_amortization`. This pattern must be replicated for all derived metrics.
+
+**What the AI should extract:** Only values that appear verbatim in the document (line items, balances, rates). If a value requires summing, subtracting, dividing, or any arithmetic to derive, it belongs in `lib/calculations/`.
 
 ---
 
@@ -347,10 +369,19 @@ Bugs that produce incorrect financial outputs or misleading risk scores. Must fi
 - [ ] **MEDIUM — Revolver cap threshold (1.5x) too permissive; cap assignment uses full balance** `[Financial Director]` — `debt-service-resolver.ts` allows repayments up to 50% over funded debt before capping. More conservative: use `Math.min(principal, fundedDebt)` with 1.1x tolerance. File: `lib/calculations/debt-service-resolver.ts`
 - [ ] **MEDIUM — No analyst warning when unfunded CapEx floor fires** `[Financial Director]` — When `unfundedCapex < 0` (debt proceeds > CapEx), the floor at zero fires silently. Analyst doesn't know that new borrowing is masking future debt service. Surface a warning. File: `lib/calculations/fccr-calculator.ts`
 
+### Task 24b: Proceeds from LT Debt Prompt — Edge Cases (2026-03-19)
+Financial Director review of the revolving exclusion and net issuance prompt changes. These edge cases stem from the updated `proceeds_from_long_term_debt` extraction instructions.
+
+- [x] **CRITICAL — Net figure + separate repayment line from different instrument treated as gross** `[Financial Director]` — IFRS filers may show "Net issuances of long-term debt: 4,200" alongside "Repayment of debentures: (1,800)" for a different instrument. The proximity heuristic ("repayment line exists nearby → gross") causes the AI to treat the net 4,200 as gross proceeds, overstating `proceedsFromLTDebt` and inflating FCCR. Fix: replace proximity heuristic with instrument-level matching — only interpret as gross when the repayment line references the same instrument class. File: `lib/prompts/extraction-prompt.ts`
+- [ ] **HIGH — Net negative = null creates silent year-over-year FCCR volatility** `[Financial Director]` — Extracting negative net issuances as null (→ defaults to 0 in calculator) causes full CapEx to be treated as unfunded in paydown years with no analyst warning. A company refinancing at lower balance shows dramatically different unfunded CapEx vs. prior year for invisible reasons. Fix: extract negative net as-is instead of null; add analyst warning in `fccr_breakdown.warnings` when proceeds are negative. Files: `lib/prompts/extraction-prompt.ts`, `lib/calculations/fccr-calculator.ts`
+- [ ] **HIGH — "New borrowings" blanket exclusion causes systematic under-extraction for Canadian ASPE private companies** `[Financial Director]` — Canadian private companies frequently label their sole long-term facility as "Proceeds from new borrowings" or "New bank borrowing." The blanket exclusion zeros out CapEx offset for these borrowers. Fix: add contextual instruction — if "New borrowings" appears alongside a balance sheet long-term debt balance, include it. File: `lib/prompts/extraction-prompt.ts`
+- [ ] **MEDIUM — Net issuance extraction creates inconsistency with `repayment_of_debt` fallback chain** `[Financial Director]` — When a document uses net presentation, `repayment_of_debt` may be null (no separate line) while `proceeds_from_long_term_debt` reflects a net figure. FCCR numerator and denominator are sourced from structurally different data points. Fix: add note to `repayment_of_debt` instructions — when net issuance presentation is used, explicitly set `repayment_of_debt = null` and flag that repayments are embedded in the net figure. Files: `lib/prompts/extraction-prompt.ts`, `lib/calculations/debt-service-resolver.ts`
+- [ ] **MEDIUM — REITs, fleet companies, and equipment lessors use unrecognized but legitimate label variants** `[Financial Director]` — "Proceeds from mortgage financing", "Proceeds from equipment financing", "Proceeds from vehicle loans", "Advance from related party" are all legitimate LT debt but fail the label test. Fix: add cross-reference instruction — when a financing line doesn't match accepted labels, check balance sheet for a new/increased long-term liability that ties to the cash inflow. File: `lib/prompts/extraction-prompt.ts`
+
 ### Task 25: Critical — Portfolio Display & Formatting
 Display bugs that misrepresent financial data to analysts.
 
-- [ ] **CRITICAL — `fmtCurrency` scale bug on instruments page** `[4 agents]` — All values stored in thousands. The local `fmtCurrency` thresholds are wrong: `>= 1_000_000` labels as "$B" but means $1 trillion; `>= 1_000` labels as "$M" but means $1 billion. A company with $999M EBITDA (stored as 999,000) displays as `$999,000.0M`. Fix thresholds for thousands-denominated data OR replace with shared `formatCurrency` from `utils/format.ts`. File: `app/instruments/page.tsx`
+- [x] **~~CRITICAL~~ FALSE POSITIVE — `fmtCurrency` scale bug on instruments page** `[4 agents]` — Verified correct: thresholds work correctly for thousands-denominated data. `>= 1_000_000` thousands = $1B (not $1T as reported); `>= 1_000` thousands = $1M (not $1B). Confirmed with ground truth: Zedcor revenue 24,889K → `$24.9M` ✓, ADEN revenue 1,634,382K → `$1.6B` ✓. The 4 auditors' arithmetic was incorrect.
 - [ ] **HIGH — 6 duplicate `formatCurrency` implementations with inconsistent behavior** `[Code Improver, Senior Engineer]` — `utils/format.ts`, `utils/formatters.ts`, `AdjustedEBITDA.tsx`, `DebtHealthMeters.tsx`, `FCCRBreakdown.tsx`, and `instruments/page.tsx` all have separate formatters producing different output for the same value (`$1,500.00` vs `$1,500K` vs `$1.5M`). Consolidate to single canonical function in `utils/format.ts` with K/M/B scaling. Delete `utils/formatters.ts` and all local copies.
 - [ ] **HIGH — Senior Debt/EBITDA labeled "EBITDA" but uses Adjusted EBITDA** `[Financial Director]` — Column header says "Sr Debt / EBITDA" with no qualifier. Code uses `adjusted_ebitda` as denominator. For companies with large adjustments, displayed ratio can differ 40%+ from base EBITDA leverage. Label as "Sr Debt / Adj. EBITDA" everywhere. Files: `app/instruments/page.tsx`, `components/FinancialTable.tsx`
 - [ ] **HIGH — DSCR/FCCR definitional difference (preferred dividends) undisclosed** `[Financial Director]` — DSCR excludes preferred dividends while FCCR includes them. Both displayed side-by-side with no notation. Analyst can't reconcile the divergence. Add definitional footnote or standardize. Files: `lib/calculations/dscr-calculator.ts`, `lib/calculations/fccr-calculator.ts`
@@ -422,6 +453,7 @@ Improvements to align with commercial banking standards. Not bugs, but gaps.
 - [ ] **LOW — Quick ratio not computed; current ratio misleading for inventory-heavy businesses** `[Financial Director]` — Add `inventory` to extraction schema. Compute quick ratio = (current_assets - inventory) / current_liabilities. Flag divergence. Files: `lib/prompts/extraction-prompt.ts`, `lib/calculations/ratio-calculator.ts`
 - [ ] **LOW — RiskAssessment.tsx pillar score normalization heuristic is unvalidated** `[Financial Director]` — Divides by 10 or 100 based on magnitude guessing. Enforce 1–10 range in Zod schema, remove heuristic. File: `components/RiskAssessment.tsx`
 
+
 ### Task 32: Long-Term — Regulatory & Compliance Infrastructure
 Architectural gaps for regulated lending use. Required before supporting actual credit decisions at a regulated institution.
 
@@ -432,3 +464,12 @@ Architectural gaps for regulated lending use. Required before supporting actual 
 - [ ] **CRITICAL — No model risk management framework** `[Financial Director]` — OCC Bulletin 2011-12 / Fed SR 11-7 require model validation, backtesting, and ongoing monitoring for AI credit models.
 
 *Note: Until Task 32 items are addressed, Lendflow should be positioned as an analytical decision-support tool, not a decision-making system.*
+
+### Task 33: Critical — Enforce Internal Calculation Principle
+All derived metrics must be computed by the TypeScript calculation engine (`lib/calculations/`), not by the AI. The AI prompt must only instruct Claude to extract raw document values. Any field that requires arithmetic (summing, subtracting, dividing) belongs in app code. See **Internal Calculation Principle** section above.
+
+- [ ] **CRITICAL — Remove `profit_margins` AI computation; calculate in-app** — Extraction prompt (`lib/prompts/extraction-prompt.ts` line 436) explicitly instructs Claude: "Calculate as net_income / revenue." This is computation, not extraction. The AI-computed ratio becomes stale after scale normalization and arithmetic corrections are applied to `net_income` or `revenue`. Fix: (1) Set `"profit_margins": null` in the extraction schema (same pattern as `ebitda: null`), (2) Add `calculateProfitMargin(net_income, revenue)` to `lib/calculations/ratio-calculator.ts`, (3) Call it in `computeMetrics()` in `utils/aiProcessor.ts` after all pipeline corrections. Files: `lib/prompts/extraction-prompt.ts`, `lib/calculations/ratio-calculator.ts`, `utils/aiProcessor.ts`, `types/financial.ts`
+- [ ] **CRITICAL — Remove `total_debt` AI aggregation; compute from `debt_components` only** — Prompt (line 497) instructs Claude to sum: "total_debt = bank_debt + lease_liabilities + notes_payable + subordinated_debt + all other interest-bearing obligations." This is arithmetic the app should perform. `calculateDebtMetrics()` in `debt-calculator.ts` already computes total debt from `debt_components`, but falls back to the AI-aggregated `metrics.total_debt` when the computed value is zero (line 117). Fix: (1) Remove the aggregation formula from the prompt — instruct Claude to extract `total_debt` ONLY if the document explicitly states a labelled total, (2) Enforce `"total_debt": null` in the schema (same as `ebitda`), (3) Remove the `metrics.total_debt` fallback in `calculateDebtMetrics()` — if `debt_components` are all null, total debt is null (not silently populated from an AI sum). Files: `lib/prompts/extraction-prompt.ts`, `lib/calculations/debt-calculator.ts`
+- [ ] **CRITICAL — Remove `senior_debt` AI aggregation; compute from `debt_components` only** — Prompt (line 493) instructs Claude: "senior_debt = funded bank debt ONLY: bank_debt_current + bank_debt_long_term." Same issue as total_debt — the AI performs addition that the app should handle. `calculateDebtMetrics()` already computes senior debt from components but falls back to `metrics.senior_debt` when the computed value is zero (line 113). Fix: (1) Remove the sum instruction from the prompt, (2) Enforce `"senior_debt": null` in the schema, (3) Remove the `metrics.senior_debt` fallback in `calculateDebtMetrics()`. Files: `lib/prompts/extraction-prompt.ts`, `lib/calculations/debt-calculator.ts`
+- [ ] **HIGH — Remove `senior_debt_interest` AI subtraction from prompt** — Prompt (line 544) instructs Claude: "If only total interest shown AND you found subordinated debt interest separately, calculate: total_interest - subordinated_debt_interest." This asks Claude to perform arithmetic. The FCCR debt service resolver (`debt-service-resolver.ts`) already handles missing `senior_debt_interest` gracefully through its fallback chain. Fix: Remove the subtraction instruction — if `senior_debt_interest` cannot be found as a labelled line item in the document, it should be null. File: `lib/prompts/extraction-prompt.ts`
+- [ ] **HIGH — Remove D&A self-verification loop from AI prompt; rely on in-app completeness gate** — Prompt (lines 601-611) runs a full D&A self-verification inside Claude: "depreciation_amortization MUST equal the SUM of ALL depreciation and amortization lines... If it doesn't, recalculate." The in-app `calculateEBITDA()` in `ebitda-calculator.ts` (lines 140-201) already implements the identical completeness gate in deterministic TypeScript. Fix: Simplify prompt to instruct Claude to extract both the CF aggregate (`depreciation_amortization`) and the sub-components (`depreciation_equipment`, `depreciation_rou`, `depreciation_other`, `amortization_intangibles`) independently. Remove the "if mismatch, use X" decision logic — that resolution belongs in the TypeScript pipeline. File: `lib/prompts/extraction-prompt.ts`

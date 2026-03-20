@@ -48,7 +48,6 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "depreciation_other": number|null,
       "amortization_intangibles": number|null,
       "ebitda": null,
-      "reported_adjusted_ebitda": number|null,
       "shareholders_equity": number|null,
       "capital_expenditures": number|null,
       "proceeds_from_long_term_debt": number|null,
@@ -178,8 +177,7 @@ Example _sources, _confidence, and _source_statements:
     "revenue": "income_statement",
     "depreciation_amortization": "cash_flow_statement",
     "total_debt": "balance_sheet",
-    "cash_taxes_paid": "cash_flow_statement",
-    "reported_adjusted_ebitda": "notes"
+    "cash_taxes_paid": "cash_flow_statement"
   }
 }
 
@@ -219,8 +217,6 @@ Canonical statement guidance (where each metric is TYPICALLY most authoritative)
   complete total), capital_expenditures, proceeds_from_long_term_debt, cash_taxes_paid,
   distributions_paid, repayment_of_debt, payment_of_lease_liability, cash_interest_paid,
   non_cash_interest_expense, ttm_principal_payments
-• Notes / MD&A: reported_adjusted_ebitda (company-disclosed Adjusted EBITDA, typically in
-  MD&A, earnings releases, or capital management sections)
 • Balance Sheet: shareholders_equity, total_debt, senior_debt, current_assets, current_liabilities, debt_components.*
 • Fixed Charges: fixed_charges interest fields (senior_debt_interest, subordinated_debt_interest,
   lease_interest, total_interest_expense) → income_statement; payment fields (minimum_lease_payments,
@@ -236,10 +232,6 @@ You MUST populate the extraction_metadata object with scale detection informatio
   - "high": Explicit scale indicator found in header/footnote
   - "medium": Inferred from number patterns or document type
   - "low": Guessing based on magnitude alone
-
-REPORTED ADJUSTED EBITDA
-• IMPORTANT: If the document explicitly reports an "Adjusted EBITDA" figure (common in MD&A, press releases, or capital management sections), extract it directly into "reported_adjusted_ebitda". This takes priority over calculated values.
-• Look for phrases like "Adjusted EBITDA was", "Adjusted EBITDA of", or reconciliation tables showing Adjusted EBITDA.
 
 ADJUSTED EBITDA COMPONENTS EXTRACTION
 Look for these terms to populate adjusted_ebitda_components. Note: Gains/income items will be SUBTRACTED from EBITDA; Losses/expense items will be ADDED back.
@@ -639,10 +631,24 @@ CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
   - Extract as POSITIVE number
 
 • proceeds_from_long_term_debt: From CASH FLOW STATEMENT under "Financing activities". Look for:
-  - "Proceeds from long-term debt" or "Proceeds from bank indebtedness"
-  - "Proceeds from credit facilities" or "Draws on revolving credit"
-  - "Proceeds from term loan" or "New borrowings"
+  - "Proceeds from long-term debt"
+  - "Proceeds from term loan"
+  - "Net issuances of long-term debt" or "Issuance of long-term debt"
   - Extract as POSITIVE number
+  EDGE CASE — NET ISSUANCE LINES: Some documents present a single net figure instead of separate proceeds/repayments:
+  - "Net issuances of long-term debt", "Net proceeds from long-term borrowings", "Net change in long-term debt", "Long-term debt issued, net of repayments"
+  - If the document shows a NET figure (issuances minus repayments combined): extract the net amount here as-is. If the net figure is NEGATIVE (repayments exceeded issuances), extract as null — a negative value means no net new long-term debt was raised.
+  - If the document shows BOTH gross proceeds AND gross repayments as separate line items, use the gross proceeds figure here (repayments are captured separately in repayment_of_debt).
+  - When in doubt about whether a proceeds line is net or gross, use INSTRUMENT-LEVEL matching — not just proximity:
+    - If a repayment line references the SAME instrument class (e.g., "Repayment of term loan" alongside "Proceeds from term loan"), the document is using gross presentation — use the gross proceeds figure.
+    - If a repayment line references a DIFFERENT instrument (e.g., "Net issuances of long-term debt: 4,200" alongside "Repayment of debentures: (1,800)"), these are separate transactions — treat the proceeds line as a net figure, NOT as gross.
+    - If no separate repayment line exists at all, the document is using net presentation — use the net figure as-is.
+  IMPORTANT — EXCLUDE revolving/short-term borrowing items. These are NOT long-term debt proceeds and must NOT be included:
+  - "Proceeds from bank indebtedness" (typically revolving credit)
+  - "Proceeds from credit facilities" (typically revolving draws)
+  - "Draws on revolving credit"
+  - "New borrowings" (ambiguous — only include if explicitly labeled as long-term or term loan)
+  Including revolving draws here would artificially reduce unfunded CapEx in the FCCR numerator, overstating coverage.
 
 • cash_taxes_paid: From CASH FLOW STATEMENT. Look for (EXHAUSTIVE LIST — check all):
   - Under "Operating activities": "Income taxes paid", "Cash taxes paid", "Taxes paid"

@@ -1,5 +1,13 @@
 ## Progress Tracker
 
+### Task 25 — Portfolio Display & Formatting (2026-03-19)
+
+**25.1 — fmtCurrency scale bug (FALSE POSITIVE):** Investigated the 4-agent-flagged CRITICAL `fmtCurrency` scale bug on instruments page. Traced through the code with ground truth values and confirmed the thresholds are correct for thousands-denominated data: `>= 1_000_000` thousands = $1B (auditors incorrectly claimed $1T), `>= 1_000` thousands = $1M (auditors claimed $1B). Verified with Zedcor (24,889K → `$24.9M` ✓) and ADEN (1,634,382K → `$1.6B` ✓). No code change needed.
+
+### Task 24b — Proceeds from LT Debt Prompt Edge Cases (2026-03-19)
+
+**24b.1 — Instrument-level matching for net vs gross:** Replaced proximity heuristic ("if repayment line exists nearby → gross") with instrument-level matching. The old heuristic caused IFRS filers' net issuance figures to be treated as gross when a repayment line for a DIFFERENT instrument existed nearby (e.g., "Net issuances of long-term debt" + "Repayment of debentures" for a separate facility). New prompt instructs Claude to only interpret as gross when the repayment line references the same instrument class. File: `lib/prompts/extraction-prompt.ts`
+
 ### Task 22 — Commit Audit Bug Fixes (2026-03-18)
 
 **22.8 — FCCRBreakdown distributions tooltip:** Tooltip incorrectly said "Distributions are excluded" but `fccr-calculator.ts` deducts `distributionsPaid` from the numerator. Corrected to list all three deductions: CapEx, cash taxes, and distributions.
