@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**30.6 — Async file I/O in extractData route:** Replaced `fs.writeFileSync` and `fs.unlinkSync` with `fs.promises.writeFile` and `fs.promises.unlink` to avoid blocking the Node.js event loop during disk I/O.
+
 **30.4 — Remove fixed inter-chunk delay:** Removed the redundant fixed delay between sequential chunk processing. The Anthropic SDK has built-in exponential backoff and processChunk already handles 429 retries with parsed wait times.
 
 **30.2 — Scoped process.noDeprecation:** Replaced global `process.noDeprecation = true` with async `withSuppressedDeprecations()` wrapper that only suppresses DEP0005 during pdf-parse calls and restores the previous value afterward.
