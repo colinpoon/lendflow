@@ -342,8 +342,8 @@ const yearMetricsSchema = {
       description: 'Always null — calculated by the application from debt_components.',
     },
     senior_debt: {
-      type: ['number', 'null'],
-      description: 'SENIOR debt = funded bank debt ONLY (bank_debt_current + bank_debt_long_term: credit facilities, term loans, revolvers). EXCLUDE IFRS 16/ASC 842 lease liabilities - they are in total_debt but NOT senior_debt per banking covenant convention. Excludes notes payable, subordinated debt. If bank debt is not broken out separately, use null. Normalized to thousands USD.',
+      type: ['null'],
+      description: 'Always null — calculated by the application from debt_components (bank_debt_current + bank_debt_long_term).',
     },
     current_assets: {
       type: ['number', 'null'],

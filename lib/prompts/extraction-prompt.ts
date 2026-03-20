@@ -77,7 +77,7 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
         "other_borrowings": number|null
       },
       "total_debt": null,
-      "senior_debt": number|null,
+      "senior_debt": null,
       "current_assets": number|null,
       "current_liabilities": number|null,
       "fixed_charges": {
@@ -486,10 +486,9 @@ Bank debt fields have TWO levels — aggregate and granular. Use ONE set, not bo
 CRITICAL DEBT CALCULATION RULES:
 • LEVERAGE DOCUMENT ORDER: When unsure of seniority, use position in the document. Debt items appearing earlier in the liabilities section or debt schedules are typically more senior.
 • Look for debt breakdowns in the notes to financial statements (e.g., "Note 8: Credit Facilities", "Note 9: Lease Liabilities", "Note 10: Note Payable")
-• "senior_debt" = funded bank debt ONLY: bank_debt_current + bank_debt_long_term (credit facilities, term loans, revolvers, lines of credit).
-  Extract senior_debt as bank debt only from the document. The system will add IFRS 16 lease liabilities to Senior Debt during calculation based on the configured treatment mode.
-  Do NOT manually add lease liabilities to senior_debt — always keep them separate in debt_components.
-• Notes payable, vendor take-back notes, or debt described as "subordinated" are NOT senior debt.
+• "senior_debt": null — ALWAYS output null. The application calculates senior debt from debt_components (bank_debt_current + bank_debt_long_term).
+  Focus on extracting accurate debt_components instead. The system handles IFRS 16 lease liability treatment automatically.
+• Notes payable, vendor take-back notes, or debt described as "subordinated" are NOT senior debt — classify them in the correct debt_components field.
 • "total_debt": null — ALWAYS output null. The application calculates total debt from debt_components.
   Focus on extracting accurate debt_components instead.
 • If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities. Lease liabilities appear as a separate line on the balance sheet.

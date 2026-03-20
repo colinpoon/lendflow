@@ -110,10 +110,7 @@ export function calculateDebtMetrics(
   const computedTotalDebt = totalBankDebt + totalLeaseDebt + totalNonSeniorDebt;
 
   return {
-    senior_debt:
-      computedSeniorDebt > 0
-        ? computedSeniorDebt
-        : metrics.senior_debt ?? null,
+    senior_debt: computedSeniorDebt > 0 ? computedSeniorDebt : null,
     total_debt: computedTotalDebt > 0 ? computedTotalDebt : null,
     debt_breakdown: {
       bank_debt: totalBankDebt,
