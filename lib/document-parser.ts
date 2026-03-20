@@ -6,8 +6,20 @@
 import { readFileSync, existsSync } from 'fs';
 import path from 'path';
 
-// Suppress Buffer() deprecation warning from pdf-parse dependency
-process.noDeprecation = true;
+/**
+ * Temporarily suppress deprecation warnings around pdf-parse calls.
+ * pdf-parse internally uses `new Buffer()` which triggers DEP0005.
+ * We scope this to only the PDF parsing path instead of silencing globally.
+ */
+async function withSuppressedDeprecations<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = process.noDeprecation;
+  process.noDeprecation = true;
+  try {
+    return await fn();
+  } finally {
+    process.noDeprecation = prev;
+  }
+}
 
 /**
  * Parse a document and extract text content suitable for AI financial analysis.
@@ -68,7 +80,7 @@ async function parsePDF(buffer: Buffer): Promise<string> {
   const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
   const PDFParser = (await import('pdf2json')).default;
 
-  const result = await pdfParse(buffer);
+  const result = await withSuppressedDeprecations(() => pdfParse(buffer));
   let text = result.text.trim();
 
   if (!text) {
