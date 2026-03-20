@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**30.4 — Remove fixed inter-chunk delay:** Removed the redundant fixed delay between sequential chunk processing. The Anthropic SDK has built-in exponential backoff and processChunk already handles 429 retries with parsed wait times.
+
 **30.2 — Scoped process.noDeprecation:** Replaced global `process.noDeprecation = true` with async `withSuppressedDeprecations()` wrapper that only suppresses DEP0005 during pdf-parse calls and restores the previous value afterward.
 
 **29.9 — Empty decision state placeholder:** Replaced single text line with a dashed-border skeleton preview showing the verdict banner, risk/positive factor panels, and a "Go to Upload" button that scrolls to the upload section.
