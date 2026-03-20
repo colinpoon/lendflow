@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": "patch-package",
-    "test:extraction": "tsx scripts/test-extraction.ts"
+    "test:extraction": "tsx scripts/test-extraction.ts",
+    "test:regression": "vitest run lib/calculations/__tests__/ground-truth-regression.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
