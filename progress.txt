@@ -12,6 +12,8 @@
 
 ### Task 33 — Enforce Internal Calculation Principle (2026-03-19)
 
+**33.5 — Remove D&A self-verification loop:** Removed the 6-step "D&A ARITHMETIC SELF-VERIFICATION" section and the "If it doesn't, recalculate" instruction. `calculateEBITDA()` in `ebitda-calculator.ts` already implements the identical completeness gate in deterministic TypeScript. Simplified prompt to extract the aggregate and sub-components independently, leaving resolution to the app. File: `lib/prompts/extraction-prompt.ts`
+
 **33.4 — Remove senior_debt_interest AI subtraction:** Removed "calculate: total_interest - subordinated_debt_interest" from prompt. Now instructs Claude to output null if senior_debt_interest isn't a labelled line item — the debt service resolver handles missing values through its fallback chain. File: `lib/prompts/extraction-prompt.ts`
 
 **33.3 — Remove senior_debt AI aggregation:** Set `"senior_debt": null` in extraction prompt schema. Removed AI summation instruction. Removed fallback to `metrics.senior_debt` in `calculateDebtMetrics()`. Updated vision extraction tool schema. Files: `lib/prompts/extraction-prompt.ts`, `lib/calculations/debt-calculator.ts`, `lib/vision/extraction-tool.ts`

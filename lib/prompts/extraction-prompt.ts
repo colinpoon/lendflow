@@ -592,17 +592,10 @@ Extract depreciation by category from INCOME STATEMENT and/or CASH FLOW STATEMEN
   - Common in companies that have grown through acquisitions (purchase price allocation creates intangible assets)
   - Do NOT include goodwill impairment here — use goodwill_impairment in adjusted_ebitda_components
   - Extract as POSITIVE number. If the company has no intangible assets, extract null.
-• depreciation_amortization: MUST equal the SUM of ALL depreciation and amortization lines across ALL sections of the income statement AND cash flow statement. CRITICAL: Depreciation may appear in MULTIPLE sections (e.g., "Direct expenses" AND "Operating expenses" AND "Other expenses"). You MUST sum them ALL. Also check the cash flow statement operating activities section for total depreciation figures which may be more reliable than summing income statement lines. Cross-check: depreciation_amortization should equal depreciation_equipment + depreciation_rou + depreciation_other + amortization_intangibles. If it doesn't, recalculate.
-
-D&A ARITHMETIC SELF-VERIFICATION (REQUIRED):
-After determining depreciation_amortization, you MUST perform and record this check:
-1. Sum all extracted sub-components: computed_sum = depreciation_equipment + depreciation_rou + depreciation_other + amortization_intangibles (treat null sub-components as 0).
-2. Compare computed_sum to depreciation_amortization.
-3. Record the result in _sources["depreciation_amortization"] using this format:
-   "Cash Flow Statement operating add-back: [CF value]. Sub-component sum: [computed_sum] ([equipment]+[rou]+[other]+[intangibles]). [MATCH or MISMATCH — used CF aggregate]"
-4. If there is a MISMATCH and a cash flow aggregate is available, USE the cash flow aggregate as depreciation_amortization (it is the authoritative complete total) and set _confidence["depreciation_amortization"] to "high".
-5. If there is a MISMATCH and NO cash flow aggregate is available, use the sub-component sum and set _confidence["depreciation_amortization"] to "medium".
-6. If sub-components are all null (the document only shows a combined D&A line), record that fact in _sources.
+• depreciation_amortization: Extract the TOTAL depreciation and amortization figure. Prefer the cash flow statement operating activities add-back (most complete aggregate). Also extract sub-components independently — the application resolves any mismatch between the aggregate and components.
+  - Check for D&A in multiple income statement sections ("Direct expenses", "Operating expenses", "Other expenses")
+  - The cash flow statement total is typically the most reliable single figure
+  - Do NOT perform arithmetic to resolve mismatches between the aggregate and sub-components — output each value as found and let the application handle resolution
 
 SOURCE TAGGING FOR DEPRECIATION:
 • When you find D&A figures in the Cash Flow Statement operating activities as a reconciling
