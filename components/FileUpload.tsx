@@ -5,7 +5,6 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, CloudUpload, Loader2, FileText, Sparkles, AlertCircle, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { PDFDocument } from 'pdf-lib';
 import { YearConflictDialog } from '@/components/YearConflictDialog';
 import type { YearConflict, ConflictResolution } from '@/lib/extraction-utils';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
@@ -32,7 +31,7 @@ interface FileUploadProps {
   projectId?: string;
 }
 
-type ProcessingStage = 'idle' | 'compressing' | 'processing' | 'conflict' | 'complete' | 'error';
+type ProcessingStage = 'idle' | 'processing' | 'conflict' | 'complete' | 'error';
 
 interface SSEProgress {
   stage: string;
@@ -66,33 +65,6 @@ const ACCEPTED_FORMATS = [
   { ext: 'Word', mime: '.doc / .docx' },
 ];
 
-/**
- * Compress a PDF file by re-saving it with pdf-lib.
- * Removes unused objects, optimizes structure, and can reduce file size.
- */
-async function compressPDF(file: File): Promise<File> {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(arrayBuffer, {
-      ignoreEncryption: true,
-      updateMetadata: false,
-    });
-
-    const compressedBytes = await pdfDoc.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-    });
-
-    const compressedBlob = new Blob([new Uint8Array(compressedBytes)], { type: 'application/pdf' });
-    const compressedFile = new File([compressedBlob], file.name, { type: 'application/pdf' });
-
-    return compressedFile;
-  } catch (error) {
-    console.warn('PDF compression failed, using original file:', error);
-    return file;
-  }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
@@ -104,7 +76,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
   const [currentStage, setCurrentStage] = useState<string>('');
   const [stageMessage, setStageMessage] = useState<string>('');
   const [extractedFileName, setExtractedFileName] = useState<string | null>(null);
-  const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -136,39 +107,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
       setStage('idle');
       setProgress(0);
       setExtractedFileName(null);
-      setCompressionInfo(null);
       setErrorMessage(null);
     }
 
-    if (
-      selectedFile.type === 'application/pdf' ||
-      selectedFile.name.toLowerCase().endsWith('.pdf')
-    ) {
-      setStage('compressing');
-      setCompressionInfo('Optimizing PDF...');
-
-      const compressedFile = await compressPDF(selectedFile);
-      const savedPercent = Math.round((1 - compressedFile.size / originalSize) * 100);
-
-      if (compressedFile.size > MAX_FILE_SIZE_BYTES) {
-        toast.error(
-          `File is still ${(compressedFile.size / 1024 / 1024).toFixed(1)}MB after compression. Maximum is ${MAX_FILE_SIZE_LABEL}.`
-        );
-        setStage('idle');
-        setCompressionInfo(null);
-        return;
-      }
-
-      setCompressionInfo(savedPercent > 0 ? `Optimized — compression saved ${savedPercent}%` : 'Already optimized');
-      setFile(compressedFile);
-      setStage('idle');
-    } else {
-      if (originalSize > MAX_FILE_SIZE_BYTES) {
-        toast.error(`File size exceeds ${MAX_FILE_SIZE_LABEL} limit.`);
-        return;
-      }
-      setFile(selectedFile);
-    }
+    setFile(selectedFile);
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -380,12 +322,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
   // ─────────────────────────────────────────────────────────────────────────
 
   const isProcessing = stage === 'processing';
-  const isCompressing = stage === 'compressing';
-  const isDisabled = isProcessing || isCompressing;
+  const isDisabled = isProcessing;
 
-  const buttonLabel = isCompressing
-    ? 'Optimizing...'
-    : isProcessing
+  const buttonLabel = isProcessing
     ? 'Processing...'
     : stage === 'complete'
     ? 'Process Another'
@@ -505,22 +444,13 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
 
           {/* Text */}
           <div className="text-center space-y-1">
-            {isCompressing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm font-medium text-foreground">Optimizing PDF...</p>
-                <p className="text-xs text-muted-foreground">Please wait</p>
-              </>
-            ) : file ? (
+            {file ? (
               <>
                 <p className="text-sm font-medium text-foreground truncate max-w-xs">
                   {file.name}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {(file.size / 1024 / 1024).toFixed(2)} MB
-                  {compressionInfo && (
-                    <span className="text-success ml-1.5">&middot; {compressionInfo}</span>
-                  )}
                 </p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
                   Click or drag to replace
@@ -539,7 +469,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
           </div>
 
           {/* Supported formats */}
-          {!file && !isCompressing && (
+          {!file && (
             <div className="flex items-center gap-2 mt-1">
               {ACCEPTED_FORMATS.map((fmt) => (
                 <span
@@ -561,7 +491,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
           className="w-full gap-2"
           size="lg"
         >
-          {isProcessing || isCompressing ? (
+          {isProcessing ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Sparkles className="h-4 w-4" />
