@@ -75,7 +75,7 @@ const SourceInfo: React.FC<{
 const getRatioColor = (ratio: number | null, thresholds: { good: number; ok: number; warning: number }): string => {
   if (ratio == null) return 'text-muted-foreground';
   if (ratio >= thresholds.good) return 'text-emerald-600 dark:text-emerald-400';
-  if (ratio >= thresholds.ok) return 'text-lime-600';
+  if (ratio >= thresholds.ok) return 'text-emerald-600/80 dark:text-emerald-400/80';
   if (ratio >= thresholds.warning) return 'text-amber-600 dark:text-amber-400';
   return 'text-destructive';
 };
@@ -168,8 +168,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
         </div>
 
         {/* EBITDA Coverage Card */}
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 text-center border border-purple-200">
-          <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">EBITDA Coverage</p>
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 text-center border border-primary/20">
+          <p className="text-xs text-primary font-medium uppercase tracking-wide">EBITDA Coverage</p>
           <p className={`text-2xl font-bold ${getRatioColor(metrics.dscr ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>
             {formatRatio(metrics.dscr)}
           </p>
@@ -186,8 +186,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
         </div>
 
         {/* Funded Debt / EBITDA Card */}
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4 text-center border border-amber-200">
-          <p className="text-xs text-amber-600 font-medium uppercase tracking-wide">Leverage</p>
+        <div className="bg-gradient-to-br from-amber-500/5 to-amber-500/10 rounded-lg p-4 text-center border border-amber-500/20">
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium uppercase tracking-wide">Leverage</p>
           <p className={`text-2xl font-bold ${getRatioColor(metrics.funded_debt_to_ebitda ?? null, { good: 1.5, ok: 2.5, warning: 3.0 })}`}>
             {formatRatio(metrics.funded_debt_to_ebitda)}
           </p>
@@ -197,7 +197,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
 
       {/* CapEx Treatment Selector (Option B) */}
       {onCapexTreatmentChange && (
-        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+        <div className="bg-muted rounded-lg p-4 border border-border">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h4 className="font-semibold text-foreground">CapEx Treatment</h4>
@@ -526,7 +526,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
             </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4 text-sm">
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-purple-700 text-xs">
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-primary text-xs">
                   <strong>EBITDA Coverage:</strong> Measures raw EBITDA capacity to service debt.
                   Unlike FCCR, does not deduct CapEx, taxes, or distributions from numerator.
                   Typical covenant requirement: &ge; 1.25x
@@ -572,8 +572,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 </div>
 
                 {/* Funded Debt / EBITDA */}
-                <div className="bg-amber-500/5 rounded-lg p-4">
-                  <h5 className="font-semibold text-amber-800 dark:text-amber-300 mb-3">Funded Debt / EBITDA (Leverage Covenant)</h5>
+                <div className="bg-amber-500/5 dark:bg-amber-500/10 rounded-lg p-4">
+                  <h5 className="font-semibold text-amber-700 dark:text-amber-300 mb-3">Funded Debt / EBITDA (Leverage Covenant)</h5>
                   <div className="space-y-2">
                     <div className="flex justify-between text-muted-foreground">
                       <span>Funded Debt (Bank Debt + Finance Leases)</span>
@@ -583,7 +583,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <span>Adjusted EBITDA</span>
                       <span>{formatCurrency(dscrBreakdown.adjusted_ebitda)}</span>
                     </div>
-                    <div className="flex justify-between font-bold border-t border-amber-300 pt-2">
+                    <div className="flex justify-between font-bold border-t border-amber-500/30 pt-2">
                       <span>= Leverage Ratio</span>
                       <span className={getRatioColor(dscrBreakdown.funded_debt_to_ebitda, { good: 1.5, ok: 2.5, warning: 3.0 })}>
                         {formatRatio(dscrBreakdown.funded_debt_to_ebitda)}
