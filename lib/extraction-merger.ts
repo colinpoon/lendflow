@@ -158,6 +158,8 @@ export interface MergeResult {
   conflictsDetected: number;
   /** Map of "year:metric" -> candidates for post-merge validation */
   candidatesMap: Map<string, ValueCandidate[]>;
+  /** Map of "year:metric" -> winning candidate for provenance tracking */
+  winnersMap: Map<string, ValueCandidate>;
 }
 
 /**
@@ -415,7 +417,7 @@ function calculateVariance(values: number[]): number {
 function resolveConflict(
   candidates: ValueCandidate[],
   metricName?: string
-): { value: number; resolution: MetricConflict['resolution']; variancePercent: number } {
+): { value: number; resolution: MetricConflict['resolution']; variancePercent: number; winnerCandidate: ValueCandidate } {
   const values = candidates.map((c) => c.value);
   const variancePercent = calculateVariance(values);
 
@@ -425,6 +427,7 @@ function resolveConflict(
       value: candidates[0].value,
       resolution: 'single',
       variancePercent: 0,
+      winnerCandidate: candidates[0],
     };
   }
 
@@ -433,10 +436,15 @@ function resolveConflict(
   // ─────────────────────────────────────────────────────────────────────────
   const consensusResult = findConsensus(candidates, MERGE_CONFIG.CONSENSUS_TOLERANCE);
   if (consensusResult !== null) {
+    // Find the candidate that matches the consensus winner
+    const consensusWinner = candidates.find(
+      (c) => c.value === consensusResult.value && c.confidence === consensusResult.confidence
+    ) ?? candidates.reduce((a, b) => (a.confidence > b.confidence ? a : b));
     return {
       value: consensusResult.value,
       resolution: 'consensus',
       variancePercent,
+      winnerCandidate: consensusWinner,
     };
   }
 
@@ -452,6 +460,7 @@ function resolveConflict(
       value: best.value,
       resolution: 'near_consensus',
       variancePercent,
+      winnerCandidate: best,
     };
   }
 
@@ -467,6 +476,7 @@ function resolveConflict(
         value: canonicalResult.value,
         resolution: 'canonical_statement',
         variancePercent,
+        winnerCandidate: canonicalResult,
       };
     }
   }
@@ -482,6 +492,7 @@ function resolveConflict(
       value: sourceQualityResult.value,
       resolution: 'source_dominance',
       variancePercent,
+      winnerCandidate: sourceQualityResult,
     };
   }
 
@@ -492,10 +503,13 @@ function resolveConflict(
   if (variancePercent <= MERGE_CONFIG.CONFLICT_THRESHOLD_PERCENT) {
     const totalWeight = candidates.reduce((sum, c) => sum + c.confidence, 0);
     const weightedSum = candidates.reduce((sum, c) => sum + c.value * c.confidence, 0);
+    // Weighted average blends values — attribute to the highest-confidence contributor
+    const topContributor = candidates.reduce((a, b) => (a.confidence > b.confidence ? a : b));
     return {
       value: Math.round((weightedSum / totalWeight) * 100) / 100,
       resolution: 'weighted_average',
       variancePercent,
+      winnerCandidate: topContributor,
     };
   }
 
@@ -515,6 +529,7 @@ function resolveConflict(
     value: best.value,
     resolution: 'highest_confidence',
     variancePercent,
+    winnerCandidate: best,
   };
 }
 
@@ -656,6 +671,7 @@ export function mergeExtractionsWithConflicts(
 ): MergeResult {
   const conflicts: MetricConflict[] = [];
   const merged: Record<string, YearMetrics> = {};
+  const winnersMap = new Map<string, ValueCandidate>();
 
   // Collect all values
   const valueMap = collectAllValues(extractions);
@@ -674,8 +690,9 @@ export function mergeExtractionsWithConflicts(
     }
 
     // Resolve conflict (pass metric name for canonical statement preference)
-    const { value, resolution, variancePercent } = resolveConflict(candidates, metric);
+    const { value, resolution, variancePercent, winnerCandidate } = resolveConflict(candidates, metric);
     merged[year][metric] = value;
+    winnersMap.set(key, winnerCandidate);
 
     // Track conflicts
     if (candidates.length > 1 && variancePercent > MERGE_CONFIG.CONFLICT_THRESHOLD_PERCENT) {
@@ -728,6 +745,7 @@ export function mergeExtractionsWithConflicts(
     totalMetrics,
     conflictsDetected,
     candidatesMap: valueMap,
+    winnersMap,
   };
 }
 

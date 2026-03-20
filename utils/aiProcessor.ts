@@ -471,17 +471,13 @@ export const extractFinancialData = async (
 
     // ── DEBUG_FINANCE: Financial Summary with source provenance ─────────────
     if (DEBUG_FINANCE) {
-      const cMap = mergeResult.candidatesMap;
+      const wMap = mergeResult.winnersMap;
       const sortedYears = Object.keys(computed).sort();
 
       // Helper: get the winning candidate's source info for a metric
       const src = (year: string, metric: string): string => {
-        const candidates = cMap.get(`${year}:${metric}`);
-        if (!candidates || candidates.length === 0) return '';
-        // Find the candidate whose value matches the computed value, or take the first
-        const m = computed[year] as unknown as Record<string, unknown>;
-        const val = m?.[metric];
-        const winner = candidates.find((c) => c.value === val) ?? candidates[0];
+        const winner = wMap.get(`${year}:${metric}`);
+        if (!winner) return '';
         const stmt = winner.sourceStatement !== 'unknown' ? winner.sourceStatement : '';
         const desc = winner.sourceDescription || '';
         // Format: [statement | description | chunk N]
