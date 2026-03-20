@@ -17,8 +17,7 @@ import {
 import { riskDataSchema, debtHealthAssessmentSchema } from './validation';
 import type { RiskData, DebtHealthAssessment, ComputedMetrics } from '@/types';
 
-// Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
-const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
+import { DEBUG_FINANCIALS } from './debug-flags';
 
 // Anthropic Claude client for risk assessment.
 // maxRetries: 3 enables the SDK's built-in exponential backoff with jitter,

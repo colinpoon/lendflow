@@ -57,12 +57,8 @@ import {
   type QuantitativeRiskAssessment,
 } from '@/lib/quantitative-risk';
 import { AI_CONFIG } from '@/lib/constants';
+import { DEBUG_FINANCIALS, DEBUG_FINANCE } from '@/lib/debug-flags';
 import type { ComputedMetrics, ExtractedMetrics, RiskData, DebtHealthAssessment } from '@/types';
-
-// Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
-const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
-// Separate flag for Financial Summary table output with source provenance
-const DEBUG_FINANCE = process.env.DEBUG_FINANCE === 'true';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Export
