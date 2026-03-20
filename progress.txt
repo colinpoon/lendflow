@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**30.8 — detectYearConflicts cyclomatic complexity:** Extracted the 4x duplicated primary-year tiebreaker logic into `resolvePrimaryYearTiebreak()` helper. Flattened the 4-branch if/else tree into a cleaner cascade: FY date comparison > primary tiebreak > timestamp fallback > ambiguous default. Net -12 lines.
+
 **30.5b — ErrorBoundary at page level:** Added `error.tsx` files for `dashboard/[projectId]` and `instruments` routes. Runtime errors now show a recoverable error card with retry button instead of crashing the page. `CompactErrorBoundary` was already applied within ProjectDetail for individual card content.
 
 **30.5 — Storage cleanup on extraction insert failure:** Both extractData and vision routes now call `storage.remove()` when the extraction DB insert fails, preventing orphaned storage objects.
