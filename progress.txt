@@ -2,6 +2,8 @@
 
 ### Task 30 — Code Quality & Performance (2026-03-20)
 
+**30 — `as unknown as` type assertions eliminated:** Unified duplicate `ExtractionResult` types — supabase/types.ts had its own interface that diverged from aiProcessor.ts (optional vs required `metrics_by_year`, missing fields like `merge_conflicts`). Deleted the supabase copy and re-exported from the canonical aiProcessor definition. Made `unionMergeMetrics` generic (`<T extends object>`) so call sites pass `ComputedMetrics` directly — 6 external `as unknown as` casts replaced with 2 contained internal casts. Phantom extraction in route.ts now directly typed as `ExtractionWithDocument` instead of double-casting. Net: 7 `as unknown as` casts removed, 30 lines added, 53 deleted. Build passes clean.
+
 **30 — ProjectDetail.tsx split into sub-components:** Extracted 3 groups from the 1310-line monolith: (1) `components/skeletons/ProjectDetailSkeletons.tsx` — 4 loading skeletons (FinancialTable, RiskScorecard, RiskAssessment, Decision), (2) `components/MetricCard.tsx` — hero metric card + helper functions (getRatioStatus, formatRatio, formatPercent), (3) `components/LoanDecisionCard.tsx` — full decision section (verdict banner, risk/positive factors, recommendations, loan structure, empty state). Reduced ProjectDetail from 1310 to 867 lines (34%). No logic changes — pure extraction with import updates. Build passes clean.
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
