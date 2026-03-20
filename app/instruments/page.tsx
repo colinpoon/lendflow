@@ -297,42 +297,69 @@ export default async function InstrumentsPage() {
                   </div>
                 </div>
 
-                {/* Bar chart */}
-                <div className="mt-4 flex gap-1.5 items-end h-32">
-                  {analyzed.map(({ project, extraction }) => {
-                    const fccr = extraction?.latest_fccr ?? null;
-                    const color =
-                      fccr === null
-                        ? 'bg-muted'
-                        : fccr >= 1.5
-                          ? 'bg-green-500'
-                          : fccr >= 1.25
-                            ? 'bg-amber-500'
-                            : 'bg-red-500';
-                    // Normalize bar height: cap at 3x for visual clarity
-                    const pct = fccr === null ? 15 : Math.max(Math.min((fccr / 3) * 100, 100), 10);
-                    return (
-                      <div
-                        key={project.id}
-                        className="flex-1 h-full flex flex-col justify-end group relative cursor-pointer"
-                      >
-                        <div
-                          className={`${color} rounded-t transition-opacity group-hover:opacity-80`}
-                          style={{ height: `${pct}%`, minHeight: '12px' }}
-                        />
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 rounded-md bg-popover text-popover-foreground text-xs shadow-md border border-border whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
-                          <span className="font-medium">{project.name}</span>
-                          <span className="text-muted-foreground ml-1.5">
-                            {fccr !== null ? `${fccr.toFixed(2)}x` : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                {/* Bar chart with y-axis scale and threshold reference lines */}
+                <div className="mt-4 flex">
+                  {/* Y-axis labels */}
+                  <div className="flex flex-col justify-between h-32 pr-2 text-[10px] text-muted-foreground tabular-nums shrink-0 w-8 text-right">
+                    <span>3.0x</span>
+                    <span>2.0x</span>
+                    <span>1.0x</span>
+                    <span>0</span>
+                  </div>
+                  {/* Chart area with reference lines */}
+                  <div className="flex-1 relative h-32">
+                    {/* 1.25x adequate threshold line */}
+                    <div
+                      className="absolute left-0 right-0 border-t border-dashed border-amber-500/50 z-10 pointer-events-none"
+                      style={{ bottom: `${(1.25 / 3) * 100}%` }}
+                    >
+                      <span className="absolute -top-3 right-0 text-[9px] text-amber-500/70 font-medium">1.25x</span>
+                    </div>
+                    {/* 1.0x minimum threshold line */}
+                    <div
+                      className="absolute left-0 right-0 border-t border-dashed border-red-500/40 z-10 pointer-events-none"
+                      style={{ bottom: `${(1.0 / 3) * 100}%` }}
+                    >
+                      <span className="absolute -top-3 right-0 text-[9px] text-red-500/60 font-medium">1.0x</span>
+                    </div>
+                    {/* Bars */}
+                    <div className="flex gap-1.5 items-end h-full">
+                      {analyzed.map(({ project, extraction }) => {
+                        const fccr = extraction?.latest_fccr ?? null;
+                        const color =
+                          fccr === null
+                            ? 'bg-muted'
+                            : fccr >= 1.5
+                              ? 'bg-success'
+                              : fccr >= 1.25
+                                ? 'bg-warning'
+                                : 'bg-error';
+                        // Normalize bar height: cap at 3x for visual clarity
+                        const pct = fccr === null ? 15 : Math.max(Math.min((fccr / 3) * 100, 100), 10);
+                        return (
+                          <div
+                            key={project.id}
+                            className="flex-1 h-full flex flex-col justify-end group relative cursor-pointer"
+                          >
+                            <div
+                              className={`${color} rounded-t transition-opacity group-hover:opacity-80`}
+                              style={{ height: `${pct}%`, minHeight: '12px' }}
+                            />
+                            {/* Tooltip */}
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 rounded-md bg-popover text-popover-foreground text-xs shadow-md border border-border whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                              <span className="font-medium">{project.name}</span>
+                              <span className="text-muted-foreground ml-1.5">
+                                {fccr !== null ? `${fccr.toFixed(2)}x` : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Each bar represents one company. Height proportional to FCCR (capped at 3x).
+                  Each bar represents one company. Height proportional to FCCR (capped at 3x). Dashed lines show covenant thresholds.
                 </p>
               </CardContent>
             </Card>
