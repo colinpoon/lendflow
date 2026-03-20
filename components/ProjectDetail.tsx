@@ -33,6 +33,7 @@ import FinancialTable from '@/components/FinancialTable';
 import DebtHealthMeters from '@/components/DebtHealthMeters';
 import WeightedRiskGauge from '@/components/WeightedRiskGauge';
 import AdjustedEBITDA from '@/components/AdjustedEBITDA';
+import SensitivityPanel from '@/components/SensitivityPanel';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import ExtractionWarnings from '@/components/ExtractionWarnings';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
@@ -1089,6 +1090,19 @@ export default function ProjectDetail({
                   )}
                 </CardContent>
               </Card>
+            </motion.div>
+          )}
+
+          {/* EBITDA Sensitivity Analysis */}
+          {displayData && !isRefreshing && (
+            <motion.div
+              initial={SECTION_ENTER.initial}
+              animate={SECTION_ENTER.animate}
+              transition={SECTION_ENTER.transition(0.25)}
+            >
+              <CompactErrorBoundary errorTitle="Failed to render sensitivity analysis">
+                <SensitivityPanel data={displayData} />
+              </CompactErrorBoundary>
             </motion.div>
           )}
         </section>

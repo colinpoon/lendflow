@@ -9,3 +9,4 @@ export * from './ebitda-calculator';
 export * from './fccr-calculator';
 export * from './dscr-calculator';
 export * from './ratio-calculator';
+export * from './stress-test';
