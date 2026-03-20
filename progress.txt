@@ -1,5 +1,9 @@
 ## Progress Tracker
 
+### Task 32 — Regulatory & Compliance Infrastructure (2026-03-20)
+
+**32.1 — Regulatory audit trail:** Created append-only `audit_trail` table (Supabase migration) with RLS INSERT/SELECT only — no UPDATE or DELETE policies, ensuring immutability for regulatory compliance. New `lib/audit-log.ts` utility captures: model version (`AI_CONFIG.MODEL`), document SHA-256 hash, computed metrics snapshot (latest year + all years), all three risk assessment snapshots (qualitative, debt health, quantitative), lending decision, and quantitative risk score/band. Non-throwing — uses admin client, failures logged but never fail the extraction request. Integrated into both text (`extractData/route.ts`) and vision (`extractData/vision/route.ts`) extraction routes, firing after successful extraction insert. Build passes clean.
+
 ### Task 31 — Financial Methodology Enhancements (2026-03-20)
 
 **31.5 — Quick ratio (acid-test) with inventory extraction and divergence warning:** Added `inventory: number|null` to ExtractedMetrics type, Zod validation schema, and extraction prompt (with label variants: "Inventory", "Inventories", "Total inventories", "Merchandise inventory", etc.). New `calculateQuickRatio()` in ratio-calculator.ts: `(currentAssets - inventory) / currentLiabilities`, returns null when inventory unavailable (service companies). Wired into both text (aiProcessor.ts) and vision (visionProcessor.ts) pipelines. Divergence warning fires when inventory >30% of current assets AND quick ratio <70% of current ratio, surfacing to analysts that the current ratio may overstate short-term liquidity. 6 unit tests added. Build passes clean.
