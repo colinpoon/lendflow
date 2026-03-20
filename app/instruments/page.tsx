@@ -76,8 +76,8 @@ function getRiskColor(band: string | null): string {
 
 function fccrIcon(fccr: number | null) {
   if (fccr === null) return <Minus className="h-3.5 w-3.5 text-muted-foreground" />;
-  if (fccr >= 1.25) return <TrendingUp className="h-3.5 w-3.5 text-green-500" />;
-  if (fccr >= 1.0) return <Minus className="h-3.5 w-3.5 text-amber-500" />;
+  if (fccr >= 1.5) return <TrendingUp className="h-3.5 w-3.5 text-green-500" />;
+  if (fccr >= 1.25) return <Minus className="h-3.5 w-3.5 text-amber-500" />;
   return <TrendingDown className="h-3.5 w-3.5 text-red-500" />;
 }
 
@@ -139,9 +139,9 @@ export default async function InstrumentsPage() {
       ? debtCapValues.reduce((a, b) => a + b, 0) / debtCapValues.length
       : null;
 
-  const belowCovenant = fccrValues.filter((v) => v < 1.0).length;
-  const adequateCoverage = fccrValues.filter((v) => v >= 1.0 && v < 1.25).length;
-  const strongCoverage = fccrValues.filter((v) => v >= 1.25).length;
+  const belowCovenant = fccrValues.filter((v) => v < 1.25).length;
+  const adequateCoverage = fccrValues.filter((v) => v >= 1.25 && v < 1.5).length;
+  const strongCoverage = fccrValues.filter((v) => v >= 1.5).length;
 
   const hasData = analyzed.length > 0;
 
@@ -199,9 +199,9 @@ export default async function InstrumentsPage() {
                   className={`text-3xl font-bold ${
                     avgFccr === null
                       ? 'text-muted-foreground'
-                      : avgFccr >= 1.25
+                      : avgFccr >= 1.5
                         ? 'text-green-600 dark:text-green-400'
-                        : avgFccr >= 1.0
+                        : avgFccr >= 1.25
                           ? 'text-amber-600 dark:text-amber-400'
                           : 'text-red-600 dark:text-red-400'
                   }`}
@@ -209,7 +209,7 @@ export default async function InstrumentsPage() {
                   {fmt(avgFccr)}x
                 </span>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Covenant threshold: 1.00x
+                  Covenant threshold: 1.25x
                 </p>
               </CardContent>
             </Card>
@@ -267,21 +267,21 @@ export default async function InstrumentsPage() {
                     <div className="h-3 w-3 rounded-full bg-red-500" />
                     <span className="text-sm">
                       <span className="font-medium text-red-600 dark:text-red-400">{belowCovenant}</span>{' '}
-                      <span className="text-muted-foreground">below covenant (&lt;1.00x)</span>
+                      <span className="text-muted-foreground">below covenant (&lt;1.25x)</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="h-3 w-3 rounded-full bg-amber-500" />
                     <span className="text-sm">
                       <span className="font-medium text-amber-600 dark:text-amber-400">{adequateCoverage}</span>{' '}
-                      <span className="text-muted-foreground">adequate (1.00–1.25x)</span>
+                      <span className="text-muted-foreground">adequate (1.25–1.50x)</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="h-3 w-3 rounded-full bg-green-500" />
                     <span className="text-sm">
                       <span className="font-medium text-green-600 dark:text-green-400">{strongCoverage}</span>{' '}
-                      <span className="text-muted-foreground">strong (&gt;1.25x)</span>
+                      <span className="text-muted-foreground">strong (&gt;1.50x)</span>
                     </span>
                   </div>
                 </div>
@@ -293,9 +293,9 @@ export default async function InstrumentsPage() {
                     const color =
                       fccr === null
                         ? 'bg-muted'
-                        : fccr >= 1.25
+                        : fccr >= 1.5
                           ? 'bg-green-500'
-                          : fccr >= 1.0
+                          : fccr >= 1.25
                             ? 'bg-amber-500'
                             : 'bg-red-500';
                     // Normalize bar height: cap at 3x for visual clarity
@@ -350,7 +350,7 @@ export default async function InstrumentsPage() {
                   <TableBody>
                     {analyzed.map(({ project, extraction }) => {
                       const fccr = extraction?.latest_fccr ?? null;
-                      const flagLowCoverage = fccr !== null && fccr < 1.0;
+                      const flagLowCoverage = fccr !== null && fccr < 1.25;
                       return (
                         <TableRow key={project.id}>
                           <TableCell className="pl-6">
@@ -376,9 +376,9 @@ export default async function InstrumentsPage() {
                                 className={
                                   fccr === null
                                     ? 'text-muted-foreground'
-                                    : fccr >= 1.25
+                                    : fccr >= 1.5
                                       ? 'text-green-600 dark:text-green-400 font-medium'
-                                      : fccr >= 1.0
+                                      : fccr >= 1.25
                                         ? 'text-amber-600 dark:text-amber-400 font-medium'
                                         : 'text-red-600 dark:text-red-400 font-medium'
                                 }
