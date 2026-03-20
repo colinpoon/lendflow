@@ -302,6 +302,7 @@ export interface ExtractedMetrics {
   senior_debt: number | null;
   current_assets: number | null;
   current_liabilities: number | null;
+  inventory: number | null;
 
   // Cash Flow Items (for FCCR)
   capital_expenditures: number | null;
@@ -343,6 +344,7 @@ export interface ComputedMetrics extends ExtractedMetrics {
   interest_coverage_ratio: number | null;
   debt_to_equity_ratio: number | null;
   current_ratio: number | null;
+  quick_ratio: number | null;
 
   // Banker's covenant ratios (NEW)
   dscr: number | null; // Debt Service Coverage Ratio (Adjusted EBITDA / Total Debt Service)

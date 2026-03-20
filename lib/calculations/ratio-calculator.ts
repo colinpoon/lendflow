@@ -101,3 +101,24 @@ export function calculateCurrentRatio(
 
   return parseFloat((currentAssets / currentLiabilities).toFixed(2));
 }
+
+/**
+ * Calculate Quick Ratio (Acid-Test Ratio)
+ * Quick Ratio = (Current Assets - Inventory) / Current Liabilities
+ * More conservative liquidity measure — excludes inventory which may
+ * be slow to convert to cash. Critical for inventory-heavy businesses
+ * (manufacturing, retail, distribution) where the current ratio alone
+ * can overstate short-term liquidity.
+ * @returns Ratio value or null if inventory is not available
+ */
+export function calculateQuickRatio(
+  currentAssets: number | null,
+  inventory: number | null,
+  currentLiabilities: number | null
+): number | null {
+  if (currentAssets == null || inventory == null || currentLiabilities == null || currentLiabilities === 0) {
+    return null;
+  }
+
+  return parseFloat(((currentAssets - inventory) / currentLiabilities).toFixed(2));
+}

@@ -6,6 +6,7 @@ import {
   calculateDebtToEquityRatio,
   calculateProfitMargin,
   calculateCurrentRatio,
+  calculateQuickRatio,
 } from '../ratio-calculator';
 
 describe('calculateTotalDebtToCapital', () => {
@@ -166,5 +167,35 @@ describe('calculateCurrentRatio', () => {
 
   it('returns ratio < 1 when liabilities exceed assets (liquidity concern)', () => {
     expect(calculateCurrentRatio(800, 2000)).toBe(0.4);
+  });
+});
+
+describe('calculateQuickRatio', () => {
+  it('calculates ratio correctly by excluding inventory', () => {
+    // (10000 - 3000) / 5000 = 1.4x
+    expect(calculateQuickRatio(10000, 3000, 5000)).toBe(1.4);
+  });
+
+  it('returns null when inventory is null (service companies)', () => {
+    expect(calculateQuickRatio(10000, null, 5000)).toBeNull();
+  });
+
+  it('returns null when currentAssets is null', () => {
+    expect(calculateQuickRatio(null, 3000, 5000)).toBeNull();
+  });
+
+  it('returns null when currentLiabilities is null', () => {
+    expect(calculateQuickRatio(10000, 3000, null)).toBeNull();
+  });
+
+  it('returns null when currentLiabilities is zero', () => {
+    expect(calculateQuickRatio(10000, 3000, 0)).toBeNull();
+  });
+
+  it('shows materially lower ratio than current ratio for inventory-heavy business', () => {
+    // Retail: current assets 5000, inventory 3500 (70%), liabilities 2000
+    // Current ratio = 5000/2000 = 2.5x
+    // Quick ratio = (5000-3500)/2000 = 0.75x — reveals true liquidity concern
+    expect(calculateQuickRatio(5000, 3500, 2000)).toBe(0.75);
   });
 });

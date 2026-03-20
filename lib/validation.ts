@@ -145,6 +145,7 @@ const yearMetricsSchema = z.object({
   senior_debt: numericValue.optional(),
   current_assets: numericValue.optional(),
   current_liabilities: numericValue.optional(),
+  inventory: numericValue.optional(),
 
   // Cash Flow
   capital_expenditures: numericValue.optional(),

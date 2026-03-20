@@ -50,6 +50,7 @@ import {
   calculateInterestCoverageRatio,
   calculateDebtToEquityRatio,
   calculateCurrentRatio,
+  calculateQuickRatio,
   calculateProfitMargin,
 } from '@/lib/calculations';
 import {
@@ -978,6 +979,12 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
     result.current_liabilities
   );
 
+  result.quick_ratio = calculateQuickRatio(
+    result.current_assets,
+    result.inventory,
+    result.current_liabilities
+  );
+
   result.profit_margins = calculateProfitMargin(
     result.net_income,
     result.revenue
@@ -1003,6 +1010,26 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
   const seenWarnings = new Set<string>();
   const allWarnings = [...fccrResult.warnings, ...dscrResult.warnings];
   if (negativeCapitalWarning) allWarnings.push(negativeCapitalWarning);
+
+  // Quick ratio vs current ratio divergence warning for inventory-heavy businesses
+  if (
+    result.current_ratio != null &&
+    result.quick_ratio != null &&
+    result.inventory != null &&
+    result.current_assets != null &&
+    result.current_assets > 0
+  ) {
+    const inventoryPct = result.inventory / result.current_assets;
+    if (inventoryPct > 0.30 && result.quick_ratio < result.current_ratio * 0.70) {
+      const yearLabel = year ?? 'unknown';
+      const pctStr = (inventoryPct * 100).toFixed(0);
+      allWarnings.push(
+        `[${yearLabel}] Inventory is ${pctStr}% of current assets — quick ratio ` +
+        `(${result.quick_ratio}x) is materially lower than current ratio ` +
+        `(${result.current_ratio}x). Current ratio may overstate short-term liquidity.`
+      );
+    }
+  }
   for (const w of allWarnings) {
     if (!seenWarnings.has(w)) {
       seenWarnings.add(w);

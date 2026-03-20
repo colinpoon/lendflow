@@ -30,6 +30,7 @@ import {
   calculateInterestCoverageRatio,
   calculateDebtToEquityRatio,
   calculateCurrentRatio,
+  calculateQuickRatio,
   calculateProfitMargin,
 } from '@/lib/calculations';
 import { calculateVisionCost } from '@/lib/benchmarks/cost';
@@ -165,6 +166,12 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
 
   result.current_ratio = calculateCurrentRatio(
     result.current_assets,
+    result.current_liabilities
+  );
+
+  result.quick_ratio = calculateQuickRatio(
+    result.current_assets,
+    result.inventory,
     result.current_liabilities
   );
 

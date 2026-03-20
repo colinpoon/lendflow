@@ -80,6 +80,7 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "senior_debt": null,
       "current_assets": number|null,
       "current_liabilities": number|null,
+      "inventory": number|null,
       "fixed_charges": {
         "senior_debt_interest": number|null,
         "subordinated_debt_interest": number|null,
@@ -217,7 +218,7 @@ Canonical statement guidance (where each metric is TYPICALLY most authoritative)
   complete total), capital_expenditures, proceeds_from_long_term_debt, cash_taxes_paid,
   distributions_paid, repayment_of_debt, payment_of_lease_liability, cash_interest_paid,
   non_cash_interest_expense, ttm_principal_payments
-• Balance Sheet: shareholders_equity, total_debt, senior_debt, current_assets, current_liabilities, debt_components.*
+• Balance Sheet: shareholders_equity, total_debt, senior_debt, current_assets, current_liabilities, inventory, debt_components.*
 • Fixed Charges: fixed_charges interest fields (senior_debt_interest, subordinated_debt_interest,
   lease_interest, total_interest_expense) → income_statement; payment fields (minimum_lease_payments,
   finance_lease_payments, operating_lease_payments, principal_payments, preferred_dividends) → cash_flow_statement
@@ -510,6 +511,12 @@ Extract from Balance Sheet for Current Ratio calculation:
   - Look for: "Total current liabilities", "Current liabilities - total", "Total current liabilities" (often bolded or underlined)
   - This is the SUBTOTAL row that sums all current liability line items
   - If no explicit total row exists, sum: accounts payable, accrued liabilities, current portion of debt, current portion of lease liabilities, other current liabilities
+  - Extract as POSITIVE number
+
+• inventory: Total inventory from the Balance Sheet current assets section.
+  - Look for: "Inventory", "Inventories", "Total inventories", "Merchandise inventory", "Finished goods + Work in process + Raw materials"
+  - Use the TOTAL inventory figure (sum of all inventory categories)
+  - If no inventory line exists (e.g. pure service companies), extract as null
   - Extract as POSITIVE number
 
 SHAREHOLDERS' EQUITY (CRITICAL FOR LEVERAGE RATIOS):
