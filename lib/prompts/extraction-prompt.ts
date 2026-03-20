@@ -621,6 +621,12 @@ CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
   - "Proceeds from long-term debt"
   - "Proceeds from term loan"
   - "Net issuances of long-term debt" or "Issuance of long-term debt"
+  - Industry-specific variants (REITs, fleet, equipment): "Proceeds from mortgage financing",
+    "Proceeds from equipment financing", "Proceeds from vehicle loans", "Advances from related parties"
+    (when the advance creates a long-term obligation)
+  - CROSS-REFERENCE: If a financing cash inflow does not match the above labels, check the balance sheet
+    for a new or increased long-term liability that ties to the inflow amount. If a match exists, include
+    it — the label is a legitimate LT debt variant.
   - Extract as POSITIVE number
   EDGE CASE — NET ISSUANCE LINES: Some documents present a single net figure instead of separate proceeds/repayments:
   - "Net issuances of long-term debt", "Net proceeds from long-term borrowings", "Net change in long-term debt", "Long-term debt issued, net of repayments"
