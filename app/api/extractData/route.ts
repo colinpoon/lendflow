@@ -447,6 +447,8 @@ export async function POST(req: NextRequest) {
 
         if (extractionError || !extraction) {
           console.error('❗ Error saving extraction:', extractionError);
+          // Clean up orphaned storage object since extraction record was not created
+          await adminSupabase.storage.from('financial-documents').remove([storagePath]);
           await updateDocumentStatus(freshSupabase, documentId, 'failed', 'Failed to save extraction results');
           await sendProgress({
             stage: 'error',
