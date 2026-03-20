@@ -60,6 +60,8 @@ import type { ComputedMetrics, ExtractedMetrics, RiskData, DebtHealthAssessment 
 
 // Gate financial data logs behind DEBUG_FINANCIALS to prevent sensitive data in production logs
 const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
+// Separate flag for Financial Summary table output with source provenance
+const DEBUG_FINANCE = process.env.DEBUG_FINANCE === 'true';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Export
@@ -464,6 +466,133 @@ export const extractFinancialData = async (
       // Surface debt service warnings (e.g. gross revolving credit distortion) to the UI
       for (const w of yearWarnings) {
         extractionWarnings.push(w);
+      }
+    }
+
+    // ── DEBUG_FINANCE: Financial Summary with source provenance ─────────────
+    if (DEBUG_FINANCE) {
+      const cMap = mergeResult.candidatesMap;
+      const sortedYears = Object.keys(computed).sort();
+
+      // Helper: get the winning candidate's source info for a metric
+      const src = (year: string, metric: string): string => {
+        const candidates = cMap.get(`${year}:${metric}`);
+        if (!candidates || candidates.length === 0) return '';
+        // Find the candidate whose value matches the computed value, or take the first
+        const m = computed[year] as unknown as Record<string, unknown>;
+        const val = m?.[metric];
+        const winner = candidates.find((c) => c.value === val) ?? candidates[0];
+        const stmt = winner.sourceStatement !== 'unknown' ? winner.sourceStatement : '';
+        const desc = winner.sourceDescription || '';
+        // Format: [statement | description | chunk N]
+        const parts: string[] = [];
+        if (stmt) parts.push(stmt.replace(/_/g, ' '));
+        if (desc && desc !== stmt) parts.push(desc);
+        parts.push(`chunk ${winner.chunkIndex}`);
+        return `  ← [${parts.join(' | ')}]`;
+      };
+
+      const fmt = (v: unknown) => v != null ? Number(v).toLocaleString() : '—';
+
+      console.log('\n╔══════════════════════════════════════════════════════════════════════════════════════╗');
+      console.log('║                  DEBUG_FINANCE — Financial Summary with Sources                     ║');
+      console.log('╚══════════════════════════════════════════════════════════════════════════════════════╝');
+      console.log(`Years found: ${sortedYears.join(', ') || '(none)'}\n`);
+
+      for (const year of sortedYears) {
+        const m = computed[year] as unknown as Record<string, unknown>;
+        const adj = (m?.adjusted_ebitda_components ?? {}) as Record<string, unknown>;
+        const fc = (m?.fixed_charges ?? {}) as Record<string, unknown>;
+
+        console.log(`┌─── ${year} ${'─'.repeat(75)}`);
+
+        // Income Statement
+        console.log('│ INCOME STATEMENT');
+        console.log(`│   Revenue:                    ${fmt(m.revenue).padEnd(16)}${src(year, 'revenue')}`);
+        console.log(`│   Total Operating Expenses:   ${fmt(m.expenses).padEnd(16)}${src(year, 'expenses')}`);
+        console.log(`│   Net Income:                 ${fmt(m.net_income).padEnd(16)}${src(year, 'net_income')}`);
+        console.log(`│   Net Profit Margin:          ${(m.profit_margins != null ? m.profit_margins + '%' : '—').toString().padEnd(16)}${src(year, 'profit_margins')}`);
+
+        // EBITDA Bridge
+        console.log('│ EBITDA BRIDGE');
+        console.log(`│   + Interest Expense:         ${fmt(m.interest).padEnd(16)}${src(year, 'interest')}`);
+        console.log(`│   + Taxes:                    ${fmt(m.taxes).padEnd(16)}${src(year, 'taxes')}`);
+        console.log(`│   + D&A:                      ${fmt(m.depreciation_amortization).padEnd(16)}${src(year, 'depreciation_amortization')}`);
+        console.log(`│   = EBITDA:                   ${fmt(m.ebitda).padEnd(16)}${src(year, 'ebitda')}`);
+
+        // Adjusted EBITDA (only non-zero items)
+        const adjKeys: [string, string][] = [
+          ['stock_based_compensation',    '+ Stock-Based Comp'],
+          ['impairment_charges',          '+ Impairment'],
+          ['goodwill_impairment',         '+ Goodwill Impairment'],
+          ['unrealized_gains_losses',     '+ Unrealized G/L'],
+          ['deferred_compensation',       '+ Deferred Comp'],
+          ['loss_on_disposal',            '+ Loss on Disposal'],
+          ['other_non_cash',              '+ Other Non-Cash'],
+          ['restructuring_costs',         '+ Restructuring'],
+          ['severance_costs',             '+ Severance'],
+          ['transaction_costs',           '+ Transaction Costs'],
+          ['legal_settlements',           '+ Legal Settlements'],
+          ['other_one_time_expenses',     '+ Other One-Time Exp'],
+          ['casualty_losses',             '+ Casualty Losses'],
+          ['gain_on_disposal',            '− Gain on Disposal'],
+          ['gain_on_asset_sale',          '− Gain on Asset Sale'],
+          ['other_income_non_operating',  '− Other Non-Op Income'],
+          ['insurance_proceeds',          '− Insurance Proceeds'],
+          ['other_one_time_gains',        '− Other One-Time Gains'],
+          ['owner_compensation_adjustment','± Owner Comp Adj'],
+          ['related_party_adjustments',   '± Related Party Adj'],
+          ['management_fees_adjustment',  '± Mgmt Fees Adj'],
+          ['unrealized_fx_cash_flow',     '+ Unrealized FX'],
+          ['realized_fx_pl',              '  Realized FX P&L'],
+        ];
+        const nonZeroAdj = adjKeys.filter(([k]) => adj[k] != null && adj[k] !== 0);
+        if (nonZeroAdj.length > 0) {
+          console.log('│ ADJUSTED EBITDA BRIDGE');
+          for (const [, label] of nonZeroAdj) {
+            console.log(`│   ${label.padEnd(28)} ${fmt(adj[label])}`);
+          }
+        }
+        console.log(`│   = Adjusted EBITDA:          ${fmt(m.adjusted_ebitda).padEnd(16)}${src(year, 'adjusted_ebitda')}`);
+
+        // CFADS
+        console.log('│ CFADS');
+        console.log(`│   − Capital Expenditures:     ${fmt(m.capital_expenditures).padEnd(16)}${src(year, 'capital_expenditures')}`);
+        console.log(`│   − Cash Taxes Paid:          ${fmt(m.cash_taxes_paid).padEnd(16)}${src(year, 'cash_taxes_paid')}`);
+        console.log(`│   = CFADS:                    ${fmt(m.cash_flow_for_debt_servicing)}`);
+
+        // Debt Service / Fixed Charges
+        console.log('│ DEBT SERVICE (FIXED CHARGES)');
+        console.log(`│   Principal Payments (TTM):   ${fmt(m.ttm_principal_payments).padEnd(16)}${src(year, 'ttm_principal_payments')}`);
+        console.log(`│   Interest Expense (TTM):     ${fmt(m.ttm_interest_expense).padEnd(16)}${src(year, 'ttm_interest_expense')}`);
+        console.log(`│   Lease Payments:             ${fmt(m.payment_of_lease_liability).padEnd(16)}${src(year, 'payment_of_lease_liability')}`);
+        const fcKeys: [string, string][] = [
+          ['senior_debt_interest',        'Senior Debt Interest'],
+          ['subordinated_debt_interest',  'Sub Debt Interest'],
+          ['principal_payments',          'Principal Payments'],
+          ['preferred_dividends',         'Preferred Dividends'],
+          ['other_fixed_charges',         'Other Fixed Charges'],
+        ];
+        const nonZeroFc = fcKeys.filter(([k]) => fc[k] != null && fc[k] !== 0);
+        for (const [k, label] of nonZeroFc) {
+          console.log(`│   ${label.padEnd(28)} ${fmt(fc[k])}`);
+        }
+
+        // Capital Structure
+        console.log('│ CAPITAL STRUCTURE');
+        console.log(`│   Total Debt:                 ${fmt(m.total_debt).padEnd(16)}${src(year, 'total_debt')}`);
+        console.log(`│   Senior Debt:                ${fmt(m.senior_debt).padEnd(16)}${src(year, 'senior_debt')}`);
+        console.log(`│   Shareholders' Equity:       ${fmt(m.shareholders_equity).padEnd(16)}${src(year, 'shareholders_equity')}`);
+        console.log(`│   Debt Service Payments:      ${fmt(m.debt_service_payments).padEnd(16)}${src(year, 'debt_service_payments')}`);
+
+        // Key Ratios
+        console.log('│ KEY RATIOS');
+        console.log(`│   DSCR:                       ${m.dscr != null ? m.dscr + 'x' : '—'}`);
+        console.log(`│   Senior Debt/EBITDA:          ${m.senior_debt_to_ebitda != null ? m.senior_debt_to_ebitda + 'x' : '—'}`);
+        console.log(`│   Total Debt/Total Capital:    ${m.total_debt_to_capital != null ? (Number(m.total_debt_to_capital) * 100).toFixed(1) + '%' : '—'}`);
+        console.log(`│   FCCR:                       ${m.fccr != null ? m.fccr + 'x' : '—'}`);
+
+        console.log(`└${'─'.repeat(80)}\n`);
       }
     }
 
