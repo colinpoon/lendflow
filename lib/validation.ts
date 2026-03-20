@@ -190,7 +190,10 @@ export const aiExtractionResponseSchema = z.object({
   /** Scale detection metadata from AI extraction */
   extraction_metadata: extractionMetadataSchema.optional().nullable(),
   /** Injection attempt or anomaly notes from AI (per anti-injection preamble) */
-  extraction_notes: z.record(z.string(), z.string()).optional(),
+  extraction_notes: z.union([
+    z.record(z.string(), z.string()),
+    z.string().transform((s) => ({ general: s })),
+  ]).optional(),
 }).strip();
 
 export type ValidatedAIResponse = z.infer<typeof aiExtractionResponseSchema>;
