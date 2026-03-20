@@ -18,6 +18,10 @@
 
 **25.4 — Consolidated formatCurrency duplicates:** Removed local `formatCurrency`/`formatSignedCurrency` from `AdjustedEBITDA.tsx` and `formatCurrency`/`formatRatio` from `FCCRBreakdown.tsx` — replaced with imports from canonical `utils/format.ts`. Deleted dead `utils/formatters.ts` (zero imports). The `instruments/page.tsx` `fmtCurrency` is intentionally different (B/M/K scaling for portfolio view) and was retained.
 
+### Task 27 — Security Hardening II (2026-03-19)
+
+**27.1 — HTTP security headers:** Added `headers()` to `next.config.ts` with: X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy (camera/mic/geo disabled), Strict-Transport-Security (HSTS 2yr max-age + preload), and Content-Security-Policy (self-only defaults, connect-src allows Supabase + Anthropic API, frame-ancestors none).
+
 ### Task 26 — Risk Scoring Consolidation (2026-03-19)
 
 **26.2 — Unified getRiskBand with color mapping:** Exported `getRiskBand` and added `getRiskBandWithColor` from `lib/quantitative-risk.ts` (authoritative 0-100 scale, 5 bands). Removed duplicate local `getRiskBand` from `ProjectDetail.tsx` and replaced with shared import. The `lib/risk-scoring.ts` version (0-10 scale, different band names) is retained as it serves a different scoring system (Task 26 line 392 scope).
