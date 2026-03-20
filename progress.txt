@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**31 — Bad debt provision monitoring:** Added `bad_debt_provision` to `ExtractedMetrics`, `MetricsWithConfidence`, and validation schema. Field was previously extracted by AI but silently dropped. Added YoY materiality check: warns when provision/revenue increases >50% and exceeds 1% — early credit deterioration signal.
+
 **31 — ICR lease interest labeling:** Added "(incl. lease interest)" to ICR label in FinancialTable. Added developer comment in risk-generator.ts explaining that ICR uses total P&L interest (with IFRS 16 lease) while FCCR handles leases separately — intentional divergence, now clearly labeled.
 
 **31 — EBITDA sensitivity analysis:** Created `lib/calculations/stress-test.ts` with deterministic stress scenarios (base, -10%, -20% EBITDA). Built `SensitivityPanel.tsx` component with color-coded FCCR and Sr Debt/EBITDA under each scenario. Integrated into Covenants section of ProjectDetail. +0.5KB bundle impact.
