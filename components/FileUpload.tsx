@@ -159,7 +159,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
         return;
       }
 
-      setCompressionInfo(savedPercent > 0 ? `Optimized — saved ${savedPercent}%` : 'Already optimized');
+      setCompressionInfo(savedPercent > 0 ? `Optimized — compression saved ${savedPercent}%` : 'Already optimized');
       setFile(compressedFile);
       setStage('idle');
     } else {
