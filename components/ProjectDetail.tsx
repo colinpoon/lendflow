@@ -795,7 +795,7 @@ export default function ProjectDetail({
                     <button
                       onClick={() => setDeleteDocId(doc.document_id)}
                       disabled={deletingDocId === doc.document_id}
-                      className="ml-0.5 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                      className="ml-0.5 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       title="Remove document"
                     >
                       {deletingDocId === doc.document_id ? (
@@ -867,7 +867,7 @@ export default function ProjectDetail({
                 onClick={() => !isDisabled && scrollToSection(section.id)}
                 disabled={isDisabled}
                 className={`
-                  px-3 py-1.5 rounded-md text-xs font-medium transition-colors
+                  px-3 py-1.5 rounded-md text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
                   ${isActive
                     ? 'bg-primary text-primary-foreground'
                     : isDisabled
@@ -1280,7 +1280,7 @@ export default function ProjectDetail({
                 <div className="flex justify-center">
                   <button
                     onClick={() => scrollToSection('upload')}
-                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     Go to Upload
                   </button>
