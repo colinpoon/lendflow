@@ -26,6 +26,10 @@
 
 **27.3 — Supabase env validation + server-only guard:** Replaced non-null assertions (`!`) with explicit guards that throw descriptive errors when env vars are missing. Added `import 'server-only'` to prevent accidental client-side import of the service-role key.
 
+### Task 28 — Testing Infrastructure (2026-03-19)
+
+**28.1 — zod added as explicit dependency:** Added `zod ^3.25.0` to package.json dependencies. Previously resolved transitively — if the transitive dep updated, validation would break silently.
+
 ### Task 26 — Risk Scoring Consolidation (2026-03-19)
 
 **26.2 — Unified getRiskBand with color mapping:** Exported `getRiskBand` and added `getRiskBandWithColor` from `lib/quantitative-risk.ts` (authoritative 0-100 scale, 5 bands). Removed duplicate local `getRiskBand` from `ProjectDetail.tsx` and replaced with shared import. The `lib/risk-scoring.ts` version (0-10 scale, different band names) is retained as it serves a different scoring system (Task 26 line 392 scope).
