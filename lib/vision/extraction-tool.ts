@@ -719,7 +719,7 @@ From INVESTING ACTIVITIES:
 - capital_expenditures: "Purchase of PP&E", "Capital additions", "Acquisition of fixed assets". Extract as POSITIVE.
 
 From FINANCING ACTIVITIES:
-- proceeds_from_long_term_debt: "Proceeds from long-term debt", "Proceeds from credit facilities"
+- proceeds_from_long_term_debt: "Proceeds from long-term debt", "Proceeds from term loan". EXCLUDE revolving/short-term draws. "New borrowings" only if explicitly long-term or balance sheet shows a new LT debt balance. Can be negative for net paydown years.
 - repayment_of_debt: "Repayment of debt", "Repayment of bank indebtedness" (bank debt only, NOT leases). POSITIVE value.
 - payment_of_lease_liability: "Payment of lease liability", "Repayment of lease obligations". SEPARATE from bank debt. POSITIVE value.
 - distributions_paid: "Dividends paid", "Distributions to shareholders"

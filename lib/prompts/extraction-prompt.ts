@@ -634,7 +634,7 @@ CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
   - "Proceeds from bank indebtedness" (typically revolving credit)
   - "Proceeds from credit facilities" (typically revolving draws)
   - "Draws on revolving credit"
-  - "New borrowings" (ambiguous — only include if explicitly labeled as long-term or term loan)
+  - "New borrowings" (ambiguous — include ONLY if: (a) explicitly labeled as long-term or term loan, OR (b) the balance sheet shows a new or increased long-term debt balance that ties to this cash inflow, indicating it is a long-term facility despite the generic label. Canadian ASPE private companies frequently label their sole LT facility as "Proceeds from new borrowings" or "New bank borrowing.")
   Including revolving draws here would artificially reduce unfunded CapEx in the FCCR numerator, overstating coverage.
 
 • cash_taxes_paid: From CASH FLOW STATEMENT. Look for (EXHAUSTIVE LIST — check all):
