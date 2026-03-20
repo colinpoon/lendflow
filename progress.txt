@@ -16,6 +16,10 @@
 
 ### Task 25 — Portfolio Display & Formatting (continued)
 
+### Task 26 — Risk Scoring Consolidation (2026-03-19)
+
+**26.2 — Unified getRiskBand with color mapping:** Exported `getRiskBand` and added `getRiskBandWithColor` from `lib/quantitative-risk.ts` (authoritative 0-100 scale, 5 bands). Removed duplicate local `getRiskBand` from `ProjectDetail.tsx` and replaced with shared import. The `lib/risk-scoring.ts` version (0-10 scale, different band names) is retained as it serves a different scoring system (Task 26 line 392 scope).
+
 **25.3 — DSCR/FCCR definitional footnotes:** Added parenthetical notes to the FinancialTable labels: "Covenant FCCR (incl. preferred dividends)" and "EBITDA Coverage / DSCR (debt service only)" so analysts can immediately see why the two ratios differ when preferred dividends are material.
 
 **25.2 — Sr Debt / EBITDA label corrected to Adj. EBITDA:** Updated all user-facing labels from "Senior Debt / EBITDA" to "Senior Debt / Adj. EBITDA" across instruments page (summary card + table header), WeightedRiskGauge (chart title + metric badge), CovenantParametersPanel (description text), and accuracy benchmarks. FinancialTable.tsx and DebtHealthMeters.tsx already had the correct label.

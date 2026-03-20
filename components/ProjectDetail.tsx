@@ -36,6 +36,7 @@ import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import ExtractionWarnings from '@/components/ExtractionWarnings';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
+import { getRiskBandWithColor } from '@/lib/quantitative-risk';
 import type { ComputedMetrics } from '@/types';
 import {
   recalculateWithCovenantConfig,
@@ -123,13 +124,6 @@ const SECTION_ENTER = {
 // Hero Metric helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function getRiskBand(score: number): { label: string; color: string } {
-  if (score < 20) return { label: 'Low Risk', color: 'text-success' };
-  if (score < 40) return { label: 'Moderate Risk', color: 'text-warning' };
-  if (score < 60) return { label: 'Elevated Risk', color: 'text-warning' };
-  if (score < 80) return { label: 'High Risk', color: 'text-error' };
-  return { label: 'Distressed', color: 'text-error' };
-}
 
 function getRatioStatus(value: number | null, thresholds: { good: number; fair: number; direction: 'above' | 'below' }): string {
   if (value === null) return 'text-muted-foreground';
@@ -746,8 +740,8 @@ export default function ProjectDetail({
           <MetricCard
             label="Risk Score"
             value={riskScore !== null ? `${riskScore.toFixed(0)}/100` : '--'}
-            subtitle={riskScore !== null ? getRiskBand(riskScore).label : undefined}
-            colorClass={riskScore !== null ? getRiskBand(riskScore).color : undefined}
+            subtitle={riskScore !== null ? getRiskBandWithColor(riskScore).label : undefined}
+            colorClass={riskScore !== null ? getRiskBandWithColor(riskScore).color : undefined}
           />
           <MetricCard
             label="Covenant FCCR"

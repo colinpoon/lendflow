@@ -225,15 +225,31 @@ function getTrendModifier(
 }
 
 /**
- * Get risk band from normalized score
+ * Get risk band from normalized score (0-100 scale)
  */
-function getRiskBand(normalizedScore: number): QuantitativeRiskAssessment['risk_band'] {
+export function getRiskBand(normalizedScore: number): QuantitativeRiskAssessment['risk_band'] {
   for (const band of RISK_BANDS) {
     if (normalizedScore >= band.min && normalizedScore < band.max) {
       return band.band;
     }
   }
   return 'Distressed';
+}
+
+const RISK_BAND_COLORS: Record<QuantitativeRiskAssessment['risk_band'], string> = {
+  'Low Risk': 'text-success',
+  'Moderate Risk': 'text-warning',
+  'Elevated Risk': 'text-warning',
+  'High Risk': 'text-error',
+  'Distressed': 'text-error',
+};
+
+/**
+ * Get risk band label and color from normalized score (0-100 scale)
+ */
+export function getRiskBandWithColor(normalizedScore: number): { label: string; color: string } {
+  const band = getRiskBand(normalizedScore);
+  return { label: band, color: RISK_BAND_COLORS[band] };
 }
 
 /**
