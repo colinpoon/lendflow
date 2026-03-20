@@ -1,5 +1,9 @@
 ## Progress Tracker
 
+### Task 31 — Financial Methodology Enhancements (2026-03-20)
+
+**31.5 — Quick ratio (acid-test) with inventory extraction and divergence warning:** Added `inventory: number|null` to ExtractedMetrics type, Zod validation schema, and extraction prompt (with label variants: "Inventory", "Inventories", "Total inventories", "Merchandise inventory", etc.). New `calculateQuickRatio()` in ratio-calculator.ts: `(currentAssets - inventory) / currentLiabilities`, returns null when inventory unavailable (service companies). Wired into both text (aiProcessor.ts) and vision (visionProcessor.ts) pipelines. Divergence warning fires when inventory >30% of current assets AND quick ratio <70% of current ratio, surfacing to analysts that the current ratio may overstate short-term liquidity. 6 unit tests added. Build passes clean.
+
 ### Task 34 — Frontend Audit: Design System Consistency & Polish (2026-03-20)
 
 **34.5 — SVG aria labels and focus-visible rings for accessibility:** Added `role="img"` and dynamic `aria-label` to SVG gauges in QuantitativeRiskCard, WeightedRiskGauge, and FinancialAnalysisDashboard (DebtHealthMeters uses linear meters, no SVGs). Replaced `focus:outline-none focus:ring-1` with Shadcn-standard `focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` in DebtHealthMeters custom inputs (FCCRBreakdown already fixed in 34.4). Added `aria-describedby="file-upload-hint"` to FileUpload drop zone with matching `id` on supported formats element. Build passes clean.
