@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { FCCRBreakdown } from '@/types/financial';
+import { formatCurrency } from '@/utils/format';
 
 // ─── Domain Interfaces ────────────────────────────────────────────────────────
 
@@ -89,19 +90,6 @@ interface HealthConfig {
 
 // Shared fade-up animation class (tw-animate-css) replacing framer-motion variants.
 const FADE_UP = 'animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both';
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-/**
- * Format currency values displayed in thousands (as commonly reported in
- * financial statements).
- */
-const formatCurrency = (value: number | null): string => {
-  if (value == null) return 'N/A';
-  const absValue = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-  return `${sign}$${absValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
-};
 
 // ─── Sub-Components ───────────────────────────────────────────────────────────
 

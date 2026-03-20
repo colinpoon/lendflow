@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { fmtCurrency } from '@/utils/format';
+import { formatCurrency } from '@/utils/format';
 
 /** Metrics for a single fiscal year */
 interface YearMetrics {
@@ -37,7 +37,7 @@ const EBITDA: React.FC<EBITDAProps> = ({ data }) => {
         <p key={y} className="text-foreground">
           <span className="font-semibold">{y}:</span>{' '}
           <strong>
-            {fmtCurrency(
+            {formatCurrency(
               typeof data.metrics_by_year[y]?.ebitda === 'string'
                 ? parseFloat(data.metrics_by_year[y]?.ebitda)
                 : data.metrics_by_year[y]?.ebitda

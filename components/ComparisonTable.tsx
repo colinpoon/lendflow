@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { formatCurrency, formatRatio, formatPercent } from '@/utils/format';
 import type { ComputedMetrics } from '@/types';
 
 interface ComparisonTableProps {
@@ -30,9 +31,9 @@ export function ComparisonTable({ textMetrics, visionMetrics, selectedYear }: Co
 
   const formatValue = (value: number | null | undefined, format: 'currency' | 'ratio' | 'percent'): string => {
     if (value == null) return '-';
-    if (format === 'currency') return `$${value.toLocaleString()}`;
-    if (format === 'ratio') return value.toFixed(2);
-    if (format === 'percent') return `${(value * 100).toFixed(1)}%`;
+    if (format === 'currency') return formatCurrency(value);
+    if (format === 'ratio') return formatRatio(value);
+    if (format === 'percent') return formatPercent(value);
     return String(value);
   };
 

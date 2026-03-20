@@ -8,25 +8,21 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Format currency values displayed in thousands
- * Automatically scales to M (millions) or B (billions) for large values
- * - Millions: 4 significant digits (e.g., $1.234M, $12.34M, $123.4M)
- * - Billions: 5 significant digits (e.g., $1.2345B, $12.345B, $123.45B)
- * @param value - The value in thousands
- * @returns Formatted string like "$1,234K", "$1.234M", "$1.2345B" or "N/A" for null/undefined
+ * Format currency values displayed in thousands with auto-scaling
+ * @param value - The value in thousands (e.g., 24889 = $24,889K = $24.9M)
+ * @returns Formatted string like "$500K", "$24.9M", "$1.2B" or "—" for null/undefined
  */
 export function formatCurrency(value: number | null | undefined): string {
   if (value == null || (typeof value === 'number' && isNaN(value))) {
-    return 'N/A';
+    return '—';
   }
 
-  const absValue = Math.abs(value);
+  const abs = Math.abs(value);
   const sign = value < 0 ? '-' : '';
 
-  return `${sign}$${absValue.toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}K`;
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}B`;
+  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}M`;
+  return `${sign}$${abs.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
 }
 
 /**
@@ -110,22 +106,3 @@ export function sanitizeObservationText(text: string): string {
     .replace(/\$?(\b(19|20)\d{2})\.00/g, '$1');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Legacy Aliases (for backward compatibility)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * @deprecated Use formatCurrency instead
- * Legacy alias that returns '—' instead of 'N/A' for null values
- */
-export function fmtCurrency(value: number | null | undefined): string {
-  if (typeof value !== 'number' || isNaN(value)) return '—';
-
-  const absValue = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-
-  return `${sign}$${absValue.toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}K`;
-}

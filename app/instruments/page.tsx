@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { createClient } from '@/utils/supabase/server';
+import { formatCurrency } from '@/utils/format';
 import type { Extraction, Project } from '@/lib/supabase/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,13 +41,6 @@ function fmt(value: number | null, decimals = 2): string {
   return value.toFixed(decimals);
 }
 
-function fmtCurrency(value: number | null): string {
-  if (value === null || value === undefined) return '—';
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}B`;
-  if (abs >= 1_000) return `$${(value / 1_000).toFixed(1)}M`;
-  return `$${value.toFixed(0)}K`;
-}
 
 function fmtPct(value: number | null): string {
   if (value === null || value === undefined) return '—';
@@ -405,7 +399,7 @@ export default async function InstrumentsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right tabular-nums text-sm">
-                            {fmtCurrency(extraction?.latest_adjusted_ebitda ?? null)}
+                            {formatCurrency(extraction?.latest_adjusted_ebitda ?? null)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             <span className="inline-flex items-center gap-1 text-sm">

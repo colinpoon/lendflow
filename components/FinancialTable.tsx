@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { fmtCurrency } from '@/utils/format';
+import { formatCurrency } from '@/utils/format';
 import type { FinancialDataProps } from '@/types/financial';
 
 // Re-export canonical types so that the local alias `YearMetrics` used throughout
@@ -756,7 +756,7 @@ const formatValue = (
       return `${(value * 100).toFixed(2)}%`;
     case 'currency':
     default:
-      return fmtCurrency(value);
+      return formatCurrency(value);
   }
 };
 

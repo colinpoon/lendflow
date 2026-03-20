@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { fmtCurrency, sanitizeObservationText } from '@/utils/format';
+import { formatCurrency, sanitizeObservationText } from '@/utils/format';
 import type { PillarScore, RiskData } from '@/types/risk';
 import { PILLAR_KEYS } from '@/lib/constants';
 
@@ -48,7 +48,7 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
             typeof p?.observations === 'string'
               ? sanitizeObservationText(p.observations)
               : typeof p?.observations === 'number'
-              ? fmtCurrency(p.observations)
+              ? formatCurrency(p.observations)
               : '—';
           const impact = typeof p?.impact === 'string' ? p.impact : '—';
           const label = LABEL_MAP[key] ?? key.replace(/_/g, ' ');

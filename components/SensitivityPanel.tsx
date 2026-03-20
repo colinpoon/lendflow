@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { computeStressScenarios, type StressTestResult } from '@/lib/calculations/stress-test';
-import { fmtCurrency } from '@/utils/format';
+import { formatCurrency } from '@/utils/format';
 import type { ComputedMetrics } from '@/types/financial';
 import { FCCR_THRESHOLDS, DEBT_EBITDA_THRESHOLDS } from '@/lib/constants';
 
@@ -76,7 +76,7 @@ export default function SensitivityPanel({ data }: Props) {
                 <tr key={s.label} className={`border-b border-border/50 ${s.haircut === 0 ? 'font-medium' : ''}`}>
                   <td className="py-2.5 pr-4 text-xs text-foreground">{s.label}</td>
                   <td className="py-2.5 pr-4 text-xs text-right tabular-nums text-foreground">
-                    {fmtCurrency(s.adjustedEbitda)}
+                    {formatCurrency(s.adjustedEbitda)}
                   </td>
                   <td className={`py-2.5 pr-4 text-xs text-right tabular-nums ${getRatioColor(
                     s.fccr,

@@ -1,5 +1,9 @@
 ## Progress Tracker
 
+### Task 34 — Frontend Audit: Design System Consistency & Polish (2026-03-20)
+
+**34.1 — formatCurrency consolidated to single canonical function with K/M/B auto-scaling:** Enhanced `utils/format.ts` `formatCurrency` to auto-scale based on magnitude: values ≥1M thousands → `$X.XB`, ≥1K thousands → `$X.XM`, otherwise `$X,XXXK`. Fixed negative sign handling (`-$1.6B` not `$-1.6B`). Unified null return to `'—'` (was inconsistent `'N/A'` vs `'—'`). Removed deprecated `fmtCurrency` alias. Migrated 4 callers (FinancialTable, EBITDA, SensitivityPanel, RiskAssessment) from `fmtCurrency` → `formatCurrency`. Removed local duplicate from DebtHealthMeters.tsx and instruments/page.tsx. Updated ComparisonTable.tsx inline formatter to use canonical `formatCurrency`/`formatRatio`/`formatPercent`. Net: 1 canonical function, 0 duplicates, 0 deprecated aliases. Build passes clean.
+
 ### Task 30 — Code Quality & Performance (2026-03-20)
 
 **30 — framer-motion replaced with CSS animations:** Removed the 87KB gzipped framer-motion dependency entirely. Replaced all usages across 5 components with tw-animate-css (already installed) and native CSS transitions/animations. ProjectDetail.tsx: 11 motion elements → tw-animate-css `animate-in fade-in slide-in-from-bottom-5` with staggered delay classes. WeightedRiskGauge, AdjustedEBITDA, DebtHealthMeters: container/item stagger variants → `animate-in` classes with explicit `delay-[Xms]`. FinancialAnalysisDashboard: SVG arc → CSS transition on `stroke-dashoffset` with mount-triggered state; ratio bars → `@keyframes fill-bar` animation; AnimatePresence collapse/expand → CSS `grid-template-rows: 0fr→1fr` transition. Build passes clean.
