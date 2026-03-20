@@ -57,7 +57,7 @@ export interface ResolvedDebtService {
     preferred_dividends_value: number | null;
     /**
      * Set to true when repayment_of_debt was capped at the funded debt balance
-     * because it exceeded funded_debt * 1.5 — indicating gross revolving credit
+     * because it exceeded funded_debt * 1.1 — indicating gross revolving credit
      * activity was inflating the DSCR/FCCR denominator.
      * The uncapped value is recorded in warnings for analyst review.
      */
@@ -122,13 +122,13 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
   }
 
   // Sanity check: warn when repayment_of_debt materially exceeds bank_debt_current.
-  // A >50% gap suggests either (a) non-bank debt was repaid (legitimate), or
+  // A >10% gap suggests either (a) non-bank debt was repaid (legitimate), or
   // (b) gross revolving credit activity inflated the figure (needs analyst review).
   if (
     principalSource === 'repayment_of_debt' &&
     dc.bank_debt_current != null &&
     dc.bank_debt_current > 0 &&
-    principal > dc.bank_debt_current * 1.5
+    principal > dc.bank_debt_current * 1.1
   ) {
     const overagePct = ((principal / dc.bank_debt_current - 1) * 100).toFixed(0);
     const warnMsg =
@@ -165,7 +165,7 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
   }
 
   // ── Revolver Cap: correct inflated repayment_of_debt ─────────────────
-  // When repayment_of_debt exceeds funded debt * 1.5, gross revolving credit
+  // When repayment_of_debt exceeds funded debt * 1.1, gross revolving credit
   // activity is almost certainly inflating the figure. Cap principal at the
   // funded debt balance — you cannot retire more debt than is outstanding.
   //
@@ -201,13 +201,13 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
 
     const fundedDebt = totalBankDebt + financeLeaseDebt;
 
-    if (fundedDebt > 0 && principal > fundedDebt * 1.5) {
+    if (fundedDebt > 0 && principal > fundedDebt * 1.1) {
       const uncappedPrincipal = principal;
       principal = fundedDebt;
       principalCapped = true;
       const capWarnMsg =
         `${yearTag}DSCR/FCCR: repayment_of_debt (${uncappedPrincipal.toLocaleString()}) exceeds ` +
-        `funded debt balance (${fundedDebt.toLocaleString()}) by more than 1.5x. ` +
+        `funded debt balance (${fundedDebt.toLocaleString()}) by more than 1.1x. ` +
         `Gross revolving credit draws/repayments likely inflate this line item. ` +
         `Principal capped at funded debt balance (${fundedDebt.toLocaleString()}) to prevent ` +
         `denominator distortion. Verify against financing activities note.`;

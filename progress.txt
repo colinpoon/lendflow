@@ -6,6 +6,8 @@
 
 ### Task 24b — LT Debt Prompt Edge Cases (2026-03-19)
 
+**24.8 — Revolver cap threshold tightened from 1.5x to 1.1x:** Both the diagnostic warning (bank_debt_current check) and the actual cap (funded debt check) used a 1.5x threshold, allowing 50% overage before flagging revolving credit inflation. Tightened to 1.1x (10% tolerance) for more conservative denominator protection. Cap still assigns principal = fundedDebt when triggered.
+
 **24.7 — Analyst warning when unfunded CapEx floor fires:** When debt proceeds exceed CapEx, unfunded CapEx is floored at $0 but the analyst had no visibility into this. Added analyst warning in FCCR calculator surfacing the excess amount and suggesting review of use of proceeds (acquisition financing, debt restructuring, etc.).
 
 **24.6 — Missing metrics excluded from weighted average:** `getBaseScore` previously returned 3 (middle score) when metric data was unavailable, anchoring the risk assessment with phantom data. Changed to return `null`, added `data_available: boolean` to `MetricScore`, and updated the weighted average to exclude unavailable metrics and redistribute weight proportionally among available ones. Trend summary now reports how many metrics were excluded. `generateRationale` returns "Insufficient data" message for excluded metrics.
