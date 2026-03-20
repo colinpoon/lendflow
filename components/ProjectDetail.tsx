@@ -36,7 +36,7 @@ import AdjustedEBITDA from '@/components/AdjustedEBITDA';
 import QuantitativeRiskCard from '@/components/QuantitativeRiskCard';
 import ExtractionWarnings from '@/components/ExtractionWarnings';
 import type { QuantitativeRiskAssessment } from '@/lib/quantitative-risk';
-import { getRiskBandWithColor } from '@/lib/quantitative-risk';
+import { getRiskConfig } from '@/lib/risk-scoring';
 import type { ComputedMetrics } from '@/types';
 import {
   recalculateWithCovenantConfig,
@@ -641,8 +641,14 @@ export default function ProjectDetail({
   // are reflected in the hero metric cards and all downstream components.
   const latestMetrics = displayData && latestYear ? displayData.metrics_by_year[latestYear] : null;
 
-  // Hero metric values
+  // Hero metric values — System 2 (Weighted Debt Health) is the authoritative lending score
   const riskScore = debtHealthAssessment?.weighted_score ?? null;
+  const riskConfig = riskScore !== null ? getRiskConfig(riskScore) : null;
+  const riskSemanticColor = riskConfig
+    ? (riskConfig.level === 'very-low' || riskConfig.level === 'low') ? 'text-success'
+      : riskConfig.level === 'high' ? 'text-error'
+      : 'text-warning'
+    : undefined;
   const fccr = latestMetrics?.fccr ?? null;
   const seniorDebtToEbitda = latestMetrics?.senior_debt_to_ebitda ?? null;
   const totalDebtToCapital = latestMetrics?.total_debt_to_capital ?? null;
@@ -738,10 +744,10 @@ export default function ProjectDetail({
       {hasData && (
         <section aria-label="Key metrics" className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in duration-300">
           <MetricCard
-            label="Risk Score"
-            value={riskScore !== null ? `${riskScore.toFixed(0)}/100` : '--'}
-            subtitle={riskScore !== null ? getRiskBandWithColor(riskScore).label : undefined}
-            colorClass={riskScore !== null ? getRiskBandWithColor(riskScore).color : undefined}
+            label="Lending Risk"
+            value={riskScore !== null ? `${riskScore.toFixed(1)}/10` : '--'}
+            subtitle={riskConfig?.label}
+            colorClass={riskSemanticColor}
           />
           <MetricCard
             label="Covenant FCCR"
@@ -964,36 +970,16 @@ export default function ProjectDetail({
             </motion.p>
           )}
 
-          <motion.div
-            initial={SECTION_ENTER.initial}
-            animate={SECTION_ENTER.animate}
-            transition={SECTION_ENTER.transition(0.05)}
-          >
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold tracking-tight">Quantitative Risk Scorecard</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isRefreshing ? (
-                  <RiskScorecardSkeleton />
-                ) : (
-                  <CompactErrorBoundary errorTitle="Failed to render risk scorecard">
-                    <QuantitativeRiskCard data={quantitativeRiskAssessment} />
-                  </CompactErrorBoundary>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
           {(displayData || isRefreshing) && (
             <motion.div
               initial={SECTION_ENTER.initial}
               animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0.1)}
+              transition={SECTION_ENTER.transition(0.05)}
             >
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-semibold tracking-tight">Risk Assessment</CardTitle>
+                  <CardTitle className="text-lg font-semibold tracking-tight">Lending Risk Score</CardTitle>
+                  <CardDescription className="text-xs">Authoritative lending score — FCCR (50%), Sr. Debt/EBITDA (35%), Debt/Capital (15%)</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {isRefreshing ? (
@@ -1010,6 +996,28 @@ export default function ProjectDetail({
               </Card>
             </motion.div>
           )}
+
+          <motion.div
+            initial={SECTION_ENTER.initial}
+            animate={SECTION_ENTER.animate}
+            transition={SECTION_ENTER.transition(0.1)}
+          >
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold tracking-tight">Quantitative Risk Scorecard</CardTitle>
+                <CardDescription className="text-xs">Supplementary trend analysis — 5-metric scorecard, not used for lending decisions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isRefreshing ? (
+                  <RiskScorecardSkeleton />
+                ) : (
+                  <CompactErrorBoundary errorTitle="Failed to render risk scorecard">
+                    <QuantitativeRiskCard data={quantitativeRiskAssessment} />
+                  </CompactErrorBoundary>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {(displayData || isRefreshing) && (
             <motion.div
@@ -1056,7 +1064,8 @@ export default function ProjectDetail({
             >
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-semibold tracking-tight">Debt Health Indicators</CardTitle>
+                  <CardTitle className="text-lg font-semibold tracking-tight">Covenant Health</CardTitle>
+                  <CardDescription className="text-xs">Individual covenant ratio assessment</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {isRefreshing ? (

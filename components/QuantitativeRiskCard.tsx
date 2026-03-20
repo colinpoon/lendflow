@@ -34,13 +34,13 @@ interface QuantitativeRiskCardProps {
   data: QuantitativeRiskAssessment | null;
 }
 
-// Risk band styles using semantic tokens
+// Risk band styles using semantic tokens — labels aligned with lib/risk-scoring.ts
 const RISK_BAND_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  'Very Low Risk':  { bg: 'bg-success/10',   text: 'text-success',          border: 'border-success/25' },
   'Low Risk':       { bg: 'bg-success/10',   text: 'text-success',          border: 'border-success/25' },
   'Moderate Risk':  { bg: 'bg-warning/10',   text: 'text-warning',          border: 'border-warning/25' },
   'Elevated Risk':  { bg: 'bg-error/10',     text: 'text-error',            border: 'border-error/25' },
   'High Risk':      { bg: 'bg-error/15',     text: 'text-error',            border: 'border-error/30' },
-  'Distressed':     { bg: 'bg-error/20',     text: 'text-error',            border: 'border-error/40' },
 };
 
 // Score badge colors — 5-level scale, lower is better.
@@ -100,10 +100,10 @@ const ScoreGauge: React.FC<{ score: number; maxScore?: number }> = ({
 }) => {
   const percentage = (score / maxScore) * 100;
   const riskBand =
-    score <= 20 ? 'Low Risk' :
-    score <= 40 ? 'Moderate Risk' :
-    score <= 60 ? 'Elevated Risk' :
-    score <= 80 ? 'High Risk' : 'Distressed';
+    score <= 20 ? 'Very Low Risk' :
+    score <= 40 ? 'Low Risk' :
+    score <= 60 ? 'Moderate Risk' :
+    score <= 80 ? 'Elevated Risk' : 'High Risk';
 
   const bandStyle = RISK_BAND_STYLES[riskBand];
 
@@ -189,11 +189,19 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
       <div className="space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h3 className="text-xl font-bold text-foreground">
-            Quantitative Risk Scorecard
-          </h3>
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <h3 className="text-xl font-bold text-foreground">
+              Quantitative Risk Scorecard
+            </h3>
+            <span className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 border border-border/50 rounded px-2 py-0.5">
+              Supplementary
+            </span>
+          </div>
           <p className="text-sm text-muted-foreground">
-            5-Metric Weighted Assessment with Trend Analysis
+            Deterministic trend-aware analysis across 5 financial metrics
+          </p>
+          <p className="text-[10px] text-muted-foreground/50 mt-1">
+            Provides forward-looking trend context — see Lending Risk Score for the authoritative lending assessment
           </p>
         </div>
 

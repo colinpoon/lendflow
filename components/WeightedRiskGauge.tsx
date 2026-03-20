@@ -576,10 +576,13 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
       {/* Header */}
       <motion.div variants={itemVariants} className="text-center">
         <h3 className="text-xl font-bold tracking-tight text-foreground">
-          Risk Assessment
+          Lending Risk Score
         </h3>
         <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-1">
-          Fiscal Year {latestYear} | Weighted Score Analysis
+          Fiscal Year {latestYear} | Deterministic Weighted Score
+        </p>
+        <p className="text-[10px] text-muted-foreground/70 mt-1">
+          FCCR ({RISK_WEIGHTS.FCCR * 100}%) + Sr. Debt/EBITDA ({RISK_WEIGHTS.DEBT_EBITDA * 100}%) + Debt/Capital ({RISK_WEIGHTS.DEBT_CAPITAL * 100}%) — authoritative score for lending decisions
         </p>
       </motion.div>
 
