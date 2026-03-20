@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**30.9 — Remove dead code:** Deleted deprecated `chunkText` and `processChunksInBatches` (~80 lines). Also removed unused `BATCH_SIZE` and `BATCH_DELAY_MS` constants.
+
 **30.6b — Remove client-side PDF compression:** Removed pdf-lib compression that blocked the main thread for large PDFs. Server handles parsing regardless. Bonus: ~176KB saved from client bundle (dashboard/[projectId] dropped from 201KB to 25KB First Load JS).
 
 **30.8 — detectYearConflicts cyclomatic complexity:** Extracted the 4x duplicated primary-year tiebreaker logic into `resolvePrimaryYearTiebreak()` helper. Flattened the 4-branch if/else tree into a cleaner cascade: FY date comparison > primary tiebreak > timestamp fallback > ambiguous default. Net -12 lines.

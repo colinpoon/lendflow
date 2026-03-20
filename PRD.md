@@ -440,7 +440,7 @@ Tech debt that affects maintainability and page performance.
 - [ ] **MEDIUM — `as unknown as` type assertions mask structural type mismatches** `[Code Improver]` — Phantom extraction and merge utilities use `as unknown as X` to bypass type checking. Create single canonical `ExtractionResult` type. Files: `app/api/extractData/route.ts`, `lib/extraction-utils.ts`
 - [x] **MEDIUM — `detectYearConflicts` has excessive cyclomatic complexity (181 lines, 4 levels deep)** `[Code Improver]` — Primary-year tiebreaker logic copy-pasted 4 times. Extract into named helper. File: `lib/extraction-utils.ts`
 - [ ] **LOW — Debug flags duplicated across 4 modules** `[Code Improver, Senior Engineer]` — `DEBUG_FINANCIALS` and `DEBUG_FINANCE` declared independently in `aiProcessor.ts`, `chunk-processor.ts`, `extraction-merger.ts`, `risk-generator.ts`. Centralize to `lib/debug-flags.ts`. Add to `.env.example`.
-- [ ] **LOW — Dead code: deprecated `chunkText` and `processChunksInBatches`** `[Code Improver, Senior Engineer]` — 70+ lines of dead exports marked `@deprecated`, not called anywhere. Delete them. File: `lib/chunk-processor.ts`
+- [x] **LOW — Dead code: deprecated `chunkText` and `processChunksInBatches`** `[Code Improver, Senior Engineer]` — 70+ lines of dead exports marked `@deprecated`, not called anywhere. Delete them. File: `lib/chunk-processor.ts`
 - [ ] **LOW — Full `framer-motion` (87KB gzipped) imported for basic fade animations** `[Senior Engineer]` — Only `motion.div` used. Replace with CSS keyframes or `tw-animate-css` (already in `package.json`). File: `components/ProjectDetail.tsx`
 
 ### Task 31: Medium — Financial Methodology Enhancements
