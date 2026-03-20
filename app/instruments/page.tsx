@@ -217,7 +217,7 @@ export default async function InstrumentsPage() {
             <Card>
               <CardHeader className="pb-1 pt-4 px-4">
                 <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Avg Sr Debt / EBITDA
+                  Avg Sr Debt / Adj. EBITDA
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4">
@@ -341,7 +341,7 @@ export default async function InstrumentsPage() {
                       <TableHead className="text-right">Adj EBITDA</TableHead>
                       <TableHead className="text-right">FCCR</TableHead>
                       <TableHead className="text-right">DSCR</TableHead>
-                      <TableHead className="text-right">Sr Debt / EBITDA</TableHead>
+                      <TableHead className="text-right">Sr Debt / Adj. EBITDA</TableHead>
                       <TableHead className="text-right">Debt / Capital</TableHead>
                       <TableHead className="text-center">Risk</TableHead>
                       <TableHead className="pr-6" />

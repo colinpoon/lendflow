@@ -161,7 +161,7 @@ export default function CovenantParametersPanel({
           Covenant Parameters
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Adjusting these settings instantly recalculates FCCR, Senior Debt / EBITDA, and
+          Adjusting these settings instantly recalculates FCCR, Senior Debt / Adj. EBITDA, and
           Total Debt / Capital without re-running extraction.
         </p>
       </CardHeader>

@@ -73,7 +73,6 @@ const METRIC_DEFINITIONS: Record<string, MetricDef> = {
   depreciation_other: { label: 'Depreciation (Other)', category: 'Income Statement' },
   amortization_intangibles: { label: 'Amortization (Intangibles)', category: 'Income Statement' },
   ebitda: { label: 'EBITDA', category: 'Income Statement' },
-  reported_adjusted_ebitda: { label: 'Reported Adjusted EBITDA', category: 'Income Statement' },
 
   // Balance Sheet
   shareholders_equity: { label: "Shareholders' Equity", category: 'Balance Sheet' },
@@ -164,7 +163,7 @@ const METRIC_DEFINITIONS: Record<string, MetricDef> = {
   dscr: { label: 'DSCR', category: 'Computed Ratios' },
   funded_debt: { label: 'Funded Debt', category: 'Computed Ratios' },
   funded_debt_to_ebitda: { label: 'Funded Debt / EBITDA', category: 'Computed Ratios' },
-  senior_debt_to_ebitda: { label: 'Senior Debt / EBITDA', category: 'Computed Ratios' },
+  senior_debt_to_ebitda: { label: 'Senior Debt / Adj. EBITDA', category: 'Computed Ratios' },
   total_debt_to_capital: { label: 'Total Debt / Total Capital', category: 'Computed Ratios' },
   interest_coverage_ratio: { label: 'Interest Coverage Ratio', category: 'Computed Ratios' },
   debt_to_equity_ratio: { label: 'Debt / Equity', category: 'Computed Ratios' },

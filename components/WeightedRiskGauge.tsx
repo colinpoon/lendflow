@@ -417,10 +417,10 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
         </ChartContainer>
       </div>
 
-      {/* Senior Debt / EBITDA */}
+      {/* Senior Debt / Adj. EBITDA */}
       <div>
         <h5 className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground mb-3">
-          Senior Debt / EBITDA (Target: &lt; 2.5x)
+          Senior Debt / Adj. EBITDA (Target: &lt; 2.5x)
         </h5>
         <ChartContainer config={historicalChartConfig} className="h-[120px] w-full">
           <BarChart
@@ -618,7 +618,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             weight={RISK_WEIGHTS.FCCR * 100}
           />
           <MetricBadge
-            label={`Senior Debt / EBITDA (${RISK_WEIGHTS.DEBT_EBITDA * 100}%)`}
+            label={`Senior Debt / Adj. EBITDA (${RISK_WEIGHTS.DEBT_EBITDA * 100}%)`}
             value={metrics.senior_debt_to_ebitda}
             score={debtEbitdaScore}
             format={(v) => `${v.toFixed(2)}x`}

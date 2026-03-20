@@ -14,6 +14,10 @@
 
 **24b.2 — Negative net LT debt proceeds no longer silenced:** Previously, the extraction prompt instructed AI to extract negative net issuances as `null`, which defaulted to 0 in the FCCR calculator. This caused full CapEx to appear unfunded in paydown years with no explanation for the FCCR swing. Fixed: (1) prompt now instructs AI to extract negative values as-is, (2) FCCR calculator surfaces analyst warning when proceeds are negative explaining the company is in a net debt paydown year.
 
+### Task 25 — Portfolio Display & Formatting (continued)
+
+**25.2 — Sr Debt / EBITDA label corrected to Adj. EBITDA:** Updated all user-facing labels from "Senior Debt / EBITDA" to "Senior Debt / Adj. EBITDA" across instruments page (summary card + table header), WeightedRiskGauge (chart title + metric badge), CovenantParametersPanel (description text), and accuracy benchmarks. FinancialTable.tsx and DebtHealthMeters.tsx already had the correct label.
+
 **24b.5 — REIT/fleet/equipment LT debt label variants:** Added industry-specific label variants (mortgage financing, equipment financing, vehicle loans, related party advances) to `proceeds_from_long_term_debt` extraction. Added cross-reference instruction: when a financing cash inflow uses an unrecognized label, check balance sheet for a new/increased LT liability that ties to the amount.
 
 **24b.4 — Net issuance / repayment_of_debt consistency:** Added instruction to `repayment_of_debt` extraction: when a document uses net issuance presentation (single net line, no separate repayment), set `repayment_of_debt` to null to avoid double-counting repayments already embedded in the net proceeds figure.
