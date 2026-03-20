@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**29 — Covenant panel repositioned:** Moved CovenantParametersPanel from Covenants section to top of Analysis section. Analysts now see parameter controls directly above the Financial Summary table they affect.
+
 **29 — Sign-in/sign-up branding:** Added LF logomark, "Lendflow" heading, and "AI-powered credit risk analysis" descriptor above Clerk forms on both auth pages. Matches sidebar brand pattern.
 
 **31 — Bad debt provision monitoring:** Added `bad_debt_provision` to `ExtractedMetrics`, `MetricsWithConfidence`, and validation schema. Field was previously extracted by AI but silently dropped. Added YoY materiality check: warns when provision/revenue increases >50% and exceeds 1% — early credit deterioration signal.

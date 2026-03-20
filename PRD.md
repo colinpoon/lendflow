@@ -425,7 +425,7 @@ Issues impacting analyst trust and usability.
 - [x] **MEDIUM — Empty decision state is too sparse** `[UI/UX Designer]` — When no data exists, Decision card shows one line of text. Add skeleton placeholder showing what populated state looks like, with a direct action button to Upload section. File: `components/ProjectDetail.tsx`
 - [x] **LOW — Sign-in page has no brand identity** `[UI/UX Designer]` — Renders only Clerk's default `<SignIn />` on a plain background. Add Lendflow logo, product name, one-line descriptor. File: `app/sign-in/[[...sign-in]]/page.tsx`
 - [x] **LOW — Missing `focus-visible` ring on custom buttons** `[UI/UX Designer]` — Several custom `<button>` elements outside Shadcn `Button` have no visible focus indicator. Fails WCAG 2.4.7. Files: `components/ProjectDetail.tsx`, `app/dashboard/layout.tsx`
-- [ ] **LOW — Covenant Parameters panel positioned in Risk section, not Analysis** `[UI/UX Designer]` — Covenant params directly affect Financial Summary ratios but are placed below them. Analyst must scroll up to see the effect of changes. Move to top of Analysis section. File: `components/ProjectDetail.tsx`
+- [x] **LOW — Covenant Parameters panel positioned in Risk section, not Analysis** `[UI/UX Designer]` — Covenant params directly affect Financial Summary ratios but are placed below them. Analyst must scroll up to see the effect of changes. Move to top of Analysis section. File: `components/ProjectDetail.tsx`
 
 ### Task 30: Medium — Code Quality & Performance
 Tech debt that affects maintainability and page performance.
