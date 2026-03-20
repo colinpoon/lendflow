@@ -424,7 +424,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  formatter={(v) => [`${Number(v).toFixed(2)}x`, 'Sr. Debt / EBITDA']}
+                  formatter={(v) => [`${Number(v).toFixed(2)}x`, 'Sr. Debt / Adj. EBITDA']}
                 />
               }
             />
@@ -743,7 +743,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
                     FCCR Score
                   </TableHead>
                   <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
-                    Debt/EBITDA
+                    Debt / Adj. EBITDA
                   </TableHead>
                   <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
                     Debt/Cap

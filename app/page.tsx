@@ -28,7 +28,7 @@ const features = [
     icon: BarChart3,
     title: 'Real-Time Ratio Engine',
     description:
-      'Computes DSCR, Senior Debt/EBITDA, Total Debt/Capital, and Covenant FCCR the moment extraction is complete — no spreadsheet formulas required.',
+      'Computes DSCR, Senior Debt / Adj. EBITDA, Total Debt/Capital, and Covenant FCCR the moment extraction is complete — no spreadsheet formulas required.',
   },
   {
     icon: ShieldCheck,

@@ -177,7 +177,7 @@ const BASE_KPIS: KPIData[] = [
     trend: { direction: 'up', label: '+0.01x', isPositive: true },
   },
   {
-    label: 'SR Debt / EBITDA',
+    label: 'SR Debt / Adj. EBITDA',
     value: '3.55x',
     status: 'Elevated',
     sentiment: 'warn',
@@ -339,7 +339,7 @@ function recalculate(config: CovenantConfig) {
       trend: BASE_KPIS[0].trend,
     },
     {
-      label: 'SR Debt / EBITDA',
+      label: 'SR Debt / Adj. EBITDA',
       value: `${srDebt.toFixed(2)}x`,
       status: srDebt <= 3.0 ? 'Healthy' : srDebt <= 4.0 ? 'Elevated' : 'High',
       sentiment: srS,

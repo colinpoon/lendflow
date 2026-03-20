@@ -68,7 +68,7 @@ export default function SensitivityPanel({ data }: Props) {
                 <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs">Scenario</th>
                 <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs text-right">Adj. EBITDA</th>
                 <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs text-right">FCCR</th>
-                <th className="pb-2 font-medium text-muted-foreground text-xs text-right">Sr Debt / EBITDA</th>
+                <th className="pb-2 font-medium text-muted-foreground text-xs text-right">Sr. Debt / Adj. EBITDA</th>
               </tr>
             </thead>
             <tbody>

@@ -487,7 +487,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     {metrics.senior_debt_to_ebitda != null && (
                       <div className="text-right">
                         <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
-                          Debt/EBITDA
+                          Debt / Adj. EBITDA
                         </p>
                         <p
                           className="text-sm font-bold tabular-nums"
@@ -536,7 +536,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     getHealth={getFCCRHealth}
                   />
                   <LinearMeterCard
-                    label="Sr. Debt / EBITDA"
+                    label="Sr. Debt / Adj. EBITDA"
                     value={metrics.senior_debt_to_ebitda}
                     target="Target: < 2.5x"
                     formatValue={(v) => v.toFixed(2) + 'x'}
@@ -1268,7 +1268,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground italic">
-                      Insufficient data to calculate Debt/EBITDA
+                      Insufficient data to calculate Debt / Adj. EBITDA
                     </p>
                   )}
                 </AccordionContent>

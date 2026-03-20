@@ -459,7 +459,7 @@ export default function ProjectDetail({
             colorClass={getRatioStatus(fccr, { good: FCCR_THRESHOLDS.ADEQUATE, fair: FCCR_THRESHOLDS.WEAK, direction: 'above' })}
           />
           <MetricCard
-            label="Sr. Debt / EBITDA"
+            label="Sr. Debt / Adj. EBITDA"
             value={formatRatio(seniorDebtToEbitda)}
             subtitle={seniorDebtToEbitda !== null ? (seniorDebtToEbitda <= DEBT_EBITDA_THRESHOLDS.GOOD ? 'Healthy' : 'Elevated') : undefined}
             colorClass={getRatioStatus(seniorDebtToEbitda, { good: DEBT_EBITDA_THRESHOLDS.GOOD, fair: DEBT_EBITDA_THRESHOLDS.WEAK, direction: 'below' })}
@@ -674,7 +674,7 @@ export default function ProjectDetail({
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold tracking-tight">Lending Risk Score</CardTitle>
-                  <CardDescription className="text-xs">Authoritative lending score — FCCR (50%), Sr. Debt/EBITDA (35%), Debt/Capital (15%)</CardDescription>
+                  <CardDescription className="text-xs">Authoritative lending score — FCCR (50%), Sr. Debt / Adj. EBITDA (35%), Debt/Capital (15%)</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {isRefreshing ? (

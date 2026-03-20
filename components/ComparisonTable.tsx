@@ -22,7 +22,7 @@ const COMPARISON_METRICS: { key: keyof ComputedMetrics; label: string; format: '
   { key: 'dscr', label: 'EBITDA Coverage', format: 'ratio' },
   { key: 'fccr', label: 'Covenant FCCR', format: 'ratio' },
   { key: 'total_debt_to_capital', label: 'Total Debt/Capital', format: 'percent' },
-  { key: 'senior_debt_to_ebitda', label: 'Senior Debt/EBITDA', format: 'ratio' },
+  { key: 'senior_debt_to_ebitda', label: 'Senior Debt / Adj. EBITDA', format: 'ratio' },
 ];
 
 export function ComparisonTable({ textMetrics, visionMetrics, selectedYear }: ComparisonTableProps) {
