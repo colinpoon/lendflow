@@ -166,6 +166,17 @@ export function calculateFCCR(
     capexConfig
   ));
 
+  // Analyst warning when unfunded CapEx floor fires (proceeds > CapEx)
+  const capexFloorWarnings: string[] = [];
+  if (capexConfig.mode === 'unfunded' && unfundedCapex < 0) {
+    capexFloorWarnings.push(
+      `Unfunded CapEx floor applied: debt proceeds (${proceedsFromLTDebt.toLocaleString()}) exceed ` +
+      `CapEx (${capitalExpenditures.toLocaleString()}) by ${Math.abs(unfundedCapex).toLocaleString()}. ` +
+      `CapEx deduction floored at $0 — the excess borrowing may indicate acquisition financing, ` +
+      `debt restructuring, or working capital draws classified as long-term. Review use of proceeds.`
+    );
+  }
+
   // Cash Taxes — fallback chain: CF statement → income statement → $0 (with analyst warning)
   // Using $0 when cash_taxes_paid is absent would overstate FCCR by 10–20+ bps for
   // profitable companies. Income statement tax expense (accrual) is a conservative substitute.
@@ -285,7 +296,7 @@ export function calculateFCCR(
       total_fixed_charges: null,
       cash_flow_for_debt_servicing: null,
       fccr_breakdown: null,
-      warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings, ...negativeProceedsWarnings],
+      warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings, ...negativeProceedsWarnings, ...capexFloorWarnings],
     };
   }
 
@@ -321,7 +332,7 @@ export function calculateFCCR(
     fccr_numerator: parseFloat(numerator.toFixed(2)),
     total_fixed_charges: parseFloat(totalDebtService.toFixed(2)),
     cash_flow_for_debt_servicing: parseFloat(numerator.toFixed(2)),
-    warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings, ...negativeProceedsWarnings, ...negativeFccrWarnings],
+    warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings, ...negativeProceedsWarnings, ...capexFloorWarnings, ...negativeFccrWarnings],
     fccr_breakdown: {
       calculation_type: 'lender_defined',
       // CapEx treatment info
