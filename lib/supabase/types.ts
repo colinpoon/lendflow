@@ -88,6 +88,7 @@ export interface Database {
           file_type: string;
           file_size: number;
           storage_path: string;
+          content_hash: string | null;
           processing_status: 'pending' | 'processing' | 'completed' | 'failed' | 'pending_conflict';
           error_message: string | null;
           created_at: string;
@@ -102,6 +103,7 @@ export interface Database {
           file_type: string;
           file_size: number;
           storage_path: string;
+          content_hash?: string | null;
           processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | 'pending_conflict';
           error_message?: string | null;
           created_at?: string;
@@ -116,6 +118,7 @@ export interface Database {
           file_type?: string;
           file_size?: number;
           storage_path?: string;
+          content_hash?: string | null;
           processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | 'pending_conflict';
           error_message?: string | null;
           updated_at?: string;

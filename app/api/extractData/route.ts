@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -268,6 +269,29 @@ export async function POST(req: NextRequest) {
         return;
       }
 
+      // ── Duplicate detection via SHA-256 content hash ─────────────────────────
+      const contentHash = crypto.createHash('sha256').update(buffer).digest('hex');
+
+      const { data: existingDoc } = await supabase
+        .from('documents')
+        .select('file_name, created_at')
+        .eq('project_id', projectId!)
+        .eq('content_hash', contentHash)
+        .limit(1)
+        .single();
+
+      if (existingDoc) {
+        const uploadDate = new Date(existingDoc.created_at).toLocaleDateString();
+        console.log(`🔁 Duplicate detected: "${existingDoc.file_name}" uploaded on ${uploadDate}`);
+        await sendProgress({
+          stage: 'error',
+          progress: 0,
+          message: `This file has already been uploaded to this project as "${existingDoc.file_name}" on ${uploadDate}. If this is an updated version, please ensure the file content has changed.`,
+        });
+        await closeWriter();
+        return;
+      }
+
       await sendProgress({
         stage: 'uploading',
         progress: 8,
@@ -305,6 +329,7 @@ export async function POST(req: NextRequest) {
         file_type: file.type,
         file_size: file.size,
         storage_path: storagePath,
+        content_hash: contentHash,
         processing_status: 'processing',
       });
 
