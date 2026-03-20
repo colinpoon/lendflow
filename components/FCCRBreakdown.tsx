@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/accordion';
 import type { FCCRBreakdown as FCCRBreakdownData, DSCRBreakdown as DSCRBreakdownData } from '@/types/financial';
 import { formatCurrency, formatRatio } from '@/utils/format';
+import { GAUGE_COLORS } from '@/lib/constants';
 
 interface CustomAdjustment {
   id: string;
@@ -74,9 +75,9 @@ const SourceInfo: React.FC<{
 
 const getRatioColor = (ratio: number | null, thresholds: { good: number; ok: number; warning: number }): string => {
   if (ratio == null) return 'text-muted-foreground';
-  if (ratio >= thresholds.good) return 'text-emerald-600 dark:text-emerald-400';
-  if (ratio >= thresholds.ok) return 'text-emerald-600/80 dark:text-emerald-400/80';
-  if (ratio >= thresholds.warning) return 'text-amber-600 dark:text-amber-400';
+  if (ratio >= thresholds.good) return 'text-success';
+  if (ratio >= thresholds.ok) return 'text-success/80';
+  if (ratio >= thresholds.warning) return 'text-warning';
   return 'text-destructive';
 };
 
@@ -186,8 +187,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
         </div>
 
         {/* Funded Debt / EBITDA Card */}
-        <div className="bg-gradient-to-br from-amber-500/5 to-amber-500/10 rounded-lg p-4 text-center border border-amber-500/20">
-          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium uppercase tracking-wide">Leverage</p>
+        <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 text-center border border-warning/20">
+          <p className="text-xs text-warning font-medium uppercase tracking-wide">Leverage</p>
           <p className={`text-2xl font-bold ${getRatioColor(metrics.funded_debt_to_ebitda ?? null, { good: 1.5, ok: 2.5, warning: 3.0 })}`}>
             {formatRatio(metrics.funded_debt_to_ebitda)}
           </p>
@@ -288,11 +289,11 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 </div>
 
                 {/* Numerator Section */}
-                <div className="bg-emerald-500/5 rounded-lg p-4">
-                  <h5 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-3">
+                <div className="bg-success/5 rounded-lg p-4">
+                  <h5 className="font-semibold text-success mb-3">
                     Numerator Components
                     {!fccrBreakdown.sources && (
-                      <span className="text-xs text-amber-600 dark:text-amber-400 ml-2">(Re-upload document to see source values)</span>
+                      <span className="text-xs text-warning ml-2">(Re-upload document to see source values)</span>
                     )}
                   </h5>
                   <div className="space-y-2">
@@ -303,7 +304,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                     </div>
 
                     {/* CapEx Section */}
-                    <div className="border-t border-emerald-500/20 pt-2 mt-2">
+                    <div className="border-t border-success/20 pt-2 mt-2">
                       <div className="flex justify-between text-muted-foreground">
                         <span className="flex items-center flex-wrap">
                           Capital Expenditures
@@ -325,7 +326,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <div className="flex justify-between font-medium mt-1">
                         <span className="flex items-center gap-2">
                           Unfunded CapEx
-                          <span className="px-1.5 py-0.5 bg-emerald-500/20 rounded text-xs text-emerald-700 dark:text-emerald-400">
+                          <span className="px-1.5 py-0.5 bg-success/20 rounded text-xs text-success">
                             {fccrBreakdown.capex_treatment === 'unfunded' && 'CapEx - Proceeds'}
                             {fccrBreakdown.capex_treatment === 'all' && '100% CapEx'}
                             {fccrBreakdown.capex_treatment === 'none' && 'Excluded'}
@@ -339,7 +340,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                     </div>
 
                     {/* Other Deductions */}
-                    <div className="border-t border-emerald-500/20 pt-2 mt-2">
+                    <div className="border-t border-success/20 pt-2 mt-2">
                       <div className="flex justify-between text-muted-foreground">
                         <span className="flex items-center flex-wrap">
                           Cash Taxes Paid
@@ -353,8 +354,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
 
                     {/* Custom Adjustments Section */}
                     {customAdjustments.length > 0 && (
-                      <div className="border-t border-emerald-500/20 pt-2 mt-2">
-                        <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mb-2">Custom Adjustments:</div>
+                      <div className="border-t border-success/20 pt-2 mt-2">
+                        <div className="text-xs text-success font-medium mb-2">Custom Adjustments:</div>
                         <div className="space-y-1">
                           {customAdjustments.map((adj) => (
                             <div key={adj.id} className="flex justify-between items-center text-muted-foreground group">
@@ -368,7 +369,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                                 </button>
                                 {adj.description}
                               </span>
-                              <span className={adj.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}>
+                              <span className={adj.amount >= 0 ? 'text-success' : 'text-destructive'}>
                                 {adj.amount >= 0 ? '+ ' : '- '}{formatCurrency(Math.abs(adj.amount))}
                               </span>
                             </div>
@@ -378,8 +379,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                     )}
 
                     {/* Add New Adjustment Input */}
-                    <div className="border-t border-emerald-500/20 pt-3 mt-2">
-                      <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mb-2">Add Adjustment:</div>
+                    <div className="border-t border-success/20 pt-3 mt-2">
+                      <div className="text-xs text-success font-medium mb-2">Add Adjustment:</div>
                       <div className="flex gap-2">
                         <div className="relative">
                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground/60 text-sm">$</span>
@@ -388,7 +389,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                             value={newAdjustmentAmount}
                             onChange={(e) => setNewAdjustmentAmount(e.target.value)}
                             placeholder="0"
-                            className="w-24 pl-6 pr-2 py-1.5 text-sm border border-border rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            className="w-24 pl-6 pr-2 py-1.5 text-sm border border-border rounded focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                           />
                         </div>
                         <input
@@ -396,7 +397,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                           value={newAdjustmentDescription}
                           onChange={(e) => setNewAdjustmentDescription(e.target.value)}
                           placeholder="Description..."
-                          className="flex-1 px-2 py-1.5 text-sm border border-border rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="flex-1 px-2 py-1.5 text-sm border border-border rounded focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleAddAdjustment();
                           }}
@@ -404,7 +405,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                         <button
                           onClick={handleAddAdjustment}
                           disabled={!newAdjustmentAmount || !newAdjustmentDescription.trim()}
-                          className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:bg-muted disabled:cursor-not-allowed transition-colors"
+                          className="px-3 py-1.5 text-sm bg-emerald-brand text-white rounded hover:bg-emerald-brand-hover disabled:bg-muted disabled:cursor-not-allowed transition-colors"
                         >
                           Add
                         </button>
@@ -415,9 +416,9 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                     </div>
 
                     {/* Numerator Total */}
-                    <div className="flex justify-between font-bold border-t-2 border-emerald-400/40 pt-2 mt-2 bg-emerald-500/10 -mx-4 px-4 py-2 rounded-b">
+                    <div className="flex justify-between font-bold border-t-2 border-success/40 pt-2 mt-2 bg-success/10 -mx-4 px-4 py-2 rounded-b">
                       <span>= Cash Available for Debt Service {totalCustomAdjustments !== 0 && '(Adjusted)'}</span>
-                      <span className="text-emerald-700 dark:text-emerald-400">
+                      <span className="text-success">
                         {formatCurrency(totalCustomAdjustments === 0 ? fccrBreakdown.numerator : (adjustedNumerator ?? fccrBreakdown.numerator))}
                       </span>
                     </div>
@@ -493,7 +494,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                   <h5 className="font-semibold text-foreground mb-3 text-center">Covenant FCCR Calculation</h5>
                   <div className="space-y-2 font-mono text-xs text-muted-foreground">
                     <div>
-                      <span className="text-muted-foreground">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()} = <span className="font-semibold text-emerald-700 dark:text-emerald-400">{fccrBreakdown.numerator.toLocaleString()}</span>
+                      <span className="text-muted-foreground">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()} = <span className="font-semibold text-success">{fccrBreakdown.numerator.toLocaleString()}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Denominator =</span> {fccrBreakdown.ttm_principal_payments.toLocaleString()} + {fccrBreakdown.ttm_interest_expense.toLocaleString()}{fccrBreakdown.lease_payments > 0 ? ` + ${fccrBreakdown.lease_payments.toLocaleString()}` : ''} = <span className="font-semibold text-primary">{fccrBreakdown.denominator.toLocaleString()}</span>
@@ -533,11 +534,11 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 </div>
 
                 {/* Numerator */}
-                <div className="bg-emerald-500/5 rounded-lg p-4">
-                  <h5 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-3">Numerator</h5>
+                <div className="bg-success/5 rounded-lg p-4">
+                  <h5 className="font-semibold text-success mb-3">Numerator</h5>
                   <div className="flex justify-between font-bold">
                     <span>Adjusted EBITDA</span>
-                    <span className="text-emerald-700 dark:text-emerald-400">{formatCurrency(dscrBreakdown.adjusted_ebitda)}</span>
+                    <span className="text-success">{formatCurrency(dscrBreakdown.adjusted_ebitda)}</span>
                   </div>
                 </div>
 
@@ -572,8 +573,8 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                 </div>
 
                 {/* Funded Debt / EBITDA */}
-                <div className="bg-amber-500/5 dark:bg-amber-500/10 rounded-lg p-4">
-                  <h5 className="font-semibold text-amber-700 dark:text-amber-300 mb-3">Funded Debt / EBITDA (Leverage Covenant)</h5>
+                <div className="bg-warning/5 dark:bg-warning/10 rounded-lg p-4">
+                  <h5 className="font-semibold text-warning mb-3">Funded Debt / EBITDA (Leverage Covenant)</h5>
                   <div className="space-y-2">
                     <div className="flex justify-between text-muted-foreground">
                       <span>Funded Debt (Bank Debt + Finance Leases)</span>
@@ -583,7 +584,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                       <span>Adjusted EBITDA</span>
                       <span>{formatCurrency(dscrBreakdown.adjusted_ebitda)}</span>
                     </div>
-                    <div className="flex justify-between font-bold border-t border-amber-500/30 pt-2">
+                    <div className="flex justify-between font-bold border-t border-warning/30 pt-2">
                       <span>= Leverage Ratio</span>
                       <span className={getRatioColor(dscrBreakdown.funded_debt_to_ebitda, { good: 1.5, ok: 2.5, warning: 3.0 })}>
                         {formatRatio(dscrBreakdown.funded_debt_to_ebitda)}
@@ -637,38 +638,38 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">EBITDA Coverage / Covenant FCCR</div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: GAUGE_COLORS.green }}></span>
                       <span>&ge; 2.0x Excellent</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-lime-500"></span>
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: GAUGE_COLORS.lime }}></span>
                       <span>&ge; 1.5x Good</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: GAUGE_COLORS.yellow }}></span>
                       <span>&ge; 1.25x Adequate</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: GAUGE_COLORS.red }}></span>
                       <span>&lt; 1.25x Concern</span>
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Funded Debt / EBITDA</div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: GAUGE_COLORS.green }}></span>
                       <span>&le; 1.5x Low leverage</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-lime-500"></span>
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: GAUGE_COLORS.lime }}></span>
                       <span>&le; 2.5x Moderate</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: GAUGE_COLORS.yellow }}></span>
                       <span>&le; 3.0x Covenant limit</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: GAUGE_COLORS.red }}></span>
                       <span>&gt; 3.0x High leverage</span>
                     </div>
                   </div>

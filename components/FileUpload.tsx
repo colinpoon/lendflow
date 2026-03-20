@@ -420,7 +420,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
             className={[
               'h-14 w-14 rounded-full flex items-center justify-center transition-colors',
               isDragging
-                ? 'bg-[oklch(0.68_0.19_155/0.20)]'
+                ? 'bg-emerald-brand-glow'
                 : file
                 ? 'bg-success/10'
                 : 'bg-muted',
@@ -435,7 +435,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
               <CloudUpload
                 className={[
                   'h-6 w-6 transition-colors',
-                  isDragging ? 'text-[oklch(0.68_0.19_155)]' : 'text-muted-foreground',
+                  isDragging ? 'text-emerald-brand' : 'text-muted-foreground',
                 ].join(' ')}
                 strokeWidth={1.5}
               />
