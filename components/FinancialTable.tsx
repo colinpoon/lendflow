@@ -833,7 +833,10 @@ const getRatioColor = (key: string, value: number | null): string => {
  *                   Ignored for 'total' and 'subtotal' variants which always
  *                   carry their own explicit background.
  */
-const getRowClasses = (variant: RowVariant, isEven?: boolean): string => {
+const getRowClasses = (
+  variant: RowVariant,
+  isEven?: boolean,
+): string => {
   switch (variant) {
     case 'total':
       // Always blue-tinted regardless of row parity
@@ -1643,7 +1646,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
               {years.map((y) => (
                 <th
                   key={y}
-                  className="py-3 px-4 text-right text-xs font-bold uppercase tracking-wider text-primary-foreground tabular-nums min-w-[140px] bg-primary"
+                  className="py-3 px-4 text-right text-xs font-bold uppercase tracking-wider text-primary-foreground tabular-nums min-w-35 bg-primary"
                 >
                   {y}
                 </th>
