@@ -272,14 +272,14 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
 
       {/* Risk label pill */}
       <div
-        className={`mt-3 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide ${config.bgColor} ${config.textColor}`}
+        className={`mt-4 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide ${config.bgColor} ${config.textColor}`}
         style={{ boxShadow: `0 0 0 1px ${config.color}30` }}
       >
         {config.label}
       </div>
 
       {/* Zone legend — three swatches giving Low / Moderate / High scale context */}
-      <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground/70">
+      <div className="mt-4 flex items-center gap-3 text-[10px] text-muted-foreground/70">
         <span className="flex items-center gap-1">
           <span className="inline-block h-1.5 w-3 rounded-full bg-success" />
           Low
@@ -594,7 +594,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
 
           {/* Lending Decision verdict — prominent call-to-action banner */}
           <div
-            className={`w-full mt-4 rounded-xl border-2 px-5 py-4 text-center ${decisionStyle.bg}`}
+            className={`w-full mt-6 rounded-xl border-2 px-5 py-4 text-center ${decisionStyle.bg}`}
             style={{
               borderColor: `color-mix(in oklch, currentColor, transparent 55%)`,
             }}
