@@ -458,7 +458,7 @@ Improvements to align with commercial banking standards. Not bugs, but gaps.
 Architectural gaps for regulated lending use. Required before supporting actual credit decisions at a regulated institution.
 
 - [x] **CRITICAL — No regulatory audit trail** `[Financial Director]` — No immutable record of which analysis, model version, input document hash, and computed metrics were used for each lending decision. Required for regulatory exams and litigation.
-- [ ] **CRITICAL — No fair lending controls** `[Financial Director]` — ECOA/Reg B compliance: no monitoring for disparate impact from AI-generated recommendations. No disparity analysis mechanism.
+- [x] **CRITICAL — No fair lending controls** `[Financial Director]` — ECOA/Reg B compliance: no monitoring for disparate impact from AI-generated recommendations. No disparity analysis mechanism.
 - [ ] **CRITICAL — No data retention policy** `[Financial Director]` — Financial records require 5–7 year retention per OCC/FDIC. No formal retention schedule for documents or extractions.
 - [ ] **CRITICAL — Lending recommendations lack required adverse action notices** `[Financial Director]` — System outputs "Decline" with no mechanism to generate required regulatory notices.
 - [ ] **CRITICAL — No model risk management framework** `[Financial Director]` — OCC Bulletin 2011-12 / Fed SR 11-7 require model validation, backtesting, and ongoing monitoring for AI credit models.
