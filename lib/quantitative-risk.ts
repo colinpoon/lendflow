@@ -30,6 +30,8 @@ export interface MetricScore {
   trend_modifier: number;
   adjusted_score: number;
   rationale: string;
+  /** False when metric has no data — excluded from weighted average */
+  data_available: boolean;
 }
 
 export interface QuantitativeRiskAssessment {
@@ -173,8 +175,8 @@ function getBaseScore(
   value: number | null,
   bands: readonly { min: number; max: number; score: number }[],
   higherIsBetter: boolean = false
-): number {
-  if (value == null || !isFinite(value)) return 3; // Default to middle score
+): number | null {
+  if (value == null || !isFinite(value)) return null;
 
   for (const band of bands) {
     if (higherIsBetter) {
@@ -249,11 +251,15 @@ function formatValue(value: number | null, isPercent: boolean = false): string {
 function generateRationale(
   name: string,
   currentValue: number | null,
-  baseScore: number,
+  baseScore: number | null,
   avgChange: number | null,
   trendDirection: MetricScore['trend_direction'],
   isPercent: boolean = false
 ): string {
+  if (baseScore == null) {
+    return `Insufficient data to score ${name} — excluded from weighted assessment.`;
+  }
+
   const valueStr = formatValue(currentValue, isPercent);
   const scoreLabel = baseScore <= 2 ? 'Strong' : baseScore <= 3 ? 'Good' : baseScore <= 4 ? 'Weak' : 'Poor';
 
@@ -294,7 +300,8 @@ export function calculateQuantitativeRisk(
   const ebitdaConfig = METRIC_CONFIG.ebitda_trend;
   const ebitdaBaseScore = ebitdaAvgChange != null
     ? getBaseScore(ebitdaAvgChange, ebitdaConfig.bands, ebitdaConfig.higher_is_better)
-    : 3;
+    : null;
+  const ebitdaDataAvailable = ebitdaBaseScore != null;
 
   metrics.push({
     name: ebitdaConfig.name,
@@ -304,12 +311,13 @@ export function calculateQuantitativeRisk(
     avg_annual_change_pct: ebitdaAvgChange,
     trend: ebitdaAvgChange != null ? (ebitdaAvgChange > 3 ? 'positive' : ebitdaAvgChange < -3 ? 'negative' : 'stable') : null,
     trend_direction: ebitdaAvgChange != null ? (ebitdaAvgChange > 3 ? 'improving' : ebitdaAvgChange < -3 ? 'worsening' : 'stable') : null,
-    base_score: ebitdaBaseScore,
+    base_score: ebitdaBaseScore ?? 0,
     trend_modifier: 0, // No additional trend modifier for EBITDA trend - it IS the trend
-    adjusted_score: ebitdaBaseScore,
+    adjusted_score: ebitdaBaseScore ?? 0,
     rationale: ebitdaAvgChange != null
       ? `EBITDA ${ebitdaAvgChange >= 0 ? 'growing' : 'declining'} at ${ebitdaAvgChange >= 0 ? '+' : ''}${ebitdaAvgChange}% avg annually.`
       : 'Insufficient data to calculate EBITDA trend.',
+    data_available: ebitdaDataAvailable,
   });
 
   // 2. FCCR
@@ -317,8 +325,11 @@ export function calculateQuantitativeRisk(
   const fccrAvgChange = calculateAvgAnnualChange(years, fccrValues);
   const fccrConfig = METRIC_CONFIG.fccr;
   const fccrBaseScore = getBaseScore(latestMetrics.fccr, fccrConfig.bands, fccrConfig.higher_is_better);
+  const fccrDataAvailable = fccrBaseScore != null;
   const fccrTrend = getTrendModifier(fccrAvgChange, fccrConfig.higher_is_better);
-  const fccrAdjustedScore = Math.max(1, Math.min(5, fccrBaseScore - fccrTrend.modifier));
+  const fccrAdjustedScore = fccrBaseScore != null
+    ? Math.max(1, Math.min(5, fccrBaseScore - fccrTrend.modifier))
+    : 0;
 
   metrics.push({
     name: fccrConfig.name,
@@ -328,10 +339,11 @@ export function calculateQuantitativeRisk(
     avg_annual_change_pct: fccrAvgChange,
     trend: fccrTrend.trend,
     trend_direction: fccrTrend.direction,
-    base_score: fccrBaseScore,
+    base_score: fccrBaseScore ?? 0,
     trend_modifier: fccrTrend.modifier,
     adjusted_score: fccrAdjustedScore,
     rationale: generateRationale('Covenant FCCR', latestMetrics.fccr, fccrBaseScore, fccrAvgChange, fccrTrend.direction),
+    data_available: fccrDataAvailable,
   });
 
   // 3. Senior Leverage (Senior Debt / EBITDA)
@@ -339,8 +351,11 @@ export function calculateQuantitativeRisk(
   const leverageAvgChange = calculateAvgAnnualChange(years, leverageValues);
   const leverageConfig = METRIC_CONFIG.senior_leverage;
   const leverageBaseScore = getBaseScore(latestMetrics.senior_debt_to_ebitda, leverageConfig.bands, leverageConfig.higher_is_better);
+  const leverageDataAvailable = leverageBaseScore != null;
   const leverageTrend = getTrendModifier(leverageAvgChange, leverageConfig.higher_is_better);
-  const leverageAdjustedScore = Math.max(1, Math.min(5, leverageBaseScore - leverageTrend.modifier));
+  const leverageAdjustedScore = leverageBaseScore != null
+    ? Math.max(1, Math.min(5, leverageBaseScore - leverageTrend.modifier))
+    : 0;
 
   metrics.push({
     name: leverageConfig.name,
@@ -350,10 +365,11 @@ export function calculateQuantitativeRisk(
     avg_annual_change_pct: leverageAvgChange,
     trend: leverageTrend.trend,
     trend_direction: leverageTrend.direction,
-    base_score: leverageBaseScore,
+    base_score: leverageBaseScore ?? 0,
     trend_modifier: leverageTrend.modifier,
     adjusted_score: leverageAdjustedScore,
     rationale: generateRationale('Senior Leverage', latestMetrics.senior_debt_to_ebitda, leverageBaseScore, leverageAvgChange, leverageTrend.direction),
+    data_available: leverageDataAvailable,
   });
 
   // 4. Debt / Capital
@@ -361,8 +377,11 @@ export function calculateQuantitativeRisk(
   const debtCapitalAvgChange = calculateAvgAnnualChange(years, debtCapitalValues);
   const debtCapitalConfig = METRIC_CONFIG.debt_capital;
   const debtCapitalBaseScore = getBaseScore(latestMetrics.total_debt_to_capital, debtCapitalConfig.bands, debtCapitalConfig.higher_is_better);
+  const debtCapitalDataAvailable = debtCapitalBaseScore != null;
   const debtCapitalTrend = getTrendModifier(debtCapitalAvgChange, debtCapitalConfig.higher_is_better);
-  const debtCapitalAdjustedScore = Math.max(1, Math.min(5, debtCapitalBaseScore - debtCapitalTrend.modifier));
+  const debtCapitalAdjustedScore = debtCapitalBaseScore != null
+    ? Math.max(1, Math.min(5, debtCapitalBaseScore - debtCapitalTrend.modifier))
+    : 0;
 
   metrics.push({
     name: debtCapitalConfig.name,
@@ -372,10 +391,11 @@ export function calculateQuantitativeRisk(
     avg_annual_change_pct: debtCapitalAvgChange,
     trend: debtCapitalTrend.trend,
     trend_direction: debtCapitalTrend.direction,
-    base_score: debtCapitalBaseScore,
+    base_score: debtCapitalBaseScore ?? 0,
     trend_modifier: debtCapitalTrend.modifier,
     adjusted_score: debtCapitalAdjustedScore,
     rationale: generateRationale('Debt/Capital', latestMetrics.total_debt_to_capital, debtCapitalBaseScore, debtCapitalAvgChange, debtCapitalTrend.direction, true),
+    data_available: debtCapitalDataAvailable,
   });
 
   // 5. Current Ratio
@@ -383,8 +403,11 @@ export function calculateQuantitativeRisk(
   const currentRatioAvgChange = calculateAvgAnnualChange(years, currentRatioValues);
   const currentRatioConfig = METRIC_CONFIG.current_ratio;
   const currentRatioBaseScore = getBaseScore(latestMetrics.current_ratio, currentRatioConfig.bands, currentRatioConfig.higher_is_better);
+  const currentRatioDataAvailable = currentRatioBaseScore != null;
   const currentRatioTrend = getTrendModifier(currentRatioAvgChange, currentRatioConfig.higher_is_better);
-  const currentRatioAdjustedScore = Math.max(1, Math.min(5, currentRatioBaseScore - currentRatioTrend.modifier));
+  const currentRatioAdjustedScore = currentRatioBaseScore != null
+    ? Math.max(1, Math.min(5, currentRatioBaseScore - currentRatioTrend.modifier))
+    : 0;
 
   metrics.push({
     name: currentRatioConfig.name,
@@ -394,17 +417,24 @@ export function calculateQuantitativeRisk(
     avg_annual_change_pct: currentRatioAvgChange,
     trend: currentRatioTrend.trend,
     trend_direction: currentRatioTrend.direction,
-    base_score: currentRatioBaseScore,
+    base_score: currentRatioBaseScore ?? 0,
     trend_modifier: currentRatioTrend.modifier,
     adjusted_score: currentRatioAdjustedScore,
     rationale: generateRationale('Current Ratio', latestMetrics.current_ratio, currentRatioBaseScore, currentRatioAvgChange, currentRatioTrend.direction),
+    data_available: currentRatioDataAvailable,
   });
 
-  // Calculate weighted raw score (1-5 scale)
-  const weightedRawScore = metrics.reduce(
-    (sum, m) => sum + m.adjusted_score * m.weight,
-    0
-  );
+  // Calculate weighted raw score (1-5 scale), excluding metrics without data
+  const availableMetrics = metrics.filter(m => m.data_available);
+  const totalAvailableWeight = availableMetrics.reduce((sum, m) => sum + m.weight, 0);
+
+  // If no metrics have data, return a neutral midpoint
+  const weightedRawScore = totalAvailableWeight > 0
+    ? availableMetrics.reduce(
+        (sum, m) => sum + m.adjusted_score * (m.weight / totalAvailableWeight),
+        0
+      )
+    : 3; // Neutral when no data at all
 
   // Normalize to 0-100 scale: (score - 1) / 4 * 100
   const normalizedScore = Math.round(((weightedRawScore - 1) / 4) * 100);
@@ -412,10 +442,12 @@ export function calculateQuantitativeRisk(
   // Determine risk band
   const riskBand = getRiskBand(normalizedScore);
 
-  // Generate trend summary
-  const improvingCount = metrics.filter(m => m.trend_direction === 'improving').length;
-  const worseningCount = metrics.filter(m => m.trend_direction === 'worsening').length;
-  const trendSummary = `${improvingCount} of ${metrics.length} metrics improving, ${worseningCount} worsening`;
+  // Generate trend summary (only count metrics with data)
+  const improvingCount = availableMetrics.filter(m => m.trend_direction === 'improving').length;
+  const worseningCount = availableMetrics.filter(m => m.trend_direction === 'worsening').length;
+  const unavailableCount = metrics.length - availableMetrics.length;
+  const trendSummary = `${improvingCount} of ${availableMetrics.length} metrics improving, ${worseningCount} worsening` +
+    (unavailableCount > 0 ? ` (${unavailableCount} excluded — insufficient data)` : '');
 
   return {
     metrics,
