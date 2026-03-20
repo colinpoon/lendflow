@@ -664,6 +664,10 @@ DEBT SERVICE ITEMS (CRITICAL FOR EBITDA COVERAGE & FCCR CALCULATION):
   - "Repayment of long-term debt" or "Repayment of bank indebtedness"
   - "Principal payments on credit facilities"
   - Extract as POSITIVE number
+  NET ISSUANCE PRESENTATION: If the document uses a single net issuance line for long-term debt
+  (e.g., "Net change in long-term debt") with no separate repayment line, set repayment_of_debt
+  to null. The net figure is captured in proceeds_from_long_term_debt and repayments are embedded
+  within it — extracting a separate repayment here would double-count.
 
 • payment_of_lease_liability: PRINCIPAL portion of lease payments from CASH FLOW STATEMENT under
   "Financing activities". This captures the balance-sheet reduction (principal repayment) of lease

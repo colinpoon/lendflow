@@ -14,6 +14,8 @@
 
 **24b.2 — Negative net LT debt proceeds no longer silenced:** Previously, the extraction prompt instructed AI to extract negative net issuances as `null`, which defaulted to 0 in the FCCR calculator. This caused full CapEx to appear unfunded in paydown years with no explanation for the FCCR swing. Fixed: (1) prompt now instructs AI to extract negative values as-is, (2) FCCR calculator surfaces analyst warning when proceeds are negative explaining the company is in a net debt paydown year.
 
+**24b.4 — Net issuance / repayment_of_debt consistency:** Added instruction to `repayment_of_debt` extraction: when a document uses net issuance presentation (single net line, no separate repayment), set `repayment_of_debt` to null to avoid double-counting repayments already embedded in the net proceeds figure.
+
 **24b.3 — Canadian ASPE "New borrowings" contextual inclusion:** Updated the "New borrowings" exclusion rule from a blanket reject to a contextual check — now includes "New borrowings" when the balance sheet shows a corresponding new or increased long-term debt balance. Canadian ASPE private companies frequently use this generic label for their sole LT facility, and the blanket exclusion was zeroing out CapEx offset for these borrowers. Also fixed vision extraction tool referencing "Proceeds from credit facilities" (revolving draw) in proceeds_from_long_term_debt examples.
 
 ### Task 25 — Portfolio Display & Formatting (2026-03-19)
