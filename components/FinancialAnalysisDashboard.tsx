@@ -28,6 +28,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { GAUGE_COLORS } from '@/lib/constants';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -379,9 +380,9 @@ function RiskGauge({ score }: { score: number }) {
       <svg viewBox="0 0 200 115" className="w-full max-w-[220px]">
         <defs>
           <linearGradient id="riskArc" x1="0%" y1="50%" x2="100%" y2="50%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="45%" stopColor="#eab308" />
-            <stop offset="100%" stopColor="#ef4444" />
+            <stop offset="0%" stopColor={GAUGE_COLORS.green} />
+            <stop offset="45%" stopColor={GAUGE_COLORS.yellow} />
+            <stop offset="100%" stopColor={GAUGE_COLORS.red} />
           </linearGradient>
         </defs>
 

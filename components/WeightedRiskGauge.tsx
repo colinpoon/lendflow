@@ -26,7 +26,7 @@ import {
 import type { DebtHealthAssessment } from '@/types/risk';
 import type { RiskConfig } from '@/types';
 import type { ComputedMetrics as YearMetrics } from '@/types/financial';
-import { RISK_WEIGHTS, FCCR_THRESHOLDS } from '@/lib/constants';
+import { RISK_WEIGHTS, FCCR_THRESHOLDS, GAUGE_COLORS } from '@/lib/constants';
 import {
   getFCCRRiskScore,
   getDebtEBITDARiskScore,
@@ -79,11 +79,11 @@ const getRiskConfig = (score: number): UIRiskConfig => {
   };
 
   const semanticOverrides: Record<RiskLevel, Pick<UIRiskConfig, 'color' | 'bgColor' | 'textColor'>> = {
-    'very-low': { color: '#22c55e', bgColor: 'bg-success/10',  textColor: 'text-success' },
-    'low':      { color: '#84cc16', bgColor: 'bg-success/10',  textColor: 'text-success' },
-    'moderate': { color: '#eab308', bgColor: 'bg-warning/10',  textColor: 'text-warning' },
-    'elevated': { color: '#f97316', bgColor: 'bg-error/10',    textColor: 'text-error' },
-    'high':     { color: '#ef4444', bgColor: 'bg-error/15',    textColor: 'text-error' },
+    'very-low': { color: GAUGE_COLORS.green,  bgColor: 'bg-success/10',  textColor: 'text-success' },
+    'low':      { color: GAUGE_COLORS.lime,   bgColor: 'bg-success/10',  textColor: 'text-success' },
+    'moderate': { color: GAUGE_COLORS.yellow,  bgColor: 'bg-warning/10',  textColor: 'text-warning' },
+    'elevated': { color: GAUGE_COLORS.orange,  bgColor: 'bg-error/10',    textColor: 'text-error' },
+    'high':     { color: GAUGE_COLORS.red,     bgColor: 'bg-error/15',    textColor: 'text-error' },
   };
 
   return {
@@ -114,24 +114,24 @@ const getLendingDecisionStyle = (decision: string): { bg: string; text: string }
 // ─── Color helpers for Recharts (hex required — CSS classes not readable) ─────
 
 const getFccrBarColor = (value: number | null): string => {
-  if (value == null) return '#6b7280';
-  if (value >= FCCR_THRESHOLDS.ADEQUATE) return '#22c55e';
-  if (value >= FCCR_THRESHOLDS.WEAK) return '#eab308';
-  return '#ef4444';
+  if (value == null) return GAUGE_COLORS.gray;
+  if (value >= FCCR_THRESHOLDS.ADEQUATE) return GAUGE_COLORS.green;
+  if (value >= FCCR_THRESHOLDS.WEAK) return GAUGE_COLORS.yellow;
+  return GAUGE_COLORS.red;
 };
 
 const getDebtEbitdaBarColor = (value: number | null): string => {
-  if (value == null) return '#6b7280';
-  if (value <= 2.5) return '#22c55e';
-  if (value <= 3.5) return '#eab308';
-  return '#ef4444';
+  if (value == null) return GAUGE_COLORS.gray;
+  if (value <= 2.5) return GAUGE_COLORS.green;
+  if (value <= 3.5) return GAUGE_COLORS.yellow;
+  return GAUGE_COLORS.red;
 };
 
 const getDebtCapitalBarColor = (value: number | null): string => {
-  if (value == null) return '#6b7280';
-  if (value <= 50) return '#22c55e';
-  if (value <= 65) return '#eab308';
-  return '#ef4444';
+  if (value == null) return GAUGE_COLORS.gray;
+  if (value <= 50) return GAUGE_COLORS.green;
+  if (value <= 65) return GAUGE_COLORS.yellow;
+  return GAUGE_COLORS.red;
 };
 
 // Shared fade-up animation class (tw-animate-css) replacing framer-motion variants.
@@ -171,7 +171,7 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
           <path
             d="M 10 110 A 90 90 0 0 1 190 110"
             fill="none"
-            stroke="#22c55e"
+            stroke={GAUGE_COLORS.green}
             strokeWidth="10"
             strokeLinecap="butt"
             strokeOpacity="0.22"
@@ -181,7 +181,7 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
           <path
             d="M 10 110 A 90 90 0 0 1 190 110"
             fill="none"
-            stroke="#eab308"
+            stroke={GAUGE_COLORS.yellow}
             strokeWidth="10"
             strokeLinecap="butt"
             strokeOpacity="0.22"
@@ -192,7 +192,7 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
           <path
             d="M 10 110 A 90 90 0 0 1 190 110"
             fill="none"
-            stroke="#ef4444"
+            stroke={GAUGE_COLORS.red}
             strokeWidth="10"
             strokeLinecap="butt"
             strokeOpacity="0.22"

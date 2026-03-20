@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Info,
 } from 'lucide-react';
+import { GAUGE_COLORS } from '@/lib/constants';
 import {
   Tooltip,
   TooltipContent,
@@ -107,7 +108,6 @@ const ScoreGauge: React.FC<{ score: number; maxScore?: number }> = ({
 
   const bandStyle = RISK_BAND_STYLES[riskBand];
 
-  // Gradient stops for the gauge (SVG hex values retained intentionally)
   const gradientId = 'risk-gauge-gradient';
 
   return (
@@ -116,11 +116,11 @@ const ScoreGauge: React.FC<{ score: number; maxScore?: number }> = ({
         <svg viewBox="0 0 200 100" className="w-full h-full">
           <defs>
             <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#22c55e" />
-              <stop offset="25%" stopColor="#84cc16" />
-              <stop offset="50%" stopColor="#eab308" />
-              <stop offset="75%" stopColor="#f97316" />
-              <stop offset="100%" stopColor="#ef4444" />
+              <stop offset="0%" stopColor={GAUGE_COLORS.green} />
+              <stop offset="25%" stopColor={GAUGE_COLORS.lime} />
+              <stop offset="50%" stopColor={GAUGE_COLORS.yellow} />
+              <stop offset="75%" stopColor={GAUGE_COLORS.orange} />
+              <stop offset="100%" stopColor={GAUGE_COLORS.red} />
             </linearGradient>
           </defs>
 

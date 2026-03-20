@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import type { FCCRBreakdown } from '@/types/financial';
 import { formatCurrency } from '@/utils/format';
+import { GAUGE_COLORS } from '@/lib/constants';
 
 // ─── Domain Interfaces ────────────────────────────────────────────────────────
 
@@ -127,34 +128,34 @@ const getFCCRHealth = (value: number): HealthConfig => {
   if (value >= 2.0)
     return {
       level: 'excellent',
-      color: '#22c55e',
+      color: GAUGE_COLORS.green,
       bgClass: 'bg-success',
       percentage: 100,
     };
   if (value >= 1.5)
     return {
       level: 'good',
-      color: '#84cc16',
+      color: GAUGE_COLORS.lime,
       bgClass: 'bg-success/70',
       percentage: 80,
     };
   if (value >= 1.2)
     return {
       level: 'adequate',
-      color: '#eab308',
+      color: GAUGE_COLORS.yellow,
       bgClass: 'bg-warning',
       percentage: 60,
     };
   if (value >= 1.0)
     return {
       level: 'weak',
-      color: '#f97316',
+      color: GAUGE_COLORS.orange,
       bgClass: 'bg-error/80',
       percentage: 40,
     };
   return {
     level: 'poor',
-    color: '#ef4444',
+    color: GAUGE_COLORS.red,
     bgClass: 'bg-error',
     percentage: 20,
   };
@@ -165,34 +166,34 @@ const getSeniorDebtEBITDAHealth = (value: number): HealthConfig => {
   if (value <= 1.5)
     return {
       level: 'excellent',
-      color: '#22c55e',
+      color: GAUGE_COLORS.green,
       bgClass: 'bg-success',
       percentage: 100,
     };
   if (value <= 2.5)
     return {
       level: 'good',
-      color: '#84cc16',
+      color: GAUGE_COLORS.lime,
       bgClass: 'bg-success/70',
       percentage: 80,
     };
   if (value <= 3.0)
     return {
       level: 'adequate',
-      color: '#eab308',
+      color: GAUGE_COLORS.yellow,
       bgClass: 'bg-warning',
       percentage: 60,
     };
   if (value <= 4.0)
     return {
       level: 'weak',
-      color: '#f97316',
+      color: GAUGE_COLORS.orange,
       bgClass: 'bg-error/80',
       percentage: 40,
     };
   return {
     level: 'poor',
-    color: '#ef4444',
+    color: GAUGE_COLORS.red,
     bgClass: 'bg-error',
     percentage: 20,
   };
@@ -203,34 +204,34 @@ const getTotalDebtCapitalHealth = (value: number): HealthConfig => {
   if (value < 0.3)
     return {
       level: 'excellent',
-      color: '#22c55e',
+      color: GAUGE_COLORS.green,
       bgClass: 'bg-success',
       percentage: 100,
     };
   if (value <= 0.5)
     return {
       level: 'good',
-      color: '#84cc16',
+      color: GAUGE_COLORS.lime,
       bgClass: 'bg-success/70',
       percentage: 80,
     };
   if (value <= 0.6)
     return {
       level: 'adequate',
-      color: '#eab308',
+      color: GAUGE_COLORS.yellow,
       bgClass: 'bg-warning',
       percentage: 60,
     };
   if (value <= 0.7)
     return {
       level: 'weak',
-      color: '#f97316',
+      color: GAUGE_COLORS.orange,
       bgClass: 'bg-error/80',
       percentage: 40,
     };
   return {
     level: 'poor',
-    color: '#ef4444',
+    color: GAUGE_COLORS.red,
     bgClass: 'bg-error',
     percentage: 20,
   };

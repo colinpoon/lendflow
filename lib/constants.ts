@@ -145,6 +145,20 @@ export const HEALTH_COLORS = {
 } as const;
 
 /**
+ * SVG gauge fill colors (Tailwind 500-shade equivalents)
+ * Used for SVG gradient stops, zone bands, and bar fills on dark backgrounds.
+ * Distinct from HEALTH_COLORS (600-shade) which are used for text/borders.
+ */
+export const GAUGE_COLORS = {
+  green: '#22c55e',   // green-500
+  lime: '#84cc16',    // lime-500
+  yellow: '#eab308',  // yellow-500
+  orange: '#f97316',  // orange-500
+  red: '#ef4444',     // red-500
+  gray: '#6b7280',    // gray-500 (null/disabled fallback)
+} as const;
+
+/**
  * Tailwind CSS class mappings for health levels
  * Improved contrast ratios for WCAG AA compliance
  */
