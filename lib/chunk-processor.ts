@@ -28,23 +28,6 @@ const DEBUG_FINANCIALS = process.env.DEBUG_FINANCIALS === 'true';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @deprecated Use chunkTextSemantic for better table/boundary preservation
- * Split text into manageable chunks using fixed character boundaries
- * @param text - The text to chunk
- * @param maxChars - Maximum characters per chunk
- */
-export function chunkText(
-  text: string,
-  maxChars: number = AI_CONFIG.CHUNK_SIZE
-): string[] {
-  const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += maxChars) {
-    chunks.push(text.slice(i, i + maxChars));
-  }
-  return chunks;
-}
-
-/**
  * Semantic text chunking that respects document structure
  * - Splits at paragraph boundaries (\n\n)
  * - Adds configurable overlap between chunks
@@ -638,68 +621,6 @@ export async function processChunksSequentially(
       model: AI_CONFIG.MODEL,
     },
   };
-}
-
-/**
- * @deprecated Use processChunksSequentially for deterministic extraction
- * Process chunks in parallel batches - kept for backward compatibility
- * WARNING: Parallel processing can cause non-deterministic merge order
- * @param chunks - Unique chunks to process
- * @returns Array of extraction results (order may vary between runs)
- */
-export async function processChunksInBatches(
-  chunks: UniqueChunk[]
-): Promise<AIExtractionResponse[]> {
-  console.warn(
-    '⚠️ processChunksInBatches is deprecated. Use processChunksSequentially for deterministic results.'
-  );
-
-  const results: ChunkResult[] = [];
-  const totalBatches = Math.ceil(chunks.length / AI_CONFIG.BATCH_SIZE);
-
-  console.log(
-    `📊 Processing ${chunks.length} unique chunks in ${totalBatches} batches`
-  );
-
-  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-    const batchStart = batchIndex * AI_CONFIG.BATCH_SIZE;
-    const batchEnd = Math.min(batchStart + AI_CONFIG.BATCH_SIZE, chunks.length);
-    const batchChunks = chunks.slice(batchStart, batchEnd);
-
-    console.log(
-      `⚡ Processing batch ${batchIndex + 1}/${totalBatches} (chunks ${batchStart + 1}-${batchEnd})`
-    );
-
-    const batchPromises = batchChunks.map((chunk) => processChunk(chunk));
-    const batchResults = await Promise.allSettled(batchPromises);
-
-    for (const result of batchResults) {
-      if (result.status === 'fulfilled' && result.value) {
-        results.push(result.value);
-      }
-    }
-
-    console.log(`✅ Batch ${batchIndex + 1} complete`);
-
-    // Add delay between batches to respect rate limits (skip delay after last batch)
-    if (batchIndex < totalBatches - 1) {
-      console.log(
-        `⏳ Waiting ${AI_CONFIG.BATCH_DELAY_MS / 1000}s before next batch to respect rate limits...`
-      );
-      await delay(AI_CONFIG.BATCH_DELAY_MS);
-    }
-  }
-
-  // Sort by chunk index for consistent ordering
-  results.sort((a, b) => a.index - b.index);
-
-  console.log(`🎯 All ${chunks.length} chunks processed`);
-
-  // Return only the result objects (for backward compatibility)
-  // Type assertion needed because TypeScript doesn't narrow through filter
-  return results
-    .filter((r): r is ChunkResult & { result: AIExtractionResponse } => r.result !== null)
-    .map((r) => r.result);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

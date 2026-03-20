@@ -25,8 +25,6 @@ export const AI_CONFIG = {
   TEMPERATURE: 0,
   MAX_TOKENS: 8192, // Claude supports higher output limits for detailed extraction
   CHUNK_SIZE: 15000, // Larger chunks - Claude has 200k context window
-  BATCH_SIZE: 3, // Claude handles concurrent requests well
-  BATCH_DELAY_MS: 500, // Lower delay - Anthropic rate limits are generous
   MAX_RETRIES: 3,
   RATE_LIMIT_BACKOFF_MS: 10000, // Anthropic returns retry-after headers
 } as const;
