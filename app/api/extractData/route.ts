@@ -339,8 +339,9 @@ export async function POST(req: NextRequest) {
       const startTime = Date.now();
 
       try {
-        // Run AI extraction with progress callback
-        const extractedData = await extractFinancialData(tempPath, sendProgress, userId);
+        // Run AI extraction with progress callback and abort signal
+        // req.signal fires when the client disconnects, stopping further API calls
+        const extractedData = await extractFinancialData(tempPath, sendProgress, userId, req.signal);
         const processingTime = Date.now() - startTime;
 
         console.log(`✅ AI extraction completed in ${processingTime}ms`);
@@ -522,18 +523,29 @@ export async function POST(req: NextRequest) {
           })));
         }
       } catch (aiError: unknown) {
-        const errorMessage = aiError instanceof Error ? aiError.message : 'AI extraction failed';
-        console.error('❗ AI extraction error:', aiError);
+        // Distinguish client disconnect from actual errors
+        const isAbort = aiError instanceof DOMException && aiError.name === 'AbortError';
+        if (isAbort) {
+          console.log('🛑 Client disconnected — extraction aborted, no further API credits consumed');
+        } else {
+          console.error('❗ AI extraction error:', aiError);
+        }
+
+        const errorMessage = isAbort
+          ? 'Extraction cancelled — client disconnected'
+          : (aiError instanceof Error ? aiError.message : 'AI extraction failed');
 
         // Get fresh client for error handling (original token may have expired)
         const errorSupabase = await createClient();
         await updateDocumentStatus(errorSupabase, documentId, 'failed', errorMessage);
 
-        await sendProgress({
-          stage: 'error',
-          progress: 0,
-          message: errorMessage,
-        });
+        if (!isAbort) {
+          await sendProgress({
+            stage: 'error',
+            progress: 0,
+            message: errorMessage,
+          });
+        }
       } finally {
         // Always clean up the temp file regardless of success or failure
         try {

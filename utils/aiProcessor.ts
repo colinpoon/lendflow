@@ -117,7 +117,8 @@ export type { ProgressCallback };
 export const extractFinancialData = async (
   filePath: string,
   onProgress?: ProgressCallback,
-  userId?: string
+  userId?: string,
+  signal?: AbortSignal
 ): Promise<ExtractionResult> => {
   try {
     // Validate environment - now using Anthropic Claude for text extraction
@@ -170,7 +171,7 @@ export const extractFinancialData = async (
     // Phase 3: AI Extraction (SEQUENTIAL for determinism)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const chunkProcessingResult = await processChunksSequentially(uniqueChunks, onProgress);
+    const chunkProcessingResult = await processChunksSequentially(uniqueChunks, onProgress, signal);
     const chunkResults = chunkProcessingResult.results;
 
     // Check for fatal API errors (billing, auth) that aborted the pipeline
