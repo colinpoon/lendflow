@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**30.10 — Centralize debug flags:** Created `lib/debug-flags.ts` with `DEBUG_FINANCIALS` and `DEBUG_FINANCE` exports. Replaced local declarations in `aiProcessor.ts`, `chunk-processor.ts`, `extraction-merger.ts`, `risk-generator.ts`. Added `DEBUG_FINANCE` to `.env.example`.
+
 **30.9 — Remove dead code:** Deleted deprecated `chunkText` and `processChunksInBatches` (~80 lines). Also removed unused `BATCH_SIZE` and `BATCH_DELAY_MS` constants.
 
 **30.6b — Remove client-side PDF compression:** Removed pdf-lib compression that blocked the main thread for large PDFs. Server handles parsing regardless. Bonus: ~176KB saved from client bundle (dashboard/[projectId] dropped from 201KB to 25KB First Load JS).
