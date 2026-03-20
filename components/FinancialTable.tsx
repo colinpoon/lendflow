@@ -443,13 +443,13 @@ const sections: SectionConfig[] = [
     rows: [
       {
         key: 'fccr',
-        label: 'Covenant FCCR',
+        label: 'Covenant FCCR (incl. preferred dividends)',
         format: 'ratio',
         variant: 'total',
       },
       {
         key: 'dscr',
-        label: 'EBITDA Coverage',
+        label: 'EBITDA Coverage / DSCR (debt service only)',
         format: 'ratio',
         variant: 'total',
       },
@@ -1175,20 +1175,13 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
           // EBITDA source badge — "Reported" (green) vs "Calc" (amber)
           let badge: React.ReactNode = null;
           if (showBadge && val !== null) {
-            const metrics = data.metrics_by_year[y];
-            const isCalc =
-              row.key === 'ebitda'
-                ? metrics.ebitda_calculated === true
-                : metrics.reported_adjusted_ebitda == null;
             badge = (
               <span
-                className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${
-                  isCalc
-                    ? 'bg-warning/15 text-warning border border-warning/25'
-                    : 'bg-success/12 text-success border border-success/20'
+                className={`ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium
+                    bg-warning/15 text-warning border border-warning/25
                 }`}
               >
-                {isCalc ? 'Calc' : 'Reported'}
+                Calc
               </span>
             );
           }
@@ -1445,18 +1438,9 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                       </span>
                       <span className="font-bold text-success">
                         {fmtEq(
-                          m.calculated_adjusted_ebitda ??
-                            m.adjusted_ebitda ??
-                            ab.reported_ebitda,
+                          m.adjusted_ebitda ?? ab.reported_ebitda,
                         )}
                       </span>
-                      {ab.uses_reported_value &&
-                        m.adjusted_ebitda != null && (
-                          <span className="text-muted-foreground/60 text-xs ml-2">
-                            (using reported:{' '}
-                            {fmtEq(m.adjusted_ebitda)})
-                          </span>
-                        )}
                     </div>
                   </div>
                 )}

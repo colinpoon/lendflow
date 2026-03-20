@@ -16,6 +16,8 @@
 
 ### Task 25 — Portfolio Display & Formatting (continued)
 
+**25.3 — DSCR/FCCR definitional footnotes:** Added parenthetical notes to the FinancialTable labels: "Covenant FCCR (incl. preferred dividends)" and "EBITDA Coverage / DSCR (debt service only)" so analysts can immediately see why the two ratios differ when preferred dividends are material.
+
 **25.2 — Sr Debt / EBITDA label corrected to Adj. EBITDA:** Updated all user-facing labels from "Senior Debt / EBITDA" to "Senior Debt / Adj. EBITDA" across instruments page (summary card + table header), WeightedRiskGauge (chart title + metric badge), CovenantParametersPanel (description text), and accuracy benchmarks. FinancialTable.tsx and DebtHealthMeters.tsx already had the correct label.
 
 **24b.5 — REIT/fleet/equipment LT debt label variants:** Added industry-specific label variants (mortgage financing, equipment financing, vehicle loans, related party advances) to `proceeds_from_long_term_debt` extraction. Added cross-reference instruction: when a financing cash inflow uses an unrecognized label, check balance sheet for a new/increased LT liability that ties to the amount.
