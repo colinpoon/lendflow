@@ -7,6 +7,7 @@ import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { detectYearConflicts, type ExtractionWithDocument } from '@/lib/extraction-utils';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { logAuditEvent } from '@/lib/audit-log';
+import { logFairLendingRecord } from '@/lib/fair-lending';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
 
 // SSE progress type for complete message with data
@@ -443,6 +444,15 @@ export async function POST(req: NextRequest) {
           documentName: sanitizedFileName,
           documentSize: file.size,
           processingTimeMs: processingTime,
+          extractedData,
+        });
+
+        // ── Fair lending monitoring (non-blocking) ───────────────────────────
+        logFairLendingRecord({
+          userId,
+          projectId: projectId!,
+          extractionId: extraction.id,
+          pipelineType: 'vision',
           extractedData,
         });
 

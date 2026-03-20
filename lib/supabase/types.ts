@@ -209,6 +209,46 @@ export interface Database {
           created_at?: string;
         };
       };
+      fair_lending_monitor: {
+        Row: {
+          id: string;
+          extraction_id: string | null;
+          project_id: string;
+          user_id: string;
+          lending_decision: string | null;
+          quantitative_risk_score: number | null;
+          quantitative_risk_band: string | null;
+          debt_health_score: number | null;
+          debt_health_band: string | null;
+          revenue_bucket: string | null;
+          revenue_thousands: number | null;
+          primary_fccr: number | null;
+          primary_leverage: number | null;
+          primary_debt_capital: number | null;
+          primary_current_ratio: number | null;
+          pipeline_type: 'text' | 'vision';
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          extraction_id?: string | null;
+          project_id: string;
+          user_id: string;
+          lending_decision?: string | null;
+          quantitative_risk_score?: number | null;
+          quantitative_risk_band?: string | null;
+          debt_health_score?: number | null;
+          debt_health_band?: string | null;
+          revenue_bucket?: string | null;
+          revenue_thousands?: number | null;
+          primary_fccr?: number | null;
+          primary_leverage?: number | null;
+          primary_debt_capital?: number | null;
+          primary_current_ratio?: number | null;
+          pipeline_type: 'text' | 'vision';
+          created_at?: string;
+        };
+      };
     };
   };
 }
@@ -222,3 +262,4 @@ export type ProjectInsert = Database['public']['Tables']['projects']['Insert'];
 export type DocumentInsert = Database['public']['Tables']['documents']['Insert'];
 export type ExtractionInsert = Database['public']['Tables']['extractions']['Insert'];
 export type AuditTrailInsert = Database['public']['Tables']['audit_trail']['Insert'];
+export type FairLendingMonitorInsert = Database['public']['Tables']['fair_lending_monitor']['Insert'];
