@@ -473,7 +473,7 @@ const sections: SectionConfig[] = [
       },
       {
         key: 'interest_coverage_ratio',
-        label: 'Interest Coverage',
+        label: 'Interest Coverage (incl. lease interest)',
         format: 'ratio',
         variant: 'normal',
       },

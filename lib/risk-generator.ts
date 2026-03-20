@@ -68,6 +68,9 @@ export async function generateRiskAssessment(
     // Prefer Adjusted EBITDA for ICR to stay consistent with FCCR/EBITDA Coverage numerators.
     // Fall back to raw EBITDA only when adjusted_ebitda is unavailable.
     // Return null (not 0) when both are absent — 0x ICR would mislead the AI assessor.
+    // NOTE: m.interest is total P&L interest expense which includes IFRS 16 lease interest.
+    // FCCR handles lease components separately via fixed_charges. The two ratios therefore
+    // treat lease interest differently — this is intentional and labeled in the UI.
     const ebitdaForICR = m.adjusted_ebitda ?? m.ebitda;
     const icr =
       m.interest != null && m.interest > 0 && ebitdaForICR != null
