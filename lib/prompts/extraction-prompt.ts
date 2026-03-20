@@ -788,11 +788,11 @@ Return EXACT JSON matching this schema — no markdown, no fences, no extra keys
   },
   "weighted_score": number,
   "band": one of {
-    "Very Low" if weighted_score <= 2,
-    "Moderate-Low" if 2 < weighted_score <= 4,
-    "Moderate" if 4 < weighted_score <= 6,
-    "Elevated" if 6 < weighted_score <= 8,
-    "High" if weighted_score > 8
+    "Very Low Risk" if weighted_score <= 2,
+    "Low Risk" if 2 < weighted_score <= 4,
+    "Moderate Risk" if 4 < weighted_score <= 6,
+    "Elevated Risk" if 6 < weighted_score <= 8,
+    "High Risk" if weighted_score > 8
   },
   // Round weighted_score to 1 decimal place
   "lending_recommendation": string

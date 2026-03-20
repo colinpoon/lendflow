@@ -588,7 +588,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
                   <span className="text-muted-foreground">— splitting into segments</span>
                 )}
                 {currentStage === 'extracting' && (
-                  <span className="text-muted-foreground">— AI analyzing financials</span>
+                  <span className="text-muted-foreground animate-pulse-slow">— AI analyzing financials</span>
                 )}
                 {currentStage === 'merging' && (
                   <span className="text-muted-foreground">— consolidating results</span>

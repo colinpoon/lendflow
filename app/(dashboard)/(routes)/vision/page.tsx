@@ -25,6 +25,7 @@ import { H1 } from '@/components/ui/typography';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -167,33 +168,36 @@ const VisionUploadPage = () => {
         <TabsContent value="credit" key="credit">
           {riskData || financialData ? (
             <div className="space-y-6">
-              {/* Weighted Risk Gauge - Primary Risk Assessment */}
+              {/* Quantitative Risk Scorecard — supplemental trend analysis */}
+              {financialData && quantitativeRiskAssessment && (
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Quantitative Risk Scorecard</CardTitle>
+                    <CardDescription className="text-xs">Trend analysis — supplemental 5-metric scorecard, not used for lending decisions</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ErrorBoundary errorTitle="Error loading risk scorecard">
+                      <QuantitativeRiskCard data={quantitativeRiskAssessment} />
+                    </ErrorBoundary>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Lending Risk Assessment — authoritative score */}
               {financialData && (
                 <Card className="shadow-lg">
                   <CardHeader>
-                    <CardTitle>Debt Health Risk Assessment</CardTitle>
+                    <CardTitle>Lending Risk Assessment</CardTitle>
+                    <CardDescription className="text-xs">Authoritative lending score — FCCR (50%), Sr. Debt/EBITDA (35%), Debt/Capital (15%)</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-8">
-                      {/* Quantitative Risk Scorecard */}
-                      <ErrorBoundary errorTitle="Error loading risk scorecard">
-                        <QuantitativeRiskCard data={quantitativeRiskAssessment} />
-                      </ErrorBoundary>
-
-                      {/* Divider */}
-                      {quantitativeRiskAssessment && (
-                        <hr className="border-border" />
-                      )}
-
-                      {/* Existing Weighted Risk Gauge */}
-                      <ErrorBoundary errorTitle="Error loading risk gauge">
-                        <WeightedRiskGauge
-                          data={financialData}
-                          debtHealthAssessment={debtHealthAssessment}
-                          customFccrAdjustment={totalCustomAdjustments}
-                        />
-                      </ErrorBoundary>
-                    </div>
+                    <ErrorBoundary errorTitle="Error loading risk gauge">
+                      <WeightedRiskGauge
+                        data={financialData}
+                        debtHealthAssessment={debtHealthAssessment}
+                        customFccrAdjustment={totalCustomAdjustments}
+                      />
+                    </ErrorBoundary>
                   </CardContent>
                 </Card>
               )}
@@ -203,6 +207,7 @@ const VisionUploadPage = () => {
                 <Card className="shadow-lg">
                   <CardHeader>
                     <CardTitle>Credit-Risk Assessment</CardTitle>
+                    <CardDescription className="text-xs">AI advisory analysis — narrative insights only, not used for lending decisions</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ErrorBoundary errorTitle="Error loading credit risk assessment">

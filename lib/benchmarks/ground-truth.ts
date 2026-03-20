@@ -31,7 +31,6 @@ export type GroundTruthValues = {
   depreciation_other?: number;
   amortization_intangibles?: number;
   ebitda?: number;
-  reported_adjusted_ebitda?: number;
 
   // Balance Sheet
   shareholders_equity?: number;
@@ -156,10 +155,10 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
     values: {
       // Income Statement — all values in thousands of Canadian dollars
       // Source: Consolidated Statements of Income and Comprehensive Income
-      revenue: 24889,           // Revenue (note 16): security tower + fixed site + personnel
-      net_income: 2652,         // Net income
-      interest: 1621,           // Finance costs (note 18): bank charges + debt interest + note accretion + finance lease interest
-      taxes: 0,                 // Current tax expense $0; deferred tax recovery $0 in 2023
+      revenue: 24889, // Revenue (note 16): security tower + fixed site + personnel
+      net_income: 2652, // Net income
+      interest: 1621, // Finance costs (note 18): bank charges + debt interest + note accretion + finance lease interest
+      taxes: 0, // Current tax expense $0; deferred tax recovery $0 in 2023
       // D&A from cash flow statement (authoritative): equipment depreciation $3,614 + ROU $1,249
       depreciation_amortization: 4863,
       // Depreciation breakdown:
@@ -172,42 +171,42 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       ebitda: 9136,
 
       // Balance Sheet — source: Consolidated Statements of Financial Position
-      shareholders_equity: 12115,  // Total equity Dec 31 2023
+      shareholders_equity: 12115, // Total equity Dec 31 2023
       // total_debt = current debt $3,788 + LT debt $12,846 + note payable $3,249
       //            + current lease liabilities $2,421 + non-current lease liabilities $5,310 = $27,614
       total_debt: 27614,
       // senior_debt = total_debt - note payable $3,249 (vendor take-back note to director = subordinated)
       senior_debt: 24365,
-      current_assets: 7286,     // Total current assets
+      current_assets: 7286, // Total current assets
       current_liabilities: 9451, // Total current liabilities (note: negative working capital -$2,165)
 
       // Cash Flow — source: Consolidated Statements of Cash Flow, financing activities
-      capital_expenditures: 13465,          // Purchase of property and equipment
-      proceeds_from_long_term_debt: 8676,   // Proceeds from debt (note 8) — financing activities
-      cash_taxes_paid: 0,                   // No current taxes paid; taxes recovered $0 in 2023
-      distributions_paid: 0,               // No distributions/dividends paid in 2023
-      repayment_of_debt: 2589,              // Repayment of debt (note 8) — financing activities
-      payment_of_lease_liability: 2059,     // Payment of lease liability (note 9) — principal only, IFRS 16
-      cash_interest_paid: 1470,             // Supplementary info: cash interest paid
-      non_cash_interest_expense: 151,       // Non-cash interest expense and other financing costs (cash flow add-back)
+      capital_expenditures: 13465, // Purchase of property and equipment
+      proceeds_from_long_term_debt: 8676, // Proceeds from debt (note 8) — financing activities
+      cash_taxes_paid: 0, // No current taxes paid; taxes recovered $0 in 2023
+      distributions_paid: 0, // No distributions/dividends paid in 2023
+      repayment_of_debt: 2589, // Repayment of debt (note 8) — financing activities
+      payment_of_lease_liability: 2059, // Payment of lease liability (note 9) — principal only, IFRS 16
+      cash_interest_paid: 1470, // Supplementary info: cash interest paid
+      non_cash_interest_expense: 151, // Non-cash interest expense and other financing costs (cash flow add-back)
 
       // Debt Components
       // Source: Balance Sheet (note 8 for debt, note 9 for leases)
-      'debt_components.bank_debt_current': 3788,         // Current debt (note 8)
-      'debt_components.bank_debt_long_term': 12846,      // Long-term debt (note 8)
-      'debt_components.notes_payable': 3249,             // Note payable (note 10): vendor take-back note to director
+      'debt_components.bank_debt_current': 3788, // Current debt (note 8)
+      'debt_components.bank_debt_long_term': 12846, // Long-term debt (note 8)
+      'debt_components.notes_payable': 3249, // Note payable (note 10): vendor take-back note to director
       'debt_components.lease_liabilities_current': 2421, // Current portion of lease liabilities (note 9)
       'debt_components.lease_liabilities_long_term': 5310, // Non-current lease liabilities (note 9)
 
       // Fixed Charges
       // Source: Finance costs breakdown (note 18) + cash flow financing activities
-      'fixed_charges.senior_debt_interest': 975,         // Interest on debt (note 18)
-      'fixed_charges.lease_interest': 316,               // Interest on finance leases (note 18)
+      'fixed_charges.senior_debt_interest': 975, // Interest on debt (note 18)
+      'fixed_charges.lease_interest': 316, // Interest on finance leases (note 18)
       // total_interest_expense = bank charges $88 + debt interest $975 + note accretion $242 + lease interest $316
       'fixed_charges.total_interest_expense': 1621,
       // minimum_lease_payments = payment of lease liability (principal, IFRS 16, note 9 financing activities)
       'fixed_charges.minimum_lease_payments': 2059,
-      'fixed_charges.principal_payments': 2589,          // Repayment of debt (note 8) financing activities
+      'fixed_charges.principal_payments': 2589, // Repayment of debt (note 8) financing activities
 
       // Adjusted EBITDA Components
       // Source: Cash flow operating add-backs + income statement other income
@@ -233,7 +232,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // senior_debt_to_ebitda: 24,365 / 7,541 = 3.23
       senior_debt_to_ebitda: 3.23,
       // total_debt_to_capital: 27,614 / (27,614 + 12,115) = 27,614 / 39,729 = 0.70
-      total_debt_to_capital: 0.70,
+      total_debt_to_capital: 0.7,
       // interest_coverage_ratio: EBITDA / Interest = 9,136 / 1,621 = 5.63
       interest_coverage_ratio: 5.63,
       // debt_to_equity_ratio: 27,614 / 12,115 = 2.28
@@ -259,51 +258,51 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
     values: {
       // Income Statement — all values in thousands of Canadian dollars
       // Source: Consolidated Statements of Income and Comprehensive Income
-      revenue: 32992,          // Revenue (note 16): security tower $31,561 + fixed site $715 + personnel $716
-      net_income: 1629,        // Net income (income taxes $0 in 2024)
-      interest: 1949,          // Finance costs (note 18): bank charges $43 + debt interest $1,425 + note accretion $101 + lease interest $380
-      taxes: 0,                // Current and deferred tax expense both $0 in 2024
+      revenue: 32992, // Revenue (note 16): security tower $31,561 + fixed site $715 + personnel $716
+      net_income: 1629, // Net income (income taxes $0 in 2024)
+      interest: 1949, // Finance costs (note 18): bank charges $43 + debt interest $1,425 + note accretion $101 + lease interest $380
+      taxes: 0, // Current and deferred tax expense both $0 in 2024
       // D&A from cash flow (authoritative): P&E $5,303 + ROU $1,806 = $7,109
       depreciation_amortization: 7109,
       depreciation_equipment: 5303, // Cash flow add-back: depreciation of P&E
-      depreciation_rou: 1806,       // Cash flow add-back: depreciation of ROU assets
+      depreciation_rou: 1806, // Cash flow add-back: depreciation of ROU assets
       amortization_intangibles: 0,
       // EBITDA = NI $1,629 + Finance costs $1,949 + Taxes $0 + D&A $7,109 = $10,687
       ebitda: 10687,
 
       // Balance Sheet — source: Consolidated Statements of Financial Position
-      shareholders_equity: 31991,  // Total equity Dec 31 2024
+      shareholders_equity: 31991, // Total equity Dec 31 2024
       // total_debt = current debt $4,068 + LT debt $16,054 + note payable $0 (repaid)
       //            + current lease liabilities $3,037 + non-current lease liabilities $5,167 = $28,326
       total_debt: 28326,
       // senior_debt = total_debt = $28,326 (note payable was fully repaid in 2024 — no subordinated debt)
       senior_debt: 28326,
-      current_assets: 15541,      // Total current assets
+      current_assets: 15541, // Total current assets
       current_liabilities: 14239, // Total current liabilities
 
       // Cash Flow — source: Consolidated Statements of Cash Flow, financing activities
-      capital_expenditures: 21391,         // Purchase of property and equipment
+      capital_expenditures: 21391, // Purchase of property and equipment
       proceeds_from_long_term_debt: 22776, // Proceeds from debt (note 8): includes refinancing of old facilities
-      cash_taxes_paid: 0,                  // No taxes paid; taxes recovered $0 in 2024
-      distributions_paid: 0,              // No dividends/distributions in 2024
+      cash_taxes_paid: 0, // No taxes paid; taxes recovered $0 in 2024
+      distributions_paid: 0, // No dividends/distributions in 2024
       // NOTE: repayment_of_debt $18,105 includes refinancing old credit facilities (payoff + new draw).
       // For recurring debt service, use bank_debt_current ($4,068) as a better proxy.
-      repayment_of_debt: 18105,            // Total repayment of debt (includes refinancing — see note)
-      payment_of_lease_liability: 2829,    // Lease repayments per note 9 continuity (principal-only, IFRS 16)
-      cash_interest_paid: 2057,            // Supplementary info in note 19: cash interest paid
+      repayment_of_debt: 18105, // Total repayment of debt (includes refinancing — see note)
+      payment_of_lease_liability: 2829, // Lease repayments per note 9 continuity (principal-only, IFRS 16)
+      cash_interest_paid: 2057, // Supplementary info in note 19: cash interest paid
 
       // Debt Components
-      'debt_components.bank_debt_current': 4068,         // Current portion of ATB credit facility (note 8)
-      'debt_components.bank_debt_long_term': 16054,      // Long-term portion of ATB credit facility (note 8)
+      'debt_components.bank_debt_current': 4068, // Current portion of ATB credit facility (note 8)
+      'debt_components.bank_debt_long_term': 16054, // Long-term portion of ATB credit facility (note 8)
       'debt_components.lease_liabilities_current': 3037, // Current portion of lease liabilities (note 9)
       'debt_components.lease_liabilities_long_term': 5167, // Non-current lease liabilities (note 9)
       // notes_payable = $0 (vendor take-back note fully repaid May 2024)
 
       // Fixed Charges (note 18)
-      'fixed_charges.senior_debt_interest': 1425,        // Interest on debt (note 18)
-      'fixed_charges.lease_interest': 380,               // Interest on finance leases (note 18)
-      'fixed_charges.total_interest_expense': 1949,      // Total finance costs (note 18)
-      'fixed_charges.minimum_lease_payments': 2829,      // Lease repayments — principal only (note 9)
+      'fixed_charges.senior_debt_interest': 1425, // Interest on debt (note 18)
+      'fixed_charges.lease_interest': 380, // Interest on finance leases (note 18)
+      'fixed_charges.total_interest_expense': 1949, // Total finance costs (note 18)
+      'fixed_charges.minimum_lease_payments': 2829, // Lease repayments — principal only (note 9)
 
       // Adjusted EBITDA Components
       'adjusted_ebitda_components.stock_based_compensation': 1566, // SBC (note 14, cash flow add-back)
@@ -363,7 +362,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       amortization_intangibles: 0,
       // ebitda = net_income + interest + taxes + D&A = 47,613 + 811 + 19,518 + 12,885 = 80,827
       ebitda: 80827,
-      reported_adjusted_ebitda: 0,
+
 
       // Balance Sheet
       // shareholders_equity: equity attributable to shareholders = 454,396 (from statement of financial position)
@@ -468,7 +467,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // fccr = (Adj EBITDA - CapEx - cash_taxes) / (principal + cash_interest + lease_payments)
       //      = (80,827 - 3,967 - 16,082) / (0 + 1,072 + 6,425)
       //      = 60,778 / 7,497 = 8.10
-      fccr: 8.10,
+      fccr: 8.1,
       // dscr = EBITDA / (cash_interest + lease_payments) = 80,827 / (1,072 + 6,425) = 80,827 / 7,497 = 10.78
       dscr: 10.78,
       funded_debt: 0,
@@ -524,7 +523,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // ebitda = 3,116 + 975 + 1,335 + 2,662 = 8,088
       // Alternatively: operating income (5,426) + total D&A (2,662) = 8,088
       ebitda: 8088,
-      reported_adjusted_ebitda: 0,
+
 
       // Balance Sheet
       // Shareholders' equity: 57,890
@@ -695,7 +694,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // ebitda = operating income (155,323) + D&A (65,913) = 221,236
       // (operating income + D&A approach; adds back FX loss vs. NI approach)
       ebitda: 221236,
-      reported_adjusted_ebitda: 0,
+
 
       // Balance Sheet
       // Shareholders' equity: 95,749 (retained deficit — franchise capital returned to shareholders)
@@ -865,8 +864,6 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       amortization_intangibles: 25521,
       // EBITDA = income from operations (96,908) + D&A (76,099) = 173,007 (matches company disclosed)
       ebitda: 173007,
-      // Company disclosed Adj EBITDA: ~184,300 (173,007 + LTIP + trade duties + transaction costs)
-      reported_adjusted_ebitda: 184300,
 
       // Balance Sheet
       // Shareholders' equity: 634,572 USD thousands
@@ -972,7 +969,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // senior_debt_to_ebitda = bank debt (410,536) / EBITDA (173,007) = 2.37
       senior_debt_to_ebitda: 2.37,
       // total_debt_to_capital = 623,066 / (623,066 + 634,572) = 0.50
-      total_debt_to_capital: 0.50,
+      total_debt_to_capital: 0.5,
       // interest_coverage_ratio = EBITDA / net finance expense = 173,007 / 41,614 = 4.16
       interest_coverage_ratio: 4.16,
       // debt_to_equity_ratio = 623,066 / 634,572 = 0.98
@@ -1019,7 +1016,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // ebitda = EBIT + D&A = (61,301 + 2,302 + 15,384) + 12,276 = 91,263
       // Equivalently: operating earnings before finance (78,987) + D&A (12,276) = 91,263
       ebitda: 91263,
-      reported_adjusted_ebitda: 0,
+
 
       // Balance Sheet
       // Shareholders' equity: 395,418
@@ -1183,8 +1180,6 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       amortization_intangibles: 21600,
       // ebitda = NI + I + accretion + T + D&A = 121.5 + 170.7 + 28.6 + 46.9 + 179.5 = 547.2M = 547,200 thousands
       ebitda: 547200,
-      // Company's "operating profit before D&A and plant restructuring" = 593.7M = 593,700
-      reported_adjusted_ebitda: 593700,
 
       // Balance Sheet (thousands CAD, converted from millions)
       // Shareholders' equity: 1,769.2M = 1,769,200 thousands
@@ -1318,7 +1313,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'Verified from source PDF (PBHC.Consolidated.FS.Q4-2024.FINAL.pdf — Premium Brands Holdings Corporation). ' +
       'CRITICAL: Original document in MILLIONS of CAD; all values multiplied ×1000 for thousands consistency. ' +
       'IFRS reporting. 52-week fiscal year ended December 28, 2024. ' +
-      'Premium Brands Holdings Corporation (TSX: PBH) — Canada\'s largest specialty food manufacturer. ' +
+      "Premium Brands Holdings Corporation (TSX: PBH) — Canada's largest specialty food manufacturer. " +
       'Complex capital structure: revolving credit (bank 19.1M) + term debt (1,922.1M) + ' +
       'IFRS 16 leases (756.9M) + convertible debentures (470.9M) = 3,169.0M total debt. ' +
       'Current LT debt = 1.0M (minimal scheduled repayment); revolving credit managed dynamically. ' +
@@ -1355,7 +1350,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       amortization_intangibles: 0,
       // ebitda = NI + Finance + Tax + D&A = 127 + 378 + 0 + 825 = 1,330M = 1,330,000
       ebitda: 1330000,
-      reported_adjusted_ebitda: 0,
+
 
       // Balance Sheet (thousands CAD, converted from millions)
       // Shareholders' equity: 3,166M = 3,166,000
@@ -1477,7 +1472,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // interest_coverage_ratio = EBITDA / finance costs = 1,330,000 / 378,000 = 3.52
       interest_coverage_ratio: 3.52,
       // debt_to_equity_ratio = 6,641,000 / 3,166,000 = 2.10
-      debt_to_equity_ratio: 2.10,
+      debt_to_equity_ratio: 2.1,
       // current_ratio = 4,478,000 / 3,382,000 = 1.32
       current_ratio: 1.32,
     },

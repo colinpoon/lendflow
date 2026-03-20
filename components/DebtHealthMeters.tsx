@@ -62,7 +62,6 @@ interface YearMetrics {
   // Source data for calculations
   ebitda: number | null;
   adjusted_ebitda: number | null;
-  reported_adjusted_ebitda: number | null;
   fccr_breakdown: FCCRBreakdown | null;
   debt_breakdown: DebtBreakdown | null;
   debt_components: DebtComponents | null;
@@ -1245,24 +1244,6 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                               {formatCurrency(metrics.ebitda)}
                             </span>
                           </div>
-                          {metrics.reported_adjusted_ebitda !=
-                            null && (
-                            <div className="flex justify-between items-center py-1.5 px-3 bg-surface-2/60">
-                              <span className="text-muted-foreground flex items-center flex-wrap">
-                                Company-Reported Adj. EBITDA
-                                <SourceInfo
-                                  value={
-                                    metrics.reported_adjusted_ebitda
-                                  }
-                                />
-                              </span>
-                              <span className="font-medium tabular-nums text-secondary-foreground">
-                                {formatCurrency(
-                                  metrics.reported_adjusted_ebitda,
-                                )}
-                              </span>
-                            </div>
-                          )}
                         </div>
                         <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
                           <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">

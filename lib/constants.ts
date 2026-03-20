@@ -285,7 +285,6 @@ export const CURRENCY_METRICS = [
   'depreciation_other',
   'amortization_intangibles',
   'ebitda',
-  'reported_adjusted_ebitda',
   'shareholders_equity',
   'capital_expenditures',
   'proceeds_from_long_term_debt',
@@ -340,7 +339,6 @@ export const CANONICAL_STATEMENT_MAP: Record<string, SourceStatementType> = {
   non_cash_interest_expense: 'cash_flow_statement',
   ttm_principal_payments: 'cash_flow_statement',
   ttm_interest_expense: 'income_statement', // equals top-level "interest" for annual reports
-  reported_adjusted_ebitda: 'notes', // MD&A reconciliation tables, earnings releases, capital management sections
 
   // Balance Sheet metrics
   shareholders_equity: 'balance_sheet',

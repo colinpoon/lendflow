@@ -48,10 +48,8 @@ async function debugExtraction() {
 
       // Core EBITDA values
       console.log('📊 EBITDA VALUES:');
-      console.log(`   EBITDA (reported/calculated): ${metrics.ebitda}`);
+      console.log(`   EBITDA (calculated):          ${metrics.ebitda}`);
       console.log(`   Adjusted EBITDA:              ${metrics.adjusted_ebitda}`);
-      console.log(`   Reported Adjusted EBITDA:     ${metrics.reported_adjusted_ebitda ?? 'N/A'}`);
-      console.log(`   Calculated Adjusted EBITDA:   ${metrics.calculated_adjusted_ebitda ?? 'N/A'}`);
 
       // Adjusted EBITDA Components - THE KEY DEBUG INFO
       const adj = (metrics.adjusted_ebitda_components || {}) as Record<string, unknown>;

@@ -122,6 +122,14 @@ export interface DebtBreakdown {
 
 export interface AdjustedEBITDABreakdown {
   reported_ebitda: number;
+  /** The resolved component values used to calculate reported_ebitda.
+   *  May differ from raw extracted fields due to interest/D&A fallback resolution. */
+  reported_ebitda_components?: {
+    net_income: number;
+    interest: number;
+    taxes: number;
+    depreciation_amortization: number;
+  };
   non_cash_adjustments: number;
   one_time_expenses: number;
   one_time_gains: number;
@@ -137,7 +145,6 @@ export interface AdjustedEBITDABreakdown {
   realized_fx_pl: number;
   pro_forma_adjustments: number;
   capital_expenditures_not_in_calc: number;
-  uses_reported_value: boolean;
 }
 
 /**
@@ -282,9 +289,8 @@ export interface ExtractedMetrics {
   depreciation_other: number | null;
   amortization_intangibles: number | null;
 
-  // EBITDA
+  // EBITDA (always null from extraction — calculated in-app from components)
   ebitda: number | null;
-  reported_adjusted_ebitda: number | null;
 
   // Balance Sheet
   shareholders_equity: number | null;

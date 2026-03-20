@@ -137,7 +137,6 @@ const yearMetricsSchema = z.object({
 
   // EBITDA
   ebitda: numericValue.optional(),
-  reported_adjusted_ebitda: numericValue.optional(),
 
   // Balance Sheet
   shareholders_equity: numericValue.optional(),

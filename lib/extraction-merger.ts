@@ -1192,29 +1192,6 @@ export function validateArithmeticConsistency(
       }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Reported adjusted EBITDA plausibility check
-    // If the company publishes its own adj EBITDA, compare against our EBITDA
-    // base (NI + I + T + D&A). Divergence > 40% warrants a review of the
-    // adjustment components captured in adjusted_ebitda_components.
-    // ─────────────────────────────────────────────────────────────────────────
-    const reportedAdjEbitda = metrics.reported_adjusted_ebitda as number | null;
-    const calculatedEbitdaBase =
-      netIncome != null && interest != null && taxes != null && da != null
-        ? netIncome + interest + taxes + da
-        : ebitda ?? null;
-
-    if (reportedAdjEbitda != null && calculatedEbitdaBase != null && Math.abs(calculatedEbitdaBase) > 0) {
-      const adjEbitdaVariance = Math.abs(reportedAdjEbitda - calculatedEbitdaBase) / Math.abs(calculatedEbitdaBase);
-      if (adjEbitdaVariance > 0.40) {
-        corrections.push(
-          `${year}: Info — reported adjusted EBITDA (${reportedAdjEbitda}) differs from ` +
-          `calculated EBITDA base (${calculatedEbitdaBase.toFixed(0)}) by ` +
-          `${(adjEbitdaVariance * 100).toFixed(1)}%. ` +
-          `Large gap may indicate significant non-recurring adjustments; review adjusted_ebitda_components.`
-        );
-      }
-    }
   }
 
   return { metrics: corrected, corrections };

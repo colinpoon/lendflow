@@ -81,9 +81,6 @@ RESOLUTION RULES (in order of priority):
    non_cash_interest_expense):
      Cash Flow Statement > Notes > Income Statement > Balance Sheet
 
-   COMPANY-DISCLOSED NON-GAAP METRICS (reported_adjusted_ebitda):
-     Notes / MD&A > Income Statement > Balance Sheet
-
    PROFITABILITY METRICS (revenue, net_income, taxes, expenses, interest, interest_income,
    profit_margins, ttm_interest_expense):
      Income Statement > Notes > Cash Flow Statement > Balance Sheet

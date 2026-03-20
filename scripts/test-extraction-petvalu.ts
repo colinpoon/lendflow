@@ -39,7 +39,6 @@ async function main() {
         ebitda: d.ebitda ?? null,
         adjusted_ebitda: d.adjusted_ebitda ?? null,
         calculated_adjusted_ebitda: d.calculated_adjusted_ebitda ?? null,
-        reported_adjusted_ebitda: d.reported_adjusted_ebitda ?? null,
         fccr: d.fccr ?? null,
         fccr_numerator: d.fccr_numerator ?? null,
         total_fixed_charges: d.total_fixed_charges ?? null,
@@ -93,7 +92,7 @@ async function main() {
     console.log(`${'='.repeat(100)}\n`);
 
     const metrics = [
-      'ebitda', 'adjusted_ebitda', 'calculated_adjusted_ebitda', 'reported_adjusted_ebitda',
+      'ebitda', 'adjusted_ebitda', 'calculated_adjusted_ebitda',
       'fccr', 'fccr_numerator', 'total_fixed_charges',
       'dscr', 'senior_debt_to_ebitda', 'total_debt_to_capital',
       'net_income', 'revenue', 'interest', 'taxes',
@@ -182,7 +181,6 @@ async function main() {
         console.log(`    + Owner/mgmt adj:       ${bd.owner_management_adjustments}`);
         console.log(`    + Accounting adj:       ${bd.accounting_adjustments}`);
         console.log(`    + Pro forma:            ${bd.pro_forma_adjustments}`);
-        console.log(`    Uses reported:          ${bd.uses_reported_value}`);
         console.log(`    = Calc'd Adj EBITDA:    ${(r.fy2024 as Record<string, unknown>)?.calculated_adjusted_ebitda}`);
         console.log(`    = Final Adj EBITDA:     ${(r.fy2024 as Record<string, unknown>)?.adjusted_ebitda}`);
       } else {

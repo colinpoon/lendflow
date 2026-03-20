@@ -91,7 +91,6 @@ export interface MetricsWithConfidence {
   depreciation_rou: MetricWithConfidence;
   depreciation_other: MetricWithConfidence;
   ebitda: MetricWithConfidence;
-  reported_adjusted_ebitda: MetricWithConfidence;
   shareholders_equity: MetricWithConfidence;
   total_debt: MetricWithConfidence;
   senior_debt: MetricWithConfidence;

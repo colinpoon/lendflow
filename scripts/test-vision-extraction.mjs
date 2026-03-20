@@ -80,10 +80,6 @@ Call this tool with all extracted financial metrics.`,
         type: ['number', 'null'],
         description: 'EBITDA if explicitly stated in document (do not calculate)',
       },
-      reported_adjusted_ebitda: {
-        type: ['number', 'null'],
-        description: 'Adjusted EBITDA if explicitly reported in document',
-      },
       shareholders_equity: {
         type: ['number', 'null'],
         description: 'Total shareholders equity in thousands USD',
@@ -421,9 +417,6 @@ async function main() {
         console.log(`  Revenue: ${metrics.revenue ?? 'N/A'}`);
         console.log(`  Net Income: ${metrics.net_income ?? 'N/A'}`);
         console.log(`  EBITDA: ${metrics.ebitda ?? 'N/A'}`);
-        console.log(
-          `  Reported Adj. EBITDA: ${metrics.reported_adjusted_ebitda ?? 'N/A'}`
-        );
         console.log(`  Total Debt: ${metrics.total_debt ?? 'N/A'}`);
         console.log(`  Senior Debt: ${metrics.senior_debt ?? 'N/A'}`);
         console.log(`  D&A: ${metrics.depreciation_amortization ?? 'N/A'}`);

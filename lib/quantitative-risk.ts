@@ -38,7 +38,7 @@ export interface QuantitativeRiskAssessment {
   metrics: MetricScore[];
   weighted_raw_score: number;
   normalized_score: number;
-  risk_band: 'Low Risk' | 'Moderate Risk' | 'Elevated Risk' | 'High Risk' | 'Distressed';
+  risk_band: 'Very Low Risk' | 'Low Risk' | 'Moderate Risk' | 'Elevated Risk' | 'High Risk';
   trend_summary: string;
 }
 
@@ -121,12 +121,13 @@ const TREND_MODIFIERS = [
 ];
 
 // Risk bands based on normalized 0-100 score
+// Labels aligned with lib/risk-scoring.ts (0-10 scale) for consistent analyst experience
 const RISK_BANDS = [
-  { min: 0, max: 20, band: 'Low Risk' as const },
-  { min: 20, max: 40, band: 'Moderate Risk' as const },
-  { min: 40, max: 60, band: 'Elevated Risk' as const },
-  { min: 60, max: 80, band: 'High Risk' as const },
-  { min: 80, max: 100, band: 'Distressed' as const },
+  { min: 0, max: 20, band: 'Very Low Risk' as const },
+  { min: 20, max: 40, band: 'Low Risk' as const },
+  { min: 40, max: 60, band: 'Moderate Risk' as const },
+  { min: 60, max: 80, band: 'Elevated Risk' as const },
+  { min: 80, max: 100, band: 'High Risk' as const },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,15 +234,15 @@ export function getRiskBand(normalizedScore: number): QuantitativeRiskAssessment
       return band.band;
     }
   }
-  return 'Distressed';
+  return 'High Risk';
 }
 
 const RISK_BAND_COLORS: Record<QuantitativeRiskAssessment['risk_band'], string> = {
+  'Very Low Risk': 'text-success',
   'Low Risk': 'text-success',
   'Moderate Risk': 'text-warning',
   'Elevated Risk': 'text-warning',
   'High Risk': 'text-error',
-  'Distressed': 'text-error',
 };
 
 /**

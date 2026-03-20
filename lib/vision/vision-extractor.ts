@@ -100,7 +100,6 @@ const CURRENCY_METRICS: ReadonlySet<string> = new Set([
   'depreciation_rou',
   'depreciation_other',
   'ebitda',
-  'reported_adjusted_ebitda',
   'shareholders_equity',
   'total_debt',
   'senior_debt',
