@@ -155,6 +155,8 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
           width="100%"
           height="100%"
           className="absolute top-0 left-0"
+          role="img"
+          aria-label={`Weighted risk gauge showing score ${score.toFixed(1)} out of 10 — ${config.label} risk`}
         >
           {/* Track arc — muted background */}
           <path

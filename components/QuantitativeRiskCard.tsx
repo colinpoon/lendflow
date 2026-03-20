@@ -113,7 +113,7 @@ const ScoreGauge: React.FC<{ score: number; maxScore?: number }> = ({
   return (
     <div className="flex flex-col items-center">
       <div className="relative w-48 h-24 overflow-hidden">
-        <svg viewBox="0 0 200 100" className="w-full h-full">
+        <svg viewBox="0 0 200 100" className="w-full h-full" role="img" aria-label={`Risk gauge showing score ${score} out of ${maxScore} — ${riskBand}`}>
           <defs>
             <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor={GAUGE_COLORS.green} />

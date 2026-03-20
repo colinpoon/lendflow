@@ -377,7 +377,7 @@ function RiskGauge({ score }: { score: number }) {
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 200 115" className="w-full max-w-[220px]">
+      <svg viewBox="0 0 200 115" className="w-full max-w-[220px]" role="img" aria-label={`Risk score gauge showing ${score} out of 100`}>
         <defs>
           <linearGradient id="riskArc" x1="0%" y1="50%" x2="100%" y2="50%">
             <stop offset="0%" stopColor={GAUGE_COLORS.green} />

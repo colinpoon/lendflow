@@ -775,7 +775,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                   )
                                 }
                                 placeholder="0"
-                                className="w-24 pl-6 pr-2 py-1.5 text-sm tabular-nums border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                className="w-24 pl-6 pr-2 py-1.5 text-sm tabular-nums border border-border rounded bg-background text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                               />
                             </div>
                             <input
@@ -787,7 +787,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 )
                               }
                               placeholder="Description..."
-                              className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                              className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-border rounded bg-background text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter')
                                   handleAddAdjustment();

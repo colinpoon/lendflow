@@ -399,6 +399,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
         />
         <label
           htmlFor="file-input"
+          aria-describedby="file-upload-hint"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -470,7 +471,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
 
           {/* Supported formats */}
           {!file && (
-            <div className="flex items-center gap-2 mt-1">
+            <div id="file-upload-hint" className="flex items-center gap-2 mt-1">
               {ACCEPTED_FORMATS.map((fmt) => (
                 <span
                   key={fmt.ext}
