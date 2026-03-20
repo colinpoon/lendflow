@@ -402,7 +402,7 @@ New security findings not covered by Tasks 13/18.
 - [x] **HIGH — Supabase admin client created without env var validation** `[Senior Engineer]` — `createAdminClient()` uses `process.env.SUPABASE_SERVICE_ROLE_KEY!` (non-null assertion). Missing key → cryptic runtime errors. Add explicit guard. File: `utils/supabase/server.ts`
 - [x] **MEDIUM — No `server-only` guard on admin Supabase client** `[Senior Engineer]` — If `createAdminClient` is accidentally imported in a Client Component, the service-role key gets bundled to browser. Add `import 'server-only'`. File: `utils/supabase/server.ts`
 - [x] **MEDIUM — Vision route inserts extraction before conflict detection** `[Senior Engineer]` — Vision route writes to DB before checking conflicts (opposite of main route). Creates records that may need cleanup. Mirror pre-insertion pattern from main route. File: `app/api/extractData/vision/route.ts`
-- [ ] **MEDIUM — Storage not cleaned up on extraction insert failure** `[Senior Engineer]` — If extraction DB insert fails after file is uploaded to storage, the storage object is orphaned. Call `storage.remove()` on extraction insert failure. Files: `app/api/extractData/route.ts`, `app/api/extractData/vision/route.ts`
+- [x] **MEDIUM — Storage not cleaned up on extraction insert failure** `[Senior Engineer]` — If extraction DB insert fails after file is uploaded to storage, the storage object is orphaned. Call `storage.remove()` on extraction insert failure. Files: `app/api/extractData/route.ts`, `app/api/extractData/vision/route.ts`
 
 ### Task 28: High — Testing Infrastructure
 Zero automated tests on a system that makes lending recommendations.
