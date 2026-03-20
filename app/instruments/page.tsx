@@ -287,7 +287,7 @@ export default async function InstrumentsPage() {
                 </div>
 
                 {/* Bar chart */}
-                <div className="mt-4 flex gap-1 items-end h-10">
+                <div className="mt-4 flex gap-1.5 items-end h-32">
                   {analyzed.map(({ project, extraction }) => {
                     const fccr = extraction?.latest_fccr ?? null;
                     const color =
@@ -299,23 +299,29 @@ export default async function InstrumentsPage() {
                             ? 'bg-amber-500'
                             : 'bg-red-500';
                     // Normalize bar height: cap at 3x for visual clarity
-                    const pct = fccr === null ? 20 : Math.min((fccr / 3) * 100, 100);
+                    const pct = fccr === null ? 15 : Math.max(Math.min((fccr / 3) * 100, 100), 10);
                     return (
                       <div
                         key={project.id}
-                        className="flex-1 flex flex-col justify-end group relative"
-                        title={`${project.name}: ${fccr !== null ? `${fccr.toFixed(2)}x` : 'N/A'}`}
+                        className="flex-1 h-full flex flex-col justify-end group relative cursor-pointer"
                       >
                         <div
-                          className={`${color} rounded-t-sm transition-opacity group-hover:opacity-75`}
-                          style={{ height: `${pct}%`, minHeight: '4px' }}
+                          className={`${color} rounded-t transition-opacity group-hover:opacity-80`}
+                          style={{ height: `${pct}%`, minHeight: '12px' }}
                         />
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 rounded-md bg-popover text-popover-foreground text-xs shadow-md border border-border whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                          <span className="font-medium">{project.name}</span>
+                          <span className="text-muted-foreground ml-1.5">
+                            {fccr !== null ? `${fccr.toFixed(2)}x` : 'N/A'}
+                          </span>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Each bar represents one company (hover for name). Height proportional to FCCR (capped at 3x).
+                <p className="text-xs text-muted-foreground mt-2">
+                  Each bar represents one company. Height proportional to FCCR (capped at 3x).
                 </p>
               </CardContent>
             </Card>
@@ -391,14 +397,17 @@ export default async function InstrumentsPage() {
                             {fmtPct(extraction?.latest_debt_to_capital ?? null)}
                           </TableCell>
                           <TableCell className="text-center">
-                            {project.risk_band ? (
-                              <Badge
-                                variant={getRiskBadgeVariant(project.risk_band)}
-                                className={`text-xs ${getRiskColor(project.risk_band)}`}
-                              >
-                                {project.risk_band}
-                              </Badge>
-                            ) : (
+                            {project.risk_band ? (() => {
+                              const variant = getRiskBadgeVariant(project.risk_band);
+                              return (
+                                <Badge
+                                  variant={variant}
+                                  className={`text-xs ${variant === 'destructive' ? '' : getRiskColor(project.risk_band)}`}
+                                >
+                                  {project.risk_band}
+                                </Badge>
+                              );
+                            })() : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
