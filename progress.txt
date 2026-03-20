@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**29.5 — Section nav reflects actual content structure:** Expanded SECTIONS array from 4 to 6 items (Upload, Analysis, Risk Score, EBITDA, Covenants, Decision). Split monolithic `<section id="risk">` into three separate sections with own `id` and `ref` attributes for Intersection Observer tracking. Each new section has `scroll-mt-16` and `space-y-5`. Nav disabled logic already covers new sections automatically.
+
 **29.4 — Fix lending decision text truncation:** Replaced `truncate` with `break-words` on the lending decision banner in `ProjectDetail.tsx` so critical text like "Conditional Approval" isn't cut off at smaller viewports.
 
 **29.3 — Replace hardcoded colors with semantic design tokens:** Replaced all 43 raw OKLCH values in `app/page.tsx` with semantic tokens (`bg-emerald-brand`, `text-foreground`, `text-muted-foreground`, `border-foreground/XX`, etc.). Added `dark` class to page wrapper so tokens resolve to dark-mode values (landing page is always dark). Added `--emerald-brand-hover` token to `globals.css` for both light and dark modes. In `ProjectDetail.tsx`, replaced MetricCard's `bg-white`→`bg-card`, `border-gray-200`→`border-border`, `text-gray-*`→semantic equivalents. Changes to `globals.css` tokens now propagate correctly to all surfaces.
