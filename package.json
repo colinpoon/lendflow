@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "postinstall": "patch-package",
     "test:extraction": "tsx scripts/test-extraction.ts"
   },
@@ -72,7 +74,8 @@
     "shadcn": "^3.8.5",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.1"
   },
   "overrides": {
     "react": "^19.0.0",
