@@ -130,6 +130,7 @@ const yearMetricsSchema = z.object({
   interest: numericValue.optional(),
   taxes: numericValue.optional(),
   depreciation_amortization: numericValue.optional(),
+  bad_debt_provision: numericValue.optional(),
   depreciation_equipment: numericValue.optional(),
   depreciation_rou: numericValue.optional(),
   depreciation_other: numericValue.optional(),

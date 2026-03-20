@@ -467,6 +467,33 @@ export const extractFinancialData = async (
       }
     }
 
+    // ── Bad Debt Provision materiality check ──────────────────────────────
+    // Warn when bad_debt_provision as % of revenue spikes year-over-year.
+    // A rising provision signals credit deterioration in the borrower's
+    // customer base — an early warning for lenders.
+    {
+      const sortedYrs = Object.keys(computed).sort();
+      for (let i = 1; i < sortedYrs.length; i++) {
+        const prev = computed[sortedYrs[i - 1]];
+        const curr = computed[sortedYrs[i]];
+        if (
+          prev?.bad_debt_provision != null && prev.bad_debt_provision > 0 &&
+          curr?.bad_debt_provision != null && curr.bad_debt_provision > 0 &&
+          prev?.revenue != null && prev.revenue > 0 &&
+          curr?.revenue != null && curr.revenue > 0
+        ) {
+          const prevPct = prev.bad_debt_provision / prev.revenue;
+          const currPct = curr.bad_debt_provision / curr.revenue;
+          // Flag if provision/revenue increased by more than 50% relatively
+          if (currPct > prevPct * 1.5 && currPct >= 0.01) {
+            extractionWarnings.push(
+              `Bad debt provision as % of revenue increased significantly: ${(prevPct * 100).toFixed(1)}% (${sortedYrs[i - 1]}) → ${(currPct * 100).toFixed(1)}% (${sortedYrs[i]}). This may signal credit deterioration in the borrower's customer base.`
+            );
+          }
+        }
+      }
+    }
+
     // ── DEBUG_FINANCE: Financial Summary with source provenance ─────────────
     if (DEBUG_FINANCE) {
       const wMap = mergeResult.winnersMap;

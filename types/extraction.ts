@@ -87,6 +87,7 @@ export interface MetricsWithConfidence {
   interest: MetricWithConfidence;
   taxes: MetricWithConfidence;
   depreciation_amortization: MetricWithConfidence;
+  bad_debt_provision: MetricWithConfidence;
   depreciation_equipment: MetricWithConfidence;
   depreciation_rou: MetricWithConfidence;
   depreciation_other: MetricWithConfidence;

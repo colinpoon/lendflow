@@ -282,6 +282,10 @@ export interface ExtractedMetrics {
   interest_income: number | null;
   taxes: number | null;
   depreciation_amortization: number | null;
+  /** Bad debt provision / allowance for doubtful accounts.
+   *  Core operating expense — NOT added back to EBITDA.
+   *  Monitored for YoY spikes as early credit deterioration signal. */
+  bad_debt_provision: number | null;
 
   // Depreciation breakdown (critical for banker's EBITDA)
   depreciation_equipment: number | null;
