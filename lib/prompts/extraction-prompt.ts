@@ -535,7 +535,7 @@ INTEREST COMPONENTS - EXTRACT WITH PRECISION:
   - Look for "Finance costs" breakdown in notes (e.g., "Note 16: Finance costs")
   - "Interest on bank indebtedness" or "Interest on credit facilities"
   - "Interest expense" allocated to senior debt in footnotes
-  - If only total interest shown AND you found subordinated debt interest separately, calculate: total_interest - subordinated_debt_interest
+  - If senior_debt_interest cannot be found as a labelled line item, output null — the application handles missing values through its fallback chain
 
 • subordinated_debt_interest: Interest on subordinated notes, vendor take-back notes, mezzanine debt.
   WHERE TO FIND IT:
