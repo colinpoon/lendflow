@@ -23,6 +23,8 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
+const showDevTools = process.env.NEXT_PUBLIC_SHOW_DEV_INFO === 'true';
+
 const navItems = [
   {
     title: 'Projects',
@@ -34,16 +36,20 @@ const navItems = [
     href: '/dashboard/new',
     icon: Upload,
   },
-  {
-    title: 'Compare',
-    href: '/compare',
-    icon: GitCompareArrows,
-  },
-  {
-    title: 'Vision',
-    href: '/vision',
-    icon: Eye,
-  },
+  ...(showDevTools
+    ? [
+        {
+          title: 'Compare',
+          href: '/compare',
+          icon: GitCompareArrows,
+        },
+        {
+          title: 'Vision',
+          href: '/vision',
+          icon: Eye,
+        },
+      ]
+    : []),
   {
     title: 'Portfolio',
     href: '/instruments',
