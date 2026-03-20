@@ -1,5 +1,9 @@
 ## Progress Tracker
 
+### Task 24 — Quantitative Risk Scoring (2026-03-19)
+
+**24.5 — calculateAvgAnnualChange year-gap fix:** `calculateAvgAnnualChange` treated consecutive valid data points as 1-year apart regardless of actual year keys. With years [2021, 2022, 2024], the 2022→2024 change was treated as 1 year instead of 2, overstating/understating the average. Fixed by adding `years: string[]` parameter and dividing each period's total change by the actual year gap (`curr.year - prev.year`). All 5 call sites (EBITDA trend, FCCR, Senior Leverage, Debt/Capital, Current Ratio) updated.
+
 ### Task 25 — Portfolio Display & Formatting (2026-03-19)
 
 **25.1 — fmtCurrency scale bug (FALSE POSITIVE):** Investigated the 4-agent-flagged CRITICAL `fmtCurrency` scale bug on instruments page. Traced through the code with ground truth values and confirmed the thresholds are correct for thousands-denominated data: `>= 1_000_000` thousands = $1B (auditors incorrectly claimed $1T), `>= 1_000` thousands = $1M (auditors claimed $1B). Verified with Zedcor (24,889K → `$24.9M` ✓) and ADEN (1,634,382K → `$1.6B` ✓). No code change needed.

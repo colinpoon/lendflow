@@ -132,27 +132,38 @@ const RISK_BANDS = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Calculate average annual change across all years
- * Returns percentage change (e.g., 8.5 for 8.5%)
+ * Calculate average annualized change across all years.
+ * Accounts for year gaps — e.g. 2022→2024 is a 2-year span, so the
+ * per-year change is totalChange / 2 rather than treating it as 1 year.
+ * Returns percentage change (e.g., 8.5 for 8.5%).
  */
-function calculateAvgAnnualChange(values: (number | null)[]): number | null {
-  const validValues = values.filter((v): v is number => v != null && isFinite(v));
-
-  if (validValues.length < 2) return null;
-
-  const changes: number[] = [];
-  for (let i = 1; i < validValues.length; i++) {
-    const prev = validValues[i - 1];
-    const curr = validValues[i];
-    if (prev !== 0) {
-      changes.push(((curr - prev) / Math.abs(prev)) * 100);
+function calculateAvgAnnualChange(years: string[], values: (number | null)[]): number | null {
+  // Pair years with values, keeping only valid entries
+  const validPairs: { year: number; value: number }[] = [];
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i];
+    if (v != null && isFinite(v)) {
+      validPairs.push({ year: parseInt(years[i], 10), value: v });
     }
   }
 
-  if (changes.length === 0) return null;
+  if (validPairs.length < 2) return null;
 
-  const avgChange = changes.reduce((sum, c) => sum + c, 0) / changes.length;
-  return Math.round(avgChange * 10) / 10; // Round to 1 decimal
+  const annualizedChanges: number[] = [];
+  for (let i = 1; i < validPairs.length; i++) {
+    const prev = validPairs[i - 1];
+    const curr = validPairs[i];
+    const yearGap = curr.year - prev.year;
+    if (prev.value !== 0 && yearGap > 0) {
+      const totalChange = ((curr.value - prev.value) / Math.abs(prev.value)) * 100;
+      annualizedChanges.push(totalChange / yearGap);
+    }
+  }
+
+  if (annualizedChanges.length === 0) return null;
+
+  const avgChange = annualizedChanges.reduce((sum, c) => sum + c, 0) / annualizedChanges.length;
+  return Math.round(avgChange * 10) / 10;
 }
 
 /**
@@ -279,7 +290,7 @@ export function calculateQuantitativeRisk(
 
   // 1. EBITDA Trend - special case: we score the trend itself, not a current value
   const ebitdaValues = years.map(y => metricsByYear[y].adjusted_ebitda ?? metricsByYear[y].ebitda);
-  const ebitdaAvgChange = calculateAvgAnnualChange(ebitdaValues);
+  const ebitdaAvgChange = calculateAvgAnnualChange(years, ebitdaValues);
   const ebitdaConfig = METRIC_CONFIG.ebitda_trend;
   const ebitdaBaseScore = ebitdaAvgChange != null
     ? getBaseScore(ebitdaAvgChange, ebitdaConfig.bands, ebitdaConfig.higher_is_better)
@@ -303,7 +314,7 @@ export function calculateQuantitativeRisk(
 
   // 2. FCCR
   const fccrValues = years.map(y => metricsByYear[y].fccr);
-  const fccrAvgChange = calculateAvgAnnualChange(fccrValues);
+  const fccrAvgChange = calculateAvgAnnualChange(years, fccrValues);
   const fccrConfig = METRIC_CONFIG.fccr;
   const fccrBaseScore = getBaseScore(latestMetrics.fccr, fccrConfig.bands, fccrConfig.higher_is_better);
   const fccrTrend = getTrendModifier(fccrAvgChange, fccrConfig.higher_is_better);
@@ -325,7 +336,7 @@ export function calculateQuantitativeRisk(
 
   // 3. Senior Leverage (Senior Debt / EBITDA)
   const leverageValues = years.map(y => metricsByYear[y].senior_debt_to_ebitda);
-  const leverageAvgChange = calculateAvgAnnualChange(leverageValues);
+  const leverageAvgChange = calculateAvgAnnualChange(years, leverageValues);
   const leverageConfig = METRIC_CONFIG.senior_leverage;
   const leverageBaseScore = getBaseScore(latestMetrics.senior_debt_to_ebitda, leverageConfig.bands, leverageConfig.higher_is_better);
   const leverageTrend = getTrendModifier(leverageAvgChange, leverageConfig.higher_is_better);
@@ -347,7 +358,7 @@ export function calculateQuantitativeRisk(
 
   // 4. Debt / Capital
   const debtCapitalValues = years.map(y => metricsByYear[y].total_debt_to_capital);
-  const debtCapitalAvgChange = calculateAvgAnnualChange(debtCapitalValues);
+  const debtCapitalAvgChange = calculateAvgAnnualChange(years, debtCapitalValues);
   const debtCapitalConfig = METRIC_CONFIG.debt_capital;
   const debtCapitalBaseScore = getBaseScore(latestMetrics.total_debt_to_capital, debtCapitalConfig.bands, debtCapitalConfig.higher_is_better);
   const debtCapitalTrend = getTrendModifier(debtCapitalAvgChange, debtCapitalConfig.higher_is_better);
@@ -369,7 +380,7 @@ export function calculateQuantitativeRisk(
 
   // 5. Current Ratio
   const currentRatioValues = years.map(y => metricsByYear[y].current_ratio);
-  const currentRatioAvgChange = calculateAvgAnnualChange(currentRatioValues);
+  const currentRatioAvgChange = calculateAvgAnnualChange(years, currentRatioValues);
   const currentRatioConfig = METRIC_CONFIG.current_ratio;
   const currentRatioBaseScore = getBaseScore(latestMetrics.current_ratio, currentRatioConfig.bands, currentRatioConfig.higher_is_better);
   const currentRatioTrend = getTrendModifier(currentRatioAvgChange, currentRatioConfig.higher_is_better);
