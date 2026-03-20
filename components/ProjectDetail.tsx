@@ -108,7 +108,9 @@ interface ProjectDetailProps {
 const SECTIONS = [
   { id: 'upload', label: 'Upload' },
   { id: 'analysis', label: 'Analysis' },
-  { id: 'risk', label: 'Risk' },
+  { id: 'risk', label: 'Risk Score' },
+  { id: 'ebitda', label: 'EBITDA' },
+  { id: 'covenants', label: 'Covenants' },
   { id: 'decision', label: 'Decision' },
 ] as const;
 
@@ -1018,7 +1020,12 @@ export default function ProjectDetail({
               </CardContent>
             </Card>
           </motion.div>
+        </section>
+      )}
 
+      {/* EBITDA Section */}
+      {(hasData || isRefreshing) && (
+        <section id="ebitda" ref={setSectionRef('ebitda')} className="scroll-mt-16 space-y-5">
           {(displayData || isRefreshing) && (
             <motion.div
               initial={SECTION_ENTER.initial}
@@ -1041,7 +1048,12 @@ export default function ProjectDetail({
               </Card>
             </motion.div>
           )}
+        </section>
+      )}
 
+      {/* Covenants Section */}
+      {(hasData || isRefreshing) && (
+        <section id="covenants" ref={setSectionRef('covenants')} className="scroll-mt-16 space-y-5">
           {/* Covenant Parameters — controls client-side recalculation */}
           {!isRefreshing && (
             <motion.div
