@@ -1145,7 +1145,7 @@ export default function ProjectDetail({
                       <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground mb-0.5">
                         Lending Decision
                       </p>
-                      <p className="text-2xl font-extrabold tracking-tight leading-tight truncate">
+                      <p className="text-2xl font-extrabold tracking-tight leading-tight break-words">
                         {debtHealthAssessment.lending_decision}
                       </p>
                     </div>
