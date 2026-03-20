@@ -12,6 +12,10 @@
 
 ### Task 33 — Enforce Internal Calculation Principle (2026-03-19)
 
+### Task 24 — Financial Calculation Bugs (2026-03-19)
+
+**24.3 — Pro forma cap for negative EBITDA:** Changed `Math.abs(ebitda) * 0.15` to `ebitda > 0 ? ebitda * 0.15 : 0`. A company with negative base EBITDA (losing money) was getting up to 15% of the loss amount as pro forma synergy credit. Now caps at zero for negative EBITDA — distressed borrowers cannot receive speculative synergy improvements. File: `lib/calculations/ebitda-calculator.ts`
+
 **33.5 — Remove D&A self-verification loop:** Removed the 6-step "D&A ARITHMETIC SELF-VERIFICATION" section and the "If it doesn't, recalculate" instruction. `calculateEBITDA()` in `ebitda-calculator.ts` already implements the identical completeness gate in deterministic TypeScript. Simplified prompt to extract the aggregate and sub-components independently, leaving resolution to the app. File: `lib/prompts/extraction-prompt.ts`
 
 **33.4 — Remove senior_debt_interest AI subtraction:** Removed "calculate: total_interest - subordinated_debt_interest" from prompt. Now instructs Claude to output null if senior_debt_interest isn't a labelled line item — the debt service resolver handles missing values through its fallback chain. File: `lib/prompts/extraction-prompt.ts`

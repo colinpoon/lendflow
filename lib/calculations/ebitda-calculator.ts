@@ -62,6 +62,15 @@ export interface EBITDAResult {
    * "Finance costs — net". Interest income may inflate EBITDA and should be subtracted.
    */
   usedGrossFallback: boolean;
+  /** The resolved component values actually used in the EBITDA calculation.
+   *  Only present when EBITDA was calculated (not company-reported).
+   *  May differ from raw extracted fields due to interest/D&A fallback chains. */
+  resolvedComponents?: {
+    net_income: number;
+    interest: number;
+    taxes: number;
+    depreciation_amortization: number;
+  };
 }
 
 /**
@@ -69,9 +78,7 @@ export interface EBITDAResult {
  * EBITDA = Net Income + Interest + Taxes + Depreciation & Amortization
  */
 export function calculateEBITDA(metrics: ExtractedMetrics): EBITDAResult | null {
-  // If EBITDA is already provided, use it
-  if (metrics.ebitda != null) return { value: metrics.ebitda, usedGrossFallback: false };
-
+  // Always calculate EBITDA from components — never use document-reported values
   const netIncome = metrics.net_income;
 
   // CRITICAL: Interest expense should ALWAYS be positive for EBITDA.
@@ -195,11 +202,19 @@ export function calculateEBITDA(metrics: ExtractedMetrics): EBITDAResult | null 
 
   // Need at minimum net_income and depreciation to calculate meaningful EBITDA
   if (netIncome != null && depAmort != null) {
+    const resolvedInterest = interest ?? 0;
+    const resolvedTaxes = taxes ?? 0;
     return {
       value: parseFloat(
-        (netIncome + (interest ?? 0) + (taxes ?? 0) + depAmort).toFixed(2)
+        (netIncome + resolvedInterest + resolvedTaxes + depAmort).toFixed(2)
       ),
       usedGrossFallback,
+      resolvedComponents: {
+        net_income: netIncome,
+        interest: resolvedInterest,
+        taxes: resolvedTaxes,
+        depreciation_amortization: depAmort,
+      },
     };
   }
 
@@ -530,7 +545,8 @@ function deduplicateOneTimeGains(
 export function calculateAdjustedEBITDA(
   ebitda: number,
   metrics: ExtractedMetrics,
-  usedGrossFallback: boolean = false
+  usedGrossFallback: boolean = false,
+  resolvedComponents?: EBITDAResult['resolvedComponents'],
 ): EBITDACalculationResult {
   const adj = (metrics.adjusted_ebitda_components || {}) as AdjustedEBITDAComponents;
 
@@ -838,13 +854,15 @@ export function calculateAdjustedEBITDA(
     .filter((v): v is number => v != null)
     .reduce((sum, v) => sum + v, 0);
 
-  const proFormaCap = Math.abs(ebitda) * PRO_FORMA_CAP_PCT;
+  // When base EBITDA is negative, cap pro forma at zero — distressed borrowers
+  // should not receive synergy credits that improve a negative operating figure.
+  const proFormaCap = ebitda > 0 ? ebitda * PRO_FORMA_CAP_PCT : 0;
   const proFormaAdjustments =
-    rawProFormaAdjustments > proFormaCap && ebitda !== 0
+    rawProFormaAdjustments > proFormaCap
       ? proFormaCap
       : rawProFormaAdjustments;
 
-  if (rawProFormaAdjustments > proFormaCap && ebitda !== 0) {
+  if (rawProFormaAdjustments > proFormaCap) {
     console.warn(
       `⚠️ PRO FORMA CAP: Raw pro forma adjustments (${rawProFormaAdjustments}) exceed ` +
       `${PRO_FORMA_CAP_PCT * 100}% of base EBITDA (${ebitda}). Capped at ${proFormaCap.toFixed(2)}. ` +
@@ -895,11 +913,12 @@ export function calculateAdjustedEBITDA(
 
   return {
     ebitda,
-    ebitda_calculated: metrics.ebitda == null,
-    adjusted_ebitda: metrics.reported_adjusted_ebitda ?? calculatedAdjustedEbitda,
+    ebitda_calculated: true,
+    adjusted_ebitda: calculatedAdjustedEbitda,
     calculated_adjusted_ebitda: calculatedAdjustedEbitda,
     adjusted_ebitda_breakdown: {
       reported_ebitda: ebitda,
+      reported_ebitda_components: resolvedComponents,
       non_cash_adjustments: nonCashAdjustments,
       one_time_expenses: oneTimeExpenses,
       one_time_gains: oneTimeGains,
@@ -911,7 +930,6 @@ export function calculateAdjustedEBITDA(
       realized_fx_pl: adj.realized_fx_pl ?? 0,
       pro_forma_adjustments: proFormaAdjustments,
       capital_expenditures_not_in_calc: capitalExpenditures,
-      uses_reported_value: metrics.reported_adjusted_ebitda != null,
     },
     deduped_components: {
       other_non_cash: deduplicatedOtherNonCash,
