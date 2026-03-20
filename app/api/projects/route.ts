@@ -5,8 +5,8 @@ import { z } from 'zod';
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(255),
-  description: z.string().max(2000).optional(),
-  company_name: z.string().max(255).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  company_name: z.string().max(255).nullable().optional(),
 });
 
 // GET /api/projects - List all projects for the current user
