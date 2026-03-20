@@ -141,6 +141,31 @@ export function isMoreRecent(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Apply the primary-year tiebreaker: the document for which this year is the
+ * PRIMARY reporting year is more authoritative than one where it appears as a
+ * comparative figure. Returns null when both or neither are primary (ambiguous).
+ */
+function resolvePrimaryYearTiebreak(
+  year: string,
+  isPrimaryInNew: boolean,
+  isPrimaryInExisting: boolean
+): { recommendation: 'keep_existing' | 'use_new'; reason: string } | null {
+  if (isPrimaryInNew && !isPrimaryInExisting) {
+    return {
+      recommendation: 'use_new',
+      reason: `Year ${year} is the primary reporting year of the new document, making it the authoritative source`,
+    };
+  }
+  if (isPrimaryInExisting && !isPrimaryInNew) {
+    return {
+      recommendation: 'keep_existing',
+      reason: `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`,
+    };
+  }
+  return null; // Ambiguous — both or neither are primary
+}
+
+/**
  * Detect year conflicts between a new extraction and existing extractions.
  * Returns information about which years overlap and recommendations for resolution.
  */
@@ -224,80 +249,43 @@ export function detectYearConflicts(
 
     const fyDateComparison = compareFiscalYearEndDates(newFiscalYearEnd, existing.fiscal_year_end_date);
 
-    // Determine recommendation and reason
+    // Determine recommendation and reason.
+    // Primary-year tiebreaker: the document for which this year is the primary
+    // reporting year is always more authoritative than one where it's comparative.
+    const primaryTiebreak = resolvePrimaryYearTiebreak(year, isPrimaryYearInNew, isPrimaryYearInExisting);
+
     let recommendation: 'keep_existing' | 'use_new';
     let reason: string;
 
-    if (newFiscalYearEnd && existing.fiscal_year_end_date) {
+    if (newFiscalYearEnd && existing.fiscal_year_end_date && fyDateComparison !== 0) {
+      // Fiscal year end dates differ — the later date wins
       if (fyDateComparison > 0) {
-        // New document has a strictly later fiscal year end — it is more recent
         recommendation = 'use_new';
         reason = `New document has a later fiscal year end (${newFiscalYearEnd}) than existing (${existing.fiscal_year_end_date})`;
-      } else if (fyDateComparison < 0) {
-        // Existing document has a strictly later fiscal year end — it is more recent
+      } else {
         recommendation = 'keep_existing';
         reason = `Existing document has a later fiscal year end (${existing.fiscal_year_end_date}) than new (${newFiscalYearEnd})`;
-      } else {
-        // Dates are equal — same fiscal year appears in both documents.
-        // The document for which this is the PRIMARY reporting year is always more
-        // authoritative than the document where it appears as a comparative figure.
-        if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
-          recommendation = 'use_new';
-          reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
-        } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
-          recommendation = 'keep_existing';
-          reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
-        } else {
-          // Both or neither are primary — cannot determine authority automatically
-          recommendation = 'keep_existing';
-          reason = `Both documents cover year ${year} with equal authority; manual review suggested`;
-        }
       }
-    } else if (newFiscalYearEnd && !existing.fiscal_year_end_date) {
-      // Can't reliably compare dates — apply primary-year tiebreaker first
-      if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
+    } else if (primaryTiebreak) {
+      // Dates are equal, missing, or incomparable — use primary-year tiebreaker
+      recommendation = primaryTiebreak.recommendation;
+      reason = primaryTiebreak.reason;
+    } else if (!newFiscalYearEnd && !existing.fiscal_year_end_date) {
+      // Last resort: upload timestamp (weakest signal)
+      const newIsMoreRecentByTimestamp =
+        new Date(newExtraction.created_at) > new Date(existing.extracted_at);
+      if (newIsMoreRecentByTimestamp) {
         recommendation = 'use_new';
-        reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
-      } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
-        recommendation = 'keep_existing';
-        reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
+        reason = 'New document was uploaded more recently';
       } else {
         recommendation = 'keep_existing';
-        reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
-      }
-    } else if (!newFiscalYearEnd && existing.fiscal_year_end_date) {
-      // Can't reliably compare dates — apply primary-year tiebreaker first
-      if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
-        recommendation = 'use_new';
-        reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
-      } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
-        recommendation = 'keep_existing';
-        reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
-      } else {
-        recommendation = 'keep_existing';
-        reason = 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
+        reason = 'Existing document was uploaded more recently';
       }
     } else {
-      // Neither has fiscal year end date — apply primary-year tiebreaker before
-      // falling back to upload timestamp, which is the weakest possible signal.
-      if (isPrimaryYearInNew && !isPrimaryYearInExisting) {
-        recommendation = 'use_new';
-        reason = `Year ${year} is the primary reporting year of the new document, making it the authoritative source`;
-      } else if (isPrimaryYearInExisting && !isPrimaryYearInNew) {
-        recommendation = 'keep_existing';
-        reason = `Year ${year} is the primary reporting year of the existing document, making it the authoritative source`;
-      } else {
-        // Last resort: upload timestamp
-        const newIsMoreRecentByTimestamp =
-          new Date(newExtraction.created_at) > new Date(existing.extracted_at);
-        if (newIsMoreRecentByTimestamp) {
-          recommendation = 'use_new';
-          reason = 'New document was uploaded more recently';
-        } else {
-          recommendation = 'keep_existing';
-          reason = 'Existing document was uploaded more recently';
-        }
-      }
+      recommendation = 'keep_existing';
+      reason = newFiscalYearEnd && existing.fiscal_year_end_date
+        ? `Both documents cover year ${year} with equal authority; manual review suggested`
+        : 'Cannot compare fiscal year end dates - keeping existing data (you can override)';
     }
 
     conflicts.push({
