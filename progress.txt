@@ -12,6 +12,8 @@
 
 ### Task 33 — Enforce Internal Calculation Principle (2026-03-19)
 
+**33.2 — Remove total_debt AI aggregation:** Set `"total_debt": null` in extraction prompt schema. Removed AI summation instruction ("total_debt = bank_debt + lease_liabilities + ..."). Removed fallback to `metrics.total_debt` in `calculateDebtMetrics()` — if all debt_components are null, total_debt is now null instead of silently using an AI-computed sum. Updated vision extraction tool schema. Files: `lib/prompts/extraction-prompt.ts`, `lib/calculations/debt-calculator.ts`, `lib/vision/extraction-tool.ts`
+
 **33.1 — Remove profit_margins AI computation:** Set `"profit_margins": null` in extraction prompt schema (same pattern as `ebitda`). Removed "Calculate as net_income / revenue" instruction. Added `calculateProfitMargin(netIncome, revenue)` to `lib/calculations/ratio-calculator.ts`. Called it in `computeMetrics()` in both `utils/aiProcessor.ts` and `utils/visionProcessor.ts`. Updated vision extraction tool schema to enforce null. Files: `lib/prompts/extraction-prompt.ts`, `lib/calculations/ratio-calculator.ts`, `utils/aiProcessor.ts`, `utils/visionProcessor.ts`, `lib/vision/extraction-tool.ts`
 
 **26.2 — FCCR covenant threshold 1.0x → 1.25x on instruments page:** Updated all FCCR threshold references on the portfolio analytics page from 1.0x to 1.25x (commercial banking standard per OCC/FDIC). Below covenant: <1.25x (was <1.0x). Adequate: 1.25x–1.50x (was 1.00x–1.25x). Strong: ≥1.50x (was ≥1.25x). Updated: distribution counters, bar chart colors, table row flag, FCCR text colors, icon helper, covenant threshold label. File: `app/instruments/page.tsx`

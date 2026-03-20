@@ -114,7 +114,7 @@ export function calculateDebtMetrics(
       computedSeniorDebt > 0
         ? computedSeniorDebt
         : metrics.senior_debt ?? null,
-    total_debt: computedTotalDebt > 0 ? computedTotalDebt : metrics.total_debt,
+    total_debt: computedTotalDebt > 0 ? computedTotalDebt : null,
     debt_breakdown: {
       bank_debt: totalBankDebt,
       lease_liabilities: totalLeaseDebt,

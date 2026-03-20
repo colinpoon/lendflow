@@ -338,8 +338,8 @@ const yearMetricsSchema = {
       description: 'Total shareholders equity / owners equity / net assets (common stock + retained earnings + AOCI). Normalized to thousands USD.',
     },
     total_debt: {
-      type: ['number', 'null'],
-      description: 'TOTAL debt = ALL interest-bearing borrowings (bank + notes + bonds + leases + subordinated). NOT the same as senior_debt. Normalized to thousands USD.',
+      type: ['null'],
+      description: 'Always null — calculated by the application from debt_components.',
     },
     senior_debt: {
       type: ['number', 'null'],

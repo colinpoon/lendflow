@@ -76,7 +76,7 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
         "lines_of_credit": number|null,
         "other_borrowings": number|null
       },
-      "total_debt": number|null,
+      "total_debt": null,
       "senior_debt": number|null,
       "current_assets": number|null,
       "current_liabilities": number|null,
@@ -490,9 +490,8 @@ CRITICAL DEBT CALCULATION RULES:
   Extract senior_debt as bank debt only from the document. The system will add IFRS 16 lease liabilities to Senior Debt during calculation based on the configured treatment mode.
   Do NOT manually add lease liabilities to senior_debt — always keep them separate in debt_components.
 • Notes payable, vendor take-back notes, or debt described as "subordinated" are NOT senior debt.
-• "total_debt" = bank_debt + lease_liabilities + notes_payable + subordinated_debt + all other interest-bearing obligations.
-  CRITICAL: total_debt must ONLY include interest-bearing financial liabilities.
-  Do NOT include: accounts payable, accrued liabilities, trade payables, deferred revenue, income taxes payable, provisions (unless they represent called debt obligations), puttable interests, or any other non-financial operating obligation. These are operating liabilities, NOT debt.
+• "total_debt": null — ALWAYS output null. The application calculates total debt from debt_components.
+  Focus on extracting accurate debt_components instead.
 • If the document shows "Current debt" and "Long term debt" line items, these typically refer to bank debt only, NOT lease liabilities. Lease liabilities appear as a separate line on the balance sheet.
 • Lease liabilities must always be recorded in debt_components (lease_liabilities_current + lease_liabilities_long_term) but must NOT be added to senior_debt.
 • When a note or schedule lists multiple debt facilities, the ORDER they appear indicates relative seniority among bank facilities.
