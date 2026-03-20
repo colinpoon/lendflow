@@ -347,17 +347,21 @@ const NESTED_METRIC_KEYS = new Set([
  * @param context - Human-readable label used in warning messages (e.g. year + file names).
  * @returns An object with the merged metrics and an array of warning strings.
  */
-export function unionMergeMetrics(
-  winner: Record<string, unknown>,
-  loser: Record<string, unknown>,
+export function unionMergeMetrics<T extends object>(
+  winner: T,
+  loser: T,
   context: string
-): { merged: Record<string, unknown>; warnings: string[] } {
-  const merged: Record<string, unknown> = { ...winner };
+): { merged: T; warnings: string[] } {
+  // Cast to Record for dynamic key iteration — the function fills null gaps
+  // from the loser into the winner, preserving the runtime shape of T.
+  const winnerRec = winner as Record<string, unknown>;
+  const loserRec = loser as Record<string, unknown>;
+  const merged: Record<string, unknown> = { ...winnerRec };
   const warnings: string[] = [];
 
-  for (const key of Object.keys(loser)) {
-    const winnerValue = winner[key];
-    const loserValue = loser[key];
+  for (const key of Object.keys(loserRec)) {
+    const winnerValue = winnerRec[key];
+    const loserValue = loserRec[key];
 
     if (NESTED_METRIC_KEYS.has(key)) {
       // One level deeper: both sides must be plain objects (or null/undefined).
@@ -411,7 +415,9 @@ export function unionMergeMetrics(
     }
   }
 
-  return { merged, warnings };
+  // The spread-and-fill logic preserves the runtime shape of T.
+  // The internal Record<string, unknown> is needed for dynamic key iteration.
+  return { merged: merged as T, warnings };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -446,8 +452,9 @@ export function mergeExtractions(
     const year_sources: Record<string, { document_id: string; file_name: string; extracted_at: string; fiscal_year_end_date?: string }> = {};
     const years = data.metrics_by_year ? Object.keys(data.metrics_by_year).sort() : [];
 
+    const metricsByYear = data.metrics_by_year ?? {};
     for (const year of years) {
-      const metrics = data.metrics_by_year[year];
+      const metrics = metricsByYear[year];
       year_sources[year] = {
         document_id: extractions[0].document_id,
         file_name: fileName,
@@ -459,7 +466,7 @@ export function mergeExtractions(
     const mostRecentYear = years[years.length - 1];
 
     return {
-      metrics_by_year: data.metrics_by_year || {},
+      metrics_by_year: metricsByYear,
       riskAssessment: data.riskAssessment,
       debtHealthAssessment: data.debtHealthAssessment,
       quantitativeRiskAssessment: data.quantitativeRiskAssessment as QuantitativeRiskAssessment | null | undefined,
@@ -585,12 +592,12 @@ export function mergeExtractions(
 
       const context = `year=${year} winner="${winner.file_name}" loser="${loser.file_name}"`;
       const { merged: mergedMetrics, warnings } = unionMergeMetrics(
-        winner.metrics as unknown as Record<string, unknown>,
-        loser.metrics as unknown as Record<string, unknown>,
+        winner.metrics,
+        loser.metrics,
         context
       );
       unionMergeWarnings.push(...warnings);
-      yearDataMap.set(year, { ...winner, metrics: mergedMetrics as unknown as ComputedMetrics });
+      yearDataMap.set(year, { ...winner, metrics: mergedMetrics });
     } else {
       // No explicit resolution — pick the more recent entry.
       const newestIsMoreRecent = isMoreRecent(
@@ -602,12 +609,12 @@ export function mergeExtractions(
 
       const context = `year=${year} winner="${winner.file_name}" loser="${loser.file_name}"`;
       const { merged: mergedMetrics, warnings } = unionMergeMetrics(
-        winner.metrics as unknown as Record<string, unknown>,
-        loser.metrics as unknown as Record<string, unknown>,
+        winner.metrics,
+        loser.metrics,
         context
       );
       unionMergeWarnings.push(...warnings);
-      yearDataMap.set(year, { ...winner, metrics: mergedMetrics as unknown as ComputedMetrics });
+      yearDataMap.set(year, { ...winner, metrics: mergedMetrics });
     }
   }
 

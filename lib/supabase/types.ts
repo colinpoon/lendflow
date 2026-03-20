@@ -1,34 +1,7 @@
-import type { RiskData, DebtHealthAssessment } from '@/types/risk';
-import type { ComputedMetrics } from '@/types/financial';
-
-// ExtractionResult type - matches the structure from aiProcessor
-export interface ExtractionResult {
-  metrics_by_year: Record<string, ComputedMetrics>;
-  /**
-   * The fiscal year for which this document is the PRIMARY report.
-   * For example, a 2024 annual report has primary_fiscal_year = "2024",
-   * even though it may also contain 2023 comparative figures.
-   * Used for conflict resolution: a document is always more authoritative
-   * for the year it primarily reports on than for comparative years.
-   */
-  primary_fiscal_year?: string | null;
-  riskAssessment?: RiskData | null;
-  debtHealthAssessment?: DebtHealthAssessment | null;
-  quantitativeRiskAssessment?: {
-    normalized_score: number;
-    risk_band: string;
-    [key: string]: unknown;
-  } | null;
-  validation_issues?: Record<string, string[]>;
-  extraction_warnings?: string[];
-  chunk_stats?: { total: number; successful: number; failed: number; skipped?: number };
-  token_usage?: {
-    input_tokens: number;
-    output_tokens: number;
-    model: string;
-    cost_usd?: number;
-  };
-}
+// Canonical ExtractionResult lives in utils/aiProcessor.ts — single source of truth.
+// Imported for local use in Database interface, re-exported for downstream consumers.
+import type { ExtractionResult } from '@/utils/aiProcessor';
+export type { ExtractionResult };
 
 export type Json =
   | string

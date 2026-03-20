@@ -408,10 +408,7 @@ export async function POST(req: NextRequest) {
         if (existingExtractions && existingExtractions.length > 0) {
           // Build a phantom extraction object (not yet in DB) to run conflict detection
           const now = new Date().toISOString();
-          // Cast to ExtractionWithDocument: aiProcessor.ExtractionResult and
-          // lib/supabase/types.ExtractionResult are structurally compatible at
-          // runtime even though they have different TypeScript declarations.
-          const phantomExtraction = {
+          const phantomExtraction: ExtractionWithDocument = {
             id: documentId, // placeholder — extraction not yet persisted
             document_id: documentId,
             project_id: projectId!,
@@ -430,7 +427,7 @@ export async function POST(req: NextRequest) {
             created_at: now,
             updated_at: now,
             documents: { id: documentId, file_name: sanitizedFileName },
-          } as unknown as ExtractionWithDocument;
+          };
 
           const conflictResult = detectYearConflicts(
             phantomExtraction,
