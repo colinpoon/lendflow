@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**31 — EBITDA sensitivity analysis:** Created `lib/calculations/stress-test.ts` with deterministic stress scenarios (base, -10%, -20% EBITDA). Built `SensitivityPanel.tsx` component with color-coded FCCR and Sr Debt/EBITDA under each scenario. Integrated into Covenants section of ProjectDetail. +0.5KB bundle impact.
+
 **29 — Focus-visible rings:** Added `focus-visible:ring-2 ring-ring ring-offset-2` to 5 custom `<button>` elements across `ProjectDetail.tsx`, `dashboard/layout.tsx`, and `(dashboard)/layout.tsx`. WCAG 2.4.7 compliance.
 
 **23 — Duplicate document detection:** Added SHA-256 content hashing before extraction in both `/api/extractData` and `/api/extractData/vision`. Computes hash from raw buffer, checks for existing documents with matching hash in the same project, rejects with original filename and upload date. Hash stored in `documents.content_hash` column. Created SQL migration with composite index on `(project_id, content_hash)`. Zero API credits wasted on duplicates.
