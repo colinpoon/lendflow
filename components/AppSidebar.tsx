@@ -8,13 +8,11 @@ import {
   Eye,
   GitCompareArrows,
   BarChart3,
-  PanelLeft,
 } from 'lucide-react';
 
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -76,39 +74,13 @@ function SidebarWordmark() {
   );
 }
 
-function SidebarToggleButton() {
-  const { toggleSidebar } = useSidebar();
-
-  return (
-    <SidebarMenuButton
-      className="w-full cursor-pointer"
-      tooltip="Toggle sidebar"
-      onClick={toggleSidebar}
-    >
-      <PanelLeft className="h-4 w-4" />
-      <span>Collapse</span>
-    </SidebarMenuButton>
-  );
-}
-
 export function AppSidebar() {
   const pathname = usePathname();
-  const { state, toggleSidebar } = useSidebar();
+  const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
 
-  const handleSidebarClick = (e: React.MouseEvent) => {
-    if (isCollapsed) {
-      e.preventDefault();
-      toggleSidebar();
-    }
-  };
-
   return (
-    <Sidebar
-      collapsible="icon"
-      onClick={handleSidebarClick}
-      className={isCollapsed ? 'cursor-pointer' : ''}
-    >
+    <Sidebar collapsible="icon">
       <SidebarHeader className={`py-4 ${isCollapsed ? 'px-0' : 'px-3'}`}>
         <SidebarWordmark />
       </SidebarHeader>
@@ -139,14 +111,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="p-3">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarToggleButton />
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>
