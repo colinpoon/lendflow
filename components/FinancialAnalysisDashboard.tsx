@@ -14,7 +14,7 @@
  *      two unequal columns (earnings 55% | credit health 45%)
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ChevronRight,
   Home,
@@ -27,7 +27,6 @@ import {
   X,
   Plus,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -372,6 +371,8 @@ function recalculate(config: CovenantConfig) {
 /** Animated semicircular SVG risk gauge */
 function RiskGauge({ score }: { score: number }) {
   const pct = score / 100;
+  const [animated, setAnimated] = useState(false);
+  useEffect(() => { setAnimated(true); }, []);
 
   return (
     <div className="flex flex-col items-center">
@@ -393,18 +394,19 @@ function RiskGauge({ score }: { score: number }) {
           strokeLinecap="round"
         />
 
-        {/* Filled arc — animated */}
-        <motion.path
+        {/* Filled arc — CSS transition replaces framer-motion */}
+        <path
           d="M 20 100 A 80 80 0 0 1 180 100"
           fill="none"
           stroke="url(#riskArc)"
           strokeWidth="10"
           strokeLinecap="round"
-          pathLength="1"
+          pathLength={1}
           strokeDasharray="1"
-          initial={{ strokeDashoffset: 1 }}
-          animate={{ strokeDashoffset: 1 - pct }}
-          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.2 }}
+          style={{
+            strokeDashoffset: animated ? 1 - pct : 1,
+            transition: 'stroke-dashoffset 1.2s ease-out 0.2s',
+          }}
         />
 
         {/* Score */}
@@ -670,12 +672,13 @@ function RatioBar({ ratio, index }: { ratio: RatioConfig; index: number }) {
           title={`${ratio.values[1]} (${PROJECT.years[1]})`}
         />
 
-        {/* Current fill — animated */}
-        <motion.div
+        {/* Current fill — CSS animation replaces framer-motion */}
+        <div
           className={cn('h-full rounded-full', SENTIMENT[sentiment].bar)}
-          initial={{ width: 0 }}
-          animate={{ width: `${fillPct}%` }}
-          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.15 + index * 0.06 }}
+          style={{
+            width: `${fillPct}%`,
+            animation: `fill-bar 0.8s ease-out ${150 + index * 60}ms both`,
+          }}
         />
       </div>
 
@@ -722,37 +725,33 @@ function DetailCard({ section }: { section: DetailSection }) {
         <span className="text-xs font-semibold">{section.title}</span>
       </button>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div className="border-t border-border px-4 py-2">
-              {section.rows.map((row) => (
-                <div
-                  key={row.label}
-                  className={cn(
-                    'grid py-1.5 text-xs',
-                    row.isTotal && 'border-t border-border pt-2 font-semibold'
-                  )}
-                  style={{ gridTemplateColumns: '1fr 100px 100px' }}
-                >
-                  <span>{row.label}</span>
-                  {row.values.map((v, i) => (
-                    <span key={i} className="text-right tabular-nums">
-                      {fmt(v)}
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Collapse/expand via CSS grid-rows transition */}
+      <div className={cn(
+        'grid transition-[grid-template-rows,opacity] duration-200',
+        open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+      )}>
+        <div className="overflow-hidden">
+          <div className="border-t border-border px-4 py-2">
+            {section.rows.map((row) => (
+              <div
+                key={row.label}
+                className={cn(
+                  'grid py-1.5 text-xs',
+                  row.isTotal && 'border-t border-border pt-2 font-semibold'
+                )}
+                style={{ gridTemplateColumns: '1fr 100px 100px' }}
+              >
+                <span>{row.label}</span>
+                {row.values.map((v, i) => (
+                  <span key={i} className="text-right tabular-nums">
+                    {fmt(v)}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -833,54 +832,50 @@ function UploadInline() {
         </button>
       </div>
 
-      <AnimatePresence initial={false}>
-        {showUpload && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div className="border-t border-border px-4 pb-4 pt-3">
-              <div
-                className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-6 text-center"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (e.dataTransfer.files.length > 0) setFiles(Array.from(e.dataTransfer.files));
-                }}
-              >
-                <Upload className="h-6 w-6 text-muted-foreground/50" />
-                <p className="text-xs text-muted-foreground">
-                  Drop files or{' '}
-                  <label className="cursor-pointer font-medium text-foreground underline underline-offset-2">
-                    browse
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".pdf,.xlsx,.xls,.doc,.docx"
-                      onChange={(e) => {
-                        if (e.target.files?.length) setFiles(Array.from(e.target.files));
-                      }}
-                    />
-                  </label>
-                </p>
-              </div>
-              {files.length > 0 && (
-                <div className="mt-2 flex items-center justify-between text-xs">
-                  <span className="font-medium">{files[0].name}</span>
-                  <button
-                    className="rounded-lg bg-foreground px-3 py-1.5 text-xs font-medium text-background"
-                  >
-                    Analyze
-                  </button>
-                </div>
-              )}
+      {/* Collapse/expand via CSS grid-rows transition */}
+      <div className={cn(
+        'grid transition-[grid-template-rows,opacity] duration-200',
+        showUpload ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+      )}>
+        <div className="overflow-hidden">
+          <div className="border-t border-border px-4 pb-4 pt-3">
+            <div
+              className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-6 text-center"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files.length > 0) setFiles(Array.from(e.dataTransfer.files));
+              }}
+            >
+              <Upload className="h-6 w-6 text-muted-foreground/50" />
+              <p className="text-xs text-muted-foreground">
+                Drop files or{' '}
+                <label className="cursor-pointer font-medium text-foreground underline underline-offset-2">
+                  browse
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.xlsx,.xls,.doc,.docx"
+                    onChange={(e) => {
+                      if (e.target.files?.length) setFiles(Array.from(e.target.files));
+                    }}
+                  />
+                </label>
+              </p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {files.length > 0 && (
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="font-medium">{files[0].name}</span>
+                <button
+                  className="rounded-lg bg-foreground px-3 py-1.5 text-xs font-medium text-background"
+                >
+                  Analyze
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

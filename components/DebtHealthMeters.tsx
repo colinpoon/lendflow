@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import {
   Accordion,
   AccordionContent,
@@ -88,26 +87,8 @@ interface HealthConfig {
   percentage: number;
 }
 
-// ─── Motion Variants ──────────────────────────────────────────────────────────
-
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.06 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.3,
-      ease: [0.25, 1, 0.5, 1] as [number, number, number, number],
-    },
-  },
-};
+// Shared fade-up animation class (tw-animate-css) replacing framer-motion variants.
+const FADE_UP = 'animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
@@ -372,7 +353,7 @@ const LinearMeterCard: React.FC<LinearMeterCardProps> = ({
   const subtitleColor = health ? meterSubtitleMap[health.level] : 'text-zinc-400';
 
   return (
-    <motion.div variants={itemVariants}>
+    <div className={FADE_UP}>
       <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 min-h-[140px] flex flex-col justify-between shadow-lg`}>
         {/* Noise texture overlay */}
         <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
@@ -411,7 +392,7 @@ const LinearMeterCard: React.FC<LinearMeterCardProps> = ({
           />
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -557,12 +538,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
               <AccordionContent>
                 {/* Linear meter card grid */}
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid grid-cols-1 md:grid-cols-3 gap-3 py-4"
-                >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 py-4">
                   <LinearMeterCard
                     label="Covenant FCCR"
                     value={metrics.fccr}
@@ -584,7 +560,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     formatValue={(v) => `${(v * 100).toFixed(1)}%`}
                     getHealth={getTotalDebtCapitalHealth}
                   />
-                </motion.div>
+                </div>
               </AccordionContent>
             </AccordionItem>
           );

@@ -17,7 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 
-import { motion, type Transition } from 'framer-motion';
+
 import CovenantParametersPanel from '@/components/CovenantParametersPanel';
 import { CompactErrorBoundary } from '@/components/ErrorBoundary';
 import FileUpload from '@/components/FileUpload';
@@ -114,13 +114,9 @@ const SECTIONS = [
   { id: 'decision', label: 'Decision' },
 ] as const;
 
-// Shared fade-up animation config used across content sections.
+// Shared fade-up animation classes (tw-animate-css).
 // Short duration and small y-offset keep it professional for a financial app.
-const SECTION_ENTER = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: (delay = 0): Transition => ({ duration: 0.35, ease: 'easeOut', delay }),
-};
+const FADE_UP = 'animate-in fade-in slide-in-from-bottom-5 duration-300 fill-mode-both';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -615,12 +611,7 @@ export default function ProjectDetail({
         <section id="analysis" ref={setSectionRef('analysis')} className="scroll-mt-16 space-y-4">
           {/* Year source indicators */}
           {!isRefreshing && Object.keys(yearSources).length > 1 && (
-            <motion.div
-              className="flex flex-wrap gap-1.5 text-[11px]"
-              initial={SECTION_ENTER.initial}
-              animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0)}
-            >
+            <div className={`flex flex-wrap gap-1.5 text-[11px] ${FADE_UP}`}>
               {years.map((year) => (
                 <Badge
                   key={year}
@@ -633,28 +624,20 @@ export default function ProjectDetail({
                   </span>
                 </Badge>
               ))}
-            </motion.div>
+            </div>
           )}
 
           {/* Covenant Parameters — controls client-side recalculation of ratios below */}
           {!isRefreshing && (
-            <motion.div
-              initial={SECTION_ENTER.initial}
-              animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0.05)}
-            >
+            <div className={`${FADE_UP} delay-[50ms]`}>
               <CovenantParametersPanel
                 config={covenantConfig}
                 onConfigChange={setCovenantConfig}
               />
-            </motion.div>
+            </div>
           )}
 
-          <motion.div
-            initial={SECTION_ENTER.initial}
-            animate={SECTION_ENTER.animate}
-            transition={SECTION_ENTER.transition(0.1)}
-          >
+          <div className={`${FADE_UP} delay-100`}>
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-semibold tracking-tight">Financial Summary</CardTitle>
@@ -669,7 +652,7 @@ export default function ProjectDetail({
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         </section>
       )}
 
@@ -678,25 +661,16 @@ export default function ProjectDetail({
         <section id="risk" ref={setSectionRef('risk')} className="scroll-mt-16 space-y-5">
           {/* Risk assessment source info */}
           {!isRefreshing && mostRecentYear && extractionCount > 1 && (
-            <motion.p
-              className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md"
-              initial={SECTION_ENTER.initial}
-              animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0)}
-            >
+            <p className={`text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md ${FADE_UP}`}>
               Risk metrics based on <span className="font-medium text-foreground">{mostRecentYear}</span> data
               {mostRecentYearSource && (
                 <> from <span className="font-medium text-foreground">{mostRecentYearSource.file_name}</span></>
               )}
-            </motion.p>
+            </p>
           )}
 
           {(displayData || isRefreshing) && (
-            <motion.div
-              initial={SECTION_ENTER.initial}
-              animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0.05)}
-            >
+            <div className={`${FADE_UP} delay-[50ms]`}>
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold tracking-tight">Lending Risk Score</CardTitle>
@@ -715,14 +689,10 @@ export default function ProjectDetail({
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
 
-          <motion.div
-            initial={SECTION_ENTER.initial}
-            animate={SECTION_ENTER.animate}
-            transition={SECTION_ENTER.transition(0.1)}
-          >
+          <div className={`${FADE_UP} delay-100`}>
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-semibold tracking-tight">Quantitative Risk Scorecard</CardTitle>
@@ -738,7 +708,7 @@ export default function ProjectDetail({
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         </section>
       )}
 
@@ -746,11 +716,7 @@ export default function ProjectDetail({
       {(hasData || isRefreshing) && (
         <section id="ebitda" ref={setSectionRef('ebitda')} className="scroll-mt-16 space-y-5">
           {(displayData || isRefreshing) && (
-            <motion.div
-              initial={SECTION_ENTER.initial}
-              animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0.15)}
-            >
+            <div className={`${FADE_UP} delay-150`}>
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold tracking-tight">Adjusted EBITDA</CardTitle>
@@ -765,7 +731,7 @@ export default function ProjectDetail({
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
         </section>
       )}
@@ -774,11 +740,7 @@ export default function ProjectDetail({
       {(hasData || isRefreshing) && (
         <section id="covenants" ref={setSectionRef('covenants')} className="scroll-mt-16 space-y-5">
           {(displayData || isRefreshing) && (
-            <motion.div
-              initial={SECTION_ENTER.initial}
-              animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0.2)}
-            >
+            <div className={`${FADE_UP} delay-200`}>
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold tracking-tight">Covenant Health</CardTitle>
@@ -794,20 +756,16 @@ export default function ProjectDetail({
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
 
           {/* EBITDA Sensitivity Analysis */}
           {displayData && !isRefreshing && (
-            <motion.div
-              initial={SECTION_ENTER.initial}
-              animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0.25)}
-            >
+            <div className={`${FADE_UP} delay-[250ms]`}>
               <CompactErrorBoundary errorTitle="Failed to render sensitivity analysis">
                 <SensitivityPanel data={displayData} />
               </CompactErrorBoundary>
-            </motion.div>
+            </div>
           )}
         </section>
       )}
@@ -840,11 +798,7 @@ export default function ProjectDetail({
 
       {/* Decision Section */}
       <section id="decision" ref={setSectionRef('decision')} className="scroll-mt-16">
-        <motion.div
-          initial={SECTION_ENTER.initial}
-          animate={SECTION_ENTER.animate}
-          transition={SECTION_ENTER.transition(0)}
-        >
+        <div className={FADE_UP}>
         <Card className="gap-3">
           <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Loan Decision</CardTitle>
@@ -860,7 +814,7 @@ export default function ProjectDetail({
             />
           </CardContent>
         </Card>
-        </motion.div>
+        </div>
       </section>
     </article>
   );

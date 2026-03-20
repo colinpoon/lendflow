@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import {
   Accordion,
   AccordionContent,
@@ -23,24 +22,8 @@ interface AdjustedEBITDAProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
 }
 
-// ─── Animation Variants ────────────────────────────────────────────────────
-
-const containerVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.06 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.3,
-      ease: [0.25, 1, 0.5, 1] as [number, number, number, number],
-    },
-  },
-};
+// Shared fade-up animation class (tw-animate-css) replacing framer-motion variants.
+const FADE_UP = 'animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both';
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
@@ -247,18 +230,10 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
       </div>
 
       {/* ── Hero KPI Cards — Split-surface design ── */}
-      <motion.div
-        className="grid grid-cols-2 gap-4"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <div className="grid grid-cols-2 gap-4">
         {/* Reported EBITDA card */}
-        <motion.div
-          variants={itemVariants}
-          className="relative overflow-hidden rounded-2xl p-5 min-h-[140px] flex flex-col justify-between shadow-sm
-            bg-card border border-border
-            dark:bg-gradient-to-br dark:from-zinc-800 dark:via-zinc-900 dark:to-zinc-950 dark:border-zinc-700 dark:shadow-lg"
+        <div
+          className={`relative overflow-hidden rounded-2xl p-5 min-h-[140px] flex flex-col justify-between shadow-sm bg-card border border-border dark:bg-gradient-to-br dark:from-zinc-800 dark:via-zinc-900 dark:to-zinc-950 dark:border-zinc-700 dark:shadow-lg ${FADE_UP}`}
         >
           <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
           <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
@@ -270,14 +245,11 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               {formatCurrency(metrics.ebitda)}
             </p>
           </div>
-        </motion.div>
+        </div>
 
         {/* Adjusted EBITDA card */}
-        <motion.div
-          variants={itemVariants}
-          className="relative overflow-hidden rounded-2xl p-5 min-h-[140px] flex flex-col justify-between shadow-sm
-            bg-card border border-border
-            dark:bg-gradient-to-br dark:from-emerald-950 dark:via-emerald-900/80 dark:to-zinc-950 dark:border-zinc-700 dark:shadow-lg"
+        <div
+          className={`relative overflow-hidden rounded-2xl p-5 min-h-[140px] flex flex-col justify-between shadow-sm bg-card border border-border dark:bg-gradient-to-br dark:from-emerald-950 dark:via-emerald-900/80 dark:to-zinc-950 dark:border-zinc-700 dark:shadow-lg ${FADE_UP} delay-[60ms]`}
         >
           <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
           <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
@@ -295,8 +267,8 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               </p>
             )}
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       {/* ── Formula Block — code-editor left-border pattern ── */}
       <div className="rounded-xl border border-surface-border-1 bg-surface-3">

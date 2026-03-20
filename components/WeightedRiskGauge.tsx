@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import {
   Accordion,
   AccordionContent,
@@ -135,24 +134,8 @@ const getDebtCapitalBarColor = (value: number | null): string => {
   return '#ef4444';
 };
 
-// ─── Framer Motion Variants ────────────────────────────────────────────────────
-
-const containerVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.06 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.3,
-      ease: [0.25, 1, 0.5, 1] as [number, number, number, number],
-    },
-  },
-};
+// Shared fade-up animation class (tw-animate-css) replacing framer-motion variants.
+const FADE_UP = 'animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both';
 
 // ─── SVG Half-Circle Gauge ─────────────────────────────────────────────────────
 
@@ -567,14 +550,9 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
   const decisionStyle = getLendingDecisionStyle(assessment.lending_decision);
 
   return (
-    <motion.div
-      className="space-y-6"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div className="space-y-6">
       {/* Header */}
-      <motion.div variants={itemVariants} className="text-center">
+      <div className={`text-center ${FADE_UP}`}>
         <h3 className="text-xl font-bold tracking-tight text-foreground">
           Lending Risk Score
         </h3>
@@ -584,13 +562,10 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         <p className="text-[10px] text-muted-foreground/70 mt-1">
           FCCR ({RISK_WEIGHTS.FCCR * 100}%) + Sr. Debt/EBITDA ({RISK_WEIGHTS.DEBT_EBITDA * 100}%) + Debt/Capital ({RISK_WEIGHTS.DEBT_CAPITAL * 100}%) — authoritative score for lending decisions
         </p>
-      </motion.div>
+      </div>
 
       {/* Gauge + Metric Badges */}
-      <motion.div
-        variants={itemVariants}
-        className="flex flex-col md:flex-row items-center justify-center gap-8"
-      >
+      <div className={`flex flex-col md:flex-row items-center justify-center gap-8 ${FADE_UP} delay-[60ms]`}>
         {/* Half-circle SVG gauge */}
         <div className="flex flex-col items-center w-full md:w-auto">
           <RiskGauge score={displayScore} />
@@ -644,14 +619,11 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Lending Recommendations */}
       {(assessment.recommendations?.length > 0 || assessment.suggested_loan_structure) && (
-        <motion.div
-          variants={itemVariants}
-          className="rounded-xl border border-surface-border-1 bg-surface-2 overflow-hidden"
-        >
+        <div className={`rounded-xl border border-surface-border-1 bg-surface-2 overflow-hidden ${FADE_UP} delay-[120ms]`}>
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-surface-border-1">
             <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
             <h4 className="font-semibold tracking-tight text-foreground">
@@ -680,13 +652,13 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
               </p>
             </div>
           )}
-        </motion.div>
+        </div>
       )}
 
       {/* Risk Factors / Positive Factors Accordions */}
       {(assessment.key_risk_factors?.length > 0 ||
         assessment.positive_factors?.length > 0) && (
-        <motion.div variants={itemVariants}>
+        <div className={`${FADE_UP} delay-[180ms]`}>
           <Accordion
             type="multiple"
             defaultValue={['risks', 'positives']}
@@ -750,15 +722,12 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
               </AccordionItem>
             )}
           </Accordion>
-        </motion.div>
+        </div>
       )}
 
       {/* Historical Comparison */}
       {years.length > 1 && (
-        <motion.div
-          variants={itemVariants}
-          className="mt-6 pt-4 border-t border-surface-border-1"
-        >
+        <div className={`mt-6 pt-4 border-t border-surface-border-1 ${FADE_UP} delay-[240ms]`}>
           <h4 className="text-sm font-semibold tracking-tight text-foreground mb-3">
             Historical Risk Score Comparison
           </h4>
@@ -846,11 +815,11 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-        </motion.div>
+        </div>
       )}
 
       {/* Credit Risk Pillar Observations - temporarily disabled */}
-    </motion.div>
+    </div>
   );
 };
 

@@ -324,6 +324,11 @@
     border: 1px solid oklch(0.26 0 0);
   }
 
+  /* ─── Bar fill animation (replaces framer-motion width animation) ──────── */
+  @keyframes fill-bar {
+    from { width: 0; }
+  }
+
   /* ─── Skeleton shimmer loader ────────────────────────────────────────────── */
   @keyframes shimmer {
     0% { background-position: -200% 0; }
