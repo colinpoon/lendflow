@@ -331,7 +331,7 @@ export async function POST(req: NextRequest) {
       // Write to temp file for AI processor (buffer already validated above)
       const tempDir = os.tmpdir();
       const tempPath = path.join(tempDir, `${documentId}-${sanitizedFileName}`);
-      fs.writeFileSync(tempPath, buffer);
+      await fs.promises.writeFile(tempPath, buffer);
 
       console.log(`📂 Temp file created: ${tempPath}`);
       console.log('🤖 Starting AI data extraction...');
@@ -549,7 +549,7 @@ export async function POST(req: NextRequest) {
       } finally {
         // Always clean up the temp file regardless of success or failure
         try {
-          fs.unlinkSync(tempPath);
+          await fs.promises.unlink(tempPath);
           console.log('Temp file cleaned up');
         } catch (cleanupError) {
           console.warn('Failed to clean up temp file:', cleanupError);
