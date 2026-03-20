@@ -932,6 +932,20 @@ export default function ProjectDetail({
             </motion.div>
           )}
 
+          {/* Covenant Parameters — controls client-side recalculation of ratios below */}
+          {!isRefreshing && (
+            <motion.div
+              initial={SECTION_ENTER.initial}
+              animate={SECTION_ENTER.animate}
+              transition={SECTION_ENTER.transition(0.05)}
+            >
+              <CovenantParametersPanel
+                config={covenantConfig}
+                onConfigChange={setCovenantConfig}
+              />
+            </motion.div>
+          )}
+
           <motion.div
             initial={SECTION_ENTER.initial}
             animate={SECTION_ENTER.animate}
@@ -1055,20 +1069,6 @@ export default function ProjectDetail({
       {/* Covenants Section */}
       {(hasData || isRefreshing) && (
         <section id="covenants" ref={setSectionRef('covenants')} className="scroll-mt-16 space-y-5">
-          {/* Covenant Parameters — controls client-side recalculation */}
-          {!isRefreshing && (
-            <motion.div
-              initial={SECTION_ENTER.initial}
-              animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0.15)}
-            >
-              <CovenantParametersPanel
-                config={covenantConfig}
-                onConfigChange={setCovenantConfig}
-              />
-            </motion.div>
-          )}
-
           {(displayData || isRefreshing) && (
             <motion.div
               initial={SECTION_ENTER.initial}
