@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**29.3 — Replace hardcoded colors with semantic design tokens:** Replaced all 43 raw OKLCH values in `app/page.tsx` with semantic tokens (`bg-emerald-brand`, `text-foreground`, `text-muted-foreground`, `border-foreground/XX`, etc.). Added `dark` class to page wrapper so tokens resolve to dark-mode values (landing page is always dark). Added `--emerald-brand-hover` token to `globals.css` for both light and dark modes. In `ProjectDetail.tsx`, replaced MetricCard's `bg-white`→`bg-card`, `border-gray-200`→`border-border`, `text-gray-*`→semantic equivalents. Changes to `globals.css` tokens now propagate correctly to all surfaces.
+
 **29.2 — Gate Compare/Vision debug tools in sidebar:** Compare and Vision nav items in `AppSidebar.tsx` are now conditionally rendered based on `NEXT_PUBLIC_SHOW_DEV_INFO === 'true'`. Reuses the same env var from 29.1. When not set, only Projects, New Analysis, and Portfolio appear in the sidebar. The `/compare` and `/vision` routes still exist (protected by Clerk auth) but aren't discoverable from the nav.
 
 **29.1 — Gate token cost and AI model details behind env var:** Added `NEXT_PUBLIC_SHOW_DEV_INFO` env var gate to the token usage summary section in `ProjectDetail.tsx`. When not set (or set to anything other than `'true'`), model name, token counts, and estimated API cost are hidden from end users. Added the var to `.env.example` with documentation. Also checked off Tasks 6, 7, and 9 in the PRD — all sub-items were already fully implemented in code but had never been marked complete.
