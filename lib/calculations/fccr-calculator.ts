@@ -138,6 +138,21 @@ export function calculateFCCR(
   const capitalExpenditures = metrics.capital_expenditures ?? 0;
   const proceedsFromLTDebt = metrics.proceeds_from_long_term_debt ?? 0;
 
+  // Analyst warning: negative net LT debt proceeds = net paydown year
+  // This increases unfunded CapEx beyond raw CapEx, lowering FCCR relative to
+  // prior years with positive proceeds. Without this warning, the FCCR swing
+  // between years appears unexplained.
+  const negativeProceedsWarnings: string[] = [];
+  if (proceedsFromLTDebt < 0) {
+    negativeProceedsWarnings.push(
+      `Proceeds from long-term debt are negative (${proceedsFromLTDebt.toLocaleString()}) — ` +
+      `the borrower is in a net debt paydown year (repayments exceeded new issuances). ` +
+      `This increases unfunded CapEx and reduces the FCCR numerator relative to years ` +
+      `with positive debt proceeds. Review whether the paydown is voluntary deleveraging ` +
+      `or reflects inability to access new credit.`
+    );
+  }
+
   // Calculate unfunded CapEx (for reference/transparency, even if not using it)
   // Can be negative when debt proceeds exceed CapEx
   const unfundedCapex = capitalExpenditures - proceedsFromLTDebt;
@@ -270,7 +285,7 @@ export function calculateFCCR(
       total_fixed_charges: null,
       cash_flow_for_debt_servicing: null,
       fccr_breakdown: null,
-      warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings],
+      warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings, ...negativeProceedsWarnings],
     };
   }
 
@@ -306,7 +321,7 @@ export function calculateFCCR(
     fccr_numerator: parseFloat(numerator.toFixed(2)),
     total_fixed_charges: parseFloat(totalDebtService.toFixed(2)),
     cash_flow_for_debt_servicing: parseFloat(numerator.toFixed(2)),
-    warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings, ...negativeFccrWarnings],
+    warnings: [...debtService.warnings, ...cashTaxesFallbackWarnings, ...negativeProceedsWarnings, ...negativeFccrWarnings],
     fccr_breakdown: {
       calculation_type: 'lender_defined',
       // CapEx treatment info

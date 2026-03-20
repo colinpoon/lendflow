@@ -361,7 +361,7 @@ const yearMetricsSchema = {
     },
     proceeds_from_long_term_debt: {
       type: ['number', 'null'],
-      description: 'Proceeds from debt from Cash Flow Statement Financing activities. Normalized to thousands USD.',
+      description: 'Proceeds from long-term debt from Cash Flow Statement Financing activities. Normalized to thousands USD. Can be negative when net issuance presentation shows repayments exceeding new borrowings.',
     },
     cash_taxes_paid: {
       type: ['number', 'null'],

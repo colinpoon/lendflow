@@ -624,7 +624,7 @@ CAPITAL EXPENDITURES & CASH FLOW ITEMS (CRITICAL FOR FCCR/DSCR CALCULATION):
   - Extract as POSITIVE number
   EDGE CASE — NET ISSUANCE LINES: Some documents present a single net figure instead of separate proceeds/repayments:
   - "Net issuances of long-term debt", "Net proceeds from long-term borrowings", "Net change in long-term debt", "Long-term debt issued, net of repayments"
-  - If the document shows a NET figure (issuances minus repayments combined): extract the net amount here as-is. If the net figure is NEGATIVE (repayments exceeded issuances), extract as null — a negative value means no net new long-term debt was raised.
+  - If the document shows a NET figure (issuances minus repayments combined): extract the net amount here as-is, including NEGATIVE values. A negative net figure means repayments exceeded new issuances (the company is paying down debt). Extract the negative number — do NOT convert to null.
   - If the document shows BOTH gross proceeds AND gross repayments as separate line items, use the gross proceeds figure here (repayments are captured separately in repayment_of_debt).
   - When in doubt about whether a proceeds line is net or gross, use INSTRUMENT-LEVEL matching — not just proximity:
     - If a repayment line references the SAME instrument class (e.g., "Repayment of term loan" alongside "Proceeds from term loan"), the document is using gross presentation — use the gross proceeds figure.
