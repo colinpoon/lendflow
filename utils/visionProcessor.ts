@@ -30,6 +30,7 @@ import {
   calculateInterestCoverageRatio,
   calculateDebtToEquityRatio,
   calculateCurrentRatio,
+  calculateProfitMargin,
 } from '@/lib/calculations';
 import { calculateVisionCost } from '@/lib/benchmarks/cost';
 import {
@@ -64,16 +65,7 @@ function correctExtractionErrors(
   const corrections: string[] = [];
 
   for (const [year, metrics] of Object.entries(metricsByYear)) {
-    // Fix 1: Always clear reported_adjusted_ebitda - we calculate it from components
-    // This ensures consistency and avoids conflation errors
-    if (metrics.reported_adjusted_ebitda != null) {
-      corrections.push(
-        `${year}: Cleared reported_adjusted_ebitda (${metrics.reported_adjusted_ebitda}) — will be calculated from components`
-      );
-      metrics.reported_adjusted_ebitda = null;
-    }
-
-    // Fix 2: If senior_debt > total_debt, they were likely swapped or conflated
+    // Fix 1: If senior_debt > total_debt, they were likely swapped or conflated
     if (
       metrics.senior_debt != null &&
       metrics.total_debt != null &&
@@ -137,7 +129,7 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
       };
     }
   } else {
-    result.adjusted_ebitda = m.reported_adjusted_ebitda ?? null;
+    result.adjusted_ebitda = null;
     result.calculated_adjusted_ebitda = null;
     result.adjusted_ebitda_breakdown = null;
   }
@@ -174,6 +166,11 @@ function computeVisionMetrics(m: ExtractedMetrics): ComputedMetrics {
   result.current_ratio = calculateCurrentRatio(
     result.current_assets,
     result.current_liabilities
+  );
+
+  result.profit_margins = calculateProfitMargin(
+    result.net_income,
+    result.revenue
   );
 
   // ── DSCR (Banker's Covenant Method) ───────────────────────────────────────
@@ -220,9 +217,7 @@ function validateVisionMetrics(
         `Senior debt (${data.senior_debt}) exceeds total debt (${data.total_debt}) — likely a conflation error`
       );
     }
-    // Note: We no longer check for EBITDA = Adjusted EBITDA conflation here
-    // because correctExtractionErrors() always clears reported_adjusted_ebitda
-    // (we calculate it from components instead of extracting it)
+    // EBITDA and Adjusted EBITDA are always calculated from components — never extracted
 
     if (problems.length > 0) {
       issues[year] = problems;

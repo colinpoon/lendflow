@@ -38,7 +38,7 @@ Return **valid JSON only** in the exact schema below – no markdown or comments
       "revenue": number|null,
       "net_income": number|null,
       "expenses": number|null,
-      "profit_margins": number|null,
+      "profit_margins": null,
       "interest": number|null,
       "interest_income": number|null,
       "taxes": number|null,
@@ -433,11 +433,7 @@ INCOME STATEMENT FIELDS - CRITICAL:
   - If no single total line exists, sum available expense components (e.g., Direct expenses + G&A) and set _confidence.expenses to "low"
   - Only extract null if the document contains no income statement, no cost-of-sales section, and no expense line items. Do NOT derive expenses from balance sheet liabilities or cash flow movements alone
 
-• "profit_margins": Net profit margin as a decimal (e.g., 0.15 for 15%). Calculate as net_income ÷ revenue.
-  - Only populate if both net_income and revenue are successfully extracted
-  - A net loss produces a negative margin (e.g., net_income -500 / revenue 10,000 = -0.05)
-  - If either net_income or revenue is null, output null
-  - This is a RATIO, not a currency amount — do NOT apply scale normalization to this field
+• "profit_margins": null — ALWAYS output null. The application calculates this from net_income and revenue.
 
 DEBT EXTRACTION - CRITICAL FOR ACCURACY:
 Extract all debt components from the Balance Sheet liabilities section:

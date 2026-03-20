@@ -72,6 +72,20 @@ export function calculateDebtToEquityRatio(
 }
 
 /**
+ * Calculate Net Profit Margin
+ * Profit Margin = Net Income / Revenue
+ * @returns Decimal value (e.g., 0.15 for 15%) or null if cannot be calculated
+ */
+export function calculateProfitMargin(
+  netIncome: number | null,
+  revenue: number | null
+): number | null {
+  if (netIncome == null || revenue == null || revenue === 0) return null;
+
+  return parseFloat((netIncome / revenue).toFixed(4));
+}
+
+/**
  * Calculate Current Ratio (Liquidity Ratio)
  * Current Ratio = Current Assets / Current Liabilities
  * Measures ability to pay short-term obligations

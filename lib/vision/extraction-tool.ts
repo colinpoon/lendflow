@@ -293,8 +293,8 @@ const yearMetricsSchema = {
       description: 'Total operating expenses (excluding COGS if separated), normalized to thousands USD',
     },
     profit_margins: {
-      type: ['number', 'null'],
-      description: 'Net profit margin as decimal (0.15 = 15%). Calculate as net_income / revenue if not stated.',
+      type: ['null'],
+      description: 'Always null — calculated by the application from net_income and revenue.',
     },
     interest: {
       type: ['number', 'null'],
@@ -332,11 +332,6 @@ const yearMetricsSchema = {
       type: ['number', 'null'],
       description: 'DEPRECATED: Always use null. EBITDA will be calculated from: net_income + interest + taxes + depreciation_amortization.',
     },
-    reported_adjusted_ebitda: {
-      type: ['number', 'null'],
-      description: 'DEPRECATED: Always use null. Adjusted EBITDA will be calculated from EBITDA + adjusted_ebitda_components.',
-    },
-
     // ── Balance Sheet ─────────────────────────────────────────────────────────
     shareholders_equity: {
       type: ['number', 'null'],
@@ -457,7 +452,7 @@ export const EXTRACTION_TOOL: Tool = {
 CRITICAL RULES:
 - Normalize ALL monetary values to THOUSANDS USD
 - Interest expense MUST be positive (convert if shown negative)
-- ebitda and reported_adjusted_ebitda: ALWAYS use null - we calculate these from components
+- ebitda: ALWAYS use null - we calculate EBITDA and Adjusted EBITDA from components
 - senior_debt and total_debt are DIFFERENT - senior excludes subordinated notes
 - Extract ALL fiscal year columns visible on the page
 - Focus on COMPONENTS: net_income, interest, taxes, depreciation, adjusted_ebitda_components`,
@@ -569,7 +564,7 @@ EBITDA COMPONENTS (WE CALCULATE EBITDA - YOU EXTRACT COMPONENTS)
 ═══════════════════════════════════════════════════════════════════════════════
 
 IMPORTANT: Do NOT extract "EBITDA" or "Adjusted EBITDA" values directly.
-Set both ebitda and reported_adjusted_ebitda to NULL.
+Set ebitda to NULL.
 
 We will CALCULATE these values from the components you extract:
 

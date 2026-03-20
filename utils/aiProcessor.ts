@@ -50,6 +50,7 @@ import {
   calculateInterestCoverageRatio,
   calculateDebtToEquityRatio,
   calculateCurrentRatio,
+  calculateProfitMargin,
 } from '@/lib/calculations';
 import {
   calculateQuantitativeRisk,
@@ -858,7 +859,7 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
     console.log(`   interest:                  ${m.interest}`);
     console.log(`   taxes:                     ${m.taxes}`);
     console.log(`   depreciation_amortization: ${m.depreciation_amortization}`);
-    console.log(`   ebitda (if reported):      ${m.ebitda ?? 'N/A (will calculate)'}`);
+    console.log(`   ebitda:                    N/A (always calculated from components)`);
   }
 
   const ebitdaCalc = calculateEBITDA(m);
@@ -866,23 +867,17 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
     const ebitda = ebitdaCalc.value;
     const { usedGrossFallback } = ebitdaCalc;
 
-    if (m.ebitda == null) {
-      result.ebitda = ebitda;
-      result.ebitda_calculated = true;
-      if (DEBUG_FINANCIALS) {
-        console.log(`   CALCULATED EBITDA:         ${ebitda} = ${m.net_income} + ${m.interest ?? 0} + ${m.taxes ?? 0} + ${m.depreciation_amortization}`);
-        if (usedGrossFallback) {
-          console.log(`   ⚠️ INTEREST SOURCE:        Gross fallback (P&L interest was negative/null)`);
-        }
-      }
-    } else {
-      if (DEBUG_FINANCIALS) {
-        console.log(`   USING REPORTED EBITDA:     ${m.ebitda}`);
+    result.ebitda = ebitda;
+    result.ebitda_calculated = true;
+    if (DEBUG_FINANCIALS) {
+      console.log(`   CALCULATED EBITDA:         ${ebitda} = ${m.net_income} + ${m.interest ?? 0} + ${m.taxes ?? 0} + ${m.depreciation_amortization}`);
+      if (usedGrossFallback) {
+        console.log(`   ⚠️ INTEREST SOURCE:        Gross fallback (P&L interest was negative/null)`);
       }
     }
 
     // Adjusted EBITDA — pass usedGrossFallback to gate interest income exclusion
-    const ebitdaResult = calculateAdjustedEBITDA(ebitda, m, usedGrossFallback);
+    const ebitdaResult = calculateAdjustedEBITDA(ebitda, m, usedGrossFallback, ebitdaCalc.resolvedComponents);
     result.adjusted_ebitda = ebitdaResult.adjusted_ebitda;
     result.calculated_adjusted_ebitda = ebitdaResult.calculated_adjusted_ebitda;
     result.adjusted_ebitda_breakdown = ebitdaResult.adjusted_ebitda_breakdown;
@@ -899,7 +894,7 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
     // Debug logging
     logAdjustedEBITDA(ebitda, ebitdaResult, m);
   } else {
-    result.adjusted_ebitda = m.reported_adjusted_ebitda ?? null;
+    result.adjusted_ebitda = null;
     result.calculated_adjusted_ebitda = null;
     result.adjusted_ebitda_breakdown = null;
   }
@@ -949,6 +944,11 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
     result.current_liabilities
   );
 
+  result.profit_margins = calculateProfitMargin(
+    result.net_income,
+    result.revenue
+  );
+
   // ─────────────────────────────────────────────────────────────────────────
   // EBITDA Coverage Ratio (Adj. EBITDA / Total Debt Service)
   // ─────────────────────────────────────────────────────────────────────────
@@ -971,29 +971,6 @@ function computeMetrics(m: ExtractedMetrics, year?: string): { metrics: Computed
     if (!seenWarnings.has(w)) {
       seenWarnings.add(w);
       calculationWarnings.push(w);
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Reported vs. Calculated Adjusted EBITDA reconciliation
-  // When the company discloses its own Adjusted EBITDA, compare to the
-  // lender's calculation. Divergence >5% is a red flag for analyst review.
-  // ─────────────────────────────────────────────────────────────────────────
-  if (
-    m.reported_adjusted_ebitda != null &&
-    result.calculated_adjusted_ebitda != null &&
-    result.calculated_adjusted_ebitda !== 0
-  ) {
-    const reported = m.reported_adjusted_ebitda;
-    const calculated = result.calculated_adjusted_ebitda;
-    const variance = Math.abs(reported - calculated) / Math.abs(calculated);
-    if (variance > 0.05) {
-      const pct = (variance * 100).toFixed(1);
-      calculationWarnings.push(
-        `Reported Adjusted EBITDA (${reported.toLocaleString()}) diverges from lender-calculated ` +
-        `Adjusted EBITDA (${calculated.toLocaleString()}) by ${pct}%. ` +
-        `Review adjusted_ebitda_components for company-specific add-backs that may not meet lender standards.`
-      );
     }
   }
 
@@ -1069,9 +1046,7 @@ function logAdjustedEBITDA(
   console.log(`   - Interest Income Excluded:  ${breakdown.interest_income_excluded}`);
   console.log(`     interest_income:            ${m.interest_income ?? 0}`);
   console.log(`   ─────────────────────────────────────`);
-  console.log(`   = Calculated Adj. EBITDA:    ${result.calculated_adjusted_ebitda}`);
-  console.log(`   Reported Adj. EBITDA:        ${m.reported_adjusted_ebitda ?? 'N/A'}`);
-  console.log(`   FINAL Adjusted EBITDA:       ${result.adjusted_ebitda}`);
+  console.log(`   = Adjusted EBITDA:           ${result.adjusted_ebitda}`);
 
   console.log('');
 }
