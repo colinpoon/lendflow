@@ -130,6 +130,7 @@ export default function NewProjectPage() {
                 onChange={(e) => setName(e.target.value)}
                 disabled={isCreating}
                 autoFocus
+                autoComplete="off"
               />
             </div>
 
