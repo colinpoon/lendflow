@@ -2,6 +2,8 @@
 
 ### Task 29 — UI/UX & Design System (2026-03-20)
 
+**29 — FCCR bar chart enhanced:** Added y-axis labels (0–3.0x), dashed threshold reference lines at 1.0x and 1.25x covenant thresholds. Switched bar colors to semantic tokens (bg-success/warning/error) for dark mode compatibility.
+
 **29 — Covenant panel repositioned:** Moved CovenantParametersPanel from Covenants section to top of Analysis section. Analysts now see parameter controls directly above the Financial Summary table they affect.
 
 **29 — Sign-in/sign-up branding:** Added LF logomark, "Lendflow" heading, and "AI-powered credit risk analysis" descriptor above Clerk forms on both auth pages. Matches sidebar brand pattern.
