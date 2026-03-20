@@ -177,27 +177,27 @@ function MetricCard({
     'text-error': 'dark:text-red-300',
   };
   const subtitleColor = [
-    'text-gray-500',
+    'text-muted-foreground',
     (colorClass && darkSubtitleMap[colorClass]) || 'dark:text-zinc-400',
   ].join(' ');
 
   return (
     <div
       className={`relative overflow-hidden rounded-2xl p-5 flex flex-col justify-between min-h-[140px] shadow-sm
-        bg-white border border-gray-200
-        dark:bg-gradient-to-br dark:border-zinc-700 dark:shadow-lg
+        bg-card border border-border
+        dark:bg-gradient-to-br dark:shadow-lg
         ${darkGradient}`}
     >
       {/* Noise texture overlay — visible only in dark mode where it adds texture without muddying light surfaces */}
       <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
       {/* Glow orb — dark mode only */}
-      <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
+      <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-foreground/[0.07] blur-2xl" />
 
-      <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-gray-400 dark:text-white/50">
+      <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-muted-foreground">
         {label}
       </p>
       <div className="relative mt-auto">
-        <p className="text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+        <p className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
           {value}
         </p>
         {subtitle && (

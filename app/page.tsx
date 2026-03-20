@@ -62,7 +62,7 @@ export default function HomePage() {
   const randomVideo = videos[0];
 
   return (
-    <div className="min-h-screen bg-[oklch(0.08_0_0)] text-[oklch(0.97_0_0)] flex flex-col relative overflow-x-hidden">
+    <div className="dark min-h-screen bg-background text-foreground flex flex-col relative overflow-x-hidden">
 
       {/* ── Video layer (darkened) ──────────────────────────────────────────── */}
       <video
@@ -79,15 +79,15 @@ export default function HomePage() {
       <div className="absolute inset-0 z-[1] aurora-glow pointer-events-none" />
 
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 md:px-10 h-16 flex items-center justify-between border-b border-[oklch(0.97_0_0/0.06)] bg-[oklch(0.08_0_0/0.80)] backdrop-blur-md">
+      <nav className="fixed top-0 left-0 right-0 z-50 px-6 md:px-10 h-16 flex items-center justify-between border-b border-foreground/6 bg-background/80 backdrop-blur-md">
         <Link
           href="/"
           className="flex items-center gap-2.5 group"
         >
-          <div className="h-7 w-7 rounded-md bg-[oklch(0.68_0.19_155)] flex items-center justify-center text-[oklch(0.08_0_0)] text-[11px] font-bold tracking-tight shrink-0">
+          <div className="h-7 w-7 rounded-md bg-emerald-brand flex items-center justify-center text-background text-[11px] font-bold tracking-tight shrink-0">
             LF
           </div>
-          <span className="text-sm font-semibold tracking-tight text-[oklch(0.97_0_0)]">
+          <span className="text-sm font-semibold tracking-tight text-foreground">
             Lendflow
           </span>
         </Link>
@@ -95,13 +95,13 @@ export default function HomePage() {
         <div className="flex items-center gap-3">
           <SignedOut>
             <SignInButton mode="modal" forceRedirectUrl="/dashboard">
-              <button className="text-sm font-medium text-[oklch(0.65_0_0)] hover:text-[oklch(0.97_0_0)] transition-colors">
+              <button className="text-sm font-medium text-foreground/65 hover:text-foreground transition-colors">
                 Sign in
               </button>
             </SignInButton>
             <Link
               href="/sign-up"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[oklch(0.68_0.19_155)] text-[oklch(0.08_0_0)] text-sm font-semibold hover:bg-[oklch(0.72_0.19_155)] transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-brand text-background text-sm font-semibold hover:bg-emerald-brand-hover transition-colors"
             >
               Get Started
               <ArrowRight className="h-3.5 w-3.5" />
@@ -110,7 +110,7 @@ export default function HomePage() {
           <SignedIn>
             <Link
               href="/dashboard"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[oklch(0.68_0.19_155)] text-[oklch(0.08_0_0)] text-sm font-semibold hover:bg-[oklch(0.72_0.19_155)] transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-brand text-background text-sm font-semibold hover:bg-emerald-brand-hover transition-colors"
             >
               Dashboard
               <ArrowRight className="h-3.5 w-3.5" />
@@ -129,21 +129,21 @@ export default function HomePage() {
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-16 text-center">
 
         {/* Eyebrow pill */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[oklch(0.68_0.19_155/0.30)] bg-[oklch(0.68_0.19_155/0.08)] mb-8">
-          <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.68_0.19_155)]" />
-          <span className="text-[11px] uppercase tracking-[0.12em] font-medium text-[oklch(0.68_0.19_155)]">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-brand/30 bg-emerald-brand-glow mb-8">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-brand" />
+          <span className="text-[11px] uppercase tracking-[0.12em] font-medium text-emerald-brand">
             AI-Powered Credit Analysis
           </span>
         </div>
 
         {/* Headline */}
-        <h1 className="max-w-3xl text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] text-[oklch(0.97_0_0)]">
+        <h1 className="max-w-3xl text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] text-foreground">
           Lending Intelligence{' '}
-          <span className="text-[oklch(0.68_0.19_155)]">Accelerated</span>
+          <span className="text-emerald-brand">Accelerated</span>
         </h1>
 
         {/* Sub-headline */}
-        <p className="mt-6 max-w-xl text-base md:text-lg text-[oklch(0.60_0_0)] leading-relaxed">
+        <p className="mt-6 max-w-xl text-base md:text-lg text-muted-foreground leading-relaxed">
           Upload a financial document. Receive a complete risk analysis — EBITDA,
           debt ratios, DSCR, and an institutional-grade lending recommendation —
           in minutes, not days.
@@ -154,13 +154,13 @@ export default function HomePage() {
           <SignedOut>
             <Link
               href="/sign-up"
-              className="flex items-center gap-2 px-6 py-3 rounded-full bg-[oklch(0.68_0.19_155)] text-[oklch(0.08_0_0)] text-sm font-semibold hover:bg-[oklch(0.72_0.19_155)] transition-colors shadow-lg shadow-[oklch(0.68_0.19_155/0.25)]"
+              className="flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-brand text-background text-sm font-semibold hover:bg-emerald-brand-hover transition-colors shadow-lg shadow-emerald-brand/25"
             >
               Start analyzing free
               <ArrowRight className="h-4 w-4" />
             </Link>
             <SignInButton mode="modal" forceRedirectUrl="/dashboard">
-              <button className="flex items-center gap-2 px-6 py-3 rounded-full border border-[oklch(0.97_0_0/0.12)] text-[oklch(0.75_0_0)] text-sm font-medium hover:border-[oklch(0.97_0_0/0.25)] hover:text-[oklch(0.97_0_0)] transition-colors">
+              <button className="flex items-center gap-2 px-6 py-3 rounded-full border border-foreground/12 text-foreground/75 text-sm font-medium hover:border-foreground/25 hover:text-foreground transition-colors">
                 Sign in to dashboard
               </button>
             </SignInButton>
@@ -168,7 +168,7 @@ export default function HomePage() {
           <SignedIn>
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 px-6 py-3 rounded-full bg-[oklch(0.68_0.19_155)] text-[oklch(0.08_0_0)] text-sm font-semibold hover:bg-[oklch(0.72_0.19_155)] transition-colors shadow-lg shadow-[oklch(0.68_0.19_155/0.25)]"
+              className="flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-brand text-background text-sm font-semibold hover:bg-emerald-brand-hover transition-colors shadow-lg shadow-emerald-brand/25"
             >
               Go to dashboard
               <ArrowRight className="h-4 w-4" />
@@ -180,13 +180,13 @@ export default function HomePage() {
         <div className="mt-20 grid grid-cols-3 gap-6 md:gap-12 max-w-xl w-full">
           {stats.map((stat) => (
             <div key={stat.label} className="flex flex-col items-center gap-1">
-              <span className="text-3xl md:text-4xl font-bold tabular-nums text-[oklch(0.97_0_0)] tracking-tight">
+              <span className="text-3xl md:text-4xl font-bold tabular-nums text-foreground tracking-tight">
                 {stat.value}
               </span>
-              <span className="text-[10px] uppercase tracking-[0.12em] text-[oklch(0.68_0.19_155)] font-medium">
+              <span className="text-[10px] uppercase tracking-[0.12em] text-emerald-brand font-medium">
                 {stat.label}
               </span>
-              <span className="text-[11px] text-[oklch(0.50_0_0)]">{stat.sub}</span>
+              <span className="text-[11px] text-foreground/50">{stat.sub}</span>
             </div>
           ))}
         </div>
@@ -198,10 +198,10 @@ export default function HomePage() {
 
           {/* Section label */}
           <div className="text-center mb-12">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[oklch(0.68_0.19_155)] font-medium mb-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-emerald-brand font-medium mb-3">
               What it does
             </p>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[oklch(0.97_0_0)]">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               From raw financials to credit decision
             </h2>
           </div>
@@ -212,17 +212,17 @@ export default function HomePage() {
               return (
                 <div
                   key={feature.title}
-                  className="card-fintech rounded-xl p-6 group hover:border-[oklch(0.68_0.19_155/0.35)] transition-colors duration-300"
+                  className="card-fintech rounded-xl p-6 group hover:border-emerald-brand/35 transition-colors duration-300"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="shrink-0 h-9 w-9 rounded-lg bg-[oklch(0.68_0.19_155/0.12)] flex items-center justify-center group-hover:bg-[oklch(0.68_0.19_155/0.20)] transition-colors">
-                      <Icon className="h-4.5 w-4.5 text-[oklch(0.68_0.19_155)]" strokeWidth={1.75} />
+                    <div className="shrink-0 h-9 w-9 rounded-lg bg-emerald-brand-muted flex items-center justify-center group-hover:bg-emerald-brand-glow transition-colors">
+                      <Icon className="h-4.5 w-4.5 text-emerald-brand" strokeWidth={1.75} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-[oklch(0.97_0_0)] mb-1.5">
+                      <h3 className="text-sm font-semibold text-foreground mb-1.5">
                         {feature.title}
                       </h3>
-                      <p className="text-sm text-[oklch(0.55_0_0)] leading-relaxed">
+                      <p className="text-sm text-muted-foreground leading-relaxed">
                         {feature.description}
                       </p>
                     </div>
@@ -235,11 +235,11 @@ export default function HomePage() {
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <footer className="relative z-10 border-t border-[oklch(0.97_0_0/0.06)] px-6 md:px-10 py-6 flex items-center justify-between">
-        <span className="text-[11px] text-[oklch(0.40_0_0)]">
+      <footer className="relative z-10 border-t border-foreground/6 px-6 md:px-10 py-6 flex items-center justify-between">
+        <span className="text-[11px] text-foreground/40">
           Lendflow &copy; {new Date().getFullYear()}
         </span>
-        <span className="text-[11px] text-[oklch(0.35_0_0)]">
+        <span className="text-[11px] text-foreground/35">
           Built for credit professionals
         </span>
       </footer>

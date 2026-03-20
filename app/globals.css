@@ -29,6 +29,7 @@
    * Usage: bg-emerald-brand, text-emerald-brand, border-emerald-brand
    * ───────────────────────────────────────────────────────────────────────── */
   --color-emerald-brand: var(--emerald-brand);
+  --color-emerald-brand-hover: var(--emerald-brand-hover);
   --color-emerald-brand-muted: var(--emerald-brand-muted);
   --color-emerald-brand-glow: var(--emerald-brand-glow);
 
@@ -128,6 +129,7 @@
    * Emerald Brand — Light mode values
    * ───────────────────────────────────────────────────────────────────────── */
   --emerald-brand: oklch(0.52 0.17 155);
+  --emerald-brand-hover: oklch(0.56 0.17 155);
   --emerald-brand-muted: oklch(0.52 0.17 155 / 0.12);
   --emerald-brand-glow: oklch(0.52 0.17 155 / 0.25);
 
@@ -214,6 +216,7 @@
    * Emerald Brand — Dark mode values (brighter for legibility on dark)
    * ───────────────────────────────────────────────────────────────────────── */
   --emerald-brand: oklch(0.68 0.19 155);
+  --emerald-brand-hover: oklch(0.72 0.19 155);
   --emerald-brand-muted: oklch(0.68 0.19 155 / 0.12);
   --emerald-brand-glow: oklch(0.68 0.19 155 / 0.20);
 
@@ -372,5 +375,14 @@
   }
   .check-pop {
     animation: check-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* ─── Slow pulse for AI processing status text ──────────────────────────── */
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .animate-pulse-slow {
+    animation: pulse-slow 2s ease-in-out infinite;
   }
 }
