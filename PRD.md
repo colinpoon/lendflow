@@ -290,22 +290,22 @@ Validate extraction integrity using the real financial reports in `public/financ
 
 ### Task 6: Critical — Database & Data Integrity Fixes 
 Prevent data corruption and silent failures in the extraction pipeline.
-- [] Wrap extraction insert + project risk-score update in a Supabase RPC transaction (or validate every `.error` response) — validated every `.error` response on extraction insert and project update; non-fatal project update failure is now logged rather than silently swallowed
-- [] Fix year-conflict detection running after insertion — detect conflicts before insert, or clean up orphaned records on cancel — moved conflict detection to run on a phantom extraction object BEFORE the DB insert; extraction is only inserted after conflict status is known
-- [] Audit all Supabase calls in `route.ts` — check `{ data, error }` on every operation, log failures, update document status to `'failed'` — all Supabase operations now check `.error`; `updateDocumentStatus` logs failures; project update failure in `resolve-conflict/route.ts` also now logged
-- [] Add cleanup mechanism for stale `processing` records (background job or cron marking stuck documents as `failed` after 15 min) — `cleanupStaleProcessingRecords()` runs at the start of each extraction, marking any document for that project stuck in `processing` for >15 min as `failed`
+- [x] Wrap extraction insert + project risk-score update in a Supabase RPC transaction (or validate every `.error` response) — validated every `.error` response on extraction insert and project update; non-fatal project update failure is now logged rather than silently swallowed
+- [x] Fix year-conflict detection running after insertion — detect conflicts before insert, or clean up orphaned records on cancel — moved conflict detection to run on a phantom extraction object BEFORE the DB insert; extraction is only inserted after conflict status is known
+- [x] Audit all Supabase calls in `route.ts` — check `{ data, error }` on every operation, log failures, update document status to `'failed'` — all Supabase operations now check `.error`; `updateDocumentStatus` logs failures; project update failure in `resolve-conflict/route.ts` also now logged
+- [x] Add cleanup mechanism for stale `processing` records (background job or cron marking stuck documents as `failed` after 15 min) — `cleanupStaleProcessingRecords()` runs at the start of each extraction, marking any document for that project stuck in `processing` for >15 min as `failed`
 
 ### Task 7: Critical — Document Parsing Completeness 
 Ensure all accepted file types can actually be processed.
-- [] Implement Excel parsing (`.xlsx`/`.xls` via existing `xlsx` dependency) in `document-parser.ts` — pipe-delimited sheet output with sheet headers, 2000-row cap per sheet
-- [] Implement Word parsing (`.docx`) in `document-parser.ts` — using `mammoth` (added to dependencies); `.doc` throws a clear user-facing error directing them to save as `.docx`
-- [] Add scanned PDF detection — checks text density (chars/page); if < 100 chars/page, prepends warning directing user to `/vision` upload
+- [x] Implement Excel parsing (`.xlsx`/`.xls` via existing `xlsx` dependency) in `document-parser.ts` — pipe-delimited sheet output with sheet headers, 2000-row cap per sheet
+- [x] Implement Word parsing (`.docx`) in `document-parser.ts` — using `mammoth` (added to dependencies); `.doc` throws a clear user-facing error directing them to save as `.docx`
+- [x] Add scanned PDF detection — checks text density (chars/page); if < 100 chars/page, prepends warning directing user to `/vision` upload
 
 ### Task 9: High — Security Hardening 
 Protect against abuse and data leaks.
-- [] Add per-user rate limiting on `/api/extractData` — in-memory sliding-window limiter (5 req/10 min per user, map capped at 10k entries); returns 429 with `Retry-After` header
-- [] Implement structured logging with sensitive data redaction — FCCR/Debt/Capital values in `risk-generator.ts` now gated behind `DEBUG_FINANCIALS` env flag (same pattern as chunk-processor and extraction-merger)
-- [] Replace synchronous file I/O in `risk-generator.ts` cache — disk cache removed entirely; replaced with in-memory Map (100-entry LRU-style, oldest evicted when full)
+- [x] Add per-user rate limiting on `/api/extractData` — in-memory sliding-window limiter (5 req/10 min per user, map capped at 10k entries); returns 429 with `Retry-After` header
+- [x] Implement structured logging with sensitive data redaction — FCCR/Debt/Capital values in `risk-generator.ts` now gated behind `DEBUG_FINANCIALS` env flag (same pattern as chunk-processor and extraction-merger)
+- [x] Replace synchronous file I/O in `risk-generator.ts` cache — disk cache removed entirely; replaced with in-memory Map (100-entry LRU-style, oldest evicted when full)
 
 ### Task 13: Critical — Security & Data Integrity
 Consensus across senior-engineer and code-approver; some overlap with financial-director on data correctness.
@@ -414,7 +414,7 @@ Zero automated tests on a system that makes lending recommendations.
 ### Task 29: High — UI/UX & Design System
 Issues impacting analyst trust and usability.
 
-- [ ] **HIGH — Token cost and AI model details shown to end users** `[UI/UX Designer]` — Project detail page unconditionally renders input/output token counts, model name, and estimated API cost. Reads as dev scaffolding in a financial tool. Gate behind env var or admin role. File: `components/ProjectDetail.tsx`
+- [x] **HIGH — Token cost and AI model details shown to end users** `[UI/UX Designer]` — Project detail page unconditionally renders input/output token counts, model name, and estimated API cost. Reads as dev scaffolding in a financial tool. Gate behind env var or admin role. File: `components/ProjectDetail.tsx`
 - [ ] **HIGH — Compare/Vision debug tools exposed in primary nav** `[UI/UX Designer]` — Sidebar shows "Compare" (renders as "Extraction Debugger" with Bug icon) and "Vision" as first-class nav items. Gate behind `?debug=true` or admin role. File: `components/AppSidebar.tsx`
 - [ ] **HIGH — Color system fork: hardcoded values bypass design tokens** `[UI/UX Designer]` — Landing page uses raw OKLCH values instead of CSS custom properties. `MetricCard` uses `bg-white`, `border-gray-200` instead of `bg-card`, `border-border`. Changes to `globals.css` tokens have no effect on these surfaces. Files: `app/page.tsx`, `components/ProjectDetail.tsx`
 - [ ] **HIGH — Lending decision text truncated by `truncate` class** `[UI/UX Designer]` — Decision banner uses `truncate` which can cut off critical words like "Conditional" at smaller viewports. Replace with `break-words` or `line-clamp-2` with tooltip. File: `components/ProjectDetail.tsx`

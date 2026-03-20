@@ -1,5 +1,9 @@
 ## Progress Tracker
 
+### Task 29 — UI/UX & Design System (2026-03-20)
+
+**29.1 — Gate token cost and AI model details behind env var:** Added `NEXT_PUBLIC_SHOW_DEV_INFO` env var gate to the token usage summary section in `ProjectDetail.tsx`. When not set (or set to anything other than `'true'`), model name, token counts, and estimated API cost are hidden from end users. Added the var to `.env.example` with documentation. Also checked off Tasks 6, 7, and 9 in the PRD — all sub-items were already fully implemented in code but had never been marked complete.
+
 ### Task 28 — Testing Infrastructure (2026-03-20)
 
 **28.3 — Ground truth regression tests wired into CI:** Added `npm run test:regression` script to `package.json` (runs `vitest run` filtered to `ground-truth-regression.test.ts`). Created `.github/workflows/ci.yml` GitHub Actions workflow that triggers on push/PR to `main` — runs lint, build (with dummy env vars for type checking), unit tests (`npm test`), and ground truth regression tests (`npm run test:regression`). Fixed unused `GroundTruthEntry` import in the test file that caused ESLint `no-unused-vars` failure during `next build`. The regression test is purely deterministic — feeds manually verified raw values from `ground-truth.ts` into the calculation pipeline and validates computed ratios match expected values. No API keys required. To make failing regression block merge: enable "Require status checks to pass before merging" in GitHub branch protection settings and add `build-and-test` as a required check.

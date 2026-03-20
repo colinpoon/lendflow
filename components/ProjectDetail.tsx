@@ -819,8 +819,8 @@ export default function ProjectDetail({
         />
       )}
 
-      {/* Token Usage Summary */}
-      {hasData && tokenUsage && (
+      {/* Token Usage Summary — dev/admin only */}
+      {hasData && tokenUsage && process.env.NEXT_PUBLIC_SHOW_DEV_INFO === 'true' && (
         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground px-1">
           <span title="AI model used for extraction" className="flex items-center gap-1">
             <span className="font-medium text-foreground">Model:</span> {tokenUsage.model}
