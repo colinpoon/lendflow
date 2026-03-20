@@ -99,18 +99,29 @@ export default async function InstrumentsPage() {
     .in('status', ['completed', 'in_progress'])
     .order('updated_at', { ascending: false });
 
-  // For each project fetch its most recent extraction (by created_at)
-  const projectsWithExtractions: ProjectWithExtraction[] = await Promise.all(
-    (projects ?? []).map(async (project) => {
-      const { data: extractions } = await supabase
+  // Fetch all extractions for these projects in a single query, then pick the
+  // most recent per project client-side. Avoids N+1 round-trips.
+  const projectIds = (projects ?? []).map((p) => p.id);
+  const { data: allExtractions } = projectIds.length > 0
+    ? await supabase
         .from('extractions')
         .select('*')
-        .eq('project_id', project.id)
+        .in('project_id', projectIds)
         .order('created_at', { ascending: false })
-        .limit(1);
-      return { project, extraction: extractions?.[0] ?? null };
-    })
-  );
+    : { data: [] as Extraction[] };
+
+  // Group by project_id — first occurrence is most recent (ordered desc above)
+  const latestByProject = new Map<string, Extraction>();
+  for (const ext of allExtractions ?? []) {
+    if (!latestByProject.has(ext.project_id)) {
+      latestByProject.set(ext.project_id, ext);
+    }
+  }
+
+  const projectsWithExtractions: ProjectWithExtraction[] = (projects ?? []).map((project) => ({
+    project,
+    extraction: latestByProject.get(project.id) ?? null,
+  }));
 
   // Only rows that have at least one extraction
   const analyzed = projectsWithExtractions.filter((r) => r.extraction !== null);
