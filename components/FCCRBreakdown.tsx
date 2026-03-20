@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import type { FCCRBreakdown as FCCRBreakdownData, DSCRBreakdown as DSCRBreakdownData } from '@/types/financial';
+import { formatCurrency, formatRatio } from '@/utils/format';
 
 interface CustomAdjustment {
   id: string;
@@ -37,19 +38,6 @@ interface FCCRBreakdownProps {
   onCustomAdjustmentsChange?: (adjustments: CustomAdjustment[]) => void;
 }
 
-const formatCurrency = (value: number | null | undefined): string => {
-  if (value == null) return 'N/A';
-
-  const absValue = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-
-  return `${sign}$${absValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
-};
-
-const formatRatio = (value: number | null | undefined): string => {
-  if (value == null) return 'N/A';
-  return `${value.toFixed(2)}x`;
-};
 
 // Helper to show source info (extracted vs fallback)
 const SourceInfo: React.FC<{

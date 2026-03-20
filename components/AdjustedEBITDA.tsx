@@ -17,32 +17,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { YearMetrics } from '@/types';
+import { formatCurrency, formatSignedCurrency } from '@/utils/format';
 
 interface AdjustedEBITDAProps {
   data: { metrics_by_year: Record<string, YearMetrics> } | null;
 }
-
-/**
- * Format currency values displayed in thousands (as commonly reported in financial statements)
- * Automatically scales to M (millions) or B (billions) for large values
- */
-const formatCurrency = (value: number | null | undefined): string => {
-  if (value == null) return 'N/A';
-
-  const absValue = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-
-  return `${sign}$${absValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
-};
-
-const formatSignedCurrency = (
-  value: number | null | undefined,
-  isSubtraction = false,
-): string => {
-  if (value == null || value === 0) return '$0K';
-  const prefix = isSubtraction ? '- ' : '+ ';
-  return prefix + formatCurrency(Math.abs(value));
-};
 
 // ─── Animation Variants ────────────────────────────────────────────────────
 
@@ -236,10 +215,6 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
   const breakdown = metrics.adjusted_ebitda_breakdown;
   const components = metrics.adjusted_ebitda_components;
   const adjustedEBITDA = metrics.adjusted_ebitda;
-  const reportedAdjustedEBITDA = metrics.reported_adjusted_ebitda;
-  const calculatedAdjustedEBITDA = metrics.calculated_adjusted_ebitda;
-  const usesReportedValue =
-    breakdown?.uses_reported_value ?? reportedAdjustedEBITDA != null;
 
   // Delta between adjusted and reported for the hero card indicator
   const ebitdaDelta =
@@ -271,26 +246,6 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
         </span>
       </div>
 
-      {/* Reported vs Calculated indicator */}
-      {usesReportedValue && (
-        <div className="bg-secondary border border-border rounded-lg p-3">
-          <p className="text-sm text-secondary-foreground">
-            <span className="font-semibold">
-              Company-Reported Value:
-            </span>{' '}
-            Using Adjusted EBITDA as reported by the company in their
-            financial documents.
-          </p>
-          {calculatedAdjustedEBITDA != null &&
-            calculatedAdjustedEBITDA !== adjustedEBITDA && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Our calculated estimate:{' '}
-                {formatCurrency(calculatedAdjustedEBITDA)}
-              </p>
-            )}
-        </div>
-      )}
-
       {/* ── Hero KPI Cards — Split-surface design ── */}
       <motion.div
         className="grid grid-cols-2 gap-4"
@@ -308,7 +263,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
           <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
           <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
           <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-muted-foreground dark:text-white/50">
-            Reported EBITDA
+            EBITDA
           </p>
           <div className="relative mt-auto">
             <p className="text-3xl font-bold tabular-nums tracking-tight text-foreground dark:text-white">
@@ -327,7 +282,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
           <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
           <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
           <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-muted-foreground dark:text-white/50">
-            Adjusted EBITDA {usesReportedValue && '(Reported)'}
+            Adjusted EBITDA
           </p>
           <div className="relative mt-auto">
             <p className="text-3xl font-bold tabular-nums tracking-tight text-success dark:text-emerald-300">
@@ -345,8 +300,11 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
 
       {/* ── Formula Block — code-editor left-border pattern ── */}
       <div className="rounded-xl border border-surface-border-1 bg-surface-3">
-        <p className="px-4 py-3 font-mono text-[11px] text-muted-foreground text-center tracking-wide leading-relaxed">
-          Adjusted EBITDA = Reported EBITDA + Non-Cash + One-Time
+        <p className="px-4 pt-3 pb-1 font-mono text-[11px] text-muted-foreground text-center tracking-wide leading-relaxed">
+          EBITDA = Net Income + Interest + Taxes + D&A
+        </p>
+        <p className="px-4 pt-1 pb-3 font-mono text-[11px] text-muted-foreground text-center tracking-wide leading-relaxed">
+          Adjusted EBITDA = EBITDA + Non-Cash + One-Time
           Expenses - One-Time Gains - Interest Income
         </p>
       </div>
@@ -361,6 +319,18 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
             const ab = m.adjusted_ebitda_breakdown;
             if (!ab) return null;
 
+            // Use the calculator's resolved components when available,
+            // otherwise fall back to raw extracted fields
+            const rc = ab.reported_ebitda_components;
+            const hasComponents = rc != null || (m.net_income != null && m.depreciation_amortization != null);
+            const ebitdaBase = ab.reported_ebitda;
+
+            // Component values for the equation display
+            const ni = rc?.net_income ?? m.net_income ?? 0;
+            const int = rc?.interest ?? m.interest ?? 0;
+            const tax = rc?.taxes ?? m.taxes ?? 0;
+            const da = rc?.depreciation_amortization ?? m.depreciation_amortization ?? 0;
+
             return (
               <div
                 key={yr}
@@ -369,11 +339,37 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                 <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">
                   {yr}
                 </div>
+
+                {/* EBITDA = Net Income + Interest + Taxes + D&A */}
+                {hasComponents ? (
+                  <div>
+                    <span className="text-muted-foreground">EBITDA</span>
+                    <span className="text-muted-foreground/70"> = </span>
+                    <span>
+                      {eqLine(ni, [
+                        { v: int, op: '+' },
+                        { v: tax, op: '+' },
+                        { v: da, op: '+' },
+                      ])}
+                    </span>
+                    <span className="text-muted-foreground/70"> = </span>
+                    <span className="font-bold">
+                      {fmtEq(ebitdaBase)}
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="text-muted-foreground">EBITDA</span>
+                    <span className="text-muted-foreground/70"> = </span>
+                    <span className="font-bold">{fmtEq(ebitdaBase)}</span>
+                  </div>
+                )}
+
                 <div>
                   <span className="text-muted-foreground">Adj. EBITDA</span>
                   <span className="text-muted-foreground/70"> = </span>
                   <span>
-                    {eqLine(ab.reported_ebitda, [
+                    {eqLine(ebitdaBase, [
                       { v: ab.non_cash_adjustments, op: '+' },
                       { v: ab.one_time_expenses, op: '+' },
                       { v: ab.one_time_gains, op: '−' },
@@ -385,18 +381,9 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                   </span>
                   <span className="text-muted-foreground/70"> = </span>
                   <span className="font-bold text-success">
-                    {fmtEq(
-                      m.calculated_adjusted_ebitda ??
-                        m.adjusted_ebitda ??
-                        ab.reported_ebitda,
-                    )}
+                    {fmtEq(m.adjusted_ebitda ?? ebitdaBase)}
                   </span>
                 </div>
-                {ab.uses_reported_value && m.adjusted_ebitda != null && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Using reported value: {fmtEq(m.adjusted_ebitda)}
-                  </div>
-                )}
               </div>
             );
           })}
@@ -428,7 +415,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               {/* Reported EBITDA baseline row */}
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
                 <span className="font-medium text-foreground">
-                  Reported EBITDA
+                  EBITDA
                 </span>
                 <span className="font-bold tabular-nums text-foreground">
                   {formatCurrency(breakdown.reported_ebitda)}
@@ -749,7 +736,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                 <TableBody>
                   <TableRow>
                     <TableCell className="text-foreground">
-                      Reported EBITDA
+                      EBITDA
                     </TableCell>
                     {years.map((yr) => (
                       <TableCell
