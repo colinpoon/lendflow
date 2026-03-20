@@ -1249,9 +1249,43 @@ export default function ProjectDetail({
                 </div>
               );
             })() : (
-              <p className="text-muted-foreground text-xs">
-                Upload financial documents to generate a lending recommendation.
-              </p>
+              <div className="space-y-4">
+                {/* Skeleton preview of what the decision looks like */}
+                <div className="rounded-xl border-2 border-dashed border-border px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-muted animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-24 bg-muted rounded animate-pulse" />
+                    <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+                  </div>
+                  <div className="space-y-2 sm:text-right">
+                    <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+                    <div className="h-5 w-24 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-lg border border-dashed border-border p-4 space-y-2">
+                    <div className="h-3 w-28 bg-muted rounded animate-pulse" />
+                    <div className="h-2 w-full bg-muted rounded animate-pulse" />
+                    <div className="h-2 w-3/4 bg-muted rounded animate-pulse" />
+                  </div>
+                  <div className="rounded-lg border border-dashed border-border p-4 space-y-2">
+                    <div className="h-3 w-28 bg-muted rounded animate-pulse" />
+                    <div className="h-2 w-full bg-muted rounded animate-pulse" />
+                    <div className="h-2 w-2/3 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-xs text-center">
+                  Upload financial documents to generate a lending recommendation.
+                </p>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => scrollToSection('upload')}
+                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    Go to Upload
+                  </button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
