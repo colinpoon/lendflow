@@ -622,19 +622,6 @@ export async function processChunksSequentially(
     }
 
     console.log(`✅ Chunk ${chunk.index} complete`);
-
-    // Add delay between chunks to respect rate limits (skip delay after last chunk)
-    if (i < chunks.length - 1) {
-      // Shorter delay for sequential processing since we're not batching
-      const delayMs = Math.min(AI_CONFIG.BATCH_DELAY_MS / 2, 3000);
-      console.log(`⏳ Waiting ${delayMs / 1000}s before next chunk...`);
-      try {
-        await delay(delayMs, signal);
-      } catch {
-        // Signal aborted during delay — loop will catch it at the top
-        continue;
-      }
-    }
   }
 
   // Sort by chunk index to guarantee deterministic order
