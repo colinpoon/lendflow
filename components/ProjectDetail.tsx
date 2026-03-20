@@ -929,20 +929,6 @@ export default function ProjectDetail({
             </motion.div>
           )}
 
-          {/* Covenant Parameters — controls client-side recalculation */}
-          {!isRefreshing && (
-            <motion.div
-              initial={SECTION_ENTER.initial}
-              animate={SECTION_ENTER.animate}
-              transition={SECTION_ENTER.transition(0.05)}
-            >
-              <CovenantParametersPanel
-                config={covenantConfig}
-                onConfigChange={setCovenantConfig}
-              />
-            </motion.div>
-          )}
-
           <motion.div
             initial={SECTION_ENTER.initial}
             animate={SECTION_ENTER.animate}
@@ -1054,6 +1040,20 @@ export default function ProjectDetail({
             </motion.div>
           )}
 
+          {/* Covenant Parameters — controls client-side recalculation */}
+          {!isRefreshing && (
+            <motion.div
+              initial={SECTION_ENTER.initial}
+              animate={SECTION_ENTER.animate}
+              transition={SECTION_ENTER.transition(0.15)}
+            >
+              <CovenantParametersPanel
+                config={covenantConfig}
+                onConfigChange={setCovenantConfig}
+              />
+            </motion.div>
+          )}
+
           {(displayData || isRefreshing) && (
             <motion.div
               initial={SECTION_ENTER.initial}
@@ -1112,8 +1112,8 @@ export default function ProjectDetail({
           animate={SECTION_ENTER.animate}
           transition={SECTION_ENTER.transition(0)}
         >
-        <Card>
-          <CardHeader className="pb-3">
+        <Card className="gap-3">
+          <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Loan Decision</CardTitle>
             <CardDescription className="text-xs">
               Consolidated lending recommendation based on extracted financial data and risk assessment.
