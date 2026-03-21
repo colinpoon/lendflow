@@ -241,7 +241,7 @@ export function calculateFCCR(
   // The resolver uses priority chains:
   //   Principal: repayment_of_debt (all debt classes) > bank_debt_current > ttm_principal_payments
   //   Interest:  cash_interest_paid (cross-checked vs accrual) > total_interest_expense > ttm > P&L
-  //   Leases:    finance_lease_payments > lease_liabilities_current > payment_of_lease_liability
+  //   Leases:    finance_lease_payments > payment_of_lease_liability > lease_liabilities_current
   //
   // Finance leases are resolved independently to prevent double-counting.
   // Lease interest is only deducted from the interest component when the

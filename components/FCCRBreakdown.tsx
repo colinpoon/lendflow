@@ -158,7 +158,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* FCCR Card */}
         <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 text-center border border-primary/20">
-          <p className="text-xs text-primary font-medium uppercase tracking-wide">Covenant FCCR</p>
+          <p className="text-xs text-primary font-medium uppercase tracking-normal">Covenant FCCR</p>
           <p className={`text-2xl font-bold ${getRatioColor(adjustedFCCR ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>
             {formatRatio(adjustedFCCR)}
           </p>
@@ -170,7 +170,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
 
         {/* EBITDA Coverage Card */}
         <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 text-center border border-primary/20">
-          <p className="text-xs text-primary font-medium uppercase tracking-wide">EBITDA Coverage</p>
+          <p className="text-xs text-primary font-medium uppercase tracking-normal">EBITDA Coverage</p>
           <p className={`text-2xl font-bold ${getRatioColor(metrics.dscr ?? null, { good: 2.0, ok: 1.5, warning: 1.25 })}`}>
             {formatRatio(metrics.dscr)}
           </p>
@@ -179,7 +179,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
 
         {/* Funded Debt Card */}
         <div className="bg-gradient-to-br from-muted to-muted rounded-lg p-4 text-center border border-border">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Funded Debt</p>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-normal">Funded Debt</p>
           <p className="text-2xl font-bold text-foreground">
             {formatCurrency(metrics.funded_debt)}
           </p>
@@ -188,7 +188,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
 
         {/* Funded Debt / EBITDA Card */}
         <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 text-center border border-warning/20">
-          <p className="text-xs text-warning font-medium uppercase tracking-wide">Leverage</p>
+          <p className="text-xs text-warning font-medium uppercase tracking-normal">Leverage</p>
           <p className={`text-2xl font-bold ${getRatioColor(metrics.funded_debt_to_ebitda ?? null, { good: 1.5, ok: 2.5, warning: 3.0 })}`}>
             {formatRatio(metrics.funded_debt_to_ebitda)}
           </p>
@@ -494,7 +494,7 @@ const FCCRBreakdown: React.FC<FCCRBreakdownProps> = ({
                   <h5 className="font-semibold text-foreground mb-3 text-center">Covenant FCCR Calculation</h5>
                   <div className="space-y-2 font-mono text-xs text-muted-foreground">
                     <div>
-                      <span className="text-muted-foreground">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()} = <span className="font-semibold text-success">{fccrBreakdown.numerator.toLocaleString()}</span>
+                      <span className="text-muted-foreground">Numerator =</span> {fccrBreakdown.adjusted_ebitda.toLocaleString()} - {fccrBreakdown.unfunded_capex.toLocaleString()} - {fccrBreakdown.cash_taxes_paid.toLocaleString()}{fccrBreakdown.distributions_paid > 0 ? ` - ${fccrBreakdown.distributions_paid.toLocaleString()}` : ''} = <span className="font-semibold text-success">{fccrBreakdown.numerator.toLocaleString()}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Denominator =</span> {fccrBreakdown.ttm_principal_payments.toLocaleString()} + {fccrBreakdown.ttm_interest_expense.toLocaleString()}{fccrBreakdown.lease_payments > 0 ? ` + ${fccrBreakdown.lease_payments.toLocaleString()}` : ''} = <span className="font-semibold text-primary">{fccrBreakdown.denominator.toLocaleString()}</span>
