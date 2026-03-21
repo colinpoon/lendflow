@@ -475,7 +475,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataExtracted, onUploadStart,
               {ACCEPTED_FORMATS.map((fmt) => (
                 <span
                   key={fmt.ext}
-                  className="px-2 py-0.5 rounded text-[10px] uppercase tracking-[0.08em] font-medium border border-border text-muted-foreground bg-muted/50"
+                  className="px-2 py-0.5 rounded text-[10px] uppercase tracking-normal font-medium border border-border text-muted-foreground bg-muted/50"
                 >
                   {fmt.ext}
                 </span>

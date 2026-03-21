@@ -84,7 +84,7 @@ export default function LoanDecisionCard({
       <div className={`flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border-2 px-6 py-5 ${bannerClasses}`}>
         <DecisionIcon className="h-12 w-12 shrink-0 opacity-90" aria-hidden="true" />
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground mb-0.5">
+          <p className="text-[10px] uppercase tracking-normal font-semibold text-muted-foreground mb-0.5">
             Lending Decision
           </p>
           <p className="text-2xl font-extrabold tracking-tight leading-tight break-words">
@@ -92,7 +92,7 @@ export default function LoanDecisionCard({
           </p>
         </div>
         <div className="sm:ml-auto sm:text-right shrink-0">
-          <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-muted-foreground mb-0.5">
+          <p className="text-[10px] uppercase tracking-normal font-semibold text-muted-foreground mb-0.5">
             Risk Band
           </p>
           <p className="text-base font-bold">{debtHealthAssessment.risk_band}</p>

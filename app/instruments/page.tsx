@@ -184,7 +184,7 @@ export default async function InstrumentsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-1 pt-4 px-4">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
                   Companies Analyzed
                 </CardTitle>
               </CardHeader>
@@ -195,7 +195,7 @@ export default async function InstrumentsPage() {
 
             <Card>
               <CardHeader className="pb-1 pt-4 px-4">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
                   Avg FCCR
                 </CardTitle>
               </CardHeader>
@@ -221,7 +221,7 @@ export default async function InstrumentsPage() {
 
             <Card>
               <CardHeader className="pb-1 pt-4 px-4">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
                   Avg Sr Debt / Adj. EBITDA
                 </CardTitle>
               </CardHeader>
@@ -247,7 +247,7 @@ export default async function InstrumentsPage() {
 
             <Card>
               <CardHeader className="pb-1 pt-4 px-4">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase">
                   Avg Debt / Capital
                 </CardTitle>
               </CardHeader>

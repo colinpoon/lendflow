@@ -242,7 +242,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
     <TableHead className={className}>
       <button
         onClick={() => toggleSort(sortKeyName)}
-        className="flex items-center gap-1 hover:text-foreground transition-colors text-[11px] uppercase tracking-[0.10em] font-medium"
+        className="flex items-center gap-1 hover:text-foreground transition-colors text-[11px] uppercase font-medium"
       >
         {label}
         <ArrowUpDown
@@ -394,7 +394,7 @@ export default function ProjectsList({ initialProjects }: ProjectsListProps) {
                         <div className="inline-flex items-center justify-end gap-2">
                           {/* Mini bar indicator */}
                           <div className="hidden sm:flex flex-col gap-0.5 items-end">
-                            <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
+                            <span className="text-[10px] uppercase text-muted-foreground font-medium">
                               {riskMeta.label}
                             </span>
                           </div>

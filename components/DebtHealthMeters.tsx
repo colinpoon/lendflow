@@ -351,7 +351,7 @@ const LinearMeterCard: React.FC<LinearMeterCardProps> = ({
 
         <div className="relative flex justify-between items-start">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.15em] font-medium text-white/50">
+            <p className="text-[11px] uppercase font-medium text-white/50">
               {label}
             </p>
             <p className="text-[11px] text-white/30 mt-0.5">
@@ -363,7 +363,7 @@ const LinearMeterCard: React.FC<LinearMeterCardProps> = ({
               {value != null ? formatValue(value) : '—'}
             </p>
             {health && (
-              <span className={`text-[11px] font-semibold uppercase tracking-wide ${subtitleColor}`}>
+              <span className={`text-[11px] font-semibold uppercase ${subtitleColor}`}>
                 {getRatingLabel(health.level)}
               </span>
             )}
@@ -443,7 +443,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
     <div className="space-y-8">
       {/* Values in thousands label */}
       <div className="flex justify-start items-center">
-        <span className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground">
+        <span className="text-[11px] uppercase font-medium text-muted-foreground">
           Values in thousands
         </span>
       </div>
@@ -471,7 +471,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                   <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 sm:gap-x-4 mr-2">
                     {metrics.fccr != null && (
                       <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                        <p className="text-[10px] uppercase text-muted-foreground">
                           FCCR
                         </p>
                         <p
@@ -486,7 +486,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     )}
                     {metrics.senior_debt_to_ebitda != null && (
                       <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                        <p className="text-[10px] uppercase text-muted-foreground">
                           Debt / Adj. EBITDA
                         </p>
                         <p
@@ -503,7 +503,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                     )}
                     {metrics.total_debt_to_capital != null && (
                       <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                        <p className="text-[10px] uppercase text-muted-foreground">
                           Debt/Cap
                         </p>
                         <p
@@ -635,7 +635,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       {/* Numerator */}
                       <div className="mb-4">
                         <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
-                          <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <h5 className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Numerator — Cash Available for Debt
                             Service
                           </h5>
@@ -720,7 +720,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         {/* Custom Adjustments */}
                         {customAdjustments.length > 0 && (
                           <div className="border-t border-border/60 pt-2 mt-2">
-                            <div className="text-[11px] uppercase tracking-widest font-medium text-info mb-2 px-3">
+                            <div className="text-[11px] uppercase font-medium text-info mb-2 px-3">
                               Custom Adjustments
                             </div>
                             {customAdjustments.map((adj, idx) => (
@@ -758,7 +758,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
 
                         {/* Add Adjustment Input */}
                         <div className="border-t border-border/60 pt-3 mt-2">
-                          <div className="text-[11px] uppercase tracking-widest font-medium text-info mb-2 px-3">
+                          <div className="text-[11px] uppercase font-medium text-info mb-2 px-3">
                             Add Adjustment
                           </div>
                           <div className="flex flex-wrap gap-2 px-3">
@@ -811,7 +811,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                         </div>
 
                         <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
-                          <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <span className="text-[11px] uppercase font-semibold text-muted-foreground">
                             = Cash for Debt Service
                           </span>
                           <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
@@ -826,7 +826,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       {/* Denominator */}
                       <div className="mb-4">
                         <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
-                          <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <h5 className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Denominator — Total Debt Service
                           </h5>
                         </div>
@@ -901,7 +901,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           )}
                         </div>
                         <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
-                          <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <span className="text-[11px] uppercase font-semibold text-muted-foreground">
                             = Total Debt Service
                           </span>
                           <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
@@ -926,8 +926,8 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                                 {metrics.fccr_breakdown.capex_deduction.toLocaleString()}{' '}
                                 -{' '}
                                 {metrics.fccr_breakdown.cash_taxes_paid.toLocaleString()}{' '}
-                                -{' '}
-                                {metrics.fccr_breakdown.distributions_paid.toLocaleString()}{' '}
+                                {metrics.fccr_breakdown.distributions_paid > 0 && <>-{' '}
+                                {metrics.fccr_breakdown.distributions_paid.toLocaleString()}{' '}</>}
                                 ={' '}
                               </span>
                               <span className="font-semibold tabular-nums text-info">
@@ -1058,7 +1058,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       {/* Senior Debt Breakdown */}
                       <div className="mb-4">
                         <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
-                          <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <h5 className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Numerator — Senior Debt
                           </h5>
                         </div>
@@ -1183,7 +1183,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           )}
                         </div>
                         <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
-                          <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <span className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Total Senior Debt
                           </span>
                           <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
@@ -1195,7 +1195,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       {/* EBITDA Denominator */}
                       <div className="mb-4">
                         <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
-                          <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <h5 className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Denominator — Adjusted EBITDA
                           </h5>
                         </div>
@@ -1211,7 +1211,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           </div>
                         </div>
                         <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
-                          <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <span className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Adjusted EBITDA (Used)
                           </span>
                           <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
@@ -1325,7 +1325,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       {/* Total Debt Breakdown */}
                       <div className="mb-4">
                         <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
-                          <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <h5 className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Numerator — Total Debt
                           </h5>
                         </div>
@@ -1546,7 +1546,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           )}
                         </div>
                         <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
-                          <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <span className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Total Debt
                           </span>
                           <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
@@ -1558,7 +1558,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                       {/* Total Capital Breakdown */}
                       <div className="mb-4">
                         <div className="flex justify-between items-center py-2 border-b border-border/60 mb-1">
-                          <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <h5 className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Denominator — Total Capital
                           </h5>
                         </div>
@@ -1587,7 +1587,7 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
                           </div>
                         </div>
                         <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
-                          <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                          <span className="text-[11px] uppercase font-semibold text-muted-foreground">
                             Total Capital
                           </span>
                           <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-foreground/5 text-foreground">
@@ -1685,13 +1685,13 @@ const DebtHealthMeters: React.FC<DebtHealthMetersProps> = ({
             <Table className="table-financial">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground">
+                  <TableHead className="text-[11px] uppercase font-medium text-muted-foreground">
                     Metric
                   </TableHead>
                   {years.map((yr) => (
                     <TableHead
                       key={yr}
-                      className="text-right text-[11px] uppercase tracking-widest font-medium text-muted-foreground"
+                      className="text-right text-[11px] uppercase font-medium text-muted-foreground"
                     >
                       {yr}
                     </TableHead>

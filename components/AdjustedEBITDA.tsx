@@ -88,7 +88,7 @@ const AdjustmentCategory: React.FC<AdjustmentCategoryProps> = ({
     <div className="mb-4">
       {/* Category header — ledger label + pill total */}
       <div className="flex justify-between items-center py-2 border-b border-border/60">
-        <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+        <h5 className="text-[11px] uppercase font-semibold text-muted-foreground">
           {title}
         </h5>
         <span
@@ -221,7 +221,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
     <div className="space-y-4">
       {/* Header row */}
       <div className="flex justify-between items-center mb-2">
-        <span className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground">
+        <span className="text-[11px] uppercase font-medium text-muted-foreground">
           Values in thousands
         </span>
         <span className="text-sm text-muted-foreground">
@@ -237,7 +237,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
         >
           <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
           <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
-          <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-muted-foreground dark:text-white/50">
+          <p className="relative text-[11px] uppercase font-medium text-muted-foreground dark:text-white/50">
             EBITDA
           </p>
           <div className="relative mt-auto">
@@ -253,7 +253,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
         >
           <div className="absolute inset-0 opacity-0 dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
           <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-white/[0.07] blur-2xl" />
-          <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-muted-foreground dark:text-white/50">
+          <p className="relative text-[11px] uppercase font-medium text-muted-foreground dark:text-white/50">
             Adjusted EBITDA
           </p>
           <div className="relative mt-auto">
@@ -272,10 +272,10 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
 
       {/* ── Formula Block — code-editor left-border pattern ── */}
       <div className="rounded-xl border border-surface-border-1 bg-surface-3">
-        <p className="px-4 pt-3 pb-1 font-mono text-[11px] text-muted-foreground text-center tracking-wide leading-relaxed">
+        <p className="px-4 pt-3 pb-1 font-mono text-[11px] text-muted-foreground text-center leading-relaxed">
           EBITDA = Net Income + Interest + Taxes + D&A
         </p>
-        <p className="px-4 pt-1 pb-3 font-mono text-[11px] text-muted-foreground text-center tracking-wide leading-relaxed">
+        <p className="px-4 pt-1 pb-3 font-mono text-[11px] text-muted-foreground text-center leading-relaxed">
           Adjusted EBITDA = EBITDA + Non-Cash + One-Time
           Expenses - One-Time Gains - Interest Income
         </p>
@@ -308,7 +308,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                 key={yr}
                 className="bg-muted/50 border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1"
               >
-                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">
+                <div className="text-xs font-bold text-muted-foreground uppercase mb-2">
                   {yr}
                 </div>
 
@@ -584,7 +584,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
                 breakdown.interest_income_excluded > 0 && (
                   <div className="mb-4">
                     <div className="flex justify-between items-center py-2 border-b border-border/60">
-                      <h5 className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                      <h5 className="text-[11px] uppercase font-semibold text-muted-foreground">
                         Interest Income (Excluded)
                       </h5>
                       <span className="text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-md bg-error/8 text-error">
@@ -651,7 +651,7 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               {/* ── Final Total Row — statement-level result ── */}
               <div className="flex justify-between items-end mt-5 pt-4 border-t-2 border-foreground/10">
                 <div>
-                  <span className="text-[11px] uppercase tracking-[0.15em] font-semibold text-muted-foreground block mb-0.5">
+                  <span className="text-[11px] uppercase font-semibold text-muted-foreground block mb-0.5">
                     Result
                   </span>
                   <span className="font-bold text-foreground text-base tracking-tight">
@@ -692,13 +692,13 @@ const AdjustedEBITDA: React.FC<AdjustedEBITDAProps> = ({ data }) => {
               <Table className="table-financial">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground">
+                    <TableHead className="text-[11px] uppercase font-medium text-muted-foreground">
                       Metric
                     </TableHead>
                     {years.map((yr) => (
                       <TableHead
                         key={yr}
-                        className="text-right text-[11px] uppercase tracking-widest font-medium text-muted-foreground"
+                        className="text-right text-[11px] uppercase font-medium text-muted-foreground"
                       >
                         {yr}
                       </TableHead>

@@ -223,7 +223,7 @@ export function Metric({ size, trend, className, ...props }: MetricProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const labelVariants = cva(
-  'text-xs font-medium uppercase tracking-wider text-muted-foreground',
+  'text-xs font-medium uppercase text-muted-foreground',
   {
     variants: {
       size: {
@@ -336,7 +336,7 @@ export function TableHeader({ className, children, ...props }: TableHeaderProps)
   return (
     <th
       className={cn(
-        'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+        'px-4 py-3 text-left text-xs font-semibold uppercase text-muted-foreground',
         className
       )}
       {...props}

@@ -131,7 +131,7 @@ export default function HomePage() {
         {/* Eyebrow pill */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-brand/30 bg-emerald-brand-glow mb-8">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-brand" />
-          <span className="text-[11px] uppercase tracking-[0.12em] font-medium text-emerald-brand">
+          <span className="text-[11px] uppercase font-medium text-emerald-brand">
             AI-Powered Credit Analysis
           </span>
         </div>
@@ -183,7 +183,7 @@ export default function HomePage() {
               <span className="text-3xl md:text-4xl font-bold tabular-nums text-foreground tracking-tight">
                 {stat.value}
               </span>
-              <span className="text-[10px] uppercase tracking-[0.12em] text-emerald-brand font-medium">
+              <span className="text-[10px] uppercase text-emerald-brand font-medium">
                 {stat.label}
               </span>
               <span className="text-[11px] text-foreground/50">{stat.sub}</span>
@@ -198,7 +198,7 @@ export default function HomePage() {
 
           {/* Section label */}
           <div className="text-center mb-12">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-emerald-brand font-medium mb-3">
+            <p className="text-[11px] uppercase text-emerald-brand font-medium mb-3">
               What it does
             </p>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">

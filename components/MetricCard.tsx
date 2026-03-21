@@ -70,7 +70,7 @@ export default function MetricCard({
       {/* Glow orb — dark mode only */}
       <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full opacity-0 dark:opacity-100 bg-foreground/[0.07] blur-2xl" />
 
-      <p className="relative text-[11px] uppercase tracking-[0.15em] font-medium text-muted-foreground">
+      <p className="relative text-[11px] uppercase tracking-normal font-medium text-muted-foreground">
         {label}
       </p>
       <div className="relative mt-auto">

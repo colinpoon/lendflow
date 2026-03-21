@@ -193,7 +193,7 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
             <h3 className="text-xl font-bold text-foreground">
               Quantitative Risk Scorecard
             </h3>
-            <span className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 border border-border/50 rounded px-2 py-0.5">
+            <span className="text-[10px] uppercase font-semibold text-muted-foreground/60 border border-border/50 rounded px-2 py-0.5">
               Supplementary
             </span>
           </div>
@@ -220,12 +220,12 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
           <Table className="table-financial min-w-[560px]">
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Metric</TableHead>
-                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Weight</TableHead>
-                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Value</TableHead>
-                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Score</TableHead>
-                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Avg Change</TableHead>
-                <TableHead className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Trend</TableHead>
+                <TableHead className="text-[11px] uppercase font-semibold text-muted-foreground">Metric</TableHead>
+                <TableHead className="text-center text-[11px] uppercase font-semibold text-muted-foreground">Weight</TableHead>
+                <TableHead className="text-center text-[11px] uppercase font-semibold text-muted-foreground">Value</TableHead>
+                <TableHead className="text-center text-[11px] uppercase font-semibold text-muted-foreground">Score</TableHead>
+                <TableHead className="text-center text-[11px] uppercase font-semibold text-muted-foreground">Avg Change</TableHead>
+                <TableHead className="text-center text-[11px] uppercase font-semibold text-muted-foreground">Trend</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -349,11 +349,11 @@ const QuantitativeRiskCard: React.FC<QuantitativeRiskCardProps> = ({ data }) => 
                   <Table className="table-financial min-w-[400px] text-xs">
                     <TableHeader>
                       <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">Metric</TableHead>
+                        <TableHead className="text-[11px] uppercase font-semibold text-muted-foreground">Metric</TableHead>
                         {Object.keys(data.metrics[0]?.values_by_year || {})
                           .sort()
                           .map(year => (
-                            <TableHead key={year} className="text-center text-[11px] uppercase tracking-[0.10em] font-semibold text-muted-foreground">{year}</TableHead>
+                            <TableHead key={year} className="text-center text-[11px] uppercase font-semibold text-muted-foreground">{year}</TableHead>
                           ))}
                       </TableRow>
                     </TableHeader>

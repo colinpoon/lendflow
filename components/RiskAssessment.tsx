@@ -97,14 +97,14 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
       <div className="rounded-lg border border-border bg-muted/30 p-5 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
+            <p className="text-xs font-medium uppercase text-muted-foreground mb-1">
               AI Assessment
             </p>
             <span className="inline-block rounded-full px-3 py-1 text-xs font-medium text-muted-foreground bg-muted">
               {data.band ?? 'N/A'}
             </span>
           </div>
-          <span className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 border border-border/50 rounded px-2 py-0.5">
+          <span className="text-[10px] uppercase font-semibold text-muted-foreground/60 border border-border/50 rounded px-2 py-0.5">
             Advisory Only
           </span>
         </div>
@@ -112,7 +112,7 @@ const RiskAssessment: React.FC<Props> = ({ data }) => {
         {/* Advisory narrative */}
         {data.lending_recommendation && (
           <div className="border-t border-border/30 pt-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1.5">
+            <p className="text-xs font-medium uppercase text-muted-foreground mb-1.5">
               Narrative
             </p>
             <p className="text-sm leading-relaxed text-foreground">

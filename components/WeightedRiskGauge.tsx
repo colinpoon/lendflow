@@ -257,7 +257,7 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
 
       {/* Risk label pill */}
       <div
-        className={`mt-4 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide ${config.bgColor} ${config.textColor}`}
+        className={`mt-4 px-4 py-1.5 rounded-full text-xs font-semibold ${config.bgColor} ${config.textColor}`}
         style={{ boxShadow: `0 0 0 1px ${config.color}30` }}
       >
         {config.label}
@@ -305,7 +305,7 @@ const MetricBadge: React.FC<MetricBadgeProps> = ({ label, value, score, format, 
       />
       <div className="pl-3">
         <div className="flex justify-between items-start mb-2">
-          <span className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground leading-tight">
+          <span className="text-[11px] uppercase font-semibold text-muted-foreground leading-tight">
             {label.replace(/\s*\(\d+%\)\s*\*?/, '')}
           </span>
           {weight != null && (
@@ -367,7 +367,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
     <div className="space-y-8">
       {/* FCCR */}
       <div>
-        <h5 className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground mb-3">
+        <h5 className="text-[11px] uppercase font-medium text-muted-foreground mb-3">
           Covenant FCCR (Target: &gt; 1.25x)
         </h5>
         <ChartContainer config={historicalChartConfig} className="h-[120px] w-full">
@@ -404,7 +404,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
 
       {/* Senior Debt / Adj. EBITDA */}
       <div>
-        <h5 className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground mb-3">
+        <h5 className="text-[11px] uppercase font-medium text-muted-foreground mb-3">
           Senior Debt / Adj. EBITDA (Target: &lt; 2.5x)
         </h5>
         <ChartContainer config={historicalChartConfig} className="h-[120px] w-full">
@@ -441,7 +441,7 @@ const HistoricalChart: React.FC<HistoricalChartProps> = ({ data }) => {
 
       {/* Debt / Capital */}
       <div>
-        <h5 className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground mb-3">
+        <h5 className="text-[11px] uppercase font-medium text-muted-foreground mb-3">
           Debt / Capital (Target: &lt; 50%)
         </h5>
         <ChartContainer config={historicalChartConfig} className="h-[120px] w-full">
@@ -558,7 +558,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
         <h3 className="text-xl font-bold tracking-tight text-foreground">
           Lending Risk Score
         </h3>
-        <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-1">
+        <p className="text-[11px] uppercase text-muted-foreground mt-1">
           Fiscal Year {latestYear} | Deterministic Weighted Score
         </p>
         <p className="text-[10px] text-muted-foreground/70 mt-1">
@@ -579,7 +579,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
               borderColor: `color-mix(in oklch, currentColor, transparent 55%)`,
             }}
           >
-            <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground mb-1">
+            <p className="text-[10px] uppercase font-semibold text-muted-foreground mb-1">
               Lending Decision
             </p>
             <p className={`text-xl font-extrabold tracking-tight leading-tight ${decisionStyle.text}`}>
@@ -646,7 +646,7 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
 
           {assessment.suggested_loan_structure && (
             <div className="px-5 py-3.5 border-t border-surface-border-1 bg-surface-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground mb-1">
+              <p className="text-[11px] uppercase font-semibold text-muted-foreground mb-1">
                 Suggested Structure
               </p>
               <p className="text-sm text-foreground">
@@ -738,19 +738,19 @@ const WeightedRiskGauge: React.FC<WeightedRiskGaugeProps> = ({
             <Table className="table-financial min-w-[340px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  <TableHead className="text-[11px] uppercase font-semibold text-muted-foreground">
                     Year
                   </TableHead>
-                  <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase font-semibold text-muted-foreground">
                     FCCR Score
                   </TableHead>
-                  <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase font-semibold text-muted-foreground">
                     Debt / Adj. EBITDA
                   </TableHead>
-                  <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  <TableHead className="hidden sm:table-cell text-right text-[11px] uppercase font-semibold text-muted-foreground">
                     Debt/Cap
                   </TableHead>
-                  <TableHead className="text-right text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground">
+                  <TableHead className="text-right text-[11px] uppercase font-semibold text-muted-foreground">
                     Weighted Score
                   </TableHead>
                 </TableRow>

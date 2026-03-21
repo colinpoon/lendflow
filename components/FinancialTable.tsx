@@ -1031,7 +1031,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         >
           <td
             colSpan={years.length + 1}
-            className="py-3 px-4 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest border-t-2 border-primary"
+            className="py-3 px-4 bg-primary text-primary-foreground text-xs font-bold uppercase border-t-2 border-primary"
           >
             <div className="flex items-center gap-2">
               {section.collapsible && (
@@ -1055,7 +1055,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
       >
         <td
           colSpan={years.length + 1}
-          className="py-2 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide border-t border-border"
+          className="py-2 px-4 text-xs font-bold text-muted-foreground uppercase border-t border-border"
         >
           <div className="flex items-center gap-2">
             {section.collapsible && (
@@ -1383,14 +1383,14 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
 
           return (
             <div key={year} className="space-y-3">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase">
                 {year} — Formula Breakdown
               </h3>
               <div className="grid gap-3 lg:grid-cols-2">
                 {/* Adjusted EBITDA breakdown */}
                 {hasEbitda && ab && (
                   <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1">
-                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 font-sans">
+                    <div className="text-xs font-bold text-muted-foreground uppercase mb-2 font-sans">
                       Adjusted EBITDA
                     </div>
                     <div>
@@ -1448,7 +1448,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                 {/* FCCR equation */}
                 {hasFccr && fb && (
                   <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1">
-                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 font-sans">
+                    <div className="text-xs font-bold text-muted-foreground uppercase mb-2 font-sans">
                       Covenant FCCR
                     </div>
                     <div>
@@ -1525,7 +1525,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                 {/* Senior Debt / Adj. EBITDA */}
                 {hasSenior && (
                   <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1">
-                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 font-sans">
+                    <div className="text-xs font-bold text-muted-foreground uppercase mb-2 font-sans">
                       Senior Debt / Adj. EBITDA
                     </div>
                     <div>
@@ -1559,7 +1559,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
                 {/* Total Debt / Total Capital */}
                 {hasDebtCap && (
                   <div className="bg-muted border border-border rounded-lg px-5 py-4 font-mono text-sm leading-relaxed space-y-1">
-                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 font-sans">
+                    <div className="text-xs font-bold text-muted-foreground uppercase mb-2 font-sans">
                       Total Debt / Total Capital
                     </div>
                     <div>
@@ -1608,7 +1608,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
         <h2 className="text-lg font-semibold tracking-tight text-foreground">
           Financial Summary
         </h2>
-        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+        <span className="text-[11px] uppercase text-muted-foreground">
           Values in thousands
         </span>
       </div>
@@ -1624,13 +1624,13 @@ const FinancialTable: React.FC<FinancialTableProps> = ({ data }) => {
           <thead className="sticky top-0 z-10">
             <tr className="bg-primary border-b-2 border-primary">
               {/* Label column — wide enough for longest metric name */}
-              <th className="py-3 px-4 text-left text-xs font-bold uppercase tracking-wider text-primary-foreground w-56 whitespace-nowrap bg-primary">
+              <th className="py-3 px-4 text-left text-xs font-bold uppercase text-primary-foreground w-56 whitespace-nowrap bg-primary">
                 Line Item
               </th>
               {years.map((y) => (
                 <th
                   key={y}
-                  className="py-3 px-4 text-right text-xs font-bold uppercase tracking-wider text-primary-foreground tabular-nums min-w-35 bg-primary"
+                  className="py-3 px-4 text-right text-xs font-bold uppercase text-primary-foreground tabular-nums min-w-35 bg-primary"
                 >
                   {y}
                 </th>
