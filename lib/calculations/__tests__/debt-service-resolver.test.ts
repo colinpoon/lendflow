@@ -9,6 +9,7 @@ describe('resolveDebtService', () => {
         repayment_of_debt: 5000,
         debt_components: makeDebtComponents({
           bank_debt_current: 3000,
+          bank_debt_long_term: 2000,
         }),
       });
       const result = resolveDebtService(metrics);
