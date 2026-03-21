@@ -136,10 +136,10 @@ export interface MetricConflict {
 }
 
 /** Metric value - can be number, null, or nested object (nested objects may contain strings, e.g. senior_debt_interest_rate) */
-type MetricValue = number | null | Record<string, number | string | null>;
+export type MetricValue = number | null | Record<string, number | string | null>;
 
 /** Year metrics - a record of metric names to values */
-type YearMetrics = Record<string, MetricValue>;
+export type YearMetrics = Record<string, MetricValue>;
 
 /** Extraction input type */
 interface ExtractionInput {

@@ -29,7 +29,63 @@ import {
 import type { ExtractedMetrics } from '@/types/financial';
 import type Anthropic from '@anthropic-ai/sdk';
 import { MERGE_CONFIG } from '@/lib/constants';
-import { normalizeScaleMismatch } from '@/lib/extraction-merger';
+import { normalizeScaleMismatch, type ScaleNormalizationResult } from '@/lib/extraction-merger';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Vision Module Internal Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A loose intermediate record used during candidate accumulation and conflict
+ * resolution. Fields are populated incrementally from multiple page extractions
+ * using dynamic string keys. Once resolution is complete the record is narrowed
+ * to ExtractedMetrics via `toExtractedMetrics`.
+ */
+type VisionYearRecord = Record<string, number | string | boolean | null | Record<string, number | null>>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Type-Safe Conversion Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Widen a `Record<string, ExtractedMetrics>` to the shape that
+ * `normalizeScaleMismatch` expects as input, without an `as unknown as` chain.
+ *
+ * ExtractedMetrics fields are all numeric, null, or nested plain objects —
+ * structurally compatible with `Record<string, number | null | object>`.
+ * The helper makes this widening explicit and localises the cast.
+ */
+function toNormalizerInput(
+  map: Record<string, ExtractedMetrics>
+): Parameters<typeof normalizeScaleMismatch>[0] {
+  // The cast is justified: ExtractedMetrics has no index signature but its
+  // field values are all subtypes of the normalizer's MetricValue union.
+  return map as unknown as Parameters<typeof normalizeScaleMismatch>[0];
+}
+
+/**
+ * Narrow the `ScaleNormalizationResult.metrics` output back to the canonical
+ * `Record<string, ExtractedMetrics>` shape. The normalizer only modifies numeric
+ * values (divides outliers by 1000) and never adds or removes fields, so the
+ * shape identity of each year record is preserved.
+ */
+function fromNormalizerOutput(
+  result: ScaleNormalizationResult
+): Record<string, ExtractedMetrics> {
+  return result.metrics as unknown as Record<string, ExtractedMetrics>;
+}
+
+/**
+ * Narrow a fully-populated `VisionYearRecord` accumulator to `ExtractedMetrics`.
+ * Only fields defined on ExtractedMetrics are ever written into the accumulator
+ * (see `accumulateCandidates` and `resolveAllCandidates`), so the runtime shape
+ * is guaranteed to match.
+ */
+function toExtractedMetrics(
+  map: Record<string, VisionYearRecord>
+): Record<string, ExtractedMetrics> {
+  return map as unknown as Record<string, ExtractedMetrics>;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public Types
@@ -236,12 +292,10 @@ export async function extractFromPdf(
   // Re-use the existing cross-year normalizer from lib/extraction-merger.ts.
   // It detects ~1000× outliers between years (raw dollars vs thousands) and
   // divides outlier values by 1000.
-  // The double-cast through `unknown` is intentional: normalizeScaleMismatch
-  // uses its own internal YearMetrics type that is structurally compatible but
-  // not nominally identical to ExtractedMetrics.
-  const normalizedMetricsByYear = normalizeScaleMismatch(
-    metricsByYear as unknown as Record<string, Record<string, number | null>>
-  ) as unknown as Record<string, ExtractedMetrics>;
+  const scaleResult: ScaleNormalizationResult = normalizeScaleMismatch(
+    toNormalizerInput(metricsByYear)
+  );
+  const normalizedMetricsByYear = fromNormalizerOutput(scaleResult);
 
   return {
     metricsByYear: normalizedMetricsByYear,
@@ -284,7 +338,10 @@ function accumulateCandidates(
   nestedValues: Map<string, Record<string, number | null>>,
   metaValues: Map<string, MetaValue>
 ): void {
-  const metrics = yearExtraction.metrics as unknown as Record<string, unknown>;
+  // Widen ExtractedMetrics to VisionYearRecord for dynamic field iteration.
+  // VisionYearRecord captures all ExtractedMetrics value types (number, string,
+  // boolean, null, nested Record), so no information is lost during iteration.
+  const metrics: VisionYearRecord = yearExtraction.metrics as unknown as VisionYearRecord;
 
   for (const [field, rawValue] of Object.entries(metrics)) {
     // ── Nested objects: keep the first non-null value seen ─────────────────
@@ -333,11 +390,11 @@ function resolveAllCandidates(
   metricsByYear: Record<string, ExtractedMetrics>;
   mergeConflicts: MergeConflict[];
 } {
-  // Use a loose internal record type to accumulate heterogeneous values.
-  // The cast to ExtractedMetrics at the end is safe because we only write
-  // fields that are defined on ExtractedMetrics (numeric metrics, nested
-  // objects, and string metadata fields).
-  const metricsByYear: Record<string, Record<string, unknown>> = {};
+  // VisionYearRecord captures all value types that ExtractedMetrics fields can
+  // hold (number, string, boolean, null, nested Record). Fields are populated
+  // incrementally via string keys during resolution; once complete, the map is
+  // narrowed to Record<string, ExtractedMetrics> by toExtractedMetrics().
+  const metricsByYear: Record<string, VisionYearRecord> = {};
   const mergeConflicts: MergeConflict[] = [];
 
   // Resolve numeric metrics
@@ -395,7 +452,7 @@ function resolveAllCandidates(
   }
 
   return {
-    metricsByYear: metricsByYear as unknown as Record<string, ExtractedMetrics>,
+    metricsByYear: toExtractedMetrics(metricsByYear),
     mergeConflicts,
   };
 }

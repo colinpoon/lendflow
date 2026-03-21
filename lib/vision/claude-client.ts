@@ -50,11 +50,52 @@ export interface PageExtractionResult {
 // Raw tool output types (mirrors extractionToolSchema in extraction-tool.ts)
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface RawYearEntry {
-  fiscal_year: string;
+/**
+ * All numeric and nested-object metric fields that Claude returns inside a
+ * year entry. This mirrors the fields defined in extractionToolSchema and
+ * ExtractedMetrics so that we can safely strip `fiscal_year` without resorting
+ * to `as unknown as ExtractedMetrics`.
+ */
+interface RawYearMetrics {
   fiscal_year_end_date?: string | null;
   fiscal_period_type?: 'annual' | 'interim' | 'quarterly' | null;
-  [key: string]: unknown;
+  revenue?: number | null;
+  net_income?: number | null;
+  expenses?: number | null;
+  profit_margins?: number | null;
+  interest?: number | null;
+  interest_income?: number | null;
+  taxes?: number | null;
+  depreciation_amortization?: number | null;
+  bad_debt_provision?: number | null;
+  depreciation_equipment?: number | null;
+  depreciation_rou?: number | null;
+  depreciation_other?: number | null;
+  amortization_intangibles?: number | null;
+  ebitda?: number | null;
+  shareholders_equity?: number | null;
+  total_debt?: number | null;
+  senior_debt?: number | null;
+  current_assets?: number | null;
+  current_liabilities?: number | null;
+  inventory?: number | null;
+  capital_expenditures?: number | null;
+  proceeds_from_long_term_debt?: number | null;
+  cash_taxes_paid?: number | null;
+  distributions_paid?: number | null;
+  ttm_principal_payments?: number | null;
+  ttm_interest_expense?: number | null;
+  repayment_of_debt?: number | null;
+  payment_of_lease_liability?: number | null;
+  cash_interest_paid?: number | null;
+  non_cash_interest_expense?: number | null;
+  debt_components?: Record<string, number | null> | null;
+  fixed_charges?: Record<string, number | string | null> | null;
+  adjusted_ebitda_components?: Record<string, number | null> | null;
+}
+
+interface RawYearEntry extends RawYearMetrics {
+  fiscal_year: string;
 }
 
 interface RawToolOutput {
@@ -150,12 +191,14 @@ export async function analyzeFinancialImage(
     );
   }
 
-  // Convert each raw year entry into a typed YearExtraction
+  // Convert each raw year entry into a typed YearExtraction.
+  // `RawYearMetrics` is structurally compatible with `ExtractedMetrics` —
+  // every optional numeric/nested field is present — so a single cast suffices.
   const yearExtractions: YearExtraction[] = raw.years.map((entry) => {
     const { fiscal_year, ...rest } = entry;
     return {
       fiscalYear: fiscal_year,
-      metrics: rest as unknown as ExtractedMetrics,
+      metrics: rest as ExtractedMetrics,
     };
   });
 
