@@ -71,9 +71,7 @@ export function recalculateWithCovenantConfig(
   config: CovenantConfig
 ): Record<string, ComputedMetrics> {
   // Deep clone to guarantee immutability of the original
-  const result: Record<string, ComputedMetrics> = JSON.parse(
-    JSON.stringify(metricsMap)
-  );
+  const result: Record<string, ComputedMetrics> = structuredClone(metricsMap);
 
   for (const [year, m] of Object.entries(result)) {
     // ── 1. Debt metrics ───────────────────────────────────────────────────
