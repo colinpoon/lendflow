@@ -188,7 +188,7 @@ const VisionUploadPage = () => {
                 <Card className="shadow-lg">
                   <CardHeader>
                     <CardTitle>Lending Risk Assessment</CardTitle>
-                    <CardDescription className="text-xs">Authoritative lending score — FCCR (50%), Sr. Debt/EBITDA (35%), Debt/Capital (15%)</CardDescription>
+                    <CardDescription className="text-xs">Authoritative lending score — FCCR (50%), Sr. Debt / Adj. EBITDA (35%), Debt/Capital (15%)</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ErrorBoundary errorTitle="Error loading risk gauge">
