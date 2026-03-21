@@ -210,7 +210,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
 
       // Adjusted EBITDA Components
       // Source: Cash flow operating add-backs + income statement other income
-      // Adj EBITDA = EBITDA $9,136 + SBC $562 - other income $2,159 = $7,539 ≈ $7,541
+      // Adj EBITDA = EBITDA $9,136 + SBC $562 + loss_on_disposal $108 - other income $2,159 = $7,647
       'adjusted_ebitda_components.stock_based_compensation': 562, // Stock-based compensation (note 14, cash flow add-back)
       // other_income_non_operating = $2,159 annual bonus from Rentals segment sale (note 21 — non-recurring, related-party)
       'adjusted_ebitda_components.other_income_non_operating': 2159,
@@ -218,18 +218,18 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'adjusted_ebitda_components.loss_on_disposal': 108,
 
       // Computed Ratios
-      // Adj EBITDA = EBITDA + SBC - other income (non-recurring related-party bonus)
-      //           = 9,136 + 562 - 2,159 = 7,539 (rounded to 7,541 in prior verified run)
+      // Adj EBITDA = EBITDA + SBC + loss_on_disposal - other_income_non_operating
+      //           = 9,136 + 562 + 108 - 2,159 = 7,647
       adjusted_ebitda: 7647,
       // FCCR (covenant, unfunded CapEx mode):
-      //   Numerator = Adj EBITDA $7,541 - Unfunded CapEx (13,465 - 8,676) $4,789 - Cash Taxes $0 - Distributions $0 = $2,752
+      //   Numerator = Adj EBITDA $7,647 - Unfunded CapEx (13,465 - 8,676) $4,789 - Cash Taxes $0 - Distributions $0 = $2,858
       //   Denominator = Principal $2,589 + Cash Interest $1,470 + Lease Payments $2,059 = $6,118
-      //   FCCR = 2,752 / 6,118 = 0.45
+      //   FCCR = 2,858 / 6,118 = 0.47
       //   NOTE: Company's own bank covenant DSCR = 2.15:1 (different formula — excludes CapEx deduction)
       fccr: 0.47,
-      // DSCR (banker's): Adj EBITDA $7,541 / Total Debt Service $6,118 = 1.23
+      // DSCR (banker's): Adj EBITDA $7,647 / Total Debt Service $6,118 = 1.25
       dscr: 1.25,
-      // senior_debt_to_ebitda: 24,365 / 7,541 = 3.23
+      // senior_debt_to_ebitda: 24,365 / 7,647 = 3.19
       senior_debt_to_ebitda: 3.19,
       // total_debt_to_capital: 27,614 / (27,614 + 12,115) = 27,614 / 39,729 = 0.70
       total_debt_to_capital: 0.7,
@@ -244,8 +244,8 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'Fully verified from source PDF (2023-12-31-Q4-Zedcor-Inc.-Financial-Stmts-vFINAL.pdf). ' +
       'All values in thousands of Canadian dollars (CAD). ' +
       'IFRS reporting. Fiscal year ended December 31, 2023. ' +
-      'Note: FCCR updated from prior value of 0.57 to 0.45 based on first-principles calculation ' +
-      'using actual proceeds from LT debt ($8,676K) and unfunded CapEx treatment. ' +
+      'Note: FCCR = 0.47 (Adj EBITDA $7,647 - Unfunded CapEx $4,789 = $2,858 numerator; $6,118 denominator). ' +
+      'Adj EBITDA includes loss_on_disposal add-back ($108) in addition to SBC ($562) and other_income deduction ($2,159). ' +
       "Company's own bank covenant DSCR was 2.15:1 (excludes CapEx deduction — different formula). " +
       'High CapEx year ($13.5M) relative to EBITDA ($9.1M) explains sub-1.0 Lendflow FCCR. ' +
       'Lease liabilities are IFRS 16 finance leases (no operating lease liabilities on balance sheet).',
@@ -466,7 +466,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       calculated_adjusted_ebitda: 0,
       // fccr = (Adj EBITDA - CapEx - cash_taxes) / (principal + cash_interest + lease_payments)
       //      = (80,827 - 3,967 - 16,082) / (0 + 1,072 + 6,425)
-      //      = 60,778 / 7,497 = 8.10
+      //      = 60,778 / 7,497 = 8.11
       fccr: 8.11,
       // dscr = EBITDA / (cash_interest + lease_payments) = 80,827 / (1,072 + 6,425) = 80,827 / 7,497 = 10.78
       dscr: 10.78,
@@ -493,7 +493,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'interest expense of 811 is entirely lease finance cost (IFRS 16 implicit interest). ' +
       'FCCR denominator: cash_interest_paid (1,072) + payment_of_lease_liability (6,425) = 7,497. ' +
       'FCCR numerator: Adj EBITDA (80,827) - CapEx (3,967) - cash_taxes (16,082) = 60,778. ' +
-      'FCCR = 60,778 / 7,497 = 8.10 — very strong coverage given asset-light model. ' +
+      'FCCR = 60,778 / 7,497 = 8.11 — very strong coverage given asset-light model. ' +
       'No Adj EBITDA adjustments identified from financial statements.',
   },
   {
@@ -631,17 +631,20 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // adjusted_ebitda = EBITDA (8,088) + SBC (1,005) = 9,093
       adjusted_ebitda: 9093,
       calculated_adjusted_ebitda: 0,
-      // fccr = (Adj EBITDA - CapEx - cash_taxes) / (principal + cash_interest + lease_payments)
-      //      = (9,093 - 3,154 - 27) / (3,687 + 688 + 1,189)
-      //      = 5,912 / 5,564 = 1.06
+      // fccr = (Adj EBITDA - CapEx - cash_taxes) / (principal + net_interest + lease_payments)
+      //      Interest: cash_interest_paid (688) < total_interest_expense (1,036) × 1.15 (1,191) → use 1,036
+      //      Lease interest deduction: 1,036 - lease_interest (431) = 605 (total_interest_expense is P&L-based;
+      //        payment_of_lease_liability is a total cash payment that includes principal + interest → deduct)
+      //      = (9,093 - 3,154 - 27) / (3,687 + 605 + 1,189)
+      //      = 5,912 / 5,481 = 1.08
       // NOTE: Tight coverage — BDC loan repayments are $3.7M/yr and declining as balance is paid down.
       // Promissory note ($2.4M) paid zero principal in 2024; matures Jan 2026.
       fccr: 1.08,
-      // dscr = Adj EBITDA / total debt service = 9,093 / 5,564 = 1.63
+      // dscr = Adj EBITDA / total debt service = 9,093 / 5,481 = 1.66
       dscr: 1.66,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
-      // senior_debt_to_ebitda = 12,600 / 8,088 = 1.56 (including IFRS 16 leases)
+      // senior_debt_to_ebitda = senior_debt (10,204) / Adj EBITDA (9,093) = 1.12
       senior_debt_to_ebitda: 1.12,
       // total_debt_to_capital = 12,600 / (12,600 + 57,890) = 12,600 / 70,490 = 0.18
       total_debt_to_capital: 0.18,
@@ -799,20 +802,21 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'adjusted_ebitda_components.pro_forma_synergies': 0,
 
       // Computed Ratios
-      // adjusted_ebitda = EBITDA (221,236) + SBC (7,203) + impairments (744) - gain on disposal (3,565) = 225,618
+      // adjusted_ebitda = EBITDA (219,400) + SBC (7,203) + impairments (744) - gain on disposal (3,565) = 223,782
       adjusted_ebitda: 223782,
       calculated_adjusted_ebitda: 0,
-      // fccr = (Adj EBITDA - CapEx - cash_taxes - distributions) / (principal + interest_LTD + lease_principal + lease_interest)
-      //      = (225,618 - 60,612 - 31,213 - 31,470) / (13,312 + 22,847 + 64,898 + 23,409)
-      //      = 102,323 / 124,466 = 0.82
+      // fccr = (Adj EBITDA - CapEx - cash_taxes - distributions) / (principal + cash_interest + lease_payments)
+      //      Interest: cash_interest_paid (46,256) used directly (accrual = 46,256, no crossover)
+      //      = (223,782 - 60,612 - 31,213 - 31,470) / (13,312 + 46,256 + 64,898)
+      //      = 100,487 / 124,466 = 0.81
       // NOTE: Low FCCR reflects high CapEx growth phase (opening stores) + dividends + debt repayment.
       // PetValu has significant cash generation from operations (200M+) but returns capital aggressively.
       fccr: 0.81,
-      // dscr = Adj EBITDA / (interest + lease_interest + principal + lease_principal) = 225,618 / 124,466 = 1.81
+      // dscr = Adj EBITDA / total debt service = 223,782 / 124,466 = 1.80
       dscr: 1.80,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
-      // senior_debt_to_ebitda = bank debt (278,020) / EBITDA (221,236) = 1.26
+      // senior_debt_to_ebitda = senior_debt (749,294) / Adj EBITDA (223,782) = 3.35
       senior_debt_to_ebitda: 3.35,
       // total_debt_to_capital = 749,294 / (749,294 + 95,749) = 0.89 (including IFRS 16 leases)
       // But net of lease receivables (210,391): 538,903 / 634,652 = 0.85
@@ -834,7 +838,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'Net lease position = 471,274 - 210,391 = 260,883 (franchise sublease income offsets lease obligations). ' +
       'interest: 32,103 is NET of lease receivable interest income (~11,914); gross cash interest = 46,256. ' +
       'D&A = 65,913 from CF statement (PP&E + ROU + intangibles combined). ' +
-      'FCCR = 0.82 reflects growth CapEx (60.6M for new stores) + dividends (31.5M) + share buybacks. ' +
+      'FCCR = 0.81 (Adj EBITDA 223,782 - CapEx 60,612 - taxes 31,213 - dividends 31,470 = 100,487 numerator; denom 124,466). ' +
       'Cash from operations = 200,076 before investing/financing — strong operating coverage. ' +
       'total_debt_to_capital of 0.89 overstates risk — franchise model has lease receivable offset.',
   },
@@ -958,15 +962,24 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'adjusted_ebitda_components.pro_forma_synergies': 0,
 
       // Computed Ratios
-      // adjusted_ebitda = 184,300 per company disclosure (LTIP + trade duties + transaction costs adj)
+      // adjusted_ebitda = EBITDA (173,007) — no adjustments extracted (company adj 184,300 not in schema)
       adjusted_ebitda: 173007,
       calculated_adjusted_ebitda: 0,
-      // FCCR/DSCR not set — CapEx and cash interest split not available from AR summary section
+      // fccr = (Adj EBITDA - CapEx - cash_taxes - distributions) / (principal + interest + leases)
+      //   CapEx = 0, cash_taxes = 0, distributions = 9,632
+      //   principal: repayment_of_debt (40,000)
+      //   interest: interest P&L (41,614), source = interest_accrual
+      //   leases: lease_liabilities_current (39,305) — fallback (no payment_of_lease_liability)
+      //     (balance sheet current portion; no lease interest deducted — not a total-payment source)
+      //   Numerator = 173,007 - 0 - 0 - 9,632 = 163,375
+      //   Denominator = 40,000 + 41,614 + 39,305 = 120,919
+      //   FCCR = 163,375 / 120,919 = 1.35
       fccr: 1.35,
+      // dscr = Adj EBITDA / total debt service = 173,007 / 120,919 = 1.43
       dscr: 1.43,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
-      // senior_debt_to_ebitda = bank debt (410,536) / EBITDA (173,007) = 2.37
+      // senior_debt_to_ebitda = senior_debt (623,066) / Adj EBITDA (173,007) = 3.60
       senior_debt_to_ebitda: 3.6,
       // total_debt_to_capital = 623,066 / (623,066 + 634,572) = 0.50
       total_debt_to_capital: 0.5,
@@ -1287,18 +1300,23 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'adjusted_ebitda_components.pro_forma_synergies': 0,
 
       // Computed Ratios
-      // adjusted_ebitda = EBITDA (547,200) + restructuring (43,700) + transaction costs (5,800) = 596,700
+      // adjusted_ebitda = EBITDA (518,600) + restructuring (43,700) + transaction costs (5,800) = 568,100
       adjusted_ebitda: 568100,
       calculated_adjusted_ebitda: 0,
-      // FCCR not set — revolving credit repayments (468.2M) inflate denominator inappropriately
-      // Only 1.0M is scheduled term loan repayment; rest is revolving facility management
-      // A clean FCCR would use: (596,700 - 364,800 - 47,800 - 148,100) / (1,000 + 165,200 + 81,500) = 35,700/247,700 = 0.14
-      // But this reflects heavy CapEx investment cycle, not sustainable debt service capacity
+      // fccr = (Adj EBITDA - unfunded_CapEx - cash_taxes - distributions) / (principal + interest + leases)
+      //   Unfunded CapEx: 364,800 - 749,000 = -384,200 → floored to 0 (proceeds exceed CapEx)
+      //   principal: repayment_of_debt (468,200) — includes revolving repayments (not capped; < funded_debt × 1.1)
+      //   interest: cash_interest_paid (165,200) used directly (accrual = 165,200, no crossover)
+      //   leases: payment_of_lease_liability (81,500)
+      //   Numerator = 568,100 - 0 - 47,800 - 148,100 = 372,200
+      //   Denominator = 468,200 + 165,200 + 81,500 = 714,900
+      //   FCCR = 372,200 / 714,900 = 0.52
       fccr: 0.52,
+      // dscr = Adj EBITDA / total debt service = 568,100 / 714,900 = 0.79
       dscr: 0.79,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
-      // senior_debt_to_ebitda = (bank 19,100 + LT debt 1,922,100) / EBITDA (547,200) = 1,941,200 / 547,200 = 3.55
+      // senior_debt_to_ebitda = senior_debt (bank 19,100 + LT 1,921,100 + leases 61,900 + 695,000 = 2,697,100) / Adj EBITDA (568,100) = 4.75
       senior_debt_to_ebitda: 4.75,
       // total_debt_to_capital = 3,169,000 / (3,169,000 + 1,769,200) = 0.64
       total_debt_to_capital: 0.64,
@@ -1455,17 +1473,20 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // adjusted_ebitda = EBITDA (1,330,000) + acquisition/integration (218,000) = 1,548,000
       adjusted_ebitda: 1548000,
       calculated_adjusted_ebitda: 0,
-      // fccr = (Adj EBITDA - net CapEx - cash_taxes - distributions) / (LT principal + cash_interest + lease_principal)
-      //      = (1,548,000 - 518,000 - 60,000 - 243,000) / (1,000 + 329,000 + 280,000)
-      //      = 727,000 / 610,000 = 1.19
-      // Note: net CapEx = 575,000 - 57,000 (disposals) = 518,000
-      // Note: excludes revolving Credit Facility repayments (778,000) — revolving, not term
+      // fccr = (Adj EBITDA - unfunded_CapEx - cash_taxes - distributions) / (principal + interest + leases)
+      //   Unfunded CapEx: 575,000 - 677,000 = -102,000 → floored to 0 (proceeds exceed CapEx)
+      //   principal: repayment_of_debt (778,000) — revolving Credit Facility repayments (no funded-debt cap triggered)
+      //   interest: cash_interest_paid (329,000); total_interest_expense (378,000) = 329,000 × 1.15 (378,350) → barely below threshold → keep cash
+      //   leases: payment_of_lease_liability (280,000)
+      //   Numerator = 1,548,000 - 0 - 60,000 - 243,000 = 1,245,000
+      //   Denominator = 778,000 + 329,000 + 280,000 = 1,387,000
+      //   FCCR = 1,245,000 / 1,387,000 = 0.90
       fccr: 0.9,
-      // dscr = Adj EBITDA / (cash_interest + lease_principal + LT principal) = 1,548,000 / 610,000 = 2.54
+      // dscr = Adj EBITDA / total debt service = 1,548,000 / 1,387,000 = 1.12
       dscr: 1.12,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
-      // senior_debt_to_ebitda = 6,641,000 / 1,330,000 = 4.99
+      // senior_debt_to_ebitda = senior_debt (6,641,000) / Adj EBITDA (1,548,000) = 4.29
       senior_debt_to_ebitda: 4.29,
       // total_debt_to_capital = 6,641,000 / (6,641,000 + 3,166,000) = 0.68
       total_debt_to_capital: 0.68,
@@ -1486,7 +1507,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       'D&A = 825M (very large — extensive physical infrastructure: refineries, terminals, convenience stores). ' +
       'Lease liabilities not separately shown on balance sheet — combined in LT debt figures. ' +
       'LT debt CF shows: revolving Credit Facility (778M repaid, 677M borrowed net), term debt (1M). ' +
-      'FCCR = 1.19 calculated excluding revolving Credit Facility repayments. ' +
+      'FCCR = 0.90: proceeds (677M) exceed CapEx (575M) → unfunded CapEx = 0; numerator 1,245M; denom 1,387M (principal 778M + interest 329M + leases 280M). ' +
       'Assets and liabilities held for sale (842M / 292M) reflect active divestiture program. ' +
       'Acquisition, integration and other costs (218M) added back to Adj EBITDA as non-recurring. ' +
       'Scale normalization critical — document uses $ millions, not thousands.',
