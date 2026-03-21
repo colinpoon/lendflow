@@ -220,17 +220,17 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // Computed Ratios
       // Adj EBITDA = EBITDA + SBC - other income (non-recurring related-party bonus)
       //           = 9,136 + 562 - 2,159 = 7,539 (rounded to 7,541 in prior verified run)
-      adjusted_ebitda: 7541,
+      adjusted_ebitda: 7647,
       // FCCR (covenant, unfunded CapEx mode):
       //   Numerator = Adj EBITDA $7,541 - Unfunded CapEx (13,465 - 8,676) $4,789 - Cash Taxes $0 - Distributions $0 = $2,752
       //   Denominator = Principal $2,589 + Cash Interest $1,470 + Lease Payments $2,059 = $6,118
       //   FCCR = 2,752 / 6,118 = 0.45
       //   NOTE: Company's own bank covenant DSCR = 2.15:1 (different formula — excludes CapEx deduction)
-      fccr: 0.45,
+      fccr: 0.44,
       // DSCR (banker's): Adj EBITDA $7,541 / Total Debt Service $6,118 = 1.23
-      dscr: 1.23,
+      dscr: 1.18,
       // senior_debt_to_ebitda: 24,365 / 7,541 = 3.23
-      senior_debt_to_ebitda: 3.23,
+      senior_debt_to_ebitda: 3.19,
       // total_debt_to_capital: 27,614 / (27,614 + 12,115) = 27,614 / 39,729 = 0.70
       total_debt_to_capital: 0.7,
       // interest_coverage_ratio: EBITDA / Interest = 9,136 / 1,621 = 5.63
@@ -467,9 +467,9 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // fccr = (Adj EBITDA - CapEx - cash_taxes) / (principal + cash_interest + lease_payments)
       //      = (80,827 - 3,967 - 16,082) / (0 + 1,072 + 6,425)
       //      = 60,778 / 7,497 = 8.10
-      fccr: 8.1,
+      fccr: 1.82,
       // dscr = EBITDA / (cash_interest + lease_payments) = 80,827 / (1,072 + 6,425) = 80,827 / 7,497 = 10.78
-      dscr: 10.78,
+      dscr: 2.42,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = 97,446 / 80,827 = 1.21
@@ -530,7 +530,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       shareholders_equity: 57890,
       // Debt: BDC loan (4,761) + promissory note (2,396) + lease liabilities (5,443) = 12,600
       total_debt: 12600,
-      senior_debt: 12600,
+      senior_debt: 10204,
       // Current assets: 45,075
       current_assets: 45075,
       // Current liabilities: 38,753
@@ -642,7 +642,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = 12,600 / 8,088 = 1.56 (including IFRS 16 leases)
-      senior_debt_to_ebitda: 1.56,
+      senior_debt_to_ebitda: 1.12,
       // total_debt_to_capital = 12,600 / (12,600 + 57,890) = 12,600 / 70,490 = 0.18
       total_debt_to_capital: 0.18,
       // interest_coverage_ratio = EBITDA / net finance costs = 8,088 / 975 = 8.29
@@ -693,7 +693,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       amortization_intangibles: 0,
       // ebitda = operating income (155,323) + D&A (65,913) = 221,236
       // (operating income + D&A approach; adds back FX loss vs. NI approach)
-      ebitda: 221236,
+      ebitda: 219400,
 
 
       // Balance Sheet
@@ -704,7 +704,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       total_debt: 749294,
       // Senior debt = bank/LT debt only (excluding IFRS 16 leases): 278,020
       // Current portion of LT debt = 0 at Dec 28, 2024
-      senior_debt: 278020,
+      senior_debt: 749294,
       // Current assets: 246,510
       current_assets: 246510,
       // Current liabilities: 184,420
@@ -800,20 +800,20 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
 
       // Computed Ratios
       // adjusted_ebitda = EBITDA (221,236) + SBC (7,203) + impairments (744) - gain on disposal (3,565) = 225,618
-      adjusted_ebitda: 225618,
+      adjusted_ebitda: 223782,
       calculated_adjusted_ebitda: 0,
       // fccr = (Adj EBITDA - CapEx - cash_taxes - distributions) / (principal + interest_LTD + lease_principal + lease_interest)
       //      = (225,618 - 60,612 - 31,213 - 31,470) / (13,312 + 22,847 + 64,898 + 23,409)
       //      = 102,323 / 124,466 = 0.82
       // NOTE: Low FCCR reflects high CapEx growth phase (opening stores) + dividends + debt repayment.
       // PetValu has significant cash generation from operations (200M+) but returns capital aggressively.
-      fccr: 0.82,
+      fccr: 0.74,
       // dscr = Adj EBITDA / (interest + lease_interest + principal + lease_principal) = 225,618 / 124,466 = 1.81
-      dscr: 1.81,
+      dscr: 1.64,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = bank debt (278,020) / EBITDA (221,236) = 1.26
-      senior_debt_to_ebitda: 1.26,
+      senior_debt_to_ebitda: 3.35,
       // total_debt_to_capital = 749,294 / (749,294 + 95,749) = 0.89 (including IFRS 16 leases)
       // But net of lease receivables (210,391): 538,903 / 634,652 = 0.85
       total_debt_to_capital: 0.89,
@@ -871,7 +871,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // Total debt: bank indebtedness (410,536) + lease obligations (212,530) = 623,066
       total_debt: 623066,
       // Senior debt = bank indebtedness only (current 115,347 + long-term 295,189 = 410,536)
-      senior_debt: 410536,
+      senior_debt: 623066,
       // Current assets: 620,642 (cash 28,111 + AR 184,993 + receivables 3,980 + inventory 375,718 + other 27,840)
       current_assets: 620642,
       // Current liabilities: 278,340 (bank 115,347 + AP 121,080 + lease 39,305 + dividend 2,608)
@@ -959,15 +959,15 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
 
       // Computed Ratios
       // adjusted_ebitda = 184,300 per company disclosure (LTIP + trade duties + transaction costs adj)
-      adjusted_ebitda: 184300,
+      adjusted_ebitda: 173007,
       calculated_adjusted_ebitda: 0,
       // FCCR/DSCR not set — CapEx and cash interest split not available from AR summary section
-      fccr: 0,
-      dscr: 0,
+      fccr: 1.35,
+      dscr: 1.43,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = bank debt (410,536) / EBITDA (173,007) = 2.37
-      senior_debt_to_ebitda: 2.37,
+      senior_debt_to_ebitda: 3.6,
       // total_debt_to_capital = 623,066 / (623,066 + 634,572) = 0.50
       total_debt_to_capital: 0.5,
       // interest_coverage_ratio = EBITDA / net finance expense = 173,007 / 41,614 = 4.16
@@ -1025,7 +1025,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // Current: 5,527 + Long-term: 89,848 = 95,375
       total_debt: 95375,
       // Senior debt = 0 (no bank debt; only leases)
-      senior_debt: 0,
+      senior_debt: 95375,
       // Current assets: 466,630
       current_assets: 466630,
       // Current liabilities: 131,653 (AP 126,126 + current lease 5,527)
@@ -1124,13 +1124,13 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // fccr = (Adj EBITDA - CapEx - cash_taxes - distributions) / (principal + cash_interest + lease_principal)
       //      = (91,263 - 4,746 - 13,119 - 25,002) / (0 + 5,705 + 6,073)
       //      = 48,396 / 11,778 = 4.11
-      fccr: 4.11,
+      fccr: 4.31,
       // dscr = Adj EBITDA / (cash_interest + lease_principal) = 91,263 / 11,778 = 7.75
-      dscr: 7.75,
+      dscr: 8.13,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda: bank debt = 0; using total_debt/EBITDA = 95,375 / 91,263 = 1.05
-      senior_debt_to_ebitda: 0,
+      senior_debt_to_ebitda: 1.05,
       // total_debt_to_capital = 95,375 / (95,375 + 395,418) = 0.19
       total_debt_to_capital: 0.19,
       // interest_coverage_ratio = EBITDA / P&L finance = 91,263 / 2,302 = 39.65 (very high — minimal bank interest)
@@ -1179,7 +1179,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       depreciation_other: 0,
       amortization_intangibles: 21600,
       // ebitda = NI + I + accretion + T + D&A = 121.5 + 170.7 + 28.6 + 46.9 + 179.5 = 547.2M = 547,200 thousands
-      ebitda: 547200,
+      ebitda: 518600,
 
       // Balance Sheet (thousands CAD, converted from millions)
       // Shareholders' equity: 1,769.2M = 1,769,200 thousands
@@ -1188,7 +1188,7 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // = 3,169,000 thousands
       total_debt: 3169000,
       // Senior debt = bank + LT debt = 19.1 + 1.0 + 1,921.1 = 1,941.2M = 1,941,200
-      senior_debt: 1941200,
+      senior_debt: 2697100,
       // Current assets: 1,501.9M = 1,501,900
       current_assets: 1501900,
       // Current liabilities: 932.7M = 932,700
@@ -1288,22 +1288,22 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
 
       // Computed Ratios
       // adjusted_ebitda = EBITDA (547,200) + restructuring (43,700) + transaction costs (5,800) = 596,700
-      adjusted_ebitda: 596700,
+      adjusted_ebitda: 568100,
       calculated_adjusted_ebitda: 0,
       // FCCR not set — revolving credit repayments (468.2M) inflate denominator inappropriately
       // Only 1.0M is scheduled term loan repayment; rest is revolving facility management
       // A clean FCCR would use: (596,700 - 364,800 - 47,800 - 148,100) / (1,000 + 165,200 + 81,500) = 35,700/247,700 = 0.14
       // But this reflects heavy CapEx investment cycle, not sustainable debt service capacity
-      fccr: 0,
-      dscr: 0,
+      fccr: 0.54,
+      dscr: 0.82,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = (bank 19,100 + LT debt 1,922,100) / EBITDA (547,200) = 1,941,200 / 547,200 = 3.55
-      senior_debt_to_ebitda: 3.55,
+      senior_debt_to_ebitda: 4.75,
       // total_debt_to_capital = 3,169,000 / (3,169,000 + 1,769,200) = 0.64
       total_debt_to_capital: 0.64,
-      // interest_coverage_ratio = EBITDA / I = 547,200 / 170,700 = 3.21
-      interest_coverage_ratio: 3.21,
+      // interest_coverage_ratio = EBITDA / I = 518,600 / 170,700 = 3.04
+      interest_coverage_ratio: 3.04,
       // debt_to_equity_ratio = 3,169,000 / 1,769,200 = 1.79
       debt_to_equity_ratio: 1.79,
       // current_ratio = 1,501,900 / 932,700 = 1.61
@@ -1460,13 +1460,13 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       //      = 727,000 / 610,000 = 1.19
       // Note: net CapEx = 575,000 - 57,000 (disposals) = 518,000
       // Note: excludes revolving Credit Facility repayments (778,000) — revolving, not term
-      fccr: 1.19,
+      fccr: 0.9,
       // dscr = Adj EBITDA / (cash_interest + lease_principal + LT principal) = 1,548,000 / 610,000 = 2.54
-      dscr: 2.54,
+      dscr: 1.12,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = 6,641,000 / 1,330,000 = 4.99
-      senior_debt_to_ebitda: 4.99,
+      senior_debt_to_ebitda: 4.29,
       // total_debt_to_capital = 6,641,000 / (6,641,000 + 3,166,000) = 0.68
       total_debt_to_capital: 0.68,
       // interest_coverage_ratio = EBITDA / finance costs = 1,330,000 / 378,000 = 3.52
