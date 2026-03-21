@@ -151,8 +151,8 @@ describe('calculateDSCR', () => {
       expect(bd.adjusted_ebitda).toBe(12000);
       expect(bd.bank_principal_payments).toBe(3000);
       expect(bd.bank_interest_expense).toBe(1500);
-      expect(bd.lease_payments).toBe(1000);
-      expect(bd.total_debt_service).toBe(5500);
+      expect(bd.lease_payments).toBe(800);
+      expect(bd.total_debt_service).toBe(5300);
       expect(bd.funded_debt).toBe(13000);
     });
   });

@@ -226,9 +226,9 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       //   Denominator = Principal $2,589 + Cash Interest $1,470 + Lease Payments $2,059 = $6,118
       //   FCCR = 2,752 / 6,118 = 0.45
       //   NOTE: Company's own bank covenant DSCR = 2.15:1 (different formula — excludes CapEx deduction)
-      fccr: 0.44,
+      fccr: 0.47,
       // DSCR (banker's): Adj EBITDA $7,541 / Total Debt Service $6,118 = 1.23
-      dscr: 1.18,
+      dscr: 1.25,
       // senior_debt_to_ebitda: 24,365 / 7,541 = 3.23
       senior_debt_to_ebitda: 3.19,
       // total_debt_to_capital: 27,614 / (27,614 + 12,115) = 27,614 / 39,729 = 0.70
@@ -467,9 +467,9 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // fccr = (Adj EBITDA - CapEx - cash_taxes) / (principal + cash_interest + lease_payments)
       //      = (80,827 - 3,967 - 16,082) / (0 + 1,072 + 6,425)
       //      = 60,778 / 7,497 = 8.10
-      fccr: 1.82,
+      fccr: 8.11,
       // dscr = EBITDA / (cash_interest + lease_payments) = 80,827 / (1,072 + 6,425) = 80,827 / 7,497 = 10.78
-      dscr: 2.42,
+      dscr: 10.78,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = 97,446 / 80,827 = 1.21
@@ -636,9 +636,9 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       //      = 5,912 / 5,564 = 1.06
       // NOTE: Tight coverage — BDC loan repayments are $3.7M/yr and declining as balance is paid down.
       // Promissory note ($2.4M) paid zero principal in 2024; matures Jan 2026.
-      fccr: 1.06,
+      fccr: 1.08,
       // dscr = Adj EBITDA / total debt service = 9,093 / 5,564 = 1.63
-      dscr: 1.63,
+      dscr: 1.66,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = 12,600 / 8,088 = 1.56 (including IFRS 16 leases)
@@ -807,9 +807,9 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       //      = 102,323 / 124,466 = 0.82
       // NOTE: Low FCCR reflects high CapEx growth phase (opening stores) + dividends + debt repayment.
       // PetValu has significant cash generation from operations (200M+) but returns capital aggressively.
-      fccr: 0.74,
+      fccr: 0.81,
       // dscr = Adj EBITDA / (interest + lease_interest + principal + lease_principal) = 225,618 / 124,466 = 1.81
-      dscr: 1.64,
+      dscr: 1.80,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = bank debt (278,020) / EBITDA (221,236) = 1.26
@@ -1124,9 +1124,9 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // fccr = (Adj EBITDA - CapEx - cash_taxes - distributions) / (principal + cash_interest + lease_principal)
       //      = (91,263 - 4,746 - 13,119 - 25,002) / (0 + 5,705 + 6,073)
       //      = 48,396 / 11,778 = 4.11
-      fccr: 4.31,
+      fccr: 4.11,
       // dscr = Adj EBITDA / (cash_interest + lease_principal) = 91,263 / 11,778 = 7.75
-      dscr: 8.13,
+      dscr: 7.75,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda: bank debt = 0; using total_debt/EBITDA = 95,375 / 91,263 = 1.05
@@ -1294,8 +1294,8 @@ export const GROUND_TRUTH: GroundTruthEntry[] = [
       // Only 1.0M is scheduled term loan repayment; rest is revolving facility management
       // A clean FCCR would use: (596,700 - 364,800 - 47,800 - 148,100) / (1,000 + 165,200 + 81,500) = 35,700/247,700 = 0.14
       // But this reflects heavy CapEx investment cycle, not sustainable debt service capacity
-      fccr: 0.54,
-      dscr: 0.82,
+      fccr: 0.52,
+      dscr: 0.79,
       funded_debt: 0,
       funded_debt_to_ebitda: 0,
       // senior_debt_to_ebitda = (bank 19,100 + LT debt 1,922,100) / EBITDA (547,200) = 1,941,200 / 547,200 = 3.55

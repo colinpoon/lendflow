@@ -7,7 +7,7 @@
  *   Principal: repayment_of_debt > debt_components.bank_debt_current > ttm_principal_payments
  *              (repayment_of_debt captures ALL debt classes retired, not just bank debt)
  *   Interest:  cash_interest_paid (cross-checked vs accrual) > total_interest_expense > ttm_interest_expense > interest (accrual)
- *   Leases:    fixed_charges.finance_lease_payments > debt_components.lease_liabilities_current > payment_of_lease_liability
+ *   Leases:    fixed_charges.finance_lease_payments > payment_of_lease_liability > debt_components.lease_liabilities_current
  */
 
 import type { ExtractedMetrics, DebtComponents, FixedCharges } from '@/types';
@@ -312,20 +312,29 @@ export function resolveDebtService(metrics: ExtractedMetrics, year?: string): Re
   // ── Leases (finance only) ─────────────────────────────────────────────
   // Banks exclude IFRS 16 operating lease payments from FCCR/DSCR.
   // Prefer explicit finance lease payments from fixed_charges,
-  // then balance-sheet current lease liabilities,
-  // then cash-flow payment_of_lease_liability as last resort.
+  // then cash-flow payment_of_lease_liability (actual cash paid),
+  // then balance-sheet current lease liabilities as last resort.
+  //
+  // IMPORTANT: payment_of_lease_liability (cash flow) must rank above
+  // lease_liabilities_current (balance sheet). The balance sheet figure
+  // is the ending POSITION (what's due next 12 months), not the actual
+  // cash PAID during the period. FCCR measures coverage of actual fixed
+  // charges, so actual cash outflows are the correct input. Using the
+  // balance sheet position can wildly misstate the denominator — e.g.,
+  // Taiga FY2024: payment = 6,425 vs current position = 6,015 (small gap),
+  // but for companies with growing lease portfolios the gap can be massive.
   let leases = 0;
   let leaseSource: DebtServiceSource = 'none';
 
   if (fc.finance_lease_payments != null && fc.finance_lease_payments > 0) {
     leases = fc.finance_lease_payments;
     leaseSource = 'finance_lease_payments';
-  } else if (dc.lease_liabilities_current != null && dc.lease_liabilities_current > 0) {
-    leases = dc.lease_liabilities_current;
-    leaseSource = 'lease_liabilities_current';
   } else if (metrics.payment_of_lease_liability != null && metrics.payment_of_lease_liability > 0) {
     leases = metrics.payment_of_lease_liability;
     leaseSource = 'payment_of_lease_liability';
+  } else if (dc.lease_liabilities_current != null && dc.lease_liabilities_current > 0) {
+    leases = dc.lease_liabilities_current;
+    leaseSource = 'lease_liabilities_current';
   }
 
   // ── Lease Interest Double-Count Prevention ────────────────────────────

@@ -142,7 +142,21 @@ describe('resolveDebtService', () => {
       expect(result.sources.lease_source).toBe('finance_lease_payments');
     });
 
-    it('falls back to lease_liabilities_current', () => {
+    it('prefers payment_of_lease_liability over lease_liabilities_current', () => {
+      const metrics = makeMetrics({
+        payment_of_lease_liability: 6425,
+        debt_components: makeDebtComponents({
+          lease_liabilities_current: 6015,
+        }),
+      });
+      const result = resolveDebtService(metrics);
+      // Cash flow payment (actual cash paid) should be preferred over
+      // balance sheet current portion (what's due next 12 months)
+      expect(result.leases).toBe(6425);
+      expect(result.sources.lease_source).toBe('payment_of_lease_liability');
+    });
+
+    it('falls back to lease_liabilities_current when no cash flow payment', () => {
       const metrics = makeMetrics({
         debt_components: makeDebtComponents({
           lease_liabilities_current: 2500,
@@ -153,13 +167,16 @@ describe('resolveDebtService', () => {
       expect(result.sources.lease_source).toBe('lease_liabilities_current');
     });
 
-    it('falls back to payment_of_lease_liability', () => {
+    it('falls through to lease_liabilities_current when payment_of_lease_liability is zero', () => {
       const metrics = makeMetrics({
-        payment_of_lease_liability: 1800,
+        payment_of_lease_liability: 0,
+        debt_components: makeDebtComponents({
+          lease_liabilities_current: 2500,
+        }),
       });
       const result = resolveDebtService(metrics);
-      expect(result.leases).toBe(1800);
-      expect(result.sources.lease_source).toBe('payment_of_lease_liability');
+      expect(result.leases).toBe(2500);
+      expect(result.sources.lease_source).toBe('lease_liabilities_current');
     });
   });
 
