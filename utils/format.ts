@@ -8,9 +8,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Format currency values displayed in thousands with auto-scaling
- * @param value - The value in thousands (e.g., 24889 = $24,889K = $24.9M)
- * @returns Formatted string like "$500K", "$24.9M", "$1.2B" or "—" for null/undefined
+ * Format currency values displayed in thousands — always shows K suffix
+ * @param value - The value in thousands (e.g., 24889 = $24,889K)
+ * @returns Formatted string like "$500K", "$24,889K" or "—" for null/undefined
  */
 export function formatCurrency(value: number | null | undefined): string {
   if (value == null || (typeof value === 'number' && isNaN(value))) {
@@ -20,9 +20,7 @@ export function formatCurrency(value: number | null | undefined): string {
   const abs = Math.abs(value);
   const sign = value < 0 ? '-' : '';
 
-  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}B`;
-  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}M`;
-  return `${sign}$${abs.toLocaleString('en-US', { maximumFractionDigits: 0 })}K`;
+  return `${sign}$${Math.round(abs).toLocaleString('en-US')}K`;
 }
 
 /**
