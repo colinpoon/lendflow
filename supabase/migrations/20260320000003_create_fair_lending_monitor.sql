@@ -56,7 +56,7 @@ CREATE POLICY "Users can read fair lending records"
   USING (true);
 
 -- NOTE: No UPDATE or DELETE policies. Append-only by design.
--- When Task 18 (Clerk JWT UUID mismatch) is resolved, scope policies to user_id.
+-- User-scoped RLS policies are applied in 20260320000004_scope_rls_policies.sql.
 
 -- Indexes for disparity analysis queries
 CREATE INDEX IF NOT EXISTS idx_flm_lending_decision

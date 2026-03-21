@@ -61,8 +61,7 @@ CREATE POLICY "Users can read own audit records"
   USING (true);
 
 -- NOTE: No UPDATE or DELETE policies. This table is append-only by design.
--- When Task 18 (Clerk JWT UUID mismatch) is resolved, replace USING(true) / WITH CHECK(true)
--- with proper user-scoped policies: USING (auth.jwt() ->> 'sub' = user_id).
+-- User-scoped RLS policies are applied in 20260320000004_scope_rls_policies.sql.
 
 -- Indexes for common query patterns
 CREATE INDEX IF NOT EXISTS idx_audit_trail_user_created
