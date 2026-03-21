@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { allowed, retryAfterSeconds } = checkRateLimit(userId, 'vision');
+  const { allowed, retryAfterSeconds } = await checkRateLimit(userId, 'vision');
   if (!allowed) {
     return NextResponse.json(
       { error: 'Rate limit exceeded. Please wait before submitting another extraction.' },
@@ -356,9 +356,10 @@ export async function POST(req: NextRequest) {
         let detectedConflicts: ReturnType<typeof detectYearConflicts>['conflicts'] = [];
 
         if (existingExtractions && existingExtractions.length > 0) {
-          // Build a phantom extraction object (not yet in DB) to run conflict detection
+          // Build a phantom extraction object (not yet in DB) to run conflict detection.
+          // Typed explicitly as ExtractionWithDocument so the shape is verified at compile time.
           const now = new Date().toISOString();
-          const phantomExtraction = {
+          const phantomExtraction: ExtractionWithDocument = {
             id: documentId, // placeholder — extraction not yet persisted
             document_id: documentId,
             project_id: projectId!,
@@ -377,7 +378,7 @@ export async function POST(req: NextRequest) {
             created_at: now,
             updated_at: now,
             documents: { id: documentId, file_name: sanitizedFileName },
-          } as unknown as ExtractionWithDocument;
+          };
 
           const conflictResult = detectYearConflicts(
             phantomExtraction,

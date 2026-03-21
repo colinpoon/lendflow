@@ -1,33 +1,55 @@
 /**
- * In-memory sliding-window rate limiter for API endpoints.
- * No external dependencies — timestamps are stored per userId in a module-level Map.
+ * Redis-backed sliding-window rate limiter for API endpoints.
  *
- * Uses LRU eviction: delete-and-reinsert on every access keeps recently active
- * users at the end of Map iteration order, so eviction targets truly inactive users.
+ * Uses @upstash/ratelimit with a sliding window algorithm for accurate
+ * cross-instance rate limiting on serverless deployments.
  *
- * Memory cap: 10,000 user entries (least-recently-used evicted when full).
- *
- * TODO: Replace with Redis-backed solution (e.g. @upstash/ratelimit) for production
- * multi-instance / serverless deployments where module-level state doesn't persist.
+ * Falls back to a permissive no-op when Upstash env vars are not configured
+ * (local development without Redis).
  */
 
-const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
-const MAX_ENTRIES = 10_000;
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
 interface TierConfig {
   maxRequests: number;
+  windowSeconds: number;
 }
 
 const TIER_CONFIGS: Record<string, TierConfig> = {
-  standard: { maxRequests: 5 },
-  vision: { maxRequests: 3 },
+  standard: { maxRequests: 5, windowSeconds: 600 },  // 5 per 10 min
+  vision: { maxRequests: 3, windowSeconds: 600 },     // 3 per 10 min
 };
 
 /**
- * Map from userId → sorted array of request timestamps (epoch ms).
- * Entries are ordered by most-recent access (LRU) via delete-and-reinsert.
+ * Lazily initialized Ratelimit instances per tier.
+ * Created on first use to avoid import-time errors when env vars are missing.
  */
-const requestLog = new Map<string, number[]>();
+const limiters = new Map<string, Ratelimit>();
+
+function getLimiter(tier: string): Ratelimit | null {
+  if (limiters.has(tier)) return limiters.get(tier)!;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    return null;
+  }
+
+  const config = TIER_CONFIGS[tier];
+  if (!config) return null;
+
+  const limiter = new Ratelimit({
+    redis: new Redis({ url, token }),
+    limiter: Ratelimit.slidingWindow(config.maxRequests, `${config.windowSeconds} s`),
+    prefix: `@lendflow/ratelimit:${tier}`,
+    ephemeralCache: new Map(),
+  });
+
+  limiters.set(tier, limiter);
+  return limiter;
+}
 
 /**
  * Check whether the given user is within the rate limit.
@@ -35,51 +57,32 @@ const requestLog = new Map<string, number[]>();
  * @param userId - Clerk userId used as the rate-limit key
  * @param tier - Rate limit tier: 'standard' (5/10min) or 'vision' (3/10min)
  * @returns `allowed` — true if the request should proceed;
- *          `retryAfterSeconds` — seconds until the oldest in-window request
- *          expires (0 when allowed)
+ *          `retryAfterSeconds` — seconds until a slot opens (0 when allowed)
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   userId: string,
   tier: 'standard' | 'vision' = 'standard'
-): {
+): Promise<{
   allowed: boolean;
   retryAfterSeconds: number;
-} {
-  const now = Date.now();
-  const windowStart = now - WINDOW_MS;
-  const { maxRequests } = TIER_CONFIGS[tier];
+}> {
+  const limiter = getLimiter(tier);
 
-  // Retrieve and prune timestamps that have fallen outside the window
-  const timestamps = (requestLog.get(userId) ?? []).filter(
-    (ts) => ts > windowStart
-  );
-
-  // LRU: delete and re-insert to move this user to the end of iteration order
-  requestLog.delete(userId);
-
-  if (timestamps.length >= maxRequests) {
-    // Still update the entry position (user is active, just rate-limited)
-    requestLog.set(userId, timestamps);
-    // Oldest in-window timestamp determines when a slot opens up
-    const oldestInWindow = timestamps[0];
-    const retryAfterMs = oldestInWindow + WINDOW_MS - now;
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.ceil(retryAfterMs / 1000),
-    };
+  if (!limiter) {
+    // No Redis configured — allow all requests (local dev)
+    console.warn('⚠️ Rate limiter: Upstash Redis not configured, allowing request');
+    return { allowed: true, retryAfterSeconds: 0 };
   }
 
-  // Admit the request: record the timestamp
-  timestamps.push(now);
+  const { success, reset } = await limiter.limit(userId);
 
-  // Evict the least-recently-used entry if the map has reached capacity
-  if (requestLog.size >= MAX_ENTRIES) {
-    const lruKey = requestLog.keys().next().value;
-    if (lruKey !== undefined) {
-      requestLog.delete(lruKey);
-    }
+  if (success) {
+    return { allowed: true, retryAfterSeconds: 0 };
   }
 
-  requestLog.set(userId, timestamps);
-  return { allowed: true, retryAfterSeconds: 0 };
+  const retryAfterMs = reset - Date.now();
+  return {
+    allowed: false,
+    retryAfterSeconds: Math.ceil(Math.max(0, retryAfterMs) / 1000),
+  };
 }
