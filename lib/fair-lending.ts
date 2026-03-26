@@ -2,6 +2,7 @@ import 'server-only';
 import { createAdminClient } from '@/utils/supabase/server';
 import type { ExtractionResult } from '@/utils/aiProcessor';
 import type { FairLendingMonitorInsert } from '@/lib/supabase/types';
+import { logger } from '@/lib/logger';
 
 /**
  * Revenue bucket thresholds (in thousands).
@@ -95,10 +96,10 @@ export async function logFairLendingRecord(params: FairLendingParams): Promise<v
     const { error } = await adminSupabase.from('fair_lending_monitor').insert(record);
 
     if (error) {
-      console.error('❗ Failed to write fair lending monitor record:', error.message);
+      logger.error('Failed to write fair lending monitor record', { error: error.message, projectId, extractionId });
     }
   } catch (err) {
     // Never fail the extraction request due to monitoring
-    console.error('❗ Fair lending monitoring error:', err instanceof Error ? err.message : err);
+    logger.error('Fair lending monitoring error', { error: err instanceof Error ? err.message : String(err), projectId: params.projectId });
   }
 }

@@ -7,6 +7,7 @@ import {
   type ExtractionWithDocument,
   type ConflictResolution,
 } from '@/lib/extraction-utils';
+import { logger } from '@/lib/logger';
 
 // UUID v4 regex for validating IDs
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
       .eq('user_id', userId);
 
     if (docUpdateError) {
-      console.error('❗ Failed to update document status after conflict resolution:', docUpdateError.message);
+      logger.error('Failed to update document status after conflict resolution', { error: docUpdateError.message, documentId: targetExtraction.document_id });
     }
 
     // Update project status if we have risk assessment
@@ -127,7 +128,7 @@ export async function POST(req: NextRequest) {
         .eq('user_id', userId);
 
       if (projectUpdateError) {
-        console.error('❗ Failed to update project risk score after conflict resolution:', projectUpdateError.message);
+        logger.error('Failed to update project risk score after conflict resolution', { error: projectUpdateError.message, projectId });
       }
     }
 

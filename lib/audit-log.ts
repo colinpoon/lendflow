@@ -3,6 +3,7 @@ import { createAdminClient } from '@/utils/supabase/server';
 import { AI_CONFIG } from '@/lib/constants';
 import type { ExtractionResult } from '@/utils/aiProcessor';
 import type { AuditTrailInsert, Json } from '@/lib/supabase/types';
+import { logger } from '@/lib/logger';
 
 interface AuditLogParams {
   userId: string;
@@ -79,12 +80,12 @@ export async function logAuditEvent(params: AuditLogParams): Promise<void> {
     const { error } = await adminSupabase.from('audit_trail').insert(record);
 
     if (error) {
-      console.error('❗ Failed to write audit trail record:', error.message);
+      logger.error('Failed to write audit trail record', { error: error.message, documentId, extractionId });
     } else {
-      console.log(`📋 Audit trail recorded for document ${documentId} (extraction: ${extractionId})`);
+      logger.info('Audit trail recorded', { documentId, extractionId });
     }
   } catch (err) {
     // Never fail the extraction request due to audit logging
-    console.error('❗ Audit trail logging error:', err instanceof Error ? err.message : err);
+    logger.error('Audit trail logging error', { error: err instanceof Error ? err.message : String(err), documentId: params.documentId });
   }
 }

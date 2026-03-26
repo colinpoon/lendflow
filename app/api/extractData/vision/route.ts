@@ -9,6 +9,7 @@ import { checkRateLimit } from '@/lib/rate-limiter';
 import { logAuditEvent } from '@/lib/audit-log';
 import { logFairLendingRecord } from '@/lib/fair-lending';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 // SSE progress type for complete message with data
 interface SSECompleteProgress {
@@ -24,12 +25,12 @@ function sseMessage(data: Record<string, unknown> | SSECompleteProgress): string
 }
 
 export async function POST(req: NextRequest) {
-  console.log('✅ API Hit: /api/extractData/vision');
+  logger.info('API hit: /api/extractData/vision');
 
   const { userId } = await auth();
 
   if (!userId) {
-    console.error('❗ Unauthorized request');
+    logger.warn('Unauthorized request to /api/extractData/vision');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
   // Validate projectId is a valid UUID if provided
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (projectId && !uuidRegex.test(projectId)) {
-    console.error('❗ Invalid projectId format');
+    logger.warn('Invalid projectId format', { projectId });
     return NextResponse.json({ error: 'Invalid projectId format' }, { status: 400 });
   }
 
@@ -75,19 +76,19 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (ownershipError || !ownedProject) {
-      console.error(`❗ Project ownership check failed: user ${userId} does not own project ${projectId}`);
+      logger.warn('Project ownership check failed', { userId, projectId });
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
   }
 
   if (!file) {
-    console.error('❗ No file uploaded');
+    logger.warn('No file uploaded in request');
     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
   }
 
   // PDF-only validation — must happen before opening the SSE stream
   if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-    console.error('❗ Non-PDF file rejected:', file.type, file.name);
+    logger.warn('Non-PDF file rejected for vision extraction', { mimeType: file.type, fileName: file.name });
     return NextResponse.json(
       {
         error:
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
 
   // File size check — enforce the same shared limit as text extraction
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    console.error(`❗ File too large: ${file.size} bytes`);
+    logger.warn('File too large', { fileSize: file.size, maxBytes: MAX_FILE_SIZE_BYTES });
     return NextResponse.json(
       { error: `File too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.` },
       { status: 400 }
@@ -109,9 +110,7 @@ export async function POST(req: NextRequest) {
   // Sanitize file name to prevent path traversal — file.name is user-controlled
   const sanitizedFileName = path.basename(file.name).replace(/[^\w.\-() ]/g, '_');
 
-  console.log(
-    `📁 File received: ${sanitizedFileName}, size: ${file.size}, type: ${file.type}`
-  );
+  logger.info('File received', { fileName: sanitizedFileName, fileSize: file.size, mimeType: file.type });
 
   // Create a TransformStream for SSE
   const encoder = new TextEncoder();
@@ -149,7 +148,7 @@ export async function POST(req: NextRequest) {
 
       // If no projectId, create a new project
       if (!projectId) {
-        console.log('📂 No projectId provided, creating new project...');
+        logger.info('No projectId provided, creating new project', { fileName: sanitizedFileName });
         const { data: project, error: projectError } = await supabase
           .from('projects')
           .insert({
@@ -161,7 +160,7 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (projectError) {
-          console.error('❗ Error creating project:', projectError);
+          logger.error('Error creating project', { error: projectError.message });
           await sendProgress({
             stage: 'error',
             progress: 0,
@@ -171,14 +170,14 @@ export async function POST(req: NextRequest) {
           return;
         }
         projectId = project.id;
-        console.log(`✅ Created new project: ${projectId}`);
+        logger.info('Created new project', { projectId });
       }
 
       // Generate document ID and storage path
       const documentId = crypto.randomUUID();
       const storagePath = `${userId}/${projectId}/${documentId}/${sanitizedFileName}`;
 
-      console.log(`📤 Uploading to Supabase Storage: ${storagePath}`);
+      logger.info('Uploading to Supabase Storage', { storagePath });
 
       await sendProgress({
         stage: 'uploading',
@@ -190,7 +189,7 @@ export async function POST(req: NextRequest) {
       const fileBuffer = await file.arrayBuffer();
       const magicBytes = new Uint8Array(fileBuffer, 0, 4);
       if (magicBytes.length < 4 || magicBytes[0] !== 0x25 || magicBytes[1] !== 0x50 || magicBytes[2] !== 0x44 || magicBytes[3] !== 0x46) {
-        console.error('❗ Magic byte validation failed: file does not start with %PDF');
+        logger.warn('Magic byte validation failed: file does not start with %PDF', { fileName: sanitizedFileName });
         await sendProgress({
           stage: 'error',
           progress: 0,
@@ -213,7 +212,7 @@ export async function POST(req: NextRequest) {
 
       if (existingDoc) {
         const uploadDate = new Date(existingDoc.created_at).toLocaleDateString();
-        console.log(`🔁 Duplicate detected: "${existingDoc.file_name}" uploaded on ${uploadDate}`);
+        logger.info('Duplicate file detected', { existingFileName: existingDoc.file_name, uploadDate });
         await sendProgress({
           stage: 'error',
           progress: 0,
@@ -232,7 +231,7 @@ export async function POST(req: NextRequest) {
         });
 
       if (uploadError) {
-        console.error('❗ Storage upload error:', uploadError);
+        logger.error('Storage upload error', { error: uploadError.message, storagePath });
         await sendProgress({
           stage: 'error',
           progress: 0,
@@ -242,7 +241,7 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      console.log('✅ File uploaded to Supabase Storage');
+      logger.info('File uploaded to Supabase Storage', { storagePath });
 
       // Create document record
       const { error: docError } = await supabase.from('documents').insert({
@@ -259,7 +258,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (docError) {
-        console.error('❗ Error creating document record:', docError);
+        logger.error('Error creating document record', { error: docError.message, documentId });
         await adminSupabase.storage.from('financial-documents').remove([storagePath]);
         await sendProgress({
           stage: 'error',
@@ -270,7 +269,7 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      console.log(`✅ Document record created: ${documentId}`);
+      logger.info('Document record created', { documentId });
 
       await sendProgress({
         stage: 'uploading',
@@ -284,7 +283,7 @@ export async function POST(req: NextRequest) {
         .download(storagePath);
 
       if (downloadError || !fileData) {
-        console.error('❗ Error downloading file for processing:', downloadError);
+        logger.error('Error downloading file for processing', { error: downloadError?.message, storagePath });
         await updateDocumentStatus(supabase, documentId, 'failed', 'Failed to download file for processing');
         await sendProgress({
           stage: 'error',
@@ -298,7 +297,7 @@ export async function POST(req: NextRequest) {
       // Convert Blob to Buffer for vision processor (no temp file needed)
       const pdfBuffer = Buffer.from(await fileData.arrayBuffer());
 
-      console.log('🤖 Starting vision-based extraction...');
+      logger.info('Starting vision-based extraction', { documentId });
 
       await sendProgress({
         stage: 'extracting',
@@ -313,7 +312,7 @@ export async function POST(req: NextRequest) {
         const extractedData = await extractVisionData(pdfBuffer, userId);
         const processingTime = Date.now() - startTime;
 
-        console.log(`✅ Vision extraction completed in ${processingTime}ms`);
+        logger.info('Vision extraction completed', { processingTimeMs: processingTime, documentId });
 
         await sendProgress({
           stage: 'computing',
@@ -348,7 +347,7 @@ export async function POST(req: NextRequest) {
           .order('created_at', { ascending: false });
 
         if (existingError) {
-          console.error('❗ Error querying existing extractions:', existingError);
+          logger.error('Error querying existing extractions', { error: existingError.message, projectId });
           // Non-fatal: proceed without conflict detection
         }
 
@@ -390,7 +389,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (hasConflicts) {
-          console.log(`⚠️ Year conflicts detected: ${detectedConflicts.map(c => c.year).join(', ')}`);
+          logger.warn('Year conflicts detected', { years: detectedConflicts.map(c => c.year), projectId });
         }
 
         // ── Insert extraction ──────────────────────────────────────────────────
@@ -419,7 +418,7 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (extractionError || !extraction) {
-          console.error('❗ Error saving extraction:', extractionError);
+          logger.error('Error saving extraction', { error: extractionError?.message, documentId });
           // Clean up orphaned storage object since extraction record was not created
           await adminSupabase.storage.from('financial-documents').remove([storagePath]);
           await updateDocumentStatus(freshSupabase, documentId, 'failed', 'Failed to save extraction results');
@@ -432,7 +431,7 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        console.log(`✅ Extraction saved: ${extraction.id}`);
+        logger.info('Extraction saved', { extractionId: extraction.id, documentId });
 
         // ── Regulatory audit trail (non-blocking) ───────────────────────────
         logAuditEvent({
@@ -496,9 +495,9 @@ export async function POST(req: NextRequest) {
 
           if (projectUpdateError) {
             // Non-fatal: extraction is saved; project badge will be stale until next load
-            console.error('❗ Failed to update project risk score:', projectUpdateError.message);
+            logger.error('Failed to update project risk score', { error: projectUpdateError.message, projectId });
           } else {
-            console.log('✅ Project risk score updated');
+            logger.info('Project risk score updated', { projectId });
           }
         }
 
@@ -520,7 +519,7 @@ export async function POST(req: NextRequest) {
         }
       } catch (visionError: unknown) {
         const errorMessage = visionError instanceof Error ? visionError.message : 'Vision extraction failed';
-        console.error('❗ Vision extraction error:', visionError);
+        logger.error('Vision extraction error', { error: visionError instanceof Error ? visionError.message : String(visionError), documentId });
 
         // Get fresh client for error handling (original token may have expired)
         const errorSupabase = await createClient();
@@ -534,7 +533,7 @@ export async function POST(req: NextRequest) {
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❗ Error processing file:', errorMessage);
+      logger.error('Error processing file', { error: errorMessage });
 
       await sendProgress({
         stage: 'error',

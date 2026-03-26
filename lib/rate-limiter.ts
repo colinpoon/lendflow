@@ -10,6 +10,7 @@
 
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { logger } from '@/lib/logger';
 
 interface TierConfig {
   maxRequests: number;
@@ -70,7 +71,7 @@ export async function checkRateLimit(
 
   if (!limiter) {
     // No Redis configured — allow all requests (local dev)
-    console.warn('⚠️ Rate limiter: Upstash Redis not configured, allowing request');
+    logger.warn('Rate limiter: Upstash Redis not configured, allowing request', { tier });
     return { allowed: true, retryAfterSeconds: 0 };
   }
 

@@ -11,6 +11,7 @@ import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '@/lib/constants';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { logAuditEvent } from '@/lib/audit-log';
 import { logFairLendingRecord } from '@/lib/fair-lending';
+import { logger } from '@/lib/logger';
 
 // SSE progress type for complete message with data
 interface SSECompleteProgress {
@@ -72,7 +73,7 @@ async function cleanupStaleProcessingRecords(
     .lt('created_at', fifteenMinutesAgo);
 
   if (queryError) {
-    console.warn('⚠️ Failed to query stale processing records:', queryError.message);
+    logger.warn('Failed to query stale processing records', { error: queryError.message });
     return;
   }
 
@@ -88,25 +89,25 @@ async function cleanupStaleProcessingRecords(
     .in('id', staleIds);
 
   if (updateError) {
-    console.warn('⚠️ Failed to mark stale processing records as failed:', updateError.message);
+    logger.warn('Failed to mark stale processing records as failed', { error: updateError.message });
   } else {
-    console.log(`🧹 Marked ${staleIds.length} stale processing record(s) as failed for project ${projectId}`);
+    logger.info('Marked stale processing records as failed', { count: staleIds.length, projectId });
   }
 }
 
 export async function POST(req: NextRequest) {
-  console.log('✅ API Hit: /api/extractData');
+  logger.info('API hit: /api/extractData');
 
   const { userId } = await auth();
 
   if (!userId) {
-    console.error('❗ Unauthorized request');
+    logger.warn('Unauthorized request to /api/extractData');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { allowed, retryAfterSeconds } = await checkRateLimit(userId);
   if (!allowed) {
-    console.warn(`⚠️ Rate limit exceeded for user ${userId}`);
+    logger.warn('Rate limit exceeded', { userId });
     return NextResponse.json(
       { error: 'Too many requests. Please wait before uploading again.' },
       { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } }
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest) {
   // Validate projectId is a valid UUID if provided
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (projectId && !uuidRegex.test(projectId)) {
-    console.error('❗ Invalid projectId format');
+    logger.warn('Invalid projectId format', { projectId });
     return NextResponse.json({ error: 'Invalid projectId format' }, { status: 400 });
   }
 
@@ -144,13 +145,13 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (ownershipError || !ownedProject) {
-      console.error(`❗ Project ownership check failed: user ${userId} does not own project ${projectId}`);
+      logger.warn('Project ownership check failed', { userId, projectId });
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
   }
 
   if (!file) {
-    console.error('❗ No file uploaded');
+    logger.warn('No file uploaded in request');
     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
   }
 
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
   ]);
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    console.error(`❗ File too large: ${file.size} bytes`);
+    logger.warn('File too large', { fileSize: file.size, maxBytes: MAX_FILE_SIZE_BYTES });
     return NextResponse.json(
       { error: `File too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.` },
       { status: 413 }
@@ -171,7 +172,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
-    console.error(`❗ Unsupported file type: ${file.type}`);
+    logger.warn('Unsupported file type', { mimeType: file.type });
     return NextResponse.json(
       { error: `Unsupported file type "${file.type}". Accepted formats: PDF (.pdf), Excel (.xlsx, .xls), Word (.docx).` },
       { status: 415 }
@@ -181,9 +182,7 @@ export async function POST(req: NextRequest) {
   // Sanitize file name to prevent path traversal — file.name is user-controlled
   const sanitizedFileName = path.basename(file.name).replace(/[^\w.\-() ]/g, '_');
 
-  console.log(
-    `📁 File received: ${sanitizedFileName}, size: ${file.size}, type: ${file.type}`
-  );
+  logger.info('File received', { fileName: sanitizedFileName, fileSize: file.size, mimeType: file.type });
 
   // Create a TransformStream for SSE
   const encoder = new TextEncoder();
@@ -221,7 +220,7 @@ export async function POST(req: NextRequest) {
 
       // If no projectId, create a new project
       if (!projectId) {
-        console.log('📂 No projectId provided, creating new project...');
+        logger.info('No projectId provided, creating new project', { fileName: sanitizedFileName });
         const { data: project, error: projectError } = await supabase
           .from('projects')
           .insert({
@@ -233,7 +232,7 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (projectError) {
-          console.error('❗ Error creating project:', projectError);
+          logger.error('Error creating project', { error: projectError.message });
           await sendProgress({
             stage: 'error',
             progress: 0,
@@ -243,7 +242,7 @@ export async function POST(req: NextRequest) {
           return;
         }
         projectId = project.id;
-        console.log(`✅ Created new project: ${projectId}`);
+        logger.info('Created new project', { projectId });
       }
 
       // Clean up any stuck processing records for this project before adding a new one
@@ -253,7 +252,7 @@ export async function POST(req: NextRequest) {
       const documentId = crypto.randomUUID();
       const storagePath = `${userId}/${projectId}/${documentId}/${sanitizedFileName}`;
 
-      console.log(`📤 Uploading to Supabase Storage: ${storagePath}`);
+      logger.info('Uploading to Supabase Storage', { storagePath });
 
       // Read file buffer once — used for magic byte validation, storage upload, and temp file
       const fileBuffer = await file.arrayBuffer();
@@ -261,7 +260,7 @@ export async function POST(req: NextRequest) {
 
       // Validate magic bytes BEFORE uploading — reject spoofed MIME types early
       if (!validateMagicBytes(buffer, file.type)) {
-        console.error(`❗ Magic byte validation failed: claimed ${file.type}, content mismatch`);
+        logger.warn('Magic byte validation failed', { claimedMimeType: file.type });
         await sendProgress({
           stage: 'error',
           progress: 0,
@@ -284,7 +283,7 @@ export async function POST(req: NextRequest) {
 
       if (existingDoc) {
         const uploadDate = new Date(existingDoc.created_at).toLocaleDateString();
-        console.log(`🔁 Duplicate detected: "${existingDoc.file_name}" uploaded on ${uploadDate}`);
+        logger.info('Duplicate file detected', { existingFileName: existingDoc.file_name, uploadDate });
         await sendProgress({
           stage: 'error',
           progress: 0,
@@ -309,7 +308,7 @@ export async function POST(req: NextRequest) {
         });
 
       if (uploadError) {
-        console.error('❗ Storage upload error:', uploadError);
+        logger.error('Storage upload error', { error: uploadError.message, storagePath });
         await sendProgress({
           stage: 'error',
           progress: 0,
@@ -319,7 +318,7 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      console.log('✅ File uploaded to Supabase Storage');
+      logger.info('File uploaded to Supabase Storage', { storagePath });
 
       // Create document record
       const { error: docError } = await supabase.from('documents').insert({
@@ -336,7 +335,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (docError) {
-        console.error('❗ Error creating document record:', docError);
+        logger.error('Error creating document record', { error: docError.message, documentId });
         await adminSupabase.storage.from('financial-documents').remove([storagePath]);
         await sendProgress({
           stage: 'error',
@@ -347,7 +346,7 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      console.log(`✅ Document record created: ${documentId}`);
+      logger.info('Document record created', { documentId });
 
       await sendProgress({
         stage: 'uploading',
@@ -360,8 +359,8 @@ export async function POST(req: NextRequest) {
       const tempPath = path.join(tempDir, `${documentId}-${sanitizedFileName}`);
       await fs.promises.writeFile(tempPath, buffer);
 
-      console.log(`📂 Temp file created: ${tempPath}`);
-      console.log('🤖 Starting AI data extraction...');
+      logger.info('Temp file created', { tempPath });
+      logger.info('Starting AI data extraction', { documentId });
 
       const startTime = Date.now();
 
@@ -371,7 +370,7 @@ export async function POST(req: NextRequest) {
         const extractedData = await extractFinancialData(tempPath, sendProgress, userId, req.signal);
         const processingTime = Date.now() - startTime;
 
-        console.log(`✅ AI extraction completed in ${processingTime}ms`);
+        logger.info('AI extraction completed', { processingTimeMs: processingTime, documentId });
 
         await sendProgress({
           stage: 'saving',
@@ -400,7 +399,7 @@ export async function POST(req: NextRequest) {
           .order('created_at', { ascending: false });
 
         if (existingError) {
-          console.error('❗ Error querying existing extractions:', existingError);
+          logger.error('Error querying existing extractions', { error: existingError.message, projectId });
           // Non-fatal: proceed without conflict detection
         }
 
@@ -441,7 +440,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (hasConflicts) {
-          console.log(`⚠️ Year conflicts detected: ${detectedConflicts.map(c => c.year).join(', ')}`);
+          logger.warn('Year conflicts detected', { years: detectedConflicts.map(c => c.year), projectId });
         }
 
         // ── Insert extraction ──────────────────────────────────────────────────
@@ -470,7 +469,7 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (extractionError || !extraction) {
-          console.error('❗ Error saving extraction:', extractionError);
+          logger.error('Error saving extraction', { error: extractionError?.message, documentId });
           // Clean up orphaned storage object since extraction record was not created
           await adminSupabase.storage.from('financial-documents').remove([storagePath]);
           await updateDocumentStatus(freshSupabase, documentId, 'failed', 'Failed to save extraction results');
@@ -483,7 +482,7 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        console.log(`✅ Extraction saved: ${extraction.id}`);
+        logger.info('Extraction saved', { extractionId: extraction.id, documentId });
 
         // ── Regulatory audit trail (non-blocking) ───────────────────────────
         logAuditEvent({
@@ -549,9 +548,9 @@ export async function POST(req: NextRequest) {
 
           if (projectUpdateError) {
             // Non-fatal: extraction is saved; project badge will be stale until next load
-            console.error('❗ Failed to update project risk score:', projectUpdateError.message);
+            logger.error('Failed to update project risk score', { error: projectUpdateError.message, projectId });
           } else {
-            console.log('✅ Project risk score updated');
+            logger.info('Project risk score updated', { projectId });
           }
         }
 
@@ -575,9 +574,9 @@ export async function POST(req: NextRequest) {
         // Distinguish client disconnect from actual errors
         const isAbort = aiError instanceof DOMException && aiError.name === 'AbortError';
         if (isAbort) {
-          console.log('🛑 Client disconnected — extraction aborted, no further API credits consumed');
+          logger.info('Client disconnected — extraction aborted', { documentId });
         } else {
-          console.error('❗ AI extraction error:', aiError);
+          logger.error('AI extraction error', { error: aiError instanceof Error ? aiError.message : String(aiError), documentId });
         }
 
         const errorMessage = isAbort
@@ -606,7 +605,7 @@ export async function POST(req: NextRequest) {
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❗ Error processing file:', errorMessage);
+      logger.error('Error processing file', { error: errorMessage });
 
       await sendProgress({
         stage: 'error',
@@ -643,7 +642,7 @@ async function updateDocumentStatus(
 
   const { error } = await supabase.from('documents').update(updateData).eq('id', documentId);
   if (error) {
-    console.error(`❗ Failed to update document ${documentId} status to '${status}':`, error.message);
+    logger.error('Failed to update document status', { documentId, status, error: error.message });
   }
 }
 
