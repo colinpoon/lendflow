@@ -28,7 +28,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://img.clerk.com",
               "font-src 'self'",
-              "connect-src 'self' https://rppvicoeyzpmbwgrbfhy.supabase.co https://api.anthropic.com https://*.clerk.accounts.dev",
+              `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} https://api.anthropic.com https://*.clerk.accounts.dev`,
               "frame-ancestors 'none'",
               "worker-src 'self' blob:",
               "base-uri 'self'",
